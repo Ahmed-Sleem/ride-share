@@ -19,6 +19,7 @@
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "@eslint/js": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "@ride-share/config": "workspace:*"
   }
 }

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "verify": "bash scripts/verify-repo.sh && pnpm -r --if-present build && pnpm -r --if-present typecheck && pnpm -r --if-present lint && pnpm -r --if-present test",
+    "verify:full": "bash scripts/verify-repo.sh && pnpm -r --if-present verify",
     "verify:repo": "bash scripts/verify-repo.sh"
   },
   "devDependencies": {

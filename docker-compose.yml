@@ -1,0 +1,76 @@
+# Local full-stack run (BUILD_PLAN P0.4). The SAME images that run locally run
+# in production; the same env-var names are used by the platform deployment.
+#   docker compose up --build
+#   web:   http://localhost:8080  (healthz: http://localhost:8080/healthz)
+#   api:   http://localhost:3000  (healthz: http://localhost:3000/healthz)
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ride
+      POSTGRES_PASSWORD: ride
+      POSTGRES_DB: rideshare
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ride -d rideshare"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.node
+      args:
+        PROJECT: api
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://ride:ride@db:5432/rideshare
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-dev-secret-at-least-32-characters
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.node
+      args:
+        PROJECT: web
+    environment:
+      PORT: "8080"
+    depends_on:
+      - api
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dbdata:

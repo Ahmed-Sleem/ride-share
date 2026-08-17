@@ -1,0 +1,57 @@
+# ══════════════════════════════════════════════════════════════════════════
+# One image definition for every Node service (BUILD_PLAN P0.4, DEC-173).
+#
+#   docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=api -t ride-share-api .
+#   docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=web -t ride-share-web .
+#
+# Non-negotiables (P0.4):
+#   - non-root user in the runner stage;
+#   - only production dependencies and build output are shipped — no source,
+#     no dev dependencies, no tests;
+#   - PORT is read from the environment, never hardcoded (the platform assigns it);
+#   - a HEALTHCHECK hits the app's own /healthz endpoint.
+# The deployment platform receives a container, not a repository (portability).
+# pnpm is installed in the image (no corepack download at container runtime).
+# ══════════════════════════════════════════════════════════════════════════
+FROM node:20-alpine AS base
+RUN npm install -g pnpm@9.15.9
+WORKDIR /repo
+
+# ── prune the monorepo to a single workspace package ────────────────────
+FROM base AS pruner
+ARG PROJECT
+COPY . .
+RUN pnpm dlx turbo@2.3.3 prune --scope=@ride-share/${PROJECT} --docker
+
+# ── build ───────────────────────────────────────────────────────────────
+FROM base AS builder
+ARG PROJECT
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --from=pruner /repo/out/json/ .
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /repo/out/full/ .
+RUN pnpm --filter @ride-share/${PROJECT} build
+
+# ── run ─────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+ARG PROJECT
+ENV NODE_ENV=production PROJECT=${PROJECT}
+RUN apk add --no-cache curl \
+  && npm install -g pnpm@9.15.9 \
+  && addgroup -S app && adduser -S app -G app
+WORKDIR /app
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --from=pruner /repo/out/json/ .
+RUN pnpm install --frozen-lockfile --prod
+COPY --from=pruner /repo/out/full/ .
+COPY --from=builder /repo/apps/${PROJECT}/dist ./apps/${PROJECT}/dist
+# Ship build output and the runtime entry only — strip source and tests.
+RUN rm -rf apps/*/src packages/*/src 2>/dev/null || true \
+  && find . -name '*.test.*' -delete
+RUN chown -R app:app /app
+USER app
+ENV PORT=3000
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -fsS "http://localhost:${PORT}/healthz" || exit 1
+CMD ["sh", "-c", "pnpm --filter @ride-share/${PROJECT} start"]

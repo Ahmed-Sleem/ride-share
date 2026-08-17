@@ -72,11 +72,11 @@ can fail:
 pnpm --filter @ride-share/web verify
 ```
 
-To serve it as a container:
+To run the full stack (api + web + postgres/postgis + redis) as containers:
 
 ```bash
-docker compose -f deploy/docker/docker-compose.yml up --build
-# http://localhost:8080
+docker compose up --build
+# web: http://localhost:8080 · api: http://localhost:3000
 ```
 
 ## Repository layout
@@ -89,8 +89,8 @@ apps/api/       the backend — NestJS modular monolith (M0 skeleton)
 apps/mobile/    Capacitor wrapper (BUILD_PLAN P7, created with a README)
 packages/       shared types, logic, API client, toolchain config
 scripts/        the enforcement scripts behind `pnpm verify`
+infra/          Dockerfile, docker-compose, Railway configuration, smoke test
 docs/           everything that is not code: specification, plan, decisions, research
-deploy/         Dockerfile, nginx, Railway configuration, smoke test
 ```
 
 `apps/web/src` is assembled into one file by `apps/web/build.js`. Edit the

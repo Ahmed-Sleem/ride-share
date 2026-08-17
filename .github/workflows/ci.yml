@@ -1,0 +1,57 @@
+# Continuous integration (BUILD_PLAN P0.11). Runs the SAME commands a
+# developer runs locally — there is no parallel list of steps that can drift
+# (§0.3). Merges are blocked on green (branch protection set in repo settings).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Verify (repo + api + web unit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+
+  verify-gui:
+    name: Verify GUI (full browser suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ride-share/web verify
+
+  images:
+    name: Build both container images (non-root)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build api image
+        run: docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=api -t ride-share-api .
+      - name: Build web image
+        run: docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=web -t ride-share-web .
+      - name: Runner must not run as root (P0.4)
+        run: |
+          uid="$(docker run --rm --entrypoint sh ride-share-api -c 'id -u')"
+          test "$uid" != "0" || { echo "api image runs as root"; exit 1; }
+          uid="$(docker run --rm --entrypoint sh ride-share-web -c 'id -u')"
+          test "$uid" != "0" || { echo "web image runs as root"; exit 1; }

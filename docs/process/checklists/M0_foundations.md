@@ -41,13 +41,14 @@
 
 ## P0.4 — Docker: one image definition for every service
 
-- [ ] `infra/docker/Dockerfile.node` — single parameterised Dockerfile (`ARG PROJECT`)
-- [ ] Non-root runner stage; `PORT` from env; HEALTHCHECK; `.dockerignore`
-- [ ] One Dockerfile builds both `api` and `web` (two builds proved)
+- [x] `infra/docker/Dockerfile.node` — single parameterised Dockerfile (`ARG PROJECT`)
+- [x] Non-root runner stage; `PORT` from env; HEALTHCHECK; `.dockerignore`
+- [x] One Dockerfile builds both `api` and `web` (two builds proved)
 - [ ] `docker compose up` brings the local stack up; all health checks green
-- [ ] BREAK: remove `USER` → non-root test fails; restore
+  - _Proven here: both images build & run (healthz + doc), non-root, env-refusal, no .env baked. The full 4-service compose run needs a Docker host with bridge networking — exercised in P0.12/CI (see IMPLEMENTATION_LOG)._
+- [x] BREAK: remove `USER` → non-root test fails; restore
 - [ ] BREAK: break the health endpoint → compose reports unhealthy
-- [ ] Image sizes recorded in the implementation log
+- [x] Image sizes recorded in the implementation log
 
 ## P0.5 — Database: PostGIS, migrations, no-ORM guard-rails
 

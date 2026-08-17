@@ -1,0 +1,19 @@
+# Never in an image: secrets, source control, dev output, docs.
+.git
+.gitignore
+node_modules
+**/node_modules
+dist
+build
+.turbo
+coverage
+*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+*.osrm*
+docs

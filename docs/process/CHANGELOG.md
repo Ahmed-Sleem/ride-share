@@ -243,3 +243,14 @@
   observed failing for the right reason.
 - Added `docs/process/checklists/` — a permanent completion ledger (master index + one file per
   milestone) so a box is ticked only when a command has proved it.
+
+## 2026-08-17 — M0.4: Docker (one image for every service), infra/, CI; sandbox cleaned
+
+- Sandbox cleaned to the repo + the active rules only (freed ~28 MB); GitHub is the source of truth.
+- `infra/` replaces `deploy/` per the execution plan: parameterised `Dockerfile.node` (api + web),
+  root `docker-compose.yml` (api, web, postgres+postgis, redis), Railway config + README, smoke test.
+- `apps/web` gained a zero-dependency runtime server (serves the build + /healthz); `apps/api` gained
+  a health server; both are unit-tested.
+- CI workflow added: pnpm verify + full GUI browser suite + both image builds (non-root enforced).
+- Docker proven live in the sandbox: one Dockerfile builds both services, containers run non-root,
+  health endpoints answer, the app refuses to start naming missing env vars, no .env baked.

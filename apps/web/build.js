@@ -27,4 +27,7 @@ if (!shell.includes(MARK)) { console.error("FAIL: injection point not found"); p
 
 const html = shell.replace(MARK, MARK + "\n<script>\n" + js + "\n</script>");
 fs.writeFileSync(OUT, html);
+// Container artifact: the Docker runner copies only apps/web/dist/.
+fs.mkdirSync(path.join(__dirname, "dist"), { recursive: true });
+fs.writeFileSync(path.join(__dirname, "dist", "index.html"), html);
 console.log(`built ${path.relative(process.cwd(), OUT)} — ${(html.length/1024).toFixed(1)} KB, ${PARTS.length} modules`);

@@ -1,0 +1,13 @@
+# Railway deployment (BUILD_PLAN P0.12 — finalised when the project is
+# connected in the owner's Railway dashboard). Deployments build from
+# infra/docker/Dockerfile.node; the platform receives a container, never a
+# repository (portability, DEC-173). Health is proven at /healthz.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "infra/docker/Dockerfile.node"
+
+[deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

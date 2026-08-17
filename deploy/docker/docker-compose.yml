@@ -1,9 +1,0 @@
-# Local run of exactly what deploys. `docker compose up` from the repo root.
-services:
-  web:
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
-    ports:
-      - "8080:8080"
-    restart: unless-stopped

@@ -108,3 +108,25 @@ output) — see the engineering standard §3.3 and §4.
   DATABASE_URL, REDIS_URL, JWT_SECRET. False positives fixed (dummy conn string in a test, AKIA
   literals in two docs) so the scan is clean on a clean tree.
 - Verified: secret scan "examined 112 files, 0 hit(s)"; `git ls-files | grep -c '^.env$'` → 0.
+
+## 2026-08-17 — M0.4 (P0.4): one Dockerfile, local compose, infra/ layout
+
+- What: `infra/` layout (docker/, railway/, scripts/); the parameterised `infra/docker/Dockerfile.node`
+  (ARG PROJECT ∈ {api, web}) with turbo-prune → build → non-root runner; `apps/web/server.js` (static
+  server + /healthz, zero deps) and `apps/web/dist/index.html` build artifact; `apps/api/src/server.ts`
+  health server; root `docker-compose.yml` (api, web, postgres+postgis, redis); `.dockerignore`;
+  `infra/railway/railway.toml` + README; CI workflow (.github/workflows/ci.yml) running pnpm verify,
+  the full GUI browser suite, and both image builds with a non-root check.
+- Files: infra/** , apps/web/{server.js, build.js, tests/server.test.js, package.json},
+  apps/api/{src/server.ts, src/main.ts, src/server.test.ts, package.json}, docker-compose.yml,
+  .dockerignore, .github/workflows/ci.yml, README/docs updates.
+- Tests/break: two bugs found and fixed by actually running the images — (1) ARG PROJECT not promoted
+  to ENV (CMD saw empty → "No projects matched"); (2) corepack tried to download pnpm at container
+  runtime (no network) — pnpm is now installed in the image. Break observed: removing `USER app`
+  → image runs as root (uid=0); restored. Non-root (uid=100) proved for both images.
+- Verified (in this sandbox, dockerd running): both images build from ONE Dockerfile (web 171 MB,
+  api 177 MB); web serves /healthz `{"ok":true,"service":"web"}` + the document; api serves /healthz
+  with valid env and refuses to start (exit 1) naming DATABASE_URL, REDIS_URL, JWT_SECRET; `ls /app/.env`
+  → No such file (no secrets baked); compose YAML + railway TOML/JSON + all shell scripts syntax-checked.
+- Not yet proven here (needs a Docker host with bridge networking): a live `docker compose up` of the
+  4-service stack. The images are proven individually; the full-stack run is exercised in P0.12 and by CI.

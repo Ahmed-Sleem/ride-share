@@ -1,7 +1,7 @@
 # Documentation
 
 Everything here is not code. The interface lives in `apps/web/`, the backend
-will live in `apps/api/`, and deployment lives in `deploy/`.
+lives in `apps/api/`, and deployment/infrastructure lives in `infra/`.
 
 ## If you are new, read in this order
 
@@ -72,6 +72,7 @@ the reasoning behind the two-colour model.
 | `PROJECT_RULES.md` | Rules specific to this project |
 | `AUDIT_*.md` | Audit records. Each lists defects found and how they were fixed |
 | `IMPLEMENTATION_LOG.md` | Every closed gap and non-trivial change, with proof |
+| `checklists/` | The completion ledger — one file per milestone, a box ticked only when a command proved it |
 | `CHANGELOG.md` | What changed, when |
 | `GITHUB_SETUP.md` | Branching, secrets, protection |
 
