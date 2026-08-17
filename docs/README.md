@@ -70,11 +70,14 @@ the reasoning behind the two-colour model.
 | `REPOSITORY_STANDARD.md` | How this repository is published and kept clean |
 | `PROJECT_RULES.md` | Rules specific to this project |
 | `AUDIT_*.md` | Audit records. Each lists defects found and how they were fixed |
+| `IMPLEMENTATION_LOG.md` | Every closed gap and non-trivial change, with proof |
 | `CHANGELOG.md` | What changed, when |
 | `GITHUB_SETUP.md` | Branching, secrets, protection |
 
 ### reference/
-The investor-facing information document and its LaTeX source.
+The investor-facing information document (PDF + LaTeX source) and the UI
+reference benchmark (`UI_REFERENCE_daily-plan-app.html`, adopted by DEC-168 as
+the visual benchmark for this product).
 
 ## Two conventions worth knowing
 

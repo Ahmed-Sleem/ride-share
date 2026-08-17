@@ -159,3 +159,37 @@
   G-015 (stranded rider on failed second leg), G-024 (dynamic walking rule detail),
   G-033 (price precedence confirmation), G-034 (share-attribution design),
   plus F-26..F-40 topics scheduled to their chapters.
+
+## Later sessions — route-ticket model, full specification, GUI, build plan (2026-07-29 → 2026-08-02)
+
+- Route-ticket model adopted and propagated (DEC-113..DEC-119, DEC-132, G-051): no automatic
+  surge (manager-initiated changes only), wall-clock scheduling with Ramadan mode and a holiday
+  calendar, the alighting signal, schedule-adherence as the dispatch objective, and the slot-claim
+  model (route_slots / slot_claims / CLAIMED journey state). CH5, CH9 and CH10 rewritten to v2;
+  a full cross-chapter consistency sweep ran after each model change (P6, DEC-126).
+- Specification completed to 22 chapters (DEC-120..DEC-167): design system (CH10a), the 75-screen
+  inventory for five roles (CH10b–d), trust & safety (CH12), privacy/quality/infrastructure
+  (CH13–15), delivery plan and risk register (CH8/16/17), operations runbook (CH18), configuration
+  catalogue (CH19), notification catalogue (CH20).
+- Research passes R14–R22 appended (OpenStreetMap coverage in Egypt, ORM comparison, Railway and
+  PostGIS tooling, cold-start demand estimation, OSM QC methodology).
+- BUILD_PLAN written (DEC-170..DEC-173): Phases 0–8, every point carrying what / how / test /
+  how-to-break-the-test / done / gap-risk.
+- GUI-first pivot (DEC-174, DEC-175): commercial map provider for the visible map surface; the
+  complete interface built as one self-contained HTML file — five roles, bilingual with full RTL,
+  light and dark themes, one adaptive layout — verified with jsdom and Puppeteer plus break tests.
+- DEC-176 mobile via Capacitor; DEC-177 one private monorepo; DEC-178 profile identity and wallet
+  balance pinned in the rider top bar.
+- Investor information document produced (LaTeX source + compiled PDF).
+
+## 2026-08-17 — search bar scrolls with the page; repository completeness
+
+- UI: the search band moved from a pinned sibling above the scroller to the first element inside
+  `.main`, so it scrolls with the page; the horizontal separator under it was removed.
+- Verification updated and re-run green: build; 181 unit/accessibility assertions; 5,803 real-browser
+  layout assertions (15 viewports × 5 roles × 30 screens); 36 break cases and 7 layout break cases
+  all observed failing for the right reason.
+- Docs: design "layout contract" updated to match; the UI reference benchmark adopted by DEC-168 was
+  added under `docs/reference/`; the docs index updated.
+- Repository: confirmed `app/` (interface), `deploy/` (Docker, nginx, Railway), `docs/` (all non-code)
+  separation; secret scan clean (no PAT or credentials in tree or history); pushed to GitHub.
