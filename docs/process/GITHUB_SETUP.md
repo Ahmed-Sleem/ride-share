@@ -15,7 +15,7 @@ from history.
 | Tracked (private repo) | Never tracked, ever |
 |---|---|
 | `apps/`, `packages/`, `infra/`, `scripts/` | `.env` with values |
-| `app/` (the approved GUI source + build) | signing keystores, `*.jks`, `*.keystore` |
+| `apps/web/` (the approved GUI source + build) | signing keystores, `*.jks`, `*.keystore` |
 | `.env.example` with empty placeholders | Play service-account JSON |
 | `docs/` — architecture, API, deploy runbook | provider API keys, webhook secrets |
 | `MASTER_SPECIFICATION.md`, `BUILD_PLAN.md` | database URLs with passwords |

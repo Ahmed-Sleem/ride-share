@@ -4,7 +4,7 @@
    overlap, or whether the dock is actually on screen. This file measures
    the rendered result. */
 const path=require("path");
-const puppeteer=require("/tmp/node_modules/puppeteer");
+const puppeteer=require("puppeteer");
 
 const FILE="file://"+path.join(__dirname,"..","dist-preview.html");
 

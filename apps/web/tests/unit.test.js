@@ -4,7 +4,7 @@
    been observed failing when the thing it guards was broken (see BREAKS.md).
    Assertions therefore refuse to run against empty sets. */
 const fs=require("fs"), path=require("path");
-const {JSDOM}=require("/tmp/node_modules/jsdom");
+const {JSDOM}=require("jsdom");
 
 const FILE=path.join(__dirname,"..","dist-preview.html");
 const SRC=fs.readFileSync(FILE,"utf8");

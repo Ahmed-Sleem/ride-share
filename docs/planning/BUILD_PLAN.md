@@ -78,7 +78,8 @@ builds identically.
 /
 ├─ apps/
 │  ├─ api/            NestJS  (P0.6)
-│  ├─ web/            Next.js (P0.7)
+│  ├─ web/            the approved single-file GUI (DEC-181 supersedes the
+│  │                  Next.js choice of P0.7 — one UI codebase, DEC-176)
 │  └─ mobile/         Capacitor (P7, DEC-176 — created empty with a README explaining why)
 ├─ packages/
 │  ├─ shared-types/   entities, DTOs, events — ONE definition of each

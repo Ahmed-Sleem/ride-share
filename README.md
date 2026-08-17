@@ -23,8 +23,8 @@ The interface is one self-contained HTML file with no external requests.
 Open it directly:
 
 ```bash
-open app/dist-preview.html      # macOS
-xdg-open app/dist-preview.html  # Linux
+open apps/web/dist-preview.html      # macOS
+xdg-open apps/web/dist-preview.html  # Linux
 ```
 
 Five roles are included — rider, driver, operations, manager, support. Use the
@@ -46,29 +46,30 @@ with full RTL) and appearance (light / dark) are in Profile.
 
 ## Requirements
 
-- Node.js 20 or newer — to build and to run the checks
+- Node.js 20 or newer
+- pnpm 9 (pinned by `packageManager`; `corepack enable` picks it up)
 - Docker — only if you want to serve it as a container
 
-Nothing else. The interface has no dependencies; the test suite uses `jsdom`
-and `puppeteer`.
+The interface has no runtime dependencies; the test suite uses `jsdom` and
+`puppeteer` (installed by `pnpm install`).
 
 ## Quick start
 
 ```bash
 git clone <url>
 cd ride-share
-node app/build.js
+corepack enable && pnpm install
+pnpm --filter @ride-share/web build
 ```
 
-That writes `app/dist-preview.html`. Open it in a browser.
+That writes `apps/web/dist-preview.html`. Open it in a browser.
 
 To run everything — build, unit and accessibility checks, real-browser layout
 checks across fifteen viewports, and the break tests that prove those checks
 can fail:
 
 ```bash
-npm install jsdom puppeteer
-./app/verify.sh
+pnpm --filter @ride-share/web verify
 ```
 
 To serve it as a container:
@@ -83,20 +84,24 @@ docker compose -f deploy/docker/docker-compose.yml up --build
 Code and documentation are kept apart on purpose.
 
 ```
-app/       the interface — source, build script, tests
-docs/      everything that is not code: specification, plan, decisions, research
-deploy/    Dockerfile, nginx, Railway configuration, smoke test
+apps/web/       the interface — source, build script, tests
+apps/api/       the backend — NestJS modular monolith (M0 skeleton)
+apps/mobile/    Capacitor wrapper (BUILD_PLAN P7, created with a README)
+packages/       shared types, logic, API client, toolchain config
+scripts/        the enforcement scripts behind `pnpm verify`
+docs/           everything that is not code: specification, plan, decisions, research
+deploy/         Dockerfile, nginx, Railway configuration, smoke test
 ```
 
-`app/src` is assembled into one file by `app/build.js`. Edit the sources, never
-the generated `dist-preview.html`.
+`apps/web/src` is assembled into one file by `apps/web/build.js`. Edit the
+sources, never the generated `dist-preview.html`.
 
 ```
-app/src/styles/shell.html    design tokens, layout, every CSS rule
-app/src/data/content.js      all text, both languages, and sample content
-app/src/lib/components.js    shared components and icons
-app/src/screens/             rider, driver, staff screens
-app/src/shell/app.js         navigation table, routing, render
+apps/web/src/styles/shell.html   design tokens, layout, every CSS rule
+apps/web/src/data/content.js     all text, both languages, and sample content
+apps/web/src/lib/components.js   shared components and icons
+apps/web/src/screens/            rider, driver, staff screens
+apps/web/src/shell/app.js        navigation table, routing, render
 ```
 
 ## Further docs
@@ -114,14 +119,14 @@ picking this up with no prior context and says what to read in what order.
 
 ## Verification
 
-`./app/verify.sh` runs five stages:
+`pnpm --filter @ride-share/web verify` runs five stages:
 
 | Stage | Checks |
 |---|---|
 | Build | Assembles the single file |
-| Unit and accessibility | 180 assertions — labels, roles, focus, tokens, role boundaries, booking logic |
+| Unit and accessibility | 198 assertions — labels, roles, focus, tokens, role boundaries, booking logic |
 | Layout | 5,803 assertions in a real browser across 15 viewports × 5 roles × 30 screens |
-| Breaks | 34 deliberate defects, each confirmed to turn the suite red |
+| Breaks | 40 deliberate defects, each confirmed to turn the suite red |
 | Layout breaks | 7 deliberate layout defects, same |
 
 The break stages matter more than the passing counts. Every check in this
@@ -134,9 +139,10 @@ seen failing is an assumption wearing a test's clothing.
 |---|---|
 | Interface — all screens, five roles, bilingual, adaptive | Done |
 | Specification and build plan | Done |
-| API, database, authentication | Not started — BUILD_PLAN Phases 0–1 |
-| Booking, payments, live journeys | Not started — Phase 3 |
-| Android APK | Not started — Phase 7 |
+| Monorepo + pinned toolchain + workspace guard | Done — M0.1 |
+| API, database, authentication | In progress — M0 foundations |
+| Booking, payments, live journeys | Not started — M3 |
+| Android APK | Not started — M7 |
 
 The interface is not connected to anything. Data shown is sample content, the
 map is a labelled illustration rather than live tiles, and no control performs

@@ -62,3 +62,22 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: fully wired — the theme preference persists, the rail preference persists, every new
   check was observed failing for the right reason, and the RTL/Arabic + light/dark matrix still
   renders all 30 screens.
+
+## 2026-08-17 — M0.1: monorepo skeleton, pinned toolchain, workspace guard
+
+- What: Created the pnpm monorepo (apps/* + packages/*), pinned the toolchain exactly, added a
+  central catalog (one dependency one version), moved the approved GUI to `apps/web/`, and added
+  the first enforcement script.
+- Files: root `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `AGENTS.md`,
+  `scripts/check-workspace.sh`, `scripts/verify-repo.sh`, `packages/config/*`,
+  `apps/{api,mobile,web}/package.json` (+ READMEs), `apps/web/**` (moved from `app/`),
+  README/docs updates.
+- Tests: `scripts/check-workspace.sh` guards private-root / exact-packageManager / named-packages /
+  workspace-protocol / catalog-only. Each of the four break cases (range character in
+  packageManager, bare version in a child package, internal dep without `workspace:`, root not
+  private) observed failing for the right reason, then restored.
+- Verified: `bash scripts/check-workspace.sh` → 6 files examined, 0 failures;
+  `./apps/web/verify.sh` → 198 unit, 5,803 layout, 40 + 7 break cases caught, all green.
+- Self-check: fully wired — the workspace installs from a clean clone (`pnpm install` with a
+  generated lockfile), the GUI builds and verifies from its new home, and the guard genuinely
+  fails when any constraint is violated.

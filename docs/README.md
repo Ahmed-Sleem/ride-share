@@ -1,7 +1,7 @@
 # Documentation
 
-Everything here is not code. The interface and deployment live in `app/` and
-`deploy/`.
+Everything here is not code. The interface lives in `apps/web/`, the backend
+will live in `apps/api/`, and deployment lives in `deploy/`.
 
 ## If you are new, read in this order
 

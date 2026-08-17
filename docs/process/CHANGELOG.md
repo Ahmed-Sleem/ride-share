@@ -214,3 +214,22 @@
   referenced but never defined; they now map to `--route`/`--walk`.
 - Verification re-run green: 198 unit/accessibility assertions; 5,803 real-browser layout
   assertions; 40 break cases and 7 layout break cases all observed failing for the right reason.
+
+## 2026-08-17 — M0.1 foundations: monorepo + pinned toolchain; payments decided
+
+- Research pass R23 (`docs/research/03_PAYMENTS_EGYPT.md`): Paymob is the primary gateway
+  (cards, Meeza, mobile wallets, Fawry OTC — Uber Egypt's choice); cash stays the core; driver
+  payouts weekly via bank/InstaPay, ops-owned. Recorded as DEC-179..DEC-183 (also: keep the GUI
+  as the real client, vertical-slice sequencing, agent-prepares-Railway).
+- Execution plan written (`docs/planning/EXECUTION_PLAN.md`): milestones M0–M8, Railway topology,
+  owner-provided accounts list.
+- Monorepo skeleton (BUILD_PLAN P0.1): pnpm workspace + catalog (strict), pinned `packageManager`,
+  Turborepo, `packages/config`, `apps/api` + `apps/mobile` placeholders with READMEs, `AGENTS.md`.
+- `app/` moved to `apps/web/` (DEC-181 — the GUI is the real web client); all path references
+  updated; test requires now use the workspace `jsdom`/`puppeteer` instead of a hardcoded
+  `/tmp/node_modules` path.
+- `scripts/check-workspace.sh` (P0.1): private root, exact packageManager, every package named,
+  internal deps `workspace:`, external deps `catalog:` only. All four break cases observed failing
+  for the right reason.
+- Verification: GUI suite re-run green from the new location — 198 unit, 5,803 layout,
+  40 + 7 break cases caught.

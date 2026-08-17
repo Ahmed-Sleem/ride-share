@@ -1,0 +1,17 @@
+{
+  "name": "ride-share",
+  "version": "0.1.0",
+
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "verify": "bash scripts/verify-repo.sh && pnpm -r --if-present build && pnpm -r --if-present test",
+    "verify:repo": "bash scripts/verify-repo.sh"
+  },
+  "devDependencies": {
+    "turbo": "catalog:"
+  }
+}

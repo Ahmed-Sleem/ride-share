@@ -37,7 +37,7 @@ the architecture, not a task. Say so.
 ## Tests
 
 ```bash
-../app/verify.sh          # everything
+./verify.sh          # everything
 node tests/unit.test.js   # jsdom: semantics, a11y, logic, tokens
 node tests/layout.test.js # real browser: 15 viewports × 5 roles × 30 screens
 ./tests/breaks.sh         # proves the unit checks can fail

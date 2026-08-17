@@ -1,0 +1,7 @@
+{
+  "name": "@ride-share/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Android app — Capacitor wrapping the web interface (BUILD_PLAN P7, DEC-176).",
+  "scripts": {}
+}

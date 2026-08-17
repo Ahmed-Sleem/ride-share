@@ -1,0 +1,7 @@
+{
+  "name": "@ride-share/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The backend — a NestJS modular monolith implementing the MASTER_SPECIFICATION.",
+  "scripts": {}
+}
