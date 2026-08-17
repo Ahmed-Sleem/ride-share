@@ -57,13 +57,12 @@ group("CHROME IS OUTSIDE THE SCROLLER (nothing scrolls away)");
   const t=boot();
   t.go("rider","home");
   const main=t.q(".main"), app=t.q(".app");
-  for(const [name,sel] of [["top bar",".topbar"],["search band",".searchband"],["navigation",".nav"]]){
+  for(const [name,sel] of [["top bar",".topbar"],["navigation",".nav"]]){
     const el=t.q(sel);
     ok(`${name} exists`, !!el);
     ok(`${name} is NOT inside the scrolling region`, !!el && !main.contains(el));
   }
   ok("top bar cannot shrink",   /flex:none/.test(rule(".topbar")||""));
-  ok("search band cannot shrink",/flex:none/.test(rule(".searchband")||""));
   ok("navigation cannot shrink", /flex:none/.test(rule(".nav")||""));
   ok("navigation is a direct child of the app", t.q(".nav").parentElement===app);
   ok("no fixed/absolute positioning on the nav", !/position:\s*(fixed|absolute)/.test(rule(".nav")||""));
@@ -73,17 +72,22 @@ group("CHROME IS OUTSIDE THE SCROLLER (nothing scrolls away)");
   ok("still outside the scroller on a long list", !t.q(".main").contains(t.q(".nav")));
 }
 
-group("SEARCH SITS UNDER THE TOP BAR");
+group("SEARCH BAND IS THE FIRST THING IN THE PAGE (scrolls with content)");
 {
   const t=boot();
   t.go("rider","home");
-  const col=t.q(".appcol");
-  const kids=[...col.children].map(e=>e.className.split(" ")[0]);
-  ok("order is topbar → searchband → main",
-     kids[0]==="topbar" && kids[1]==="searchband" && kids[2]==="main", kids.join(" › "));
+  const main=t.q(".main");
+  const band=t.q(".searchband");
+  ok("search band exists", !!band);
+  ok("band is inside the scrolling region", !!band && !!main && main.contains(band));
+  ok("band is the first element of the page",
+     !!band && !!main && main.firstElementChild===band,
+     (main && main.firstElementChild && main.firstElementChild.className)||"none");
+  ok("no divider under the band", !/border-bottom/.test(rule(".searchband")||""));
   const sb=t.q(".searchband .searchbar");
   ok("the band holds a search control", !!sb);
   ok("home search navigates (is a button)", !!sb && sb.tagName==="BUTTON");
+  ok("search appears exactly once", t.all(".searchbar").length===1, String(t.all(".searchbar").length));
 
   t.go("rider","routes");
   const live=t.q(".searchband .searchbar input");
@@ -98,8 +102,8 @@ group("SEARCH SITS UNDER THE TOP BAR");
   // Not every screen should carry a search box.
   t.go("rider","wallet");
   ok("screens with nothing to search have no band", !t.q(".searchband"));
-  ok("search is never duplicated inside the scroller",
-     t.all(".main .searchbar").length===0, String(t.all(".main .searchbar").length));
+  ok("search is absent on screens with nothing to search",
+     t.all(".searchbar").length===0, String(t.all(".searchbar").length));
 }
 
 group("PROFILE IS PINNED TO THE BOTTOM OF THE DESKTOP RAIL");

@@ -47,9 +47,17 @@ run_break "nav moved inside the scroller" app/src/shell/app.js \
   's|  app.append(nav());|  col.querySelector(".main").append(nav());|' \
   "navigation is NOT inside the scrolling region"
 
-run_break "search band inside the scroller" app/src/shell/app.js \
-  's@  col.append(body);@  if(band) body.prepend(band);\n  col.append(body);@' \
-  "search band is NOT inside the scrolling region|order is topbar → searchband → main"
+run_break "search band pinned above the scroller" app/src/shell/app.js \
+  's@    if(band) body.prepend(band);@    if(band) col.append(band);@' \
+  "band is inside the scrolling region|band is the first element of the page"
+
+run_break "band drops below the content" app/src/shell/app.js \
+  's@    if(band) body.prepend(band);@    if(band) body.append(band);@' \
+  "band is the first element of the page"
+
+run_break "divider returns under the band" app/src/styles/shell.html \
+  's|^\.searchband{width:100%}|.searchband{width:100%;border-bottom:1px solid var(--line)}|' \
+  "no divider under the band"
 
 run_break "top bar loses flex:none" app/src/styles/shell.html \
   's|^\.topbar{flex:none;display:flex;|.topbar{display:flex;|' \

@@ -154,8 +154,9 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
           ok(`${id}: top bar does not overlap content`,
              m.main.t>=m.top.b-1, `main.t=${m.main.t} top.b=${m.top.b}`);
         if(m.band && m.main)
-          ok(`${id}: search band does not overlap content`,
-             m.main.t>=m.band.b-1, `main.t=${m.main.t} band.b=${m.band.b}`);
+          ok(`${id}: search band sits inside the scroller`,
+             m.band.t>=m.main.t-1 && m.band.b<=m.main.b+1,
+             `band=${m.band.t}..${m.band.b} main=${m.main.t}..${m.main.b}`);
         if(m.nav && m.main && vp.nav==="bar")
           ok(`${id}: bar does not cover content`,
              m.main.b<=m.nav.t+1, `main.b=${m.main.b} nav.t=${m.nav.t}`);

@@ -72,7 +72,8 @@ JavaScript branch per size and no resize listener.
 ## Layout contract
 
 The shell is exactly one viewport tall. `.main` is the only element that
-scrolls; the top bar, search band and navigation are `flex:none` siblings and
-are therefore structurally unable to scroll away. If you find yourself adding
-`position: fixed` to keep something in place, the element is in the wrong part
-of the tree.
+scrolls; the top bar and navigation are `flex:none` siblings and are therefore
+structurally unable to scroll away. The search band is the first element
+inside `.main`, so it scrolls with the page like any other content. If you find
+yourself adding `position: fixed` to keep something in place, the element is in
+the wrong part of the tree.

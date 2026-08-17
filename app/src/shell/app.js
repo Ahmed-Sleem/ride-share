@@ -142,8 +142,8 @@ function topbar({title, back:onBack, right, plain}){
   return bar;
 }
 
-/* Search band — sits directly under the top bar, outside the scroller, so it
-   is always reachable. Present on the screens where finding a route or a
+/* Search band — the first element of the page, inside the scroller, so it
+   scrolls with the content. Present on the screens where finding a route or a
    record is the primary job. */
 const SEARCHABLE = {
   rider:  {home:"searchHint", routes:"searchRoute"},
@@ -227,18 +227,18 @@ function render(){
     back: isRoot ? null : back,
     right: isRoot ? headerActions() : null
   }));
-  const band=searchBand();
-  if(band) col.append(band);
-
   /* Every screen returns a .main. The reading-width wrapper is applied here,
      once, rather than in each of the thirty screen functions. Staff tables
-     opt out of the cap because wide data needs the room. */
+     opt out of the cap because wide data needs the room. The search band is
+     the first element inside the scroller, so it scrolls with the page. */
   const body=def.fn();
   if(body.classList.contains("main")){
     const inner=$("div",{class:"main__inner"});
     while(body.firstChild) inner.append(body.firstChild);
     body.append(inner);
     if(def.wide) body.classList.add("main--wide");
+    const band=searchBand();
+    if(band) body.prepend(band);
   }
   col.append(body);
 

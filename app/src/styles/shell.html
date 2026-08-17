@@ -199,9 +199,8 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .topbar__title{font-size:var(--f-head);font-weight:var(--fw-bold);flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:var(--lh-snug)}
 
-/* ── search band: directly under the top bar, above the scroller ──────── */
-.searchband{flex:none;padding:var(--s3) var(--s4);background:var(--bg-base);
-  border-bottom:1px solid var(--line);z-index:var(--z-sticky)}
+/* ── search band: the first element of the page, scrolls with content ── */
+.searchband{width:100%}
 .searchband__inner{width:100%;max-width:var(--content-max);margin-inline:auto}
 .searchband--wide .searchband__inner{max-width:none}
 
@@ -283,7 +282,6 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 /* large and up: roomier gutters */
 @media (min-width:1200px){
   .main{padding:var(--s6)}
-  .searchband{padding:var(--s4) var(--s6)}
   .topbar{padding-inline:var(--s6)}
 }
 
@@ -292,7 +290,6 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   :root{--topbar-h:48px}
   .navitem__label{display:none}
   .nav{padding-block:var(--s1)}
-  .searchband{padding-block:var(--s2)}
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
