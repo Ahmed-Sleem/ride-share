@@ -5,8 +5,8 @@ file is fully ticked and pushed.
 
 | Milestone | What | Checklist | Status |
 |---|---|---|---|
-| M0 | Foundations & guard-rails; empty skeleton deploys to Railway | [M0_foundations.md](M0_foundations.md) | **In progress** — P0.1 done |
-| M1 | Identity, roles, vehicles | `M1_identity_vehicles.md` | Not started |
+| M0 | Foundations & guard-rails; empty skeleton deploys to Railway | [M0_foundations.md](M0_foundations.md) | **Done** — deployed & verified live |
+| M1 | Identity, auth, real system (no demo data), landing page, motion | [M1_identity_auth.md](M1_identity_auth.md) | **In progress** — planning |
 | M2 | Geography — stops, mapping tool, corridor | `M2_geography.md` | Not started |
 | M3 | Routes, slots & the core journey (first vertical slice) | `M3_core_journey.md` | Not started |
 | M4 | Safety & support | `M4_safety_support.md` | Not started |
