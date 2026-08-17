@@ -10,6 +10,8 @@
 **/play-service-account*.json
 **/*secret*
 **/*credential*
+# the secret scanner itself must be tracked — its name matches the pattern above
+!scripts/check-secrets.sh
 
 # dependencies and build output
 node_modules/
