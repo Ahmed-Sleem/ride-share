@@ -1,12 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Health (§14, P0.6). Reports process, database and Redis status. Returns
-   503 when either dependency is down — a health check that reports healthy
-   while the database is unreachable disables the platform's own restart
-   logic, which is worse than none. Checks are short-lived and time-boxed.
+   Health (§14, P0.6). Reports process and database status. Returns 503
+   when the database is unreachable — a health check that reports healthy
+   while the database is down disables the platform's own restart logic,
+   which is worse than none. Checks are short-lived and time-boxed.
+
+   PostgreSQL is the ONLY stateful dependency (DEC-186): realtime is
+   LISTEN/NOTIFY, queues are SKIP LOCKED, sessions/read models are tables.
    ══════════════════════════════════════════════════════════════════════ */
 import { Controller, Get, Inject, Res } from '@nestjs/common';
 import { Client } from 'pg';
-import Redis from 'ioredis';
 import { CONFIG, type Env } from '../config/env.js';
 import type { FastifyReply } from 'fastify';
 
@@ -23,19 +25,6 @@ async function dbUp(url: string): Promise<boolean> {
   }
 }
 
-async function redisUp(url: string): Promise<boolean> {
-  const redis = new Redis(url, { lazyConnect: true, connectTimeout: 2000, maxRetriesPerRequest: 0 });
-  try {
-    await redis.connect();
-    await redis.ping();
-    return true;
-  } catch {
-    return false;
-  } finally {
-    redis.disconnect();
-  }
-}
-
 @Controller()
 export class HealthController {
   constructor(@Inject(CONFIG) private readonly env: Env) {}
@@ -43,13 +32,10 @@ export class HealthController {
   @Get(['health', 'healthz'])
   async check(@Res() res: FastifyReply): Promise<void> {
     const db = await dbUp(this.env.DATABASE_URL);
-    const redis = await redisUp(this.env.REDIS_URL);
-    const ok = db && redis;
-    void res.status(ok ? 200 : 503).send({
-      ok,
+    void res.status(db ? 200 : 503).send({
+      ok: db,
       service: 'api',
       db: db ? 'up' : 'down',
-      redis: redis ? 'up' : 'down',
     });
   }
 }

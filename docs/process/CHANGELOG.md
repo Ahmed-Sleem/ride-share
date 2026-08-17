@@ -297,3 +297,18 @@
   (G-061). Local compose + CI use plain `postgres:16-alpine` for parity (DEC-185).
 - `infra/schema.sql` regenerated from a clean plain-PostgreSQL scratch DB (pgmigrations only);
   `pnpm db:verify` green (0 drift, cycle clean); `pnpm verify` green.
+
+## 2026-08-17 — DEC-186: PostgreSQL-only (Redis removed entirely)
+
+- Owner decision: drop Redis; PostgreSQL is the only stateful dependency, on this architecture from
+  the start (no adapter seam). Realtime = LISTEN/NOTIFY, queues = SKIP LOCKED, sessions/read models
+  = tables, matching hot index = in-process H3 rebuilt from PostgreSQL, rate limiting = in-memory
+  per instance. Revisit only with measured evidence at horizontal scale (G-062 MONITOR).
+- Swept everywhere: `env.ts`/`env.test.ts` (REDIS_URL removed), health controller + test (db-only
+  status, 503 when down), `ioredis` dependency removed, docker-compose + CI + production compose +
+  .env.example + Railway README (managed Postgres only), EXECUTION_PLAN topology, BUILD_PLAN P0.x
+  statements, MASTER_SPECIFICATION + CH05/CH08/CH09/CH13 (architecture statements + DEC-186/DEC-184
+  revision banners), checklists, AGENTS-facing infra README. Historical records (research, old
+  decision rows, changelog) left intact — decisions are append-only.
+- Verified: `pnpm verify` green (198 web, 21 api, 9 repo checks); `pnpm db:verify` green; LIVE:
+  `/healthz` → `{"ok":true,"service":"api","db":"up"}` (no redis), db down → 503.

@@ -52,7 +52,7 @@
 
 ## P0.5 — Database: PostGIS, migrations, no-ORM guard-rails
 
-- [x] ~~PostGIS confirmed~~ → SUPERSEDED by DEC-184: migration 0001 is now a baseline (`SELECT 1`); PostGIS deferred to M2 (G-061). Managed Postgres + managed Redis for launch.
+- [x] ~~PostGIS confirmed~~ → SUPERSEDED by DEC-184: migration 0001 is now a baseline (`SELECT 1`); PostGIS deferred to M2 (G-061). Managed Postgres only for launch (DEC-186, no Redis).
 - [x] `node-pg-migrate`, plain-SQL migrations; 0001 is a baseline that runs on any PostgreSQL (DEC-184)
 - [x] Generated types (`pnpm db:types`) from the live schema; CI regenerates + fails on drift
 - [x] One repository per table (SQL only in `**/infra/*.repository.ts`)
@@ -69,7 +69,7 @@
 - [x] One validation entry point rejecting unknown fields
 - [x] One authority resolver (only place answering "may this actor do this")
 - [x] One structured logger; lint fails on `console.log`
-- [x] `/health` returns db + redis status; 503 when either is down
+- [x] `/health` returns db status; 503 when down (Redis removed, DEC-186)
 - [x] BREAK: stop db → /health 503; raw Error → same shape; `console.log` → lint fails
 - [ ] Boundary check (P0.9) passes over the empty modules
 
@@ -107,12 +107,12 @@
 ## P0.11 — Continuous integration
 
 - [x] GitHub Actions: frozen install → `pnpm verify` → build both images; PRs blocked on green
-- [o] Postgres+PostGIS as a CI service container (done in verify-db); Redis service container lands with the first Redis-dependent test (M3).
+- [o] PostgreSQL as a CI service container (done in verify-db); PostGIS deferred (DEC-184).
 - [o] Red-PR block + branch protection = OWNER action in GitHub settings (documented below); the workflow itself runs on every push/PR.
 
 ## P0.12 — Deploy the empty skeleton to Railway
 
-- [x] Services `api`, `web`, `postgres+postgis`, `redis`; private networking; deploy from Dockerfile
+- [x] Services `api`, `web`, `postgres`; private networking; deploy from Dockerfile (DEC-186)
 - [x] 12-factor config; no Railway-specific SDK anywhere; volumes + scheduled backups
 - [x] `infra/railway/README.md` records every variable, service, procedure
 - [ ] Health verified from outside and inside the private network

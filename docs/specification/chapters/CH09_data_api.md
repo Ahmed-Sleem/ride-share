@@ -1,5 +1,10 @@
 # CHAPTER 9 — Data Model & API Contract
 
+> **Architecture revision (DEC-186/DEC-184, 2026-08-17):** PostgreSQL is the only stateful
+> dependency (Redis removed; realtime = LISTEN/NOTIFY, queues = SKIP LOCKED); PostGIS deferred
+> to M2. Any Redis/PostGIS reference in this chapter is superseded.
+
+
 Status: DRAFT v2 — updated for the ROUTE-TICKET model (DEC-114..120). Implements DEC-088..091 and every entity decision from CH1-CH6.
 Depends on: CH1 (domain), CH2 (roles), CH3 (states), CH4 (geo), CH5 (algorithm), CH6 (money)
 This is the chapter a developer builds directly from.
@@ -282,7 +287,8 @@ be verified without the server, and promising an unavailable seat is worse than 
 - Device samples GPS adaptively: high frequency near a stop, during pickup, or when a rider is
   actively watching; low frequency on long stretches.
 - Points are **batched** and compressed before sending; a single request may carry several samples.
-- Server writes to Redis (hot, for matching and live view) and appends to a durable store for
+- Server updates an in-process last-known-location store (hot, for matching and live view) and
+  appends to the PostgreSQL movement store for
   analytics and disputes (DEC-050).
 - Map-matching snaps points to roads before display (reduces jitter, improves ETA quality).
 - Battery guard: if the device reports low battery, sampling reduces further and the driver is

@@ -1,5 +1,10 @@
 # CHAPTER 5 — The Matching Algorithm
 
+> **Architecture revision (DEC-186/DEC-184, 2026-08-17):** PostgreSQL is the only stateful
+> dependency (Redis removed; realtime = LISTEN/NOTIFY, queues = SKIP LOCKED); PostGIS deferred
+> to M2. Any Redis/PostGIS reference in this chapter is superseded.
+
+
 Status: DRAFT v2 — rewritten for the ROUTE-TICKET model (DEC-114..120). Implements DEC-072..DEC-076. Evidence: R4, R7, R8, R9.
 Depends on: CH1 (domain), CH3 (states), CH4 (geography), CH6a (pricing)
 
@@ -52,7 +57,8 @@ valid and shippable. The optimiser is always optional.
 - Every Stop, Journey position and rider location is indexed to an H3 cell (R9.2).
 - Candidate journeys/vehicles are gathered from the rider's cell plus a k-ring of neighbours.
 - The ring expands progressively if too few candidates are found, up to a configured maximum.
-- Redis holds the hot geospatial index; PostGIS holds the authoritative data (A4.5).
+- An in-process spatial index (H3-partitioned, rebuilt from PostgreSQL) is the hot geospatial
+  index; PostgreSQL holds the authoritative data (A4.5, revised by DEC-184/DEC-186).
 - **Config:** `H3Resolution`, `InitialKRing`, `MaxKRing`, `MinCandidates`.
 
 ## 5.3 Stage 1 — Feasibility gate (hard constraints, no scoring)
@@ -149,7 +155,7 @@ capability exists and can be enabled without a code change if driver churn becom
 |---|---|
 | Routing engine (OSRM) slow/down | Fall back to cached corridor matrices, then to Haversine × a calibrated factor; mark ETAs as approximate |
 | Analytics pipeline lagging | Matching continues untouched; analytics is never on the hot path |
-| Redis geo index stale | Fall back to PostGIS query; slower but correct |
+| In-process geo index stale | Fall back to a PostgreSQL query; slower but correct |
 | Optimiser unavailable | Stage 2 only; service continues at reduced efficiency |
 | Everything degraded | Still serve stop-to-stop fixed-route journeys, which need no live optimisation |
 

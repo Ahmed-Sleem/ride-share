@@ -35,7 +35,7 @@ docker compose -f infra/compose/production.yml up -d --build
 
 ```bash
 infra/scripts/smoke.sh http://localhost:8080     # the interface
-curl -fsS http://localhost:3000/healthz          # api: db+redis up
+curl -fsS http://localhost:3000/healthz          # api: db up
 ```
 
 ## 5. Point DNS and move traffic

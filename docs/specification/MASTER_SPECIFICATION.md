@@ -7,6 +7,16 @@
 
 ---
 
+## ARCHITECTURE REVISIONS (supersede inline text where they differ)
+
+- **DEC-186 (2026-08-17) — PostgreSQL is the ONLY stateful dependency.** Redis is removed
+  entirely. Realtime = PostgreSQL `LISTEN/NOTIFY`; queues = `SELECT … FOR UPDATE SKIP LOCKED`;
+  sessions and read models = tables; the matching hot index = an in-process H3 index rebuilt from
+  PostgreSQL. Where a chapter still mentions Redis as a runtime component, that text is superseded.
+- **DEC-184 (2026-08-17) — PostGIS deferred to M2.** Launch runs Railway managed PostgreSQL
+  (no PostGIS); geo returns at M2 via a PostGIS-capable host or numeric lat/lng + OSRM/geocoder.
+---
+
 ## HOW TO READ THIS DOCUMENT
 
 | If you are... | Read |
@@ -1187,7 +1197,8 @@ valid and shippable. The optimiser is always optional.
 - Every Stop, Journey position and rider location is indexed to an H3 cell (R9.2).
 - Candidate journeys/vehicles are gathered from the rider's cell plus a k-ring of neighbours.
 - The ring expands progressively if too few candidates are found, up to a configured maximum.
-- Redis holds the hot geospatial index; PostGIS holds the authoritative data (A4.5).
+- An in-process spatial index (H3-partitioned, rebuilt from PostgreSQL) is the hot geospatial
+  index; PostgreSQL holds the authoritative data (A4.5, revised by DEC-184/DEC-186).
 - **Config:** `H3Resolution`, `InitialKRing`, `MaxKRing`, `MinCandidates`.
 
 ## 5.3 Stage 1 — Feasibility gate (hard constraints, no scoring)
@@ -1284,7 +1295,7 @@ capability exists and can be enabled without a code change if driver churn becom
 |---|---|
 | Routing engine (OSRM) slow/down | Fall back to cached corridor matrices, then to Haversine × a calibrated factor; mark ETAs as approximate |
 | Analytics pipeline lagging | Matching continues untouched; analytics is never on the hot path |
-| Redis geo index stale | Fall back to PostGIS query; slower but correct |
+| In-process geo index stale | Fall back to a PostgreSQL query; slower but correct |
 | Optimiser unavailable | Stage 2 only; service continues at reduced efficiency |
 | Everything degraded | Still serve stop-to-stop fixed-route journeys, which need no live optimisation |
 
@@ -1854,9 +1865,10 @@ DEC-099, DEC-110. Excludes hiring and timelines per DEC-111 / DEC-112.
               API (NestJS modular monolith, CH8a)
        ┌──────────────┼───────────────────────────────┐
        |              |                               |
-  PostgreSQL 16    Redis                        Queues / workers
-  + PostGIS        geo index, cache,            matching tick loop,
-  (+ replica)      pub/sub, seat locks          overnight optimiser (OR-Tools),
+  PostgreSQL 16    In-process store            Queues (PostgreSQL
+  (+ replica)      geo index, last-known        SKIP LOCKED), workers:
+                   state, live updates          matching tick loop,
+                                                overnight optimiser (OR-Tools),
        |                                        notifications, payouts, reconciliation
   Object storage (documents, stop photos)  ·  Cold storage (aged movement data)
   OSRM (self-hosted routing + matrices)    ·  Payment providers (Paymob et al.)
@@ -1885,7 +1897,7 @@ Africa/Cairo, or a hosting region.
 ## 8.7 Failure behaviour (R9.8, CH5 §5.9)
 The system degrades in quality, never into failure:
 OSRM down → cached matrices → Haversine × calibration factor, ETAs marked approximate.
-Redis stale → PostGIS fallback, slower but correct.
+In-process index stale → PostgreSQL fallback, slower but correct.
 Optimiser down → insertion heuristic only.
 Analytics lagging → never on the hot path; matching unaffected.
 Full degradation → fixed-route stop-to-stop journeys still operate.
@@ -2424,7 +2436,8 @@ be verified without the server, and promising an unavailable seat is worse than 
 - Device samples GPS adaptively: high frequency near a stop, during pickup, or when a rider is
   actively watching; low frequency on long stretches.
 - Points are **batched** and compressed before sending; a single request may carry several samples.
-- Server writes to Redis (hot, for matching and live view) and appends to a durable store for
+- Server updates an in-process last-known-location store (hot, for matching and live view) and
+  appends to the PostgreSQL movement store for
   analytics and disputes (DEC-050).
 - Map-matching snaps points to roads before display (reduces jitter, improves ETA quality).
 - Battery guard: if the device reports low battery, sampling reduces further and the driver is
@@ -3928,7 +3941,7 @@ Self-managed VPS, region as configuration, database self-hosted with replica + o
         |
 [ Load balancer ] -> API (NestJS, modular monolith, N containers)
                        |-- PostgreSQL 16 + PostGIS  (primary)  --> streaming replica
-                       |-- Redis (geo index, cache, queues, pub/sub)
+                       |-- In-process store (geo index, last-known state; rebuilt from PostgreSQL)
                        |-- OSRM (self-hosted routing + matrices)
                        |-- Optimiser service (Python + OR-Tools) — queue-driven
                        |-- Object storage (documents, stop photos) — encrypted
@@ -3953,7 +3966,7 @@ Self-managed VPS, region as configuration, database self-hosted with replica + o
 |---|---|---|
 | API containers | request volume | scales horizontally |
 | PostgreSQL primary + replica | data size, IOPS | the money ledger lives here |
-| Redis | active vehicles and riders | memory-bound |
+| In-process store | active vehicles and riders | memory-bound |
 | OSRM | city graph size | R5.1: self-hosting avoids ~$510/day Google matrix costs |
 | Optimiser | overnight VRP runtime | can run on a cheap burst machine |
 | Object storage | documents + stop photos | grows steadily |
@@ -5347,12 +5360,12 @@ honestly that nothing is available.
 
 ### R9.7 The double-dispatch problem is a real correctness hazard
 "What if two ride requests simultaneously try to assign the same driver?" Recommended pattern:
-ephemeral lock (Redis) + durable compare-and-set + canonical event; keep the assignment workflow in
+PostgreSQL advisory lock (pg_advisory_xact_lock) + durable compare-and-set + canonical event; keep the assignment workflow in
 a durable workflow engine so timers and state survive restarts; make all transitions idempotent.
 => Directly supports INV-16 (serialised transitions) and the event-log backbone (CH8a §8a.5).
 
 ### R9.8 Degradation strategy
-Hot path must survive dependency failure: keep last-known driver state in a Redis TTL cache so
+Hot path must survive dependency failure: keep last-known driver state in the in-process store (rebuilt from PostgreSQL) so
 matching continues if the streaming pipeline lags; analytics consumers may lag without breaking
 matching; apply backpressure at the gateway.
 => Matching must never depend on analytics, and must degrade to "good enough" rather than fail.

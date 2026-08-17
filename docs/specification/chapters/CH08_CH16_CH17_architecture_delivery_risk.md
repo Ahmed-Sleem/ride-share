@@ -1,5 +1,10 @@
 # CHAPTERS 8, 16, 17 — System Architecture, Delivery Plan & Risk Register
 
+> **Architecture revision (DEC-186/DEC-184, 2026-08-17):** PostgreSQL is the only stateful
+> dependency (Redis removed; realtime = LISTEN/NOTIFY, queues = SKIP LOCKED); PostGIS deferred
+> to M2. Any Redis/PostGIS reference in this chapter is superseded.
+
+
 Status: DRAFT v1. Implements DEC-009, DEC-069, DEC-070, DEC-085, DEC-086, DEC-088..091,
 DEC-099, DEC-110. Excludes hiring and timelines per DEC-111 / DEC-112.
 
@@ -35,9 +40,10 @@ DEC-099, DEC-110. Excludes hiring and timelines per DEC-111 / DEC-112.
               API (NestJS modular monolith, CH8a)
        ┌──────────────┼───────────────────────────────┐
        |              |                               |
-  PostgreSQL 16    Redis                        Queues / workers
-  + PostGIS        geo index, cache,            matching tick loop,
-  (+ replica)      pub/sub, seat locks          overnight optimiser (OR-Tools),
+  PostgreSQL 16    In-process store            Queues (PostgreSQL
+  (+ replica)      geo index, last-known        SKIP LOCKED), workers:
+                   state, live updates          matching tick loop,
+                                                overnight optimiser (OR-Tools),
        |                                        notifications, payouts, reconciliation
   Object storage (documents, stop photos)  ·  Cold storage (aged movement data)
   OSRM (self-hosted routing + matrices)    ·  Payment providers (Paymob et al.)
@@ -66,7 +72,7 @@ Africa/Cairo, or a hosting region.
 ## 8.7 Failure behaviour (R9.8, CH5 §5.9)
 The system degrades in quality, never into failure:
 OSRM down → cached matrices → Haversine × calibration factor, ETAs marked approximate.
-Redis stale → PostGIS fallback, slower but correct.
+In-process index stale → PostgreSQL fallback, slower but correct.
 Optimiser down → insertion heuristic only.
 Analytics lagging → never on the hot path; matching unaffected.
 Full degradation → fixed-route stop-to-stop journeys still operate.

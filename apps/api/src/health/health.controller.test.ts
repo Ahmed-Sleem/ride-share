@@ -1,4 +1,4 @@
-/* Health endpoint (P0.6): returns 503 — not 200 — when its dependencies are
+/* Health endpoint (P0.6): returns 503 — not 200 — when its database is
    unreachable. Uses Fastify's inject() so no network is needed. */
 import 'reflect-metadata';
 import { test } from 'node:test';
@@ -16,7 +16,6 @@ async function boot(): Promise<NestFastifyApplication> {
         provide: CONFIG,
         useValue: {
           DATABASE_URL: 'postgres://127.0.0.1:1/none',
-          REDIS_URL: 'redis://127.0.0.1:1',
         },
       },
     ],
@@ -26,7 +25,7 @@ async function boot(): Promise<NestFastifyApplication> {
   return app;
 }
 
-test('health reports 503 with db and redis down when unreachable', async () => {
+test('health reports 503 with db down when unreachable', async () => {
   const app = await boot();
   const res = await app.inject({ method: 'GET', url: '/healthz' });
   assert.equal(res.statusCode, 503);
@@ -34,7 +33,6 @@ test('health reports 503 with db and redis down when unreachable', async () => {
   assert.equal(body.ok, false);
   assert.equal(body.service, 'api');
   assert.equal(body.db, 'down');
-  assert.equal(body.redis, 'down');
   await app.close();
 });
 

@@ -8,7 +8,6 @@ import { loadEnv } from './env.js';
 // the secret scanner must stay clean on this tree).
 const valid = {
   DATABASE_URL: 'postgres://localhost:5432/rideshare',
-  REDIS_URL: 'redis://localhost:6379',
   JWT_SECRET: 'a'.repeat(32),
 };
 
@@ -24,7 +23,7 @@ test('missing required variables are named, all of them', () => {
     () => loadEnv({}),
     (err: Error) => {
       const msg = err.message;
-      return /DATABASE_URL/.test(msg) && /REDIS_URL/.test(msg) && /JWT_SECRET/.test(msg);
+      return /DATABASE_URL/.test(msg) && /JWT_SECRET/.test(msg);
     }
   );
 });

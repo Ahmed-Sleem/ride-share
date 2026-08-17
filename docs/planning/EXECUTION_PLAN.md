@@ -41,7 +41,7 @@ as product. The approved GUI is the front door; it gets wired to the real system
 | Payments | One provider interface; Paymob-class card rails + exact cash sequence; double-entry ledger | DEC-077…081, CH06 |
 | Web UI | **Decision below (M0)** — recommended: keep the approved single-file GUI as the real client | this plan |
 | Mobile | Capacitor wrapping the web app (Android APK) | DEC-176 |
-| Deploy | Railway (managed Postgres + managed Redis + api + web; OSRM later), GitHub Actions CI, VPS later | DEC-104/105, CH15, DEC-184 |
+| Deploy | Railway (managed Postgres + api + web; OSRM later), GitHub Actions CI, VPS later | DEC-104/105, CH15, DEC-184, DEC-186 |
 
 ## 3. Target repository layout
 
@@ -73,8 +73,7 @@ ride-share/
 |---|---|---|---|
 | `api` | NestJS backend | Dockerfile (or Nixpacks) | 3000 → `GET /healthz` |
 | `web` | the GUI (static) | Dockerfile (nginx) or static build | 80 → `GET /` |
-| `db` | PostgreSQL (managed, DEC-184) | **+ New → Database → PostgreSQL** | managed, exposes `DATABASE_URL` |
-| `redis` | managed Redis | **+ New → Database → Redis** | managed, exposes `REDIS_URL` |
+| `db` | PostgreSQL (managed — the ONLY stateful dependency, DEC-184/DEC-186) | **+ New → Database → PostgreSQL** | managed, exposes `DATABASE_URL` |
 | `osrm` | routing engine, one instance per city (DEC-163, M2+) | `osrm/osrm-backend` image, preprocessed graph volume | 5000 → `GET /route/v1/…` |
 
 - Railway connects to the **private** GitHub repo; every push to `main` rebuilds and redeploys [docs](https://docs.railway.com/services).

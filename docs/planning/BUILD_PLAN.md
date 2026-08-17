@@ -269,7 +269,7 @@ Non-negotiables in the runner stage:
 - A `HEALTHCHECK` hitting the app's own health endpoint.
 - `.dockerignore` excluding `node_modules`, `.git`, `.env`, `dist`, `.turbo`.
 
-`docker-compose.yml` at the root runs the whole system locally: api, web, postgres+postgis, redis,
+`docker-compose.yml` at the root runs the whole system locally: api, web, postgres,
 osrm. **The same images that run locally run in production**, and the same OSRM image runs on the
 platform or on a plain host with only its URL differing (DEC-173). This is the portability guarantee —
 the deployment platform receives a container, not a repository, so replacing the platform is
@@ -394,7 +394,7 @@ Cross-cutting, each implemented **once** (§0.3, §8.2):
 - **One authority resolver** — the only place that answers "may this actor do this". §8.2 is
   explicit that a second copy is a defect *even while its answer agrees*.
 - **One structured logger.** No `console.log` in production paths (§9 rule 9), enforced by lint.
-- `/health` returning process, database and Redis status.
+- `/health` returning process and database status.
 
 **HOW**
 ```bash
@@ -404,7 +404,7 @@ curl -s localhost:3000/health | jq
 ```
 
 **TEST**
-1. `/health` returns 200 with database and Redis both `ok`, and returns 503 when either is down.
+1. `/health` returns 200 with the database `ok`, and returns 503 when it is down.
 2. A thrown domain error and an unexpected error both produce the same response *shape*, differing
    only in code.
 3. Every error response carries a `request_id` that appears in the logs for that request.
@@ -613,7 +613,7 @@ build both container images. Merges are blocked on green.
 
 - The workflow runs **the same `pnpm verify`** a developer runs locally. Not a parallel list of
   steps that can drift from it — that would violate §0.3 as surely as a duplicated colour.
-- Postgres+PostGIS and Redis run as service containers so integration tests are real, not mocked.
+- PostgreSQL runs as a service container so integration tests are real, not mocked.
 - Turborepo remote caching configured if available; correctness never depends on the cache.
 
 **TEST**
@@ -645,7 +645,7 @@ Deploy the skeleton **before it does anything**, so the deployment path is prove
 trivial to debug. The first deployment of a large application is where a week disappears; the first
 deployment of a health endpoint is where an afternoon does.
 
-- Services: `api`, `web`, `postgres+postgis` (own image, R19.2), `redis`. Private networking
+- Services: `api`, `web`, `postgres` (managed, DEC-184). Private networking
   between them; only `web` and `api` are publicly reachable.
 - Deploy from the **Dockerfile**, not from a platform buildpack. This is the portability decision:
   the platform receives a container, so replacing the platform means running the same container
@@ -665,7 +665,7 @@ inconveniences:**
 
 **TEST**
 1. Public URL serves the web health page over HTTPS.
-2. API health returns database and Redis both `ok` **from inside the deployed environment**.
+2. API health returns database `ok` **from inside the deployed environment**.
 3. A deliberate bad deploy rolls back and the previous version continues serving.
 4. **A backup is restored into a scratch database and queried** (DEC-164). Not "backups are
    enabled" — restored, and read.

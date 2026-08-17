@@ -72,7 +72,7 @@ can fail:
 pnpm --filter @ride-share/web verify
 ```
 
-To run the full stack (api + web + postgres + redis) as containers:
+To run the full stack (api + web + postgres) as containers:
 
 ```bash
 docker compose up --build

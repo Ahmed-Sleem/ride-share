@@ -242,3 +242,24 @@ output) — see the engineering standard §3.3 and §4.
   clean); `pnpm db:types` (0 tables); `pnpm verify` green (9 repo checks, 198 web, 21 api).
 - Self-check: the migration machinery and all no-ORM guard-rails are proven on the SAME database
   surface production uses — no PostGIS anywhere in the committed schema.
+
+## 2026-08-17 — DEC-186: PostgreSQL-only (Redis removed)
+
+- What: removed Redis from the entire system per owner direction (single stateful dependency, no
+  adapter). Health now checks PostgreSQL only. Realtime/queues/sessions re-specified as Postgres-native
+  (LISTEN/NOTIFY, SKIP LOCKED, tables). Decision DEC-186 + scale-monitor G-062 recorded; DEC-187
+  confirms the no-ORM guard-rails are unchanged.
+- Files: apps/api/src/{config/env.ts,config/env.test.ts,health/health.controller.ts,
+  health/health.controller.test.ts,package.json}, pnpm-workspace.yaml, docker-compose.yml,
+  .env.example, .github/workflows/ci.yml, infra/{compose/production.yml,MIGRATION.md,README.md,
+  railway/README.md}, README.md, docs/planning/{EXECUTION_PLAN.md,BUILD_PLAN.md},
+  docs/specification/{MASTER_SPECIFICATION.md,chapters/CH05,CH08_CH16_CH17,CH09,CH13},
+  docs/decisions/{DECISIONS_REGISTER.md,OPEN_ITEMS.md}, docs/process/checklists/M0_foundations.md.
+- Tests: env tests updated (2 required vars now DATABASE_URL + JWT_SECRET; missing-vars names both);
+  health e2e updated (db-only; 503 when down). 21 api tests green.
+- Verified: `pnpm verify` exit 0; `pnpm db:verify` green; LIVE proof — `/healthz` returns
+  `{"ok":true,"service":"api","db":"up"}` with NO redis field, and `{"ok":false,"db":"down"}` [503]
+  with the database stopped. Zero Redis references remain in code, config, or active design docs
+  (historical decision rows and research stay, per append-only rules).
+- Self-check: fully wired — the runtime path has no Redis import, dependency, env var, or health
+  check; the spec's architecture statements match the code.

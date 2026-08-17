@@ -1,5 +1,10 @@
 # CHAPTERS 13, 14, 15 — Privacy, Quality & Infrastructure
 
+> **Architecture revision (DEC-186/DEC-184, 2026-08-17):** PostgreSQL is the only stateful
+> dependency (Redis removed; realtime = LISTEN/NOTIFY, queues = SKIP LOCKED); PostGIS deferred
+> to M2. Any Redis/PostGIS reference in this chapter is superseded.
+
+
 Status: DRAFT v1. Implements DEC-030, DEC-050, DEC-071, DEC-094, DEC-104..108.
 
 ===============================================================================
@@ -111,7 +116,7 @@ Self-managed VPS, region as configuration, database self-hosted with replica + o
         |
 [ Load balancer ] -> API (NestJS, modular monolith, N containers)
                        |-- PostgreSQL 16 + PostGIS  (primary)  --> streaming replica
-                       |-- Redis (geo index, cache, queues, pub/sub)
+                       |-- In-process store (geo index, last-known state; rebuilt from PostgreSQL)
                        |-- OSRM (self-hosted routing + matrices)
                        |-- Optimiser service (Python + OR-Tools) — queue-driven
                        |-- Object storage (documents, stop photos) — encrypted
@@ -136,7 +141,7 @@ Self-managed VPS, region as configuration, database self-hosted with replica + o
 |---|---|---|
 | API containers | request volume | scales horizontally |
 | PostgreSQL primary + replica | data size, IOPS | the money ledger lives here |
-| Redis | active vehicles and riders | memory-bound |
+| In-process store | active vehicles and riders | memory-bound |
 | OSRM | city graph size | R5.1: self-hosting avoids ~$510/day Google matrix costs |
 | Optimiser | overnight VRP runtime | can run on a cheap burst machine |
 | Object storage | documents + stop photos | grows steadily |
