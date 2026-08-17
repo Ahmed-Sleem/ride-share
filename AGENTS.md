@@ -19,6 +19,11 @@
   variables in production). `.env.example` carries names only, never values.
 - **One definition of everything.** A value, component, or rule appears once
   (§0.3). If a change needs edits in more than one place, that is a defect.
+- **Design tokens live in one place:** `apps/web/src/styles/shell.html`, the
+  `:root` block (and `[data-theme="dark"]`). Colour literals anywhere else —
+  component CSS, inline styles, JS — fail `pnpm verify` (`check-tokens.sh`).
+  Colour is enforced first; spacing/typography enforcement follows once the
+  token scale is complete (R19.5).
 - **The schema changes only through migrations** (`migrations/`,
   `node-pg-migrate`). Never a manual `psql` alteration in any environment.
 - **SQL is parameterised** and lives only in repository modules — enforced by

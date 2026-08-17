@@ -183,3 +183,32 @@ output) — see the engineering standard §3.3 and §4.
   429; redis shutdown → 503 → restart → 200.
 - Self-check: fully wired — security is applied ONCE at bootstrap/root module; feature modules get
   the same filter/pipe/guard/authority with no per-route re-implementation.
+
+## 2026-08-17 — M0.7–M0.11 (P0.7–P0.11): token/boundary/authority guards, axe scan, CI
+
+- What: the remaining Phase 0 guard-rails, each wired into `pnpm verify` and each observed
+  failing for the right reason.
+  - P0.7: axe-core scan (`apps/web/tests/a11y.test.js`) over 7 representative screens × EN/AR —
+    14/14, zero serious/critical violations. RTL, dark mode and bidi isolation were already proven
+    by the GUI suite. The shared theme object's mobile half is deferred to P7 (one definition, two
+    consumers — the Capacitor app reads the same `:root` tokens).
+  - P0.8: `scripts/check-tokens.sh` — colour literals only in the theme file (token blocks); three
+    break cases caught (CSS rule inside `<style>`, inline style object, template literal).
+  - P0.9: `scripts/check-boundaries.mjs` — cross-module imports only through `contracts/`,
+    `domain/` never imports `infra/`, no module cycles, packages never import apps. Tooling decision
+    recorded in the file: a dependency-free Node script instead of dependency-cruiser (§16
+    verify-before-adopting) — the rules are enforced from import paths, which is the same
+    information. Three break cases caught (deep import, domain→infra, contracts cycle).
+  - P0.10: `scripts/check-authority.sh` (role comparisons only in the resolver) and
+    `scripts/check-hide-not-disable.sh` (no permission-based `dis:`/`disabled:`) — both break cases
+    caught. The important break: an all-permissive resolver makes 5 authority tests fail (proved),
+    confirming the tests genuinely test authority (§7.0). `<PermissionGate>` lands in M1.
+  - P0.11: CI workflow (verify, verify-gui, verify-db with postgis service, images with non-root
+    check) validated as YAML; branch protection + the red-PR observation are owner actions in
+    GitHub settings (documented in the checklist).
+- Files: scripts/{check-tokens.sh,check-boundaries.mjs,check-authority.sh,check-hide-not-disable.sh},
+  scripts/verify-repo.sh (9 checks), apps/web/tests/a11y.test.js, AGENTS.md, catalog + axe-core,
+  apps/web/package.json.
+- Verified: `pnpm verify` green — 9 repo checks (workspace 7, secrets 191, env-doc, sql-location 34,
+  sql-injection 34, tokens 7, authority 13, hide-not-disable 7, boundaries 22), web 198 unit +
+  14 axe, api 21 tests, typecheck + lint clean.

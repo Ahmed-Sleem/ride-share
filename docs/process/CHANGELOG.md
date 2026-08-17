@@ -276,3 +276,14 @@
   "why" READMEs. 21 tests green; all break cases observed failing for the right reason.
 - Sandbox: rebuilt with native Postgres 17 + PostGIS + Redis (Docker not available this turn);
   live API proof recorded (200/503/429/404/headers).
+
+## 2026-08-17 — M0.7–M0.11: remaining guard-rails (tokens, boundaries, authority), axe scan, CI
+
+- check-tokens (colour only, R19.5 scope), check-boundaries (contracts-only, domain≠infra, no
+  cycles, shared≠apps), check-authority + check-hide-not-disable — all in `pnpm verify`, all break
+  cases observed failing for the right reason. All-permissive resolver → 5 authority tests fail
+  (the §7.0 proof). axe-core scan added: 14/14 across 7 screens × EN/AR.
+- CI workflow validated (verify, verify-gui, verify-db + postgis service, images + non-root).
+  Branch protection + red-PR observation = owner actions in GitHub settings (recorded).
+- Phase 0 is now only missing the deploy (P0.12) and portability (P0.13) — plus two owner-gated
+  items (branch protection, Railway connection).

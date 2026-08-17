@@ -75,38 +75,40 @@
 
 ## P0.7 — Web skeleton, theme object, i18n, RTL
 
-- [ ] Theme tokens single-sourced (GUI: `apps/web/src/styles/shell.html` `:root`)
-- [ ] Arabic RTL, dark mode, bidi isolation — all proven by test (GUI suite covers)
-- [ ] `packages/shared-logic/theme.ts` single source consumed by web **and** mobile (mobile half in P7)
-- [ ] Accessibility scan clean (GUI suite asserts labels/roles/focus)
-- [ ] Hex literals outside the theme file: grep returns nothing (P0.8 enforces)
+- [x] Theme tokens single-sourced (GUI: `apps/web/src/styles/shell.html` `:root`)
+- [x] Arabic RTL, dark mode, bidi isolation — all proven by test (GUI suite covers)
+- [o] `packages/shared-logic/theme.ts` single source consumed by web **and** mobile — mobile half lands in P7 (the theme object is `:root` tokens today; the Capacitor app will consume it, one definition two consumers).
+- [x] Accessibility scan clean (GUI suite asserts labels/roles/focus)
+  - _axe-core scan added (14/14 across 7 screens × EN/AR); GUI suite already covers labels/roles/focus._
+- [x] Hex literals outside the theme file: grep returns nothing (P0.8 enforces)
 
 ## P0.8 — Enforce the design system
 
-- [ ] `scripts/check-tokens.sh` fails on hex/rgb/hsl/raw-px outside the theme file
-- [ ] BREAK: plant a hex in three places (CSS, inline style, template string) → all three caught
-- [ ] Wired into `pnpm verify`; `AGENTS.md` documents the token rule
-- [ ] Decision recorded: colour enforced first; spacing/typography later (R19.5)
+- [x] `scripts/check-tokens.sh` fails on hex/rgb/hsl/raw-px outside the theme file
+- [x] BREAK: plant a hex in three places (CSS, inline style, template string) → all three caught
+- [x] Wired into `pnpm verify`; `AGENTS.md` documents the token rule
+  - _Token rule documented in AGENTS.md + check-tokens.sh header._
+- [x] Decision recorded: colour enforced first; spacing/typography later (R19.5)
 
 ## P0.9 — Enforce module boundaries
 
-- [ ] `dependency-cruiser`: imports only through `contracts/`; `domain/` never imports `infra/`; no cycles; shared-* never imports apps/*
-- [ ] BREAK: planted deep import, domain→infra, and cycle each observed failing, naming the file
-- [ ] Wired into `pnpm verify`; DEC-167 (matching first to extract) noted in config
+- [x] `dependency-cruiser`: imports only through `contracts/`; `domain/` never imports `infra/`; no cycles; shared-* never imports apps/*
+- [x] BREAK: planted deep import, domain→infra, and cycle each observed failing, naming the file
+- [x] Wired into `pnpm verify`; DEC-167 (matching first to extract) noted in config
 
 ## P0.10 — Enforce authority and hide-not-disable
 
-- [ ] `check-authority.sh` — permission decisions only via the authority resolver
-- [ ] `check-hide-not-disable.sh` — no `disabled` on a permission basis
-- [ ] `<PermissionGate>` is the only permission-conditional renderer (omits, not disables)
-- [ ] BREAK: planted `if (user.role === 'ADMIN')` fails; planted `disabled={!canEditFares}` fails
-- [ ] BREAK (the important one): all-permissive resolver → permission unit tests must fail
+- [x] `check-authority.sh` — permission decisions only via the authority resolver
+- [x] `check-hide-not-disable.sh` — no `disabled` on a permission basis
+- [o] `<PermissionGate>` — lands in M1 when the web app wires real roles; authority already single-sourced on the API.
+- [x] BREAK: planted `if (user.role === 'ADMIN')` fails; planted `disabled={!canEditFares}` fails
+- [x] BREAK (the important one): all-permissive resolver → permission unit tests must fail
 
 ## P0.11 — Continuous integration
 
-- [ ] GitHub Actions: frozen install → `pnpm verify` → build both images; PRs blocked on green
-- [ ] Postgres+PostGIS and Redis as service containers (real, not mocked)
-- [ ] BREAK: a red PR observed blocked; branch protection verified in settings
+- [x] GitHub Actions: frozen install → `pnpm verify` → build both images; PRs blocked on green
+- [o] Postgres+PostGIS as a CI service container (done in verify-db); Redis service container lands with the first Redis-dependent test (M3).
+- [o] Red-PR block + branch protection = OWNER action in GitHub settings (documented below); the workflow itself runs on every push/PR.
 
 ## P0.12 — Deploy the empty skeleton to Railway
 

@@ -16,21 +16,36 @@ checks=(
   "scripts/check-env-example.sh"
   "scripts/check-sql-location.sh"
   "scripts/check-sql-injection.sh"
+  "scripts/check-tokens.sh"
+  "scripts/check-authority.sh"
+  "scripts/check-hide-not-disable.sh"
+)
+NODE_CHECKS=(
+  "scripts/check-boundaries.mjs"
 )
 
 fail=0
-for c in "${checks[@]}"; do
-  echo "▶ $c"
-  out="$(bash "$c" 2>&1)"; rc=$?
+run_check() { # name | command...
+  local name="$1"; shift
+  echo "▶ $name"
+  local out rc
+  out="$("$@" 2>&1)"; rc=$?
   printf '%s\n' "$out" | sed 's/^/   /'
   if [ $rc -ne 0 ]; then
-    echo "✗ FAIL: $c exited $rc"
+    echo "✗ FAIL: $name exited $rc"
     fail=1
   elif ! printf '%s\n' "$out" | grep -Eq 'examined [0-9]+'; then
-    echo "✗ FAIL: $c reported no examined-file count (silent green)"
+    echo "✗ FAIL: $name reported no examined-file count (silent green)"
     fail=1
   fi
+  [ $fail -eq 0 ] || return 1
+}
+for c in "${checks[@]}"; do
+  run_check "$c" bash "$c" || break
+done
+for c in "${NODE_CHECKS[@]}"; do
   [ $fail -eq 0 ] || break
+  run_check "$c" node "$c" || break
 done
 
 if [ $fail -ne 0 ]; then
