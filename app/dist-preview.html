@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E7C66">
+<meta name="description" content="Shared rides on fixed routes at a fixed price.">
+<title>Ride Share</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   RIDE SHARE — DESIGN SYSTEM
+   Every visual decision is defined exactly once, here. To change a value
+   everywhere in the product, edit one line in this block. (GUI rules §3)
+
+   BREAKPOINTS — Material 3 window size classes (m3.material.io/foundations/
+   layout/breakpoints). Chosen because they are the researched industry
+   standard, not invented for this project:
+     compact    <  600px   phone portrait          nav = bottom bar
+     medium     >= 600px   phone landscape/tablet  nav = collapsed rail
+     expanded   >= 840px   tablet landscape        nav = expanded rail
+     large      >= 1200px  desktop                 nav = expanded rail + panes
+     x-large    >= 1600px  ultrawide               content capped, centred
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  /* ── PRIMITIVES ─────────────────────────────────────────────────────────
+     Raw values. Never referenced by a component; only by semantic tokens.
+     Two-layer model per WCAG 2.2 palette guidance.                        */
+  --teal-50:#E6F2EF;  --teal-100:#C2E0D8; --teal-400:#17A98B; --teal-500:#0E7C66;
+  --teal-600:#0A5F4E; --teal-700:#07463A; --teal-900:#04231C;
+  --violet-50:#F1EDFE; --violet-100:#E0D8FD; --violet-300:#A48BFF;
+  --violet-400:#8B6DFA; --violet-500:#6D45E8; --violet-600:#5A32D4;
+  --violet-700:#43219E; --violet-900:#1E1145;
+  --ink-0:#FFFFFF; --ink-25:#FAFBFC; --ink-50:#F5F7F9; --ink-100:#EEF0F4;
+  --ink-150:#E4E8ED; --ink-200:#DFE4EA; --ink-300:#C4CCD6; --ink-400:#98A2B0;
+  --ink-500:#6B7684; --ink-600:#5B6472; --ink-700:#3D4550; --ink-800:#232A33;
+  --ink-850:#171B21; --ink-900:#151A21; --ink-950:#0F1216; --ink-1000:#0A0D11;
+  --green-500:#1E8E3E; --green-400:#3ECF6B; --green-50:#E8F5EC; --green-950:#12291B;
+  --amber-500:#B26A00; --amber-400:#FFB020; --amber-50:#FDF3E2; --amber-950:#2E2410;
+  --red-500:#C62828;   --red-400:#FF6B6B;   --red-50:#FCEBEA;   --red-950:#2E1717;
+  --blue-500:#1B62D6;  --blue-400:#5D95F5;  --blue-50:#E9F0FC;  --blue-950:#141F33;
+
+  /* ── SEMANTIC: SURFACES ─────────────────────────────────────────────── */
+  --bg-base:var(--ink-0); --bg-raised:var(--ink-50); --bg-sunken:var(--ink-100);
+  --bg-inset:var(--ink-150); --bg-page:var(--ink-100);
+
+  /* ── SEMANTIC: TEXT ─────────────────────────────────────────────────── */
+  --text-primary:var(--ink-900); --text-secondary:var(--ink-600);
+  --text-muted:var(--ink-500); --text-inverse:var(--ink-0);
+
+  /* ── SEMANTIC: BRAND + ACCENT ───────────────────────────────────────────
+     PRIMARY  teal    — the act of travelling: book, claim, confirm, go.
+     ACCENT   violet  — value and continuity: subscriptions, promotions,
+                        recommendations, the walking leg of a journey.
+     Two roles, never interchangeable. A violet button never means "go";
+     a teal surface never means "saving". This is what keeps an accent
+     colour meaningful rather than decorative.                            */
+  --brand:var(--teal-500); --brand-hover:var(--teal-600);
+  --brand-soft:var(--teal-50); --brand-border:var(--teal-100);
+  --on-brand:var(--ink-0);
+  --accent:var(--violet-500); --accent-hover:var(--violet-600);
+  --accent-soft:var(--violet-50); --accent-border:var(--violet-100);
+  --on-accent:var(--ink-0); --accent-text:var(--violet-600);
+
+  /* route line stays blue: it is a map convention, not brand expression */
+  --route:var(--blue-500); --walk:var(--violet-400);
+
+  /* ── SEMANTIC: STATUS ───────────────────────────────────────────────── */
+  --ok:var(--green-500); --ok-bg:var(--green-50);
+  --warn:var(--amber-500); --warn-bg:var(--amber-50);
+  --danger:var(--red-500); --danger-bg:var(--red-50);
+  --info:var(--blue-500); --info-bg:var(--blue-50);
+  --offline:var(--ink-600);
+
+  /* ── SEMANTIC: LINES + FOCUS ────────────────────────────────────────── */
+  --line:var(--ink-200); --line-strong:var(--ink-300);
+  --focus:var(--violet-500); --focus-width:2px; --focus-offset:2px;
+  --scrim:rgba(12,18,26,.5);
+
+  /* ── MAP ────────────────────────────────────────────────────────────── */
+  --map-land:var(--ink-100); --map-water:#C6DCEB; --map-park:#D9E9D2;
+  --map-road:var(--ink-0); --map-road-minor:var(--ink-50); --map-building:var(--ink-150);
+
+  /* ── FIXED (never themed — reason recorded) ─────────────────────────────
+     A boarding code must scan in dark mode; a knob needs contrast on both
+     track colours; white on a saturated fill is white in both themes.    */
+  --qr-paper:#FFFFFF; --qr-ink:#151A21; --knob:#FFFFFF; --on-solid:#FFFFFF;
+
+  /* ── RADII ──────────────────────────────────────────────────────────── */
+  --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-full:999px;
+
+  /* ── SPACING (4px base) ─────────────────────────────────────────────── */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px;
+  --s6:24px; --s7:32px; --s8:40px; --s9:48px; --s10:64px;
+
+  /* ── TYPE SCALE ─────────────────────────────────────────────────────────
+     --f-input is 16px and must never go below it: iOS Safari force-zooms
+     the viewport on focus of any field under 16px. That zoom cannot be
+     undone by the user and breaks the layout.                            */
+  --f-display:32px; --f-title:22px; --f-head:18px; --f-lg:16px;
+  --f-body:15px; --f-cap:13px; --f-micro:11px; --f-input:16px;
+  --lh-tight:1.2; --lh-snug:1.35; --lh-body:1.5;
+  --fw-normal:400; --fw-med:550; --fw-semi:650; --fw-bold:750;
+
+  /* ── CONTROL SIZES ──────────────────────────────────────────────────────
+     44px is the WCAG 2.2 / platform minimum touch target.
+     56px is the driver minimum: gloved hands, moving vehicle, sunlight.   */
+  --tap:44px; --tap-sm:36px; --tap-driver:56px;
+  --icon-sm:16px; --icon-md:20px; --icon-lg:24px;
+
+  /* ── LAYOUT ─────────────────────────────────────────────────────────── */
+  --rail-collapsed:80px; --rail-expanded:248px;
+  --content-max:840px;      /* reading measure for single-pane content */
+  --shell-max:1600px;       /* beyond x-large the shell stops growing  */
+  --topbar-h:60px; --dock-h:64px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+
+  /* ── ELEVATION ──────────────────────────────────────────────────────── */
+  --sh-1:0 1px 2px rgba(16,24,40,.05);
+  --sh-2:0 2px 4px rgba(16,24,40,.04),0 10px 20px -6px rgba(16,24,40,.09);
+  --sh-3:0 4px 10px rgba(16,24,40,.06),0 24px 44px -14px rgba(16,24,40,.18);
+
+  /* ── LAYERS (named, so no arbitrary z-index appears in a component) ─── */
+  --z-base:0; --z-sticky:10; --z-nav:30; --z-scrim:55; --z-sheet:60; --z-toast:80;
+
+  /* ── MOTION ─────────────────────────────────────────────────────────── */
+  --ease:cubic-bezier(.2,.7,.3,1); --fast:140ms; --med:240ms;
+}
+
+[data-theme="dark"]{
+  --bg-base:var(--ink-950); --bg-raised:var(--ink-850); --bg-sunken:var(--ink-1000);
+  --bg-inset:var(--ink-800); --bg-page:var(--ink-1000);
+  --text-primary:#F2F5F8; --text-secondary:#9AA5B2; --text-muted:#7C8794;
+  --text-inverse:var(--ink-950);
+  --brand:var(--teal-400); --brand-hover:#12C79E;
+  --brand-soft:#10312A; --brand-border:#17493D; --on-brand:var(--teal-900);
+  --accent:var(--violet-300); --accent-hover:#B9A5FF;
+  --accent-soft:#241A46; --accent-border:#382A63;
+  --on-accent:var(--violet-900); --accent-text:var(--violet-300);
+  --route:var(--blue-400); --walk:var(--violet-300);
+  --ok:var(--green-400); --ok-bg:var(--green-950);
+  --warn:var(--amber-400); --warn-bg:var(--amber-950);
+  --danger:var(--red-400); --danger-bg:var(--red-950);
+  --info:var(--blue-400); --info-bg:var(--blue-950);
+  --offline:#9AA5B2;
+  --line:#252B33; --line-strong:#333B45;
+  --focus:var(--violet-300); --scrim:rgba(0,0,0,.66);
+  --map-land:#1A1F26; --map-water:#16303F; --map-park:#1B2A1E;
+  --map-road:#2A313A; --map-road-minor:#222831; --map-building:#232932;
+  --sh-1:0 1px 2px rgba(0,0,0,.4);
+  --sh-2:0 2px 4px rgba(0,0,0,.3),0 10px 20px -6px rgba(0,0,0,.45);
+  --sh-3:0 4px 10px rgba(0,0,0,.35),0 24px 44px -14px rgba(0,0,0,.6);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0;overflow:hidden}
+body{background:var(--bg-page);color:var(--text-primary);
+  font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
+       "Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic",sans-serif;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;text-size-adjust:100%;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit;margin:0}
+button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+:focus-visible{outline:var(--focus-width) solid var(--focus);
+  outline-offset:var(--focus-offset);border-radius:var(--r-xs)}
+:focus:not(:focus-visible){outline:none}
+.sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   APP SHELL — always exactly one viewport tall, never more, never less.
+   The shell is a flex row (rail | column). The column is topbar / search /
+   scroller / dock. Only .main scrolls; everything else is flex:none and so
+   is structurally incapable of scrolling away.
+   ══════════════════════════════════════════════════════════════════════════ */
+#root{height:100vh;height:100dvh;width:100%;display:flex}
+.app{flex:1;min-width:0;height:100%;display:flex;flex-direction:row;
+  background:var(--bg-base);position:relative;overflow:hidden;
+  max-width:var(--shell-max);margin-inline:auto;width:100%}
+.appcol{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;height:100%}
+
+/* ── top bar ──────────────────────────────────────────────────────────── */
+.topbar{flex:none;display:flex;align-items:center;gap:var(--s3);
+  min-height:var(--topbar-h);
+  padding-block:var(--s2);padding-block-start:calc(var(--s2) + var(--safe-t));
+  padding-inline:var(--s4);
+  border-bottom:1px solid var(--line);background:var(--bg-base);z-index:var(--z-sticky)}
+.topbar--plain{border-bottom:0}
+.topbar__title{font-size:var(--f-head);font-weight:var(--fw-bold);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:var(--lh-snug)}
+
+/* ── search band: directly under the top bar, above the scroller ──────── */
+.searchband{flex:none;padding:var(--s3) var(--s4);background:var(--bg-base);
+  border-bottom:1px solid var(--line);z-index:var(--z-sticky)}
+.searchband__inner{width:100%;max-width:var(--content-max);margin-inline:auto}
+.searchband--wide .searchband__inner{max-width:none}
+
+/* ── the one scrolling region ─────────────────────────────────────────── */
+.main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:var(--s4);padding-inline-start:calc(var(--s4) + var(--safe-l));
+  padding-inline-end:calc(var(--s4) + var(--safe-r));
+  display:flex;flex-direction:column;gap:var(--s4);
+  scrollbar-gutter:stable}
+.main__inner{width:100%;max-width:var(--content-max);margin-inline:auto;
+  display:flex;flex-direction:column;gap:var(--s4)}
+.main--wide .main__inner{max-width:none}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   NAVIGATION — one component, four presentations.
+   compact  : bottom bar        (thumb reach)
+   medium   : collapsed rail    (icon + tiny label)
+   expanded+: expanded rail     (icon + label, profile pinned to the bottom)
+   ══════════════════════════════════════════════════════════════════════════ */
+.nav{flex:none;display:flex;background:var(--bg-base);z-index:var(--z-nav)}
+.nav__brand{display:none}
+.nav__items{display:flex;flex:1;min-width:0}
+.nav__foot{display:none}
+.navitem{flex:1;min-width:0;min-height:var(--tap);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border-radius:var(--r-md);color:var(--text-secondary);padding:var(--s1);
+  transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.navitem:hover{color:var(--text-primary)}
+.navitem[aria-current="page"]{color:var(--brand)}
+.navitem__ico{display:grid;place-items:center;flex:none}
+.navitem svg{width:var(--icon-lg);height:var(--icon-lg);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.navitem[aria-current="page"] svg{stroke-width:2.4}
+.navitem__label{font-size:var(--f-micro);font-weight:var(--fw-semi);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* compact: bottom bar */
+@media (max-width:599.98px){
+  .app{flex-direction:column}
+  .nav{order:2;border-top:1px solid var(--line);
+    padding:var(--s2) var(--s2) calc(var(--s2) + var(--safe-b))}
+  .appcol{order:1}
+}
+
+/* the footer copy of an item is hidden in the bar, and vice versa */
+@media (min-width:600px){ .navitem.compact-only{display:none} }
+@media (max-width:599.98px){ .nav__foot{display:none} }
+
+/* medium and up: side rail */
+@media (min-width:600px){
+  .nav{flex-direction:column;border-inline-end:1px solid var(--line);
+    background:var(--bg-raised);
+    padding:var(--s4) var(--s3) calc(var(--s4) + var(--safe-b));
+    padding-inline-start:calc(var(--s3) + var(--safe-l));
+    width:var(--rail-collapsed);overflow-y:auto;overflow-x:hidden}
+  .nav__items{flex-direction:column;flex:1;gap:var(--s1)}
+  .navitem{flex:none;min-height:var(--tap-driver)}
+  .nav__foot{display:flex;flex-direction:column;flex:none;gap:var(--s1);
+    padding-top:var(--s3);border-top:1px solid var(--line);margin-top:var(--s3)}
+}
+
+/* expanded and up: rail shows labels beside icons */
+@media (min-width:840px){
+  .nav{width:var(--rail-expanded);padding-inline:var(--s3)}
+  .nav__brand{display:flex;align-items:center;gap:var(--s2);flex:none;
+    padding:var(--s2) var(--s3) var(--s5);font-size:var(--f-head);
+    font-weight:var(--fw-bold);color:var(--brand);min-width:0}
+  .nav__brand svg{width:var(--icon-lg);height:var(--icon-lg);flex:none;
+    fill:none;stroke:currentColor;stroke-width:1.8;
+    stroke-linecap:round;stroke-linejoin:round}
+  .nav__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .navitem{flex-direction:row;justify-content:flex-start;gap:var(--s3);
+    padding-inline:var(--s3);min-height:var(--tap)}
+  .navitem[aria-current="page"]{background:var(--brand);color:var(--on-brand)}
+  .navitem__label{font-size:var(--f-body);font-weight:var(--fw-semi)}
+}
+
+/* large and up: roomier gutters */
+@media (min-width:1200px){
+  .main{padding:var(--s6)}
+  .searchband{padding:var(--s4) var(--s6)}
+  .topbar{padding-inline:var(--s6)}
+}
+
+/* short viewports (landscape phone): reclaim vertical space */
+@media (max-height:520px){
+  :root{--topbar-h:48px}
+  .navitem__label{display:none}
+  .nav{padding-block:var(--s1)}
+  .searchband{padding-block:var(--s2)}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LAYOUT UTILITIES
+   ══════════════════════════════════════════════════════════════════════════ */
+.stack{display:flex;flex-direction:column;min-width:0}
+.row{display:flex;align-items:center;min-width:0;flex-wrap:wrap}
+.row--nowrap{flex-wrap:nowrap}
+.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.gap1{gap:var(--s1)} .gap2{gap:var(--s2)} .gap3{gap:var(--s3)}
+.gap4{gap:var(--s4)} .gap5{gap:var(--s5)} .gap6{gap:var(--s6)}
+.mt2{margin-top:var(--s2)} .mt3{margin-top:var(--s3)} .mt4{margin-top:var(--s4)}
+.center{align-items:center;text-align:center}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* responsive grid: columns follow available space, not a device list */
+.grid{display:grid;gap:var(--s3);width:100%;min-width:0;
+  grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
+.grid--tight{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY
+   ══════════════════════════════════════════════════════════════════════════ */
+.t-display{font-size:var(--f-display);font-weight:var(--fw-bold);
+  line-height:var(--lh-tight);letter-spacing:-.02em}
+.t-title{font-size:var(--f-title);font-weight:var(--fw-bold);
+  line-height:var(--lh-tight);letter-spacing:-.01em}
+.t-head{font-size:var(--f-head);font-weight:var(--fw-bold);line-height:var(--lh-snug)}
+.t-lg{font-size:var(--f-lg);font-weight:var(--fw-semi);line-height:var(--lh-snug)}
+.t-cap{font-size:var(--f-cap);color:var(--text-secondary);line-height:var(--lh-snug)}
+.t-micro{font-size:var(--f-micro);color:var(--text-secondary);font-weight:var(--fw-bold);
+  letter-spacing:.07em;text-transform:uppercase;line-height:var(--lh-snug)}
+.muted{color:var(--text-secondary)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   BUTTONS
+   ══════════════════════════════════════════════════════════════════════════ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  min-height:var(--tap);padding-inline:var(--s5);border-radius:var(--r-md);
+  font-size:var(--f-body);font-weight:var(--fw-semi);white-space:nowrap;flex:none;
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease),
+             border-color var(--fast) var(--ease);border:1px solid transparent}
+.btn svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn--primary{background:var(--brand);color:var(--on-brand)}
+.btn--primary:hover:not([disabled]){background:var(--brand-hover)}
+.btn--accent{background:var(--accent);color:var(--on-accent)}
+.btn--accent:hover:not([disabled]){background:var(--accent-hover)}
+.btn--secondary{background:var(--bg-sunken);color:var(--text-primary)}
+.btn--secondary:hover:not([disabled]){background:var(--bg-inset)}
+.btn--outline{border-color:var(--line-strong);color:var(--text-primary)}
+.btn--outline:hover:not([disabled]){background:var(--bg-raised);border-color:var(--brand)}
+.btn--ghost{color:var(--brand);padding-inline:var(--s3)}
+.btn--ghost:hover:not([disabled]){background:var(--brand-soft)}
+.btn--danger{background:var(--danger);color:var(--on-solid)}
+.btn--block{width:100%;flex:1 1 auto}
+.btn--driver{min-height:var(--tap-driver);font-size:var(--f-lg);border-radius:var(--r-lg)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn[aria-busy="true"]{pointer-events:none}
+
+.iconbtn{width:var(--tap);height:var(--tap);border-radius:var(--r-full);
+  display:grid;place-items:center;color:var(--text-primary);flex:none;
+  transition:background var(--fast) var(--ease)}
+.iconbtn:hover{background:var(--bg-sunken)}
+.iconbtn svg{width:var(--icon-lg);height:var(--icon-lg);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[dir="rtl"] .iconbtn--flip svg{transform:scaleX(-1)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SURFACES
+   ══════════════════════════════════════════════════════════════════════════ */
+.card{background:var(--bg-base);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.card--raised{background:var(--bg-raised)}
+.card--brand{background:var(--brand-soft);border-color:var(--brand-border)}
+.card--accent{background:var(--accent-soft);border-color:var(--accent-border)}
+.card--tight{gap:var(--s2)}
+.panel{background:var(--bg-raised);border-radius:var(--r-md);padding:var(--s4);
+  display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+.divider{height:1px;background:var(--line);flex:none}
+.section{display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.section__head{display:flex;align-items:center;gap:var(--s3);min-width:0}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LIST ROWS — one owner of row padding. No class stacking on the box.
+   ══════════════════════════════════════════════════════════════════════════ */
+.rowitem{display:flex;align-items:center;gap:var(--s3);width:100%;min-width:0;
+  min-height:var(--tap-driver);padding:var(--s3) var(--s4);border-radius:var(--r-md);
+  text-align:start;background:var(--bg-base);border:1px solid transparent;
+  transition:background var(--fast) var(--ease),border-color var(--fast) var(--ease)}
+.rowitem--bordered{border-color:var(--line)}
+.rowitem:hover:not([disabled]){background:var(--bg-raised)}
+.rowitem--selected{background:var(--accent-soft);border-color:var(--accent)}
+.rowitem[disabled]{opacity:.5;cursor:not-allowed}
+.rowitem>svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  color:var(--text-secondary)}
+[dir="rtl"] .rowitem .chev{transform:scaleX(-1)}
+.rowgroup{display:flex;flex-direction:column;background:var(--bg-base);
+  border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;min-width:0}
+.rowgroup .rowitem{border-radius:0;border:0;border-bottom:1px solid var(--line)}
+.rowgroup .rowitem:last-child{border-bottom:0}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SEARCH — one component owning its own box.
+   Font size is --f-input (16px) so iOS never force-zooms on focus.
+   ══════════════════════════════════════════════════════════════════════════ */
+.searchbar{display:flex;align-items:center;gap:var(--s3);width:100%;min-width:0;
+  min-height:var(--tap);padding-inline:var(--s4);border-radius:var(--r-full);
+  background:var(--bg-sunken);border:1px solid transparent;
+  color:var(--text-secondary);font-size:var(--f-input);text-align:start;
+  transition:background var(--fast) var(--ease),border-color var(--fast) var(--ease)}
+.searchbar:hover{background:var(--bg-inset)}
+.searchbar:focus-within{background:var(--bg-base);border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)}
+.searchbar>svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.searchbar input{flex:1;min-width:0;border:0;background:none;outline:0;
+  height:var(--tap);color:var(--text-primary);font-size:var(--f-input)}
+.searchbar input::placeholder{color:var(--text-secondary);opacity:1}
+.searchbar__text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CHIPS · BANNERS
+   ══════════════════════════════════════════════════════════════════════════ */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;
+  border-radius:var(--r-full);background:var(--bg-sunken);font-size:var(--f-cap);
+  font-weight:var(--fw-semi);min-height:30px;white-space:nowrap;flex:none;
+  border:1px solid transparent}
+.chip--brand{background:var(--brand);color:var(--on-brand)}
+.chip--accent{background:var(--accent-soft);color:var(--accent-text);
+  border-color:var(--accent-border)}
+.chip--ok{background:var(--ok-bg);color:var(--ok)}
+.chip--warn{background:var(--warn-bg);color:var(--warn)}
+.chip--danger{background:var(--danger-bg);color:var(--danger)}
+.chip--info{background:var(--info-bg);color:var(--info)}
+.chip--outline{background:none;border-color:var(--line-strong)}
+button.chip{cursor:pointer;transition:background var(--fast) var(--ease),
+  color var(--fast) var(--ease),border-color var(--fast) var(--ease)}
+button.chip:hover:not([disabled]){border-color:var(--accent)}
+button.chip[disabled]{opacity:.4;cursor:not-allowed}
+button.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);
+  border-color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:var(--r-full);flex:none;background:currentColor}
+
+.banner{display:flex;align-items:flex-start;gap:var(--s2);padding:var(--s3);
+  border-radius:var(--r-sm);font-size:var(--f-cap);font-weight:var(--fw-med);
+  line-height:var(--lh-snug)}
+.banner .dot{margin-top:5px}
+.banner--offline{background:var(--bg-inset);color:var(--text-secondary)}
+.banner--warn{background:var(--warn-bg);color:var(--warn)}
+.banner--info{background:var(--info-bg);color:var(--info)}
+.banner--danger{background:var(--danger-bg);color:var(--danger)}
+.banner--ok{background:var(--ok-bg);color:var(--ok)}
+.banner--accent{background:var(--accent-soft);color:var(--accent-text)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FORMS — all fields use --f-input
+   ══════════════════════════════════════════════════════════════════════════ */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary)}
+.input{min-height:var(--tap);width:100%;border:1px solid var(--line-strong);
+  border-radius:var(--r-md);padding-inline:var(--s4);background:var(--bg-base);
+  outline:0;font-size:var(--f-input);transition:border-color var(--fast) var(--ease),
+  box-shadow var(--fast) var(--ease)}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{padding-block:var(--s3);min-height:96px;resize:vertical;
+  line-height:var(--lh-body)}
+select.input{cursor:pointer}
+.otp{display:flex;gap:var(--s2);justify-content:center;flex-wrap:wrap}
+.otp input{width:46px;height:56px;text-align:center;font-size:var(--f-title);
+  font-weight:var(--fw-bold);border:1px solid var(--line-strong);
+  border-radius:var(--r-md);background:var(--bg-base);outline:0}
+.otp input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.stepper{display:inline-flex;align-items:center;gap:var(--s2);background:var(--bg-sunken);
+  border-radius:var(--r-full);padding:4px;flex:none}
+.stepper button{width:var(--tap-sm);height:var(--tap-sm);border-radius:var(--r-full);
+  background:var(--bg-base);display:grid;place-items:center;
+  font-weight:var(--fw-bold);box-shadow:var(--sh-1)}
+.stepper button[disabled]{opacity:.35;cursor:not-allowed}
+.stepper span{min-width:24px;text-align:center;font-weight:var(--fw-bold)}
+.switch{width:46px;height:28px;border-radius:var(--r-full);background:var(--line-strong);
+  position:relative;flex:none;transition:background var(--fast) var(--ease)}
+.switch::after{content:"";position:absolute;top:3px;inset-inline-start:3px;
+  width:22px;height:22px;border-radius:var(--r-full);background:var(--knob);
+  box-shadow:var(--sh-1);transition:transform var(--fast) var(--ease)}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(18px)}
+[dir="rtl"] .switch[aria-checked="true"]::after{transform:translateX(-18px)}
+.seg{display:inline-flex;background:var(--bg-sunken);border-radius:var(--r-full);
+  padding:3px;gap:2px;flex:none;max-width:100%;overflow-x:auto}
+.seg button{padding:7px 14px;border-radius:var(--r-full);font-size:var(--f-cap);
+  font-weight:var(--fw-semi);color:var(--text-secondary);min-height:var(--tap-sm);
+  white-space:nowrap;transition:background var(--fast) var(--ease),
+  color var(--fast) var(--ease)}
+.seg button[aria-pressed="true"]{background:var(--bg-base);color:var(--text-primary);
+  box-shadow:var(--sh-1)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STATES
+   ══════════════════════════════════════════════════════════════════════════ */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:var(--s3);padding:var(--s8) var(--s4);color:var(--text-secondary)}
+.empty>svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:1.5;
+  opacity:.5;stroke-linecap:round;stroke-linejoin:round}
+.skeleton{background:linear-gradient(90deg,var(--bg-sunken),var(--bg-inset),var(--bg-sunken));
+  background-size:200% 100%;animation:sk 1.3s linear infinite;border-radius:var(--r-sm)}
+@keyframes sk{to{background-position:-200% 0}}
+.spinner{width:18px;height:18px;border:2.5px solid currentColor;
+  border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DOMAIN COMPONENTS
+   ══════════════════════════════════════════════════════════════════════════ */
+.routecard{display:flex;align-items:center;gap:var(--s3);width:100%;min-width:0;
+  padding:var(--s4);min-height:76px;border:1px solid var(--line);
+  border-radius:var(--r-md);text-align:start;background:var(--bg-base);
+  transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+.routecard:hover{border-color:var(--brand);box-shadow:var(--sh-2)}
+.routeline{font-weight:var(--fw-semi);font-size:var(--f-lg);line-height:var(--lh-snug)}
+.fare{font-weight:var(--fw-bold);font-size:var(--f-lg);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.pricetag{font-size:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:var(--lh-tight)}
+.avatar{width:38px;height:38px;border-radius:var(--r-full);background:var(--bg-inset);
+  display:grid;place-items:center;font-weight:var(--fw-bold);font-size:var(--f-cap);
+  flex:none;overflow:hidden}
+.avatar svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.avatar--sm{width:32px;height:32px;font-size:var(--f-micro)}
+.avatar--lg{width:64px;height:64px;font-size:var(--f-head)}
+.avatar--lg svg{width:30px;height:30px}
+.manifest{display:flex;align-items:center;gap:var(--s3);min-width:0;
+  padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--bg-raised);
+  min-height:var(--tap-driver)}
+.metric{background:var(--bg-raised);border-radius:var(--r-md);padding:var(--s4);min-width:0}
+.metric__v{font-size:var(--f-title);font-weight:var(--fw-bold);line-height:var(--lh-tight);
+  font-variant-numeric:tabular-nums}
+.metric__l{font-size:var(--f-cap);color:var(--text-secondary);margin-top:2px}
+.alert{border:1px solid var(--line);border-inline-start:3px solid var(--warn);
+  border-radius:var(--r-md);padding:var(--s4);background:var(--bg-base);
+  display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.alert--info{border-inline-start-color:var(--info)}
+.alert--ok{border-inline-start-color:var(--ok)}
+.alert--accent{border-inline-start-color:var(--accent)}
+.alert--danger{border-inline-start-color:var(--danger)}
+
+/* stop timeline */
+.stops{position:relative;padding-inline-start:var(--s6)}
+.stops::before{content:"";position:absolute;inset-inline-start:8px;top:14px;bottom:14px;
+  width:2px;background:var(--line-strong)}
+.stop{position:relative;display:flex;align-items:center;gap:var(--s3);
+  padding-block:var(--s2);min-height:40px;min-width:0}
+.stop::before{content:"";position:absolute;inset-inline-start:-21px;width:10px;height:10px;
+  border-radius:var(--r-full);background:var(--bg-base);border:2px solid var(--line-strong)}
+.stop--now::before{background:var(--brand);border-color:var(--brand);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--brand) 22%,transparent)}
+.stop--done::before{background:var(--line-strong)}
+.stop--done{opacity:.5}
+
+/* map */
+.mapbox{position:relative;border-radius:var(--r-md);overflow:hidden;
+  border:1px solid var(--line);background:var(--map-land);flex:none}
+.mapbox .mapsvg{display:block;width:100%;height:100%;overflow:hidden}
+.mapctl{position:absolute;top:var(--s3);inset-inline-end:var(--s3);
+  display:flex;flex-direction:column;gap:var(--s1)}
+.mapctl button{width:var(--tap-sm);height:var(--tap-sm);border-radius:var(--r-sm);
+  background:var(--bg-base);box-shadow:var(--sh-2);display:grid;place-items:center;
+  font-weight:var(--fw-bold)}
+.attribution{position:absolute;bottom:0;inset-inline-end:0;background:var(--scrim);
+  color:var(--on-solid);font-size:10px;padding:2px 6px;
+  border-start-start-radius:var(--r-xs)}
+
+/* QR */
+.qrwrap{display:flex;flex-direction:column;align-items:center;gap:var(--s3);
+  padding:var(--s5);background:var(--qr-paper);border-radius:var(--r-lg);
+  border:1px solid var(--line)}
+.qr{width:min(176px,60vw);height:min(176px,60vw);image-rendering:pixelated}
+.qrcode{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:26px;
+  font-weight:var(--fw-bold);letter-spacing:.16em;color:var(--qr-ink)}
+
+/* tables — horizontal scroll is the deliberate small-space strategy */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--bg-base);-webkit-overflow-scrolling:touch}
+.table{width:100%;border-collapse:collapse;font-size:var(--f-body);min-width:560px}
+.table th{text-align:start;font-size:var(--f-micro);color:var(--text-secondary);
+  letter-spacing:.05em;text-transform:uppercase;font-weight:var(--fw-bold);
+  padding:var(--s3) var(--s4);border-bottom:1px solid var(--line);white-space:nowrap}
+.table td{padding:var(--s3) var(--s4);border-bottom:1px solid var(--line);
+  vertical-align:middle}
+.table tr:last-child td{border-bottom:0}
+.table tbody tr:hover td{background:var(--bg-raised)}
+
+/* sheet + scrim */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:var(--z-scrim);
+  animation:fade var(--med) var(--ease)}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;inset-inline:0;bottom:0;z-index:var(--z-sheet);
+  background:var(--bg-base);border-top:1px solid var(--line);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--sh-3);
+  padding:var(--s5);padding-bottom:calc(var(--s5) + var(--safe-b));
+  max-height:min(86%,720px);overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:var(--s3);
+  animation:up var(--med) var(--ease)}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet__grip{width:38px;height:4px;border-radius:var(--r-full);
+  background:var(--line-strong);margin:0 auto var(--s3);flex:none}
+@media (min-width:600px){
+  .sheet{inset-inline:auto;inset-inline-start:50%;transform:translateX(-50%);
+    bottom:auto;top:50%;translate:0 -50%;width:min(480px,92%);
+    border-radius:var(--r-lg);border:1px solid var(--line);
+    max-height:min(82%,720px);animation:pop var(--med) var(--ease)}
+  .sheet__grip{display:none}
+  @keyframes pop{from{opacity:0;transform:translateX(-50%) scale(.97)}}
+}
+
+/* toast */
+.toast{position:absolute;z-index:var(--z-toast);
+  bottom:calc(var(--s5) + var(--safe-b));inset-inline:var(--s4);
+  background:var(--text-primary);color:var(--bg-base);border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);box-shadow:var(--sh-3);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);
+  display:flex;align-items:center;gap:var(--s2);animation:up var(--med) var(--ease)}
+.toast svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:600px){
+  .toast{inset-inline:auto;inset-inline-start:50%;translate:-50% 0;
+    min-width:300px;max-width:420px;justify-content:center}
+}
+
+/* auth */
+.hero{flex:1;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;text-align:center;gap:var(--s5);padding:var(--s6);
+  overflow-y:auto;min-height:0}
+.logomark{width:72px;height:72px;border-radius:var(--r-lg);flex:none;
+  display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--brand),var(--accent));color:var(--on-solid)}
+.logomark svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.authfoot{flex:none;display:flex;flex-direction:column;gap:var(--s3);
+  padding:var(--s5) var(--s6);padding-bottom:calc(var(--s6) + var(--safe-b));
+  width:100%;max-width:480px;margin-inline:auto}
+.authmain{flex:1;min-height:0;overflow-y:auto;padding:var(--s5) var(--s6);
+  display:flex;flex-direction:column;gap:var(--s4);
+  width:100%;max-width:480px;margin-inline:auto}
+</style>
+</head>
+<body data-theme="light">
+<div id="root"></div>
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   1. COPY — every readable string, both languages, in one place.
+   ══════════════════════════════════════════════════════════════════════ */
+const T = {
+en:{
+  brand:"Ride Share", tagline:"Share the ride. One fixed price.",
+  role:{rider:"Rider",driver:"Driver",ops:"Operations",manager:"Manager",support:"Support"},
+  nav:{home:"Home",trips:"Trips",wallet:"Wallet",safety:"Safety",profile:"Profile",
+       duty:"Duty",work:"Find work",journey:"Journey",earnings:"Earnings",
+       queue:"Queue",livemap:"Live map",stops:"Stops",routes:"Routes",users:"Users",
+       board:"Board",coverage:"Coverage",pricing:"Pricing",promos:"Promotions",analytics:"Analytics",
+       lookup:"Lookup",tickets:"Tickets",lost:"Lost property"},
+  /* auth */
+  getStarted:"Get started", browse:"Browse routes first", phoneLabel:"Mobile number",
+  phoneHelp:"We send a 6-digit code by SMS.", continue:"Continue", verify:"Verify",
+  otpTitle:"Enter the code", otpSent:"Sent to", resendIn:"Resend in", resend:"Resend code",
+  wrongNumber:"Change number", passcodeTitle:"Set a passcode", passcodeWhy:"Opens the app without an SMS each time.",
+  skip:"Skip", yourName:"Your name", nameWhy:"Drivers see your first name only.", finish:"Finish",
+  /* rider core */
+  greeting:"Good morning", nearby:"Routes near you", searchRoute:"Search routes and stops",
+  searchHint:"Where do you want to go?",
+  searchPlaceholder:"Where do you want to go?", yourRide:"Your ride", trackVehicle:"Track vehicle", showQr:"Show boarding code",
+  walk:"min walk", fixedPrice:"Fixed price", getOffAnywhere:"Get off anywhere along the route",
+  whereBoard:"Where will you board?", recommended:"Recommended", streetPickup:"Street pickup",
+  streetPickupWhy:"We collect you from the roadside near you.",
+  pickDeparture:"Pick a departure", arrives:"arrives", confirmBooking:"Confirm booking",
+  seats:"Seats", cancelTerms:"Free until 30 minutes before departure. After that, half the fare.",
+  booked:"Booked", bookedBody:"Be at your boarding point 5 minutes early.",
+  arriving:"Arriving in", leaveNow:"Leave now", sos:"SOS", shareRide:"Share ride",
+  nextStop:"Next stop", imGettingOff:"I'm getting off next", boardingCode:"Boarding code",
+  scanAtDoor:"Show this to the driver at the door.", rideDone:"Ride complete", rateRide:"How was it?",
+  submit:"Submit", trips:"Trips", upcoming:"Upcoming", past:"Past", noTrips:"No trips yet",
+  noTripsBody:"Booked rides appear here.", balance:"Balance", topUp:"Top up", addMoney:"Add money",
+  history:"History", subs:"Subscriptions", subsBody:"Ride the same route every day for less.",
+  buySub:"Buy subscription", safetyCentre:"Safety centre", shareTrip:"Share trip status",
+  emergency:"Emergency contacts", reportProblem:"Report a problem", callSupport:"Call support",
+  language:"Language", theme:"Appearance", notifications:"Notifications", signOut:"Sign out",
+  /* driver */
+  goOnline:"Go on duty", goOffline:"Go off duty", online:"On duty", offline:"Off duty",
+  today:"Today", cashToSettle:"Cash to settle", claimSlot:"Claim this slot",
+  claimed:"Slot claimed", ridersWaiting:"riders searched this slot yesterday",
+  slotOpen:"Open", slotTaken:"Taken", slotMine:"Yours", scan:"Scan boarding code",
+  scanned:"Scanned", notScanned:"Not scanned", boarding:"Boarding", alighting:"Getting off",
+  arrived:"Arrived at stop", onTime:"On time", late:"Behind schedule",
+  cashCollected:"Cash collected", endJourney:"End journey", reportIssue:"Report a problem",
+  documents:"Documents", expires:"Expires", payouts:"Payouts", nextPayout:"Next payout",
+  vehicle:"Vehicle", myDepartures:"My departures", noClaims:"No claimed departures",
+  noClaimsBody:"Claim a slot to start earning.", queued:"queued", lastSync:"last synced",
+  offlineBanner:"Offline — actions are saved and sent when you reconnect",
+  /* staff */
+  waiting:"Waiting", oldest:"Oldest", open:"Open", approve:"Approve", reject:"Reject",
+  needsFix:"Needs correction", reason:"Reason", launchSale:"Launch flash sale",
+  notifyRiders:"Notify riders", dismiss:"Dismiss", save:"Save changes", cancel:"Cancel",
+  mapMock:"Illustrative map",
+  na:"Not available at your role."
+},
+ar:{
+  brand:"رايد شير", tagline:"شارك الرحلة. سعر ثابت.",
+  role:{rider:"راكب",driver:"سائق",ops:"العمليات",manager:"مدير",support:"الدعم"},
+  nav:{home:"الرئيسية",trips:"رحلاتي",wallet:"المحفظة",safety:"الأمان",profile:"حسابي",
+       duty:"الدوام",work:"ابحث عن عمل",journey:"الرحلة",earnings:"الأرباح",
+       queue:"الطلبات",livemap:"الخريطة",stops:"المحطات",routes:"المسارات",users:"المستخدمون",
+       board:"اللوحة",coverage:"التغطية",pricing:"التسعير",promos:"العروض",analytics:"التحليلات",
+       lookup:"بحث",tickets:"التذاكر",lost:"المفقودات"},
+  getStarted:"ابدأ", browse:"تصفح المسارات أولاً", phoneLabel:"رقم الموبايل",
+  phoneHelp:"سنرسل كود من ٦ أرقام برسالة.", continue:"متابعة", verify:"تأكيد",
+  otpTitle:"أدخل الكود", otpSent:"أُرسل إلى", resendIn:"إعادة الإرسال بعد", resend:"إعادة إرسال الكود",
+  wrongNumber:"تغيير الرقم", passcodeTitle:"اختر رمز دخول", passcodeWhy:"يفتح التطبيق بدون رسالة كل مرة.",
+  skip:"تخطي", yourName:"اسمك", nameWhy:"السائق يرى الاسم الأول فقط.", finish:"إنهاء",
+  greeting:"صباح الخير", nearby:"مسارات قريبة منك", searchRoute:"ابحث عن مسار أو محطة",
+  searchHint:"إلى أين تريد الذهاب؟",
+  searchPlaceholder:"إلى أين تريد الذهاب؟", yourRide:"رحلتك", trackVehicle:"تتبع المركبة", showQr:"اعرض كود الركوب",
+  walk:"دقيقة مشي", fixedPrice:"سعر ثابت", getOffAnywhere:"انزل في أي مكان على المسار",
+  whereBoard:"من أين ستركب؟", recommended:"الأنسب", streetPickup:"ركوب من الشارع",
+  streetPickupWhy:"نمر عليك من أقرب نقطة على الطريق.",
+  pickDeparture:"اختر موعد القيام", arrives:"الوصول", confirmBooking:"تأكيد الحجز",
+  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل القيام، وبعدها نصف الأجرة.",
+  booked:"تم الحجز", bookedBody:"كن عند نقطة الركوب قبل الموعد بـ ٥ دقائق.",
+  arriving:"يصل خلال", leaveNow:"اخرج الآن", sos:"استغاثة", shareRide:"شارك الرحلة",
+  nextStop:"المحطة التالية", imGettingOff:"سأنزل في التالية", boardingCode:"كود الركوب",
+  scanAtDoor:"اعرضه للسائق عند الباب.", rideDone:"انتهت الرحلة", rateRide:"كيف كانت؟",
+  submit:"إرسال", trips:"الرحلات", upcoming:"القادمة", past:"السابقة", noTrips:"لا توجد رحلات",
+  noTripsBody:"الرحلات المحجوزة تظهر هنا.", balance:"الرصيد", topUp:"شحن", addMoney:"إضافة رصيد",
+  history:"السجل", subs:"الاشتراكات", subsBody:"اركب نفس المسار يوميًا بسعر أقل.",
+  buySub:"اشترك", safetyCentre:"مركز الأمان", shareTrip:"شارك حالة الرحلة",
+  emergency:"جهات الطوارئ", reportProblem:"أبلغ عن مشكلة", callSupport:"اتصل بالدعم",
+  language:"اللغة", theme:"المظهر", notifications:"الإشعارات", signOut:"تسجيل الخروج",
+  goOnline:"ابدأ الدوام", goOffline:"إنهاء الدوام", online:"في الدوام", offline:"خارج الدوام",
+  today:"اليوم", cashToSettle:"نقدية للتوريد", claimSlot:"احجز هذا الموعد",
+  claimed:"تم حجز الموعد", ridersWaiting:"راكب بحث عن هذا الموعد أمس",
+  slotOpen:"متاح", slotTaken:"محجوز", slotMine:"لك", scan:"امسح كود الركوب",
+  scanned:"تم المسح", notScanned:"لم يُمسح", boarding:"الركوب", alighting:"النزول",
+  arrived:"وصلت المحطة", onTime:"في الموعد", late:"متأخر عن الجدول",
+  cashCollected:"تم تحصيل النقدية", endJourney:"إنهاء الرحلة", reportIssue:"أبلغ عن مشكلة",
+  documents:"المستندات", expires:"تنتهي", payouts:"التحويلات", nextPayout:"التحويل القادم",
+  vehicle:"المركبة", myDepartures:"مواعيدي", noClaims:"لا توجد مواعيد محجوزة",
+  noClaimsBody:"احجز موعدًا لتبدأ العمل.", queued:"في الانتظار", lastSync:"آخر مزامنة",
+  offlineBanner:"غير متصل — سنحفظ ما تفعله ونرسله عند عودة الاتصال",
+  waiting:"في الانتظار", oldest:"الأقدم", open:"فتح", approve:"قبول", reject:"رفض",
+  needsFix:"يحتاج تصحيح", reason:"السبب", launchSale:"أطلق عرضًا",
+  notifyRiders:"أبلغ الركاب", dismiss:"تجاهل", save:"حفظ التغييرات", cancel:"إلغاء",
+  mapMock:"خريطة توضيحية",
+  na:"غير متاح لدورك."
+}};
+
+/* ══════════════════════════════════════════════════════════════════════
+   2. CONTENT — sample content for every screen.
+   ══════════════════════════════════════════════════════════════════════ */
+const DATA = {
+  user:{ name:"Nour", initials:"N", phone:"+20 100 000 0000", balance:48 },
+  routes:[
+    {id:"r1", en:"Corniche Line — Montazah → Manshiya", ar:"خط الكورنيش — المنتزه ← المنشية",
+     every:"Every 12 min", everyAr:"كل ١٢ دقيقة", window:"06:00 – 22:00", fare:15, stops:11},
+    {id:"r2", en:"Smouha → Downtown", ar:"سموحة ← وسط البلد",
+     every:"Every 15 min", everyAr:"كل ١٥ دقيقة", window:"06:30 – 21:00", fare:12, stops:8},
+    {id:"r3", en:"Agami → Sidi Gaber", ar:"العجمي ← سيدي جابر",
+     every:"Every 20 min", everyAr:"كل ٢٠ دقيقة", window:"05:30 – 20:00", fare:18, stops:14},
+    {id:"r4", en:"Miami → Sporting", ar:"ميامي ← سبورتنج",
+     every:"Every 18 min", everyAr:"كل ١٨ دقيقة", window:"06:00 – 20:30", fare:14, stops:9}
+  ],
+  streetPickupFare:20,
+  boardingPoints:[
+    {id:"b1", en:"Montazah Gate 2", ar:"بوابة المنتزه ٢", walk:4, ok:true, rec:true},
+    {id:"b2", en:"Mandara Bridge", ar:"كوبري المندرة", walk:7, ok:true},
+    {id:"b3", en:"Sidi Bishr Tram", ar:"ترام سيدي بشر", walk:11, ok:true},
+    {id:"b4", en:"Asafra Market", ar:"سوق العصافرة", walk:9, ok:false, why:"Closed for road works"}
+  ],
+  departures:[
+    {id:"d1", time:"07:15", arrive:"07:52", fare:15, seatsLeft:6, rec:true},
+    {id:"d2", time:"07:27", arrive:"08:04", fare:15, seatsLeft:11},
+    {id:"d3", time:"07:39", arrive:"08:16", fare:15, seatsLeft:14},
+    {id:"d4", time:"07:51", arrive:"08:28", fare:15, seatsLeft:14}
+  ],
+  ticket:{ route:"Corniche Line", boarding:"Montazah Gate 2", time:"07:15",
+           code:"482917", seats:1, fare:15 },
+  vehicle:{ plate:"ALX 4821", model:"Toyota Hiace", colour:"#1B62D6", colourName:"Blue",
+            driver:"Mahmoud A.", eta:6, rating:4.8 },
+  routeStops:[
+    {en:"Montazah Gate 2", ar:"بوابة المنتزه ٢", state:"done"},
+    {en:"Mandara Bridge", ar:"كوبري المندرة", state:"done"},
+    {en:"Sidi Bishr", ar:"سيدي بشر", state:"now"},
+    {en:"Miami", ar:"ميامي", state:"next"},
+    {en:"Sporting", ar:"سبورتنج", state:"next"},
+    {en:"Manshiya", ar:"المنشية", state:"next"}
+  ],
+  tripsUpcoming:[
+    {route:"Corniche Line", when:"Today 07:15", fare:15, state:"confirmed"}
+  ],
+  tripsPast:[
+    {route:"Smouha → Downtown", when:"Yesterday 18:20", fare:12, state:"completed"},
+    {route:"Corniche Line", when:"Sun 07:15", fare:15, state:"completed"},
+    {route:"Agami → Sidi Gaber", when:"Sat 09:40", fare:18, state:"cancelled"}
+  ],
+  walletHistory:[
+    {label:"Corniche Line", when:"Yesterday", amount:-12},
+    {label:"Top up — card", when:"Yesterday", amount:+100},
+    {label:"Smouha → Downtown", when:"Mon", amount:-12},
+    {label:"Refund — cancelled ride", when:"Sat", amount:+18}
+  ],
+  subs:[
+    {en:"Corniche Line — 20 rides", ar:"خط الكورنيش — ٢٠ رحلة", price:255, save:45, per:"month"},
+    {en:"Corniche Line — 40 rides", ar:"خط الكورنيش — ٤٠ رحلة", price:480, save:120, per:"month"}
+  ],
+  driverToday:{ journeys:3, earned:412, cash:180, nextPayout:"Thursday" },
+  slots:[
+    {time:"06:45", state:"taken", demand:0},
+    {time:"07:15", state:"open", demand:12, bonus:0},
+    {time:"07:45", state:"claimed", demand:0},
+    {time:"08:15", state:"open", demand:4},
+    {time:"08:45", state:"open", demand:0},
+    {time:"09:15", state:"taken", demand:0}
+  ],
+  claims:[
+    {route:"Corniche Line", time:"07:45", date:"Today", seats:14, booked:9, committed:true},
+    {route:"Corniche Line", time:"16:30", date:"Today", seats:14, booked:3, committed:false}
+  ],
+  manifest:[
+    {initials:"N", name:"Nour", seats:1, scanned:true,  alighting:false, stop:"Montazah Gate 2"},
+    {initials:"H", name:"Hana", seats:2, scanned:true,  alighting:false, stop:"Mandara Bridge"},
+    {initials:"K", name:"Karim",seats:1, scanned:false, alighting:false, stop:"Sidi Bishr"},
+    {initials:"S", name:"Sara", seats:1, scanned:true,  alighting:true,  stop:"Sidi Bishr"}
+  ],
+  driverDocs:[
+    {name:"Driving licence", expires:"14 Mar 2027", state:"ok"},
+    {name:"Vehicle licence", expires:"2 Oct 2026", state:"soon"},
+    {name:"Criminal record", expires:"19 Jan 2027", state:"ok"}
+  ],
+  opsQueue:[
+    {label:"Driver applications", count:12, oldest:"2 h", severity:"none", key:"drivers"},
+    {label:"Vehicle approvals", count:5, oldest:"40 min", severity:"none", key:"vehicles"},
+    {label:"Safety incidents", count:2, oldest:"11 min", severity:"danger", key:"incidents"},
+    {label:"Disputes", count:7, oldest:"1 d", severity:"warn", key:"disputes"},
+    {label:"Stop verification", count:23, oldest:"3 d", severity:"none", key:"stops"}
+  ],
+  applicant:{ name:"Mahmoud Abdelrahman", phone:"+20 100 000 0000", submitted:"2 h ago",
+              docs:["Licence front","Licence back","National ID","Vehicle registration"] },
+  opsStops:[
+    {name:"Montazah Gate 2", route:"Corniche Line", state:"verified", by:"Field, 3 d ago"},
+    {name:"Mandara Bridge", route:"Corniche Line", state:"verified", by:"Field, 3 d ago"},
+    {name:"Asafra Market", route:"Corniche Line", state:"pending", by:"Desk, today"},
+    {name:"Victoria Tram", route:"Miami → Sporting", state:"rejected", by:"Field, 1 d ago"}
+  ],
+  opsVehicles:[
+    {plate:"ALX 4821", route:"Corniche Line", driver:"Mahmoud A.", state:"on-journey", slip:"+2 min"},
+    {plate:"ALX 1190", route:"Smouha → Downtown", driver:"Tarek S.", state:"on-journey", slip:"+9 min"},
+    {plate:"ALX 7734", route:"Agami → Sidi Gaber", driver:"Omar K.", state:"idle", slip:"—"}
+  ],
+  metrics:[
+    {v:"1,284", l:"Rides today"}, {v:"87%", l:"Seats filled"},
+    {v:"4.7", l:"Average rating"}, {v:"2", l:"Open incidents"}
+  ],
+  coverage:[
+    {slot:"07:15", route:"Corniche Line", need:4, claimed:2, state:"short"},
+    {slot:"07:45", route:"Corniche Line", need:4, claimed:4, state:"ok"},
+    {slot:"08:15", route:"Smouha → Downtown", need:3, claimed:1, state:"short"},
+    {slot:"08:45", route:"Miami → Sporting", need:2, claimed:2, state:"ok"}
+  ],
+  alerts:[
+    {zone:"Montazah — 07:00 to 08:00", kind:"warn",
+     body:"2 of 4 slots claimed. 38 riders searched this window yesterday."},
+    {zone:"Smouha — 08:00 to 09:00", kind:"warn",
+     body:"1 of 3 slots claimed. Consider a claim bonus."},
+    {zone:"Agami — all day", kind:"ok", body:"Fully covered."}
+  ],
+  fares:[
+    {route:"Corniche Line", stop:15, street:20, updated:"12 d ago"},
+    {route:"Smouha → Downtown", stop:12, street:17, updated:"12 d ago"},
+    {route:"Agami → Sidi Gaber", stop:18, street:23, updated:"5 d ago"},
+    {route:"Miami → Sporting", stop:14, street:19, updated:"5 d ago"}
+  ],
+  promos:[
+    {name:"Montazah morning fill", type:"Flash sale", window:"07:00–08:00", state:"running", uses:41},
+    {name:"First ride free", type:"Acquisition", window:"Always", state:"running", uses:308},
+    {name:"Ramadan evenings", type:"Flash sale", window:"19:00–21:00", state:"scheduled", uses:0}
+  ],
+  analytics:[
+    {l:"Rides", v:"1,284", d:"+8% vs last week"},
+    {l:"Seats filled", v:"87%", d:"+3 pts"},
+    {l:"Cancellations", v:"4.1%", d:"−0.6 pts"},
+    {l:"Schedule adherence", v:"92%", d:"−1 pt"}
+  ],
+  tickets:[
+    {ref:"T-4821", subject:"Charged twice", who:"Nour", age:"12 min", state:"open"},
+    {ref:"T-4818", subject:"Driver did not stop", who:"Hana", age:"1 h", state:"open"},
+    {ref:"T-4809", subject:"Left a bag on board", who:"Karim", age:"3 h", state:"waiting"}
+  ],
+  lost:[
+    {item:"Black backpack", route:"Corniche Line", when:"Yesterday 18:20", state:"with driver"},
+    {item:"Phone — blue case", route:"Smouha → Downtown", when:"Mon 09:10", state:"claimed"}
+  ]
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. STATE + HELPERS
+   ══════════════════════════════════════════════════════════════════════ */
+const S = {
+  role:"rider", lang:"en", theme:"light",
+  authed:true, authStep:"phone",
+  page:"home", sheet:null, toast:null,
+  chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
+  tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
+  opsView:null, stack:[]
+};
+
+const t = k => k.split(".").reduce((o,p)=>o&&o[p], T[S.lang]) ?? k;
+const L = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
+const money = n => {
+  const v = Math.abs(n), sign = n<0 ? "−" : "";
+  return S.lang==="ar" ? `${sign}${v} ج.م` : `${sign}${v} EGP`;
+};
+
+const $ = (tag, opts={}, ...kids) => {
+  const n = document.createElement(tag);
+  if (opts.class) n.className = opts.class;
+  if (opts.text != null) n.textContent = opts.text;
+  if (opts.attrs) for (const [k,v] of Object.entries(opts.attrs)){
+    if (v === true) n.setAttribute(k,"");
+    else if (v != null && v !== false) n.setAttribute(k,v);
+  }
+  if (opts.style) Object.assign(n.style, opts.style);
+  if (opts.on) for (const [e,f] of Object.entries(opts.on)) n.addEventListener(e,f);
+  for (const k of kids.flat()){ if (k==null || k===false) continue;
+    n.append(k.nodeType ? k : document.createTextNode(k)); }
+  return n;
+};
+
+/* navigation — a real stack, so Back always has somewhere to go */
+const go = (p) => { if (S.page!==p) S.stack.push(S.page); S.page=p; S.sheet=null; render(); };
+const back = () => { S.page = S.stack.pop() || DEFAULT_PAGE[S.role]; S.sheet=null; render(); };
+const openSheet = (s) => { S.sheet=s; render(); };
+const closeSheet = () => { S.sheet=null; render(); };
+const toast = (msg) => { S.toast=msg; render();
+  clearTimeout(toast._h); toast._h=setTimeout(()=>{S.toast=null;render();}, 2600); };
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. ICONS — one registry (§0.3: one place to change an icon)
+   ══════════════════════════════════════════════════════════════════════ */
+const ICON = {
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  trips:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/>',
+  wallet:'<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M17 14.5h.01"/>',
+  safety:'<path d="M12 3l7.5 3v6c0 4.4-3.1 7.9-7.5 9-4.4-1.1-7.5-4.6-7.5-9V6z"/><path d="m9 12 2 2 4-4"/>',
+  profile:'<circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  duty:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  work:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  journey:'<rect x="4" y="4" width="16" height="13" rx="2"/><path d="M4 10h16M7 21v-2M17 21v-2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',
+  earnings:'<path d="M4 18V9M9 18V5M14 18v-6M19 18v-9"/>',
+  queue:'<path d="M4 6h16M4 12h16M4 18h10"/>',
+  livemap:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
+  stops:'<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  routes:'<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M2.5 19a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 13.4A6.5 6.5 0 0 1 21.5 19"/>',
+  board:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M3 10h18"/>',
+  coverage:'<path d="M4 20h16"/><path d="M4 15h4v5H4zM10 9h4v11h-4zM16 12h4v8h-4z"/>',
+  pricing:'<path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="8" cy="8" r="1.4"/>',
+  promos:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>',
+  analytics:'<path d="M4 20h16"/><path d="m6 15 4-5 3.5 3L19 7"/>',
+  lookup:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
+  tickets:'<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/>',
+  lost:'<path d="M20 7H4v13h16z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>',
+  back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
+  qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
+  sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+  share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>', minus:'<path d="M5 12h14"/>',
+  check:'<path d="m4 12 5 5L20 6"/>', close:'<path d="M6 6 18 18M18 6 6 18"/>',
+  walk:'<circle cx="13" cy="4" r="2"/><path d="m9 21 2-6-2-3V8l4-1 3 4 3 1"/><path d="m11 15-2 6M15 12l1 9"/>',
+  bus:'<rect x="4" y="4" width="16" height="13" rx="2"/><path d="M4 10h16M7 21v-2M17 21v-2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',
+  phone:'<path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 6.5 6.5L17 13l4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4 5.2 2 2 0 0 1 6.5 3z"/>',
+  card:'<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>',
+  bell:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',
+  moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  flag:'<path d="M5 21V4M5 5h11l-2 4 2 4H5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  seat:'<path d="M6 4h3a2 2 0 0 1 2 2v7H8a2 2 0 0 1-2-2z"/><path d="M6 17h11a2 2 0 0 0 2-2v-2h-8"/><path d="M19 17v3"/>',
+  star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>',
+  logo:'<path d="M4 17h16M6 17V9l6-4 6 4v8"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="13" r="1.3"/>'
+};
+const icon = (n, cls) => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  s.setAttribute("viewBox","0 0 24 24");
+  s.setAttribute("aria-hidden","true");
+  s.setAttribute("fill","none");
+  s.setAttribute("stroke","currentColor");
+  s.setAttribute("stroke-width","1.8");
+  s.setAttribute("stroke-linecap","round");
+  s.setAttribute("stroke-linejoin","round");
+  if (cls) s.setAttribute("class", cls);
+  s.innerHTML = ICON[n] || "";
+  return s;
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. COMPONENTS — pure functions: props -> element
+   ══════════════════════════════════════════════════════════════════════ */
+const Btn = ({label, kind="primary", block, driver, icon:ic, on, dis}) =>
+  $("button",{class:`btn btn--${kind}${block?" btn--block":""}${driver?" btn--driver":""}`,
+    attrs:{type:"button", disabled:dis||null}, on:{click:on||(()=>{})}},
+    ic?icon(ic):null, $("span",{text:label}));
+
+const IconBtn = ({name,label,on,flip}) =>
+  $("button",{class:`iconbtn${flip?" iconbtn--flip":""}`,
+    attrs:{type:"button","aria-label":label}, on:{click:on||(()=>{})}}, icon(name));
+
+const Chip = ({label, kind="", dot, on, pressed, dis}) => {
+  const cls = `chip${kind?" chip--"+kind:""}`;
+  if (on || pressed != null)
+    return $("button",{class:cls, attrs:{type:"button", disabled:dis||null,
+      "aria-pressed": pressed!=null ? String(pressed) : null},
+      on:{click:on||(()=>{})}}, dot?$("span",{class:"dot"}):null, $("span",{text:label}));
+  return $("span",{class:cls}, dot?$("span",{class:"dot"}):null, $("span",{text:label}));
+};
+
+const Card    = (cls, ...k) => $("div",{class:"card"+(cls?" "+cls:"")}, ...k);
+const Panel   = (...k) => $("div",{class:"panel"}, ...k);
+const Divider = () => $("div",{class:"divider"});
+const Section = (title, ...k) => $("div",{class:"section"},
+  title ? $("div",{class:"section__head"}, $("h2",{class:"t-head grow",text:title})) : null, ...k);
+const Banner  = (kind, text) => $("div",{class:`banner banner--${kind}`},
+  $("span",{class:"dot"}), $("span",{text}));
+const Metric  = (m) => $("div",{class:"metric"},
+  $("div",{class:"metric__v ltr",text:m.v}), $("div",{class:"metric__l",text:m.l}));
+const KV = (k,v,strong=true) => $("div",{class:"row gap3"},
+  $("span",{class:"t-cap grow",text:k}),
+  $(strong?"strong":"span",{class:"ltr",text:v}));
+const Empty = (ic, title, body, action) => $("div",{class:"empty"},
+  icon(ic), $("div",{class:"t-head",text:title}),
+  body?$("div",{class:"t-cap",text:body}):null, action||null);
+
+/* Row: one component owning row layout, so padding has exactly one owner. */
+const Row = ({icon:ic, title, sub, right, on, dis, selected, bordered, chev}) =>
+  $(on?"button":"div",{
+    class:`rowitem${bordered?" rowitem--bordered":""}${selected?" rowitem--selected":""}`,
+    attrs:{ type:on?"button":null, disabled:dis||null },
+    on: on ? {click:(e)=>{ if(dis){e.preventDefault();return;} on(); }} : null},
+    ic?icon(ic):null,
+    $("div",{class:"stack grow gap1"},
+      typeof title==="string" ? $("strong",{text:title}) : title,
+      sub ? (typeof sub==="string" ? $("div",{class:"t-cap",text:sub}) : sub) : null),
+    right||null,
+    chev?icon("fwd","chev"):null);
+
+/* Search: its own component. One owner of its box, so nothing fights it. */
+const SearchBar = ({placeholder, on, live}) => live
+  ? $("label",{class:"searchbar searchbar--field"}, icon("lookup"),
+      $("input",{attrs:{type:"search", placeholder, "aria-label":placeholder}}))
+  : $("button",{class:"searchbar", attrs:{type:"button"}, on:{click:on||(()=>{})}},
+      icon("lookup"), $("span",{class:"grow",text:placeholder}), icon("fwd","chev"));
+
+const Table = (heads, rows) => {
+  const tb=$("table",{class:"table"});
+  tb.append($("thead",{}, $("tr",{}, ...heads.map(h=>$("th",{text:h})))));
+  const body=$("tbody"); rows.forEach(r=>body.append(r)); tb.append(body);
+  return $("div",{class:"tablewrap"}, tb);
+};
+
+const Sheet = (title, ...k) => $("div",{class:"sheet", attrs:{role:"dialog","aria-modal":"true",
+  "aria-label":title||"Dialog"}},
+  $("div",{class:"sheet__grip"}),
+  title ? $("div",{class:"row gap2"},
+    $("h2",{class:"t-head grow",text:title}),
+    IconBtn({name:"close", label:t("cancel"), on:closeSheet})) : null,
+  ...k);
+
+/* Map — drawn illustration. Labelled, never presented as live tiles. */
+function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false}){
+  const ns="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 400 220");
+  svg.setAttribute("preserveAspectRatio","xMidYMid slice");
+  svg.setAttribute("class","mapsvg");
+  svg.setAttribute("role","img");
+  svg.setAttribute("aria-label", t("mapMock"));
+  svg.innerHTML = `
+    <rect width="400" height="220" fill="var(--map-land)"/>
+    <path d="M0 172 Q70 160 130 176 T260 182 T400 168 L400 220 L0 220Z" fill="var(--map-water)"/>
+    <rect x="24" y="20" width="66" height="44" rx="4" fill="var(--map-park)"/>
+    <rect x="292" y="96" width="82" height="52" rx="4" fill="var(--map-park)"/>
+    <g stroke="var(--map-road-minor)" stroke-width="7" stroke-linecap="round">
+      <path d="M0 44h400M0 128h400M96 0v200M232 0v200M320 0v170"/>
+    </g>
+    <g stroke="var(--map-road)" stroke-width="11" stroke-linecap="round">
+      <path d="M0 86h400M160 0v200"/>
+    </g>
+    <g fill="var(--map-building)">
+      <rect x="112" y="52" width="26" height="20" rx="2"/><rect x="146" y="96" width="22" height="24" rx="2"/>
+      <rect x="196" y="30" width="30" height="18" rx="2"/><rect x="248" y="104" width="26" height="22" rx="2"/>
+      <rect x="60" y="98" width="24" height="18" rx="2"/><rect x="270" y="46" width="22" height="20" rx="2"/>
+    </g>
+    ${route?`<path d="M40 150 L96 150 L96 86 L232 86 L232 44 L360 44" fill="none"
+      stroke="var(--accent-route)" stroke-width="5.5" stroke-linecap="round"
+      stroke-linejoin="round" opacity=".92"/>`:""}
+    ${walk?`<path d="M40 176 L40 150" fill="none" stroke="var(--accent-walk)" stroke-width="3.5"
+      stroke-dasharray="2 6" stroke-linecap="round"/>
+      <circle cx="40" cy="176" r="6" fill="var(--accent-walk)"/>
+      <circle cx="40" cy="176" r="11" fill="var(--accent-walk)" opacity=".2"/>`:""}
+    ${stops?`<g>
+      <circle cx="96" cy="150" r="6.5" fill="var(--bg-base)" stroke="var(--accent-route)" stroke-width="3"/>
+      <circle cx="96" cy="86"  r="6.5" fill="var(--bg-base)" stroke="var(--accent-route)" stroke-width="3"/>
+      <circle cx="232" cy="86" r="6.5" fill="var(--bg-base)" stroke="var(--accent-route)" stroke-width="3"/>
+      <circle cx="232" cy="44" r="6.5" fill="var(--bg-base)" stroke="var(--accent-route)" stroke-width="3"/>
+      <circle cx="360" cy="44" r="7.5" fill="var(--brand)" stroke="var(--bg-base)" stroke-width="3"/>
+    </g>`:""}
+    ${vehicle?`<g transform="translate(150,79)">
+      <rect x="-15" y="-9" width="30" height="18" rx="5" fill="var(--brand)"/>
+      <rect x="-9" y="-5" width="18" height="7" rx="2" fill="var(--qr-paper)" opacity=".85"/>
+    </g>`:""}
+    ${fleet?`<g fill="var(--brand)">
+      <circle cx="70" cy="120" r="7"/><circle cx="205" cy="60" r="7"/>
+      <circle cx="300" cy="130" r="7"/><circle cx="120" cy="40" r="7"/>
+    </g>`:""}`;
+  return $("div",{class:"mapbox",style:{height:h+"px"}}, svg,
+    $("div",{class:"mapctl"},
+      $("button",{attrs:{type:"button","aria-label":"Zoom in"},text:"+"}),
+      $("button",{attrs:{type:"button","aria-label":"Zoom out"},text:"−"})),
+    $("div",{class:"attribution",text:t("mapMock")}));
+}
+
+/* QR — deterministic blocks + the numeric code that is the real fallback */
+function QRPanel({code}){
+  const ns="http://www.w3.org/2000/svg", n=21, cell=8;
+  const svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox",`0 0 ${n*cell} ${n*cell}`);
+  svg.setAttribute("class","qr");
+  svg.setAttribute("role","img");
+  svg.setAttribute("aria-label", t("boardingCode")+" "+code.split("").join(" "));
+  let r=`<rect width="${n*cell}" height="${n*cell}" fill="var(--qr-paper)"/>`;
+  const finder=(x,y)=>`<rect x="${x*cell}" y="${y*cell}" width="${7*cell}" height="${7*cell}" fill="var(--qr-ink)"/>
+    <rect x="${(x+1)*cell}" y="${(y+1)*cell}" width="${5*cell}" height="${5*cell}" fill="var(--qr-paper)"/>
+    <rect x="${(x+2)*cell}" y="${(y+2)*cell}" width="${3*cell}" height="${3*cell}" fill="var(--qr-ink)"/>`;
+  r+=finder(0,0)+finder(n-7,0)+finder(0,n-7);
+  let s=parseInt(code,10)||7;
+  const rnd=()=> (s=(s*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++){
+    const inF=(x<8&&y<8)||(x>n-9&&y<8)||(x<8&&y>n-9);
+    if(!inF && rnd()>0.52) r+=`<rect x="${x*cell}" y="${y*cell}" width="${cell}" height="${cell}" fill="var(--qr-ink)"/>`;
+  }
+  svg.innerHTML=r;
+  return $("div",{class:"qrwrap"}, svg,
+    $("div",{class:"stack center gap1"},
+      $("div",{class:"t-micro",text:t("boardingCode")}),
+      $("div",{class:"qrcode ltr",text:code})),
+    $("div",{class:"t-cap",text:t("scanAtDoor")}));
+}
+
+const VehicleId = (v) => $("div",{class:"row gap3"},
+  $("div",{class:"avatar",style:{background:v.colour,color:"var(--on-solid)"}}, icon("bus")),
+  $("div",{class:"stack grow gap1"},
+    $("div",{class:"row gap2"},
+      $("strong",{class:"ltr",text:v.plate}),
+      Chip({label:v.colourName})),
+    $("div",{class:"t-cap",text:`${v.model} · ${v.driver} · ★ ${v.rating}`})));
+
+const RouteCard = (r, on) => $("button",{class:"routecard", attrs:{type:"button"},
+  on:{click:on||(()=>{ S.chosenRoute=r; go("boarding"); })}},
+  $("div",{class:"stack grow gap1"},
+    $("div",{class:"routeline",text:L(r)}),
+    $("div",{class:"t-cap",text:`${S.lang==="ar"?r.everyAr:r.every} · ${r.window}`})),
+  $("div",{class:"stack",style:{alignItems:"flex-end"}},
+    $("div",{class:"fare",text:money(r.fare)}),
+    $("div",{class:"t-micro",text:t("fixedPrice")})));
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. AUTH SCREENS  (R-01 … R-05)
+   ══════════════════════════════════════════════════════════════════════ */
+function authWelcome(){                                       // R-01
+  return $("div",{class:"appcol"},
+    $("div",{class:"hero"},
+      $("div",{class:"logomark"}, icon("logo")),
+      $("div",{class:"stack gap2 center"},
+        $("h1",{class:"t-display",text:t("brand")}),
+        $("div",{class:"t-cap",text:t("tagline")})),
+      MapView({h:180, walk:true})),
+    $("div",{class:"authfoot"},
+      Btn({label:t("getStarted"), block:true, on:()=>{S.authStep="phone"; S.authed=false; render();}}),
+      Btn({label:t("browse"), kind:"secondary", block:true,
+           on:()=>{S.authed=true; S.page="routes"; render();}})));
+}
+
+function authPhone(){                                         // R-02
+  return $("div",{class:"appcol"},
+    topbar({title:"", back:()=>{S.authStep="welcome"; render();}, plain:true}),
+    $("div",{class:"main"},
+      $("h1",{class:"t-title",text:t("phoneLabel")}),
+      $("div",{class:"t-cap",text:t("phoneHelp")}),
+      $("div",{class:"row gap2 mt4"},
+        $("span",{class:"chip chip--outline ltr",text:"+20"}),
+        $("input",{class:"input grow ltr",attrs:{type:"tel", inputmode:"numeric",
+          placeholder:"100 000 0000", "aria-label":t("phoneLabel")}}))),
+    $("div",{class:"authfoot"},
+      Btn({label:t("continue"), block:true, on:()=>{S.authStep="otp"; render();}})));
+}
+
+function authOtp(){                                           // R-03
+  const boxes=$("div",{class:"otp"});
+  for(let i=0;i<6;i++) boxes.append($("input",{
+    attrs:{inputmode:"numeric", maxlength:"1", "aria-label":`Digit ${i+1}`}}));
+  return $("div",{class:"appcol"},
+    topbar({title:"", back:()=>{S.authStep="phone"; render();}, plain:true}),
+    $("div",{class:"main"},
+      $("h1",{class:"t-title",text:t("otpTitle")}),
+      $("div",{class:"t-cap"}, `${t("otpSent")} `, $("span",{class:"ltr",text:DATA.user.phone})),
+      $("div",{class:"mt4"}, boxes),
+      $("div",{class:"row gap3 mt4",style:{justifyContent:"center"}},
+        $("span",{class:"t-cap",text:`${t("resendIn")} 0:42`}),
+        Btn({label:t("wrongNumber"), kind:"ghost", on:()=>{S.authStep="phone"; render();}}))),
+    $("div",{class:"authfoot"},
+      Btn({label:t("verify"), block:true, on:()=>{S.authStep="name"; render();}})));
+}
+
+function authName(){                                          // R-05
+  return $("div",{class:"appcol"},
+    topbar({title:"", plain:true}),
+    $("div",{class:"main"},
+      $("h1",{class:"t-title",text:t("yourName")}),
+      $("div",{class:"t-cap",text:t("nameWhy")}),
+      $("input",{class:"input mt4",attrs:{placeholder:t("yourName"),"aria-label":t("yourName")}})),
+    $("div",{class:"authfoot"},
+      Btn({label:t("finish"), block:true,
+           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}}),
+      Btn({label:t("skip"), kind:"ghost", block:true,
+           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}})));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7. RIDER SCREENS
+   ══════════════════════════════════════════════════════════════════════ */
+function riderHome(){                                         // R-10
+  const w=$("div",{class:"main"});
+  if(S.offline) w.append(Banner("offline", `${t("offlineBanner")} · ${t("lastSync")} 07:42`));
+
+  /* Name, greeting and balance are in the top bar — not repeated here. */
+  /* active ticket outranks everything else on this screen */
+  w.append(Card("card--brand",
+    $("div",{class:"row gap2"},
+      Chip({label:t("yourRide"), kind:"brand"}),
+      $("div",{class:"grow"}),
+      $("strong",{class:"ltr",text:DATA.ticket.time})),
+    $("div",{class:"t-lg",text:DATA.ticket.route}),
+    $("div",{class:"t-cap",text:`${DATA.ticket.boarding} · 6 ${t("walk")}`}),
+    $("div",{class:"row gap2 mt2"},
+      Btn({label:t("showQr"), icon:"qr", on:()=>openSheet("qr")}),
+      Btn({label:t("trackVehicle"), kind:"secondary", on:()=>go("waiting")}))));
+
+  w.append(Section(t("nearby"), ...DATA.routes.slice(0,3).map(r=>RouteCard(r))));
+  return w;
+}
+
+function riderRoutes(){                                       // R-11
+  const w=$("div",{class:"main"});
+  w.append(MapView({h:170, walk:false, vehicle:false}));
+  w.append(Section(null, ...DATA.routes.map(r=>RouteCard(r))));
+  return w;
+}
+
+function riderBoarding(){                                     // R-12
+  const r=S.chosenRoute||DATA.routes[0];
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"stack gap1"},
+    $("h1",{class:"t-head",text:L(r)}),
+    $("div",{class:"t-cap",text:t("getOffAnywhere")})));
+  w.append(MapView({h:170, walk:true, vehicle:false}));
+  w.append(Section(t("whereBoard"),
+    ...DATA.boardingPoints.map(b=> Row({
+      icon:"walk",
+      title: b.rec
+        ? $("div",{class:"row gap2"}, $("strong",{text:L(b)}), Chip({label:t("recommended"),kind:"ok"}))
+        : L(b),
+      sub: b.ok ? `${b.walk} ${t("walk")}` : b.why,
+      bordered:true, chev:b.ok, dis:!b.ok, selected:S.chosenBoard===b.id,
+      on: b.ok ? ()=>{ S.chosenBoard=b.id; go("departures"); } : ()=>{}
+    })),
+    Row({ icon:"stops", title:t("streetPickup"),
+      sub:`${t("streetPickupWhy")} · + ${money(DATA.streetPickupFare - r.fare)}`,
+      bordered:true, chev:true,
+      on:()=>{ S.chosenBoard="street"; go("departures"); } })));
+  return w;
+}
+
+function riderDepartures(){                                   // R-13
+  const street = S.chosenBoard==="street";
+  const w=$("div",{class:"main"});
+  w.append(Banner("info", t("getOffAnywhere")));
+  DATA.departures.forEach(d=>{
+    const fare = street ? DATA.streetPickupFare : d.fare;
+    w.append(Row({
+      title: $("div",{class:"row gap2"},
+        $("strong",{class:"ltr",text:d.time}),
+        d.rec?Chip({label:t("recommended"),kind:"ok"}):null),
+      sub: `${street?t("streetPickup"):L(DATA.boardingPoints[0])} · ${t("arrives")} ${d.arrive} · ${d.seatsLeft} ${t("seats")}`,
+      right: $("div",{class:"fare",text:money(fare)}),
+      bordered:true, chev:true,
+      on:()=>{ S.chosenDep=d; go("review"); }}));
+  });
+  return w;
+}
+
+function riderReview(){                                       // R-14
+  const r=S.chosenRoute||DATA.routes[0], d=S.chosenDep||DATA.departures[0];
+  const street=S.chosenBoard==="street";
+  const unit=street?DATA.streetPickupFare:d.fare, total=unit*S.seats;
+  const w=$("div",{class:"main"});
+  w.append(Card("",
+    $("div",{class:"pricetag ltr",text:money(total)}),
+    $("div",{class:"t-micro",text:t("fixedPrice")}),
+    Divider(),
+    KV(L(r).split("—")[0].trim(), `${d.time} → ${d.arrive}`),
+    KV(t("whereBoard"), street?t("streetPickup"):L(DATA.boardingPoints[0])),
+    KV(t("seats"), `${S.seats} × ${money(unit)}`)));
+  w.append($("div",{class:"row gap3"},
+    $("span",{class:"grow t-lg",text:t("seats")}),
+    $("div",{class:"stepper"},
+      $("button",{attrs:{type:"button","aria-label":"−", disabled:S.seats<=1?true:null},
+        on:{click:()=>{ if(S.seats>1){S.seats--; render();} }}},"−"),
+      $("span",{text:String(S.seats)}),
+      $("button",{attrs:{type:"button","aria-label":"+", disabled:S.seats>=4?true:null},
+        on:{click:()=>{ if(S.seats<4){S.seats++; render();} }}},"+"))));
+  w.append(Panel($("div",{class:"t-micro",text:t("cancel")}),
+                 $("div",{class:"t-cap",text:t("cancelTerms")})));
+  w.append(Btn({label:t("confirmBooking"), block:true, on:()=>go("booked")}));
+  return w;
+}
+
+function riderBooked(){                                       // R-15
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"hero"},
+    $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
+    $("div",{class:"stack gap2 center"},
+      $("h1",{class:"t-title",text:t("booked")}),
+      $("div",{class:"t-cap",text:t("bookedBody")})),
+    QRPanel({code:DATA.ticket.code})));
+  w.append(Btn({label:t("yourRide"), block:true, on:()=>{S.stack=[]; go("waiting");}}));
+  return w;
+}
+
+function riderWaiting(){                                      // R-20
+  const v=DATA.vehicle;
+  const w=$("div",{class:"main"});
+  if(S.offline) w.append(Banner("offline", `${t("offlineBanner")} · ${t("lastSync")} 07:42`));
+  w.append(MapView({h:190, walk:true}));
+  w.append(Card("card--raised",
+    $("div",{class:"row gap3"},
+      $("div",{class:"stack grow gap1"},
+        $("div",{class:"t-micro",text:t("arriving")}),
+        $("div",{class:"t-display ltr",text:v.eta+" min"})),
+      Btn({label:t("leaveNow"), on:()=>toast(t("leaveNow"))})),
+    Divider(), VehicleId(v)));
+  w.append($("div",{class:"row gap3"},
+    Btn({label:t("showQr"), icon:"qr", block:true, on:()=>openSheet("qr")}),
+    Btn({label:t("sos"), kind:"danger", icon:"sos", on:()=>openSheet("sos")})));
+  return w;
+}
+
+function riderOnboard(){                                      // R-22
+  const w=$("div",{class:"main"});
+  w.append(Card("card--raised card--tight",
+    $("div",{class:"t-micro",text:t("nextStop")}),
+    $("div",{class:"t-title",text:L(DATA.routeStops[2])})));
+  w.append($("div",{class:"stops"}, ...DATA.routeStops.map(s=>
+    $("div",{class:`stop stop--${s.state==="done"?"done":s.state==="now"?"now":"next"}`},
+      $("span",{class:"grow",text:L(s)}),
+      s.state==="now"?Chip({label:t("nextStop"),kind:"brand"}):null))));
+  w.append(Btn({label:t("imGettingOff"), block:true, driver:true,
+    dis:S.gettingOff, on:()=>{ S.gettingOff=true; toast(t("imGettingOff")); }}));
+  if(S.gettingOff) w.append(Banner("ok", t("imGettingOff")));
+  w.append($("div",{class:"row gap3"},
+    Btn({label:t("shareRide"), kind:"secondary", icon:"share", block:true,
+         on:()=>toast(t("shareRide"))}),
+    Btn({label:t("sos"), kind:"danger", icon:"sos", on:()=>openSheet("sos")})));
+  return w;
+}
+
+function riderTrips(){                                        // R-30
+  const w=$("div",{class:"main"});
+  const seg=$("div",{class:"seg"});
+  [["upcoming",t("upcoming")],["past",t("past")]].forEach(([k,lbl])=>
+    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.tripTab===k)},
+      text:lbl, on:{click:()=>{S.tripTab=k; render();}}})));
+  w.append(seg);
+  const list = S.tripTab==="upcoming" ? DATA.tripsUpcoming : DATA.tripsPast;
+  if(!list.length){ w.append(Empty("trips", t("noTrips"), t("noTripsBody"),
+    Btn({label:t("searchRoute"), on:()=>go("routes")}))); return w; }
+  list.forEach(tr=> w.append(Row({
+    icon:"bus", title:tr.route, sub:tr.when, bordered:true,
+    right:$("div",{class:"stack",style:{alignItems:"flex-end"}},
+      $("div",{class:"fare",text:money(tr.fare)}),
+      Chip({label:tr.state, kind:tr.state==="cancelled"?"danger":tr.state==="confirmed"?"ok":""})),
+    on:()=>openSheet("trip")})));
+  return w;
+}
+
+function riderWallet(){                                       // R-40
+  const w=$("div",{class:"main"});
+  w.append(Card("card--brand",
+    $("div",{class:"t-micro",text:t("balance")}),
+    $("div",{class:"pricetag ltr",text:money(DATA.user.balance)}),
+    $("div",{class:"row gap2 mt2"},
+      Btn({label:t("addMoney"), icon:"plus", on:()=>openSheet("topup")}),
+      Btn({label:t("subs"), kind:"secondary", on:()=>openSheet("subs")}))));
+  w.append(Section(t("history"),
+    ...DATA.walletHistory.map(h=> Row({
+      icon:h.amount>0?"plus":"bus", title:h.label, sub:h.when, bordered:true,
+      right:$("strong",{class:"ltr", style:{color:h.amount>0?"var(--ok)":"inherit"},
+        text:(h.amount>0?"+":"")+money(h.amount)})}))));
+  return w;
+}
+
+function riderSafety(){                                       // R-60
+  const w=$("div",{class:"main"});
+  w.append(Banner("info", t("safetyCentre")));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"sos",   title:t("sos"), sub:t("emergency"), chev:true, on:()=>openSheet("sos")}),
+    Row({icon:"share", title:t("shareTrip"), chev:true, on:()=>toast(t("shareTrip"))}),
+    Row({icon:"phone", title:t("emergency"), chev:true, on:()=>openSheet("contacts")}),
+    Row({icon:"flag",  title:t("reportProblem"), chev:true, on:()=>openSheet("report")}),
+    Row({icon:"phone", title:t("callSupport"), chev:true, on:()=>toast(t("callSupport"))})));
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("vehicle")}),
+    VehicleId(DATA.vehicle)));
+  return w;
+}
+
+function riderProfile(){                                      // R-80
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"row gap3"},
+    $("div",{class:"avatar avatar--lg",text:DATA.user.initials}),
+    $("div",{class:"stack grow gap1"},
+      $("strong",{class:"t-head",text:DATA.user.name}),
+      $("div",{class:"t-cap ltr",text:DATA.user.phone}))));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"globe", title:t("language"), right:langSeg()}),
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
+    Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"card",  title:t("wallet"), chev:true, on:()=>go("wallet")}),
+    Row({icon:"trips", title:t("subs"), chev:true, on:()=>openSheet("subs")}),
+    Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
+  w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
+    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+  return w;
+}
+
+/* shared small controls */
+function langSeg(){
+  const seg=$("div",{class:"seg"});
+  [["en","EN"],["ar","AR"]].forEach(([k,lbl])=>
+    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.lang===k)},
+      text:lbl, on:{click:()=>{S.lang=k; render();}}})));
+  return seg;
+}
+function themeSeg(){
+  const seg=$("div",{class:"seg"});
+  [["light","☀"],["dark","☾"]].forEach(([k,lbl])=>
+    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.theme===k),
+      "aria-label":k}, text:lbl, on:{click:()=>{S.theme=k; render();}}})));
+  return seg;
+}
+function switchEl(on){
+  return $("button",{class:"switch",attrs:{type:"button",role:"switch",
+    "aria-checked":String(!!on),"aria-label":t("notifications")},
+    on:{click:(e)=>{ const b=e.currentTarget;
+      b.setAttribute("aria-checked", b.getAttribute("aria-checked")==="true"?"false":"true"); }}});
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   8. DRIVER SCREENS — bigger targets, glanceable
+   ══════════════════════════════════════════════════════════════════════ */
+function driverDuty(){                                        // D-10
+  const d=DATA.driverToday;
+  const w=$("div",{class:"main"});
+  if(S.offline) w.append(Banner("offline", `${t("offlineBanner")} · 3 ${t("queued")}`));
+  w.append($("div",{class:"row gap2"},
+    Chip({label:DATA.vehicle.plate, kind:"info"}),
+    $("div",{class:"grow"}),
+    Chip({label:S.onDuty?t("online"):t("offline"), kind:S.onDuty?"ok":"", dot:true})));
+
+  w.append(Btn({ label:S.onDuty?t("goOffline"):t("goOnline"),
+    kind:S.onDuty?"secondary":"primary", block:true, driver:true,
+    on:()=>{ S.onDuty=!S.onDuty; toast(S.onDuty?t("online"):t("offline")); }}));
+
+  w.append($("div",{class:"grid grid--tight"},
+    Metric({v:String(d.journeys), l:t("today")}),
+    Metric({v:money(d.earned), l:t("earnings")}),
+    Metric({v:money(d.cash), l:t("cashToSettle")})));
+
+  w.append(Section(t("myDepartures"), ...(DATA.claims.length
+    ? DATA.claims.map(c=> Row({
+        icon:"clock",
+        title:$("div",{class:"row gap2"},
+          $("strong",{class:"ltr",text:c.time}),
+          c.committed?Chip({label:"committed",kind:"ok"}):Chip({label:"provisional",kind:"warn"})),
+        sub:`${c.route} · ${c.date} · ${c.booked}/${c.seats} ${t("seats")}`,
+        bordered:true, chev:true, on:()=>go("journey")}))
+    : [Empty("clock", t("noClaims"), t("noClaimsBody"),
+        Btn({label:t("nav.work"), on:()=>go("work")}))])));
+
+  if(d.cash>0) w.append(Banner("warn", `${t("cashToSettle")}: ${money(d.cash)}`));
+  return w;
+}
+
+function driverWork(){                                        // D-11
+  const w=$("div",{class:"main"});
+  DATA.routes.slice(0,2).forEach(r=>{
+    const card=Card("",
+      $("div",{class:"row gap3"},
+        $("div",{class:"stack grow gap1"},
+          $("strong",{text:L(r)}),
+          $("div",{class:"t-cap",text:`${r.window} · ${t("fixedPrice")}`})),
+        $("div",{class:"fare",text:money(r.fare)})));
+
+    const grid=$("div",{class:"row wrap gap2"});
+    DATA.slots.forEach(s=>{
+      const taken=s.state==="taken", mine=s.state==="claimed";
+      grid.append(Chip({
+        label: s.time + (s.demand ? ` · ${s.demand}` : ""),
+        kind: mine ? "brand" : taken ? "" : "info",
+        dis: taken || mine,
+        pressed: mine,
+        on: (taken||mine) ? ()=>{} : ()=>openSheet("claim")}));
+    });
+    card.append(grid);
+
+    /* Recommendation carries its evidence. A number with no source is not shown. */
+    const hot=DATA.slots.find(s=>s.demand>0 && s.state==="open");
+    if(hot) card.append($("div",{class:"alert"},
+      $("div",{class:"row gap2"},
+        $("strong",{class:"ltr",text:hot.time}),
+        $("div",{class:"grow"}),
+        hot.bonus?Chip({label:"+"+money(hot.bonus),kind:"ok"}):null),
+      $("div",{class:"t-cap",text:`${hot.demand} ${t("ridersWaiting")}`}),
+      Btn({label:t("claimSlot"), driver:true, on:()=>openSheet("claim")})));
+    w.append(card);
+  });
+  return w;
+}
+
+function driverJourney(){                                     // D-20
+  const w=$("div",{class:"main"});
+  if(S.offline) w.append(Banner("offline",
+    `${t("offlineBanner")} · 3 ${t("queued")} · ${t("lastSync")} 07:42`));
+  w.append(Card("card--raised card--tight",
+    $("div",{class:"row gap2"},
+      $("div",{class:"t-micro grow",text:t("nextStop")}),
+      Chip({label:t("onTime"),kind:"ok"})),
+    $("div",{class:"t-title",text:L(DATA.routeStops[2])}),
+    $("div",{class:"t-cap",text:"400 m · 2 min"})));
+  w.append(MapView({h:160}));
+
+  w.append($("div",{class:"t-micro"},t("boarding")));
+  DATA.manifest.filter(m=>!m.alighting).forEach(m=>
+    w.append($("div",{class:"manifest"},
+      $("div",{class:"avatar",text:m.initials}),
+      $("div",{class:"stack grow gap1"},
+        $("strong",{text:m.name}),
+        $("div",{class:"t-cap",text:`${m.stop} · ${m.seats} ${t("seats")}`})),
+      Chip({label:m.scanned?t("scanned"):t("notScanned"), kind:m.scanned?"ok":"warn"}))));
+
+  const off=DATA.manifest.filter(m=>m.alighting);
+  if(off.length){
+    w.append($("div",{class:"t-micro"},t("alighting")));
+    off.forEach(m=> w.append($("div",{class:"manifest"},
+      $("div",{class:"avatar",text:m.initials}),
+      $("div",{class:"stack grow gap1"},
+        $("strong",{text:m.name}),
+        $("div",{class:"t-cap",text:m.stop})),
+      Chip({label:t("alighting"),kind:"info"}))));
+  }
+
+  w.append($("div",{class:"row gap3"},
+    Btn({label:t("scan"), driver:true, block:true, icon:"qr", on:()=>openSheet("scan")}),
+    Btn({label:t("arrived"), kind:"secondary", driver:true, block:true,
+         on:()=>toast(t("arrived"))})));
+  w.append($("div",{class:"row gap3"},
+    Btn({label:t("reportIssue"), kind:"ghost", block:true, on:()=>openSheet("report")}),
+    Btn({label:t("endJourney"), kind:"ghost", block:true, on:()=>toast(t("endJourney"))})));
+  return w;
+}
+
+function driverEarnings(){                                    // D-30
+  const d=DATA.driverToday;
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"grid grid--tight"},
+    Metric({v:money(d.earned), l:t("today")}),
+    Metric({v:money(1840), l:"This week"}),
+    Metric({v:money(d.cash), l:t("cashToSettle")}),
+    Metric({v:d.nextPayout, l:t("nextPayout")})));
+  w.append(Panel($("div",{class:"t-micro",text:t("payouts")}),
+    KV("Gross", money(1840)),
+    KV("Commission (20%)", "− "+money(368)),
+    KV(t("cashToSettle"), "− "+money(d.cash)),
+    Divider(),
+    KV("Net", money(1292))));
+  w.append(Section(t("documents"),
+    ...DATA.driverDocs.map(doc=> Row({
+      icon:"doc", title:doc.name, sub:`${t("expires")} ${doc.expires}`, bordered:true,
+      right:Chip({label:doc.state==="soon"?t("expires"):"OK",
+                  kind:doc.state==="soon"?"warn":"ok"})}))));
+  return w;
+}
+
+function driverProfile(){                                     // D-40
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"row gap3"},
+    $("div",{class:"avatar avatar--lg"}, icon("profile")),
+    $("div",{class:"stack grow gap1"},
+      $("strong",{class:"t-head",text:DATA.vehicle.driver}),
+      $("div",{class:"t-cap",text:`★ ${DATA.vehicle.rating} · ${DATA.vehicle.plate}`}))));
+  w.append(Card("card--tight", $("div",{class:"t-micro",text:t("vehicle")}), VehicleId(DATA.vehicle)));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"globe", title:t("language"), right:langSeg()}),
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
+    Row({icon:"doc",   title:t("documents"), chev:true, on:()=>go("earnings")}),
+    Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>openSheet("sos")})));
+  w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
+    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+  return w;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   9. OPERATIONS
+   ══════════════════════════════════════════════════════════════════════ */
+function opsQueue(){                                          // O-10
+  if(S.opsView==="review") return opsReview();
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"grid grid--tight"},
+    Metric({v:"49", l:t("waiting")}),
+    Metric({v:"2",  l:"Incidents"}),
+    Metric({v:"11 min", l:t("oldest")})));
+  DATA.opsQueue.forEach(q=> w.append(Row({
+    icon:"queue",
+    title:$("div",{class:"row gap2"},
+      q.severity!=="none"
+        ? $("span",{class:"dot",style:{color:q.severity==="danger"?"var(--danger)":"var(--warn)"}})
+        : null,
+      $("strong",{text:q.label})),
+    sub:`${t("oldest")}: ${q.oldest}`,
+    right:Chip({label:String(q.count), kind:q.severity==="danger"?"danger":"info"}),
+    bordered:true, chev:true,
+    on:()=>{ S.opsView="review"; render(); }})));
+  return w;
+}
+
+function opsReview(){                                         // O-12
+  const a=DATA.applicant;
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"row gap2"},
+    $("h1",{class:"t-head grow",text:a.name}),
+    Chip({label:a.submitted, kind:"warn"})));
+  const docs=$("div",{class:"row wrap gap3"});
+  a.docs.forEach(d=> docs.append($("div",{class:"card card--tight",style:{width:"152px"}},
+    $("div",{class:"skeleton",style:{height:"92px"}}),
+    $("div",{class:"t-cap",text:d}))));
+  w.append(Card("", $("div",{class:"t-micro",text:t("documents")}), docs));
+  w.append(Card("card--tight", KV("Phone", a.phone), KV("Duplicate check","No match")));
+  w.append($("div",{class:"field"},
+    $("label",{text:t("reason")}),
+    $("textarea",{class:"input",attrs:{placeholder:t("reason")}})));
+  w.append($("div",{class:"row wrap gap3"},
+    Btn({label:t("approve"), on:()=>{S.opsView=null; toast(t("approve"));}}),
+    Btn({label:t("needsFix"), kind:"secondary", on:()=>{S.opsView=null; toast(t("needsFix"));}}),
+    Btn({label:t("reject"), kind:"danger", on:()=>{S.opsView=null; toast(t("reject"));}})));
+  return w;
+}
+
+function opsLiveMap(){                                        // O-17
+  const w=$("div",{class:"main"});
+  w.append(MapView({h:260, fleet:true, vehicle:false}));
+  w.append(Table([t("vehicle"),"Route","Driver","Schedule"],
+    DATA.opsVehicles.map(v=> $("tr",{},
+      $("td",{},$("strong",{class:"ltr",text:v.plate})),
+      $("td",{text:v.route}),
+      $("td",{text:v.driver}),
+      $("td",{},Chip({label:v.slip,
+        kind:v.slip.startsWith("+9")?"warn":v.state==="idle"?"":"ok"}))))));
+  return w;
+}
+
+function opsStops(){                                          // O-18 / O-20
+  const w=$("div",{class:"main"});
+  w.append(MapView({h:180, vehicle:false}));
+  w.append(Table(["Stop","Route","State","Source"],
+    DATA.opsStops.map(s=> $("tr",{},
+      $("td",{},$("strong",{text:s.name})),
+      $("td",{text:s.route}),
+      $("td",{},Chip({label:s.state,
+        kind:s.state==="verified"?"ok":s.state==="rejected"?"danger":"warn"})),
+      $("td",{},$("span",{class:"t-cap",text:s.by}))))));
+  return w;
+}
+
+function opsRoutes(){                                         // O-23
+  const w=$("div",{class:"main"});
+  w.append(Banner("info","Slots published here are what drivers can claim."));
+  DATA.routes.forEach(r=>{
+    const card=Card("",
+      $("div",{class:"row gap3"},
+        $("div",{class:"stack grow gap1"},
+          $("strong",{text:L(r)}),
+          $("div",{class:"t-cap",text:`${r.stops} stops · ${r.window}`})),
+        Chip({label:money(r.fare), kind:"info"})));
+    const grid=$("div",{class:"row wrap gap2"});
+    DATA.slots.forEach(s=> grid.append(Chip({
+      label:s.time, kind:s.state==="open"?"warn":"ok"})));
+    card.append(grid);
+    card.append($("div",{class:"row gap2"},
+      Btn({label:"Edit slots", kind:"secondary", on:()=>toast("Edit slots")}),
+      Btn({label:"Publish", kind:"ghost", on:()=>toast("Published")})));
+    w.append(card);
+  });
+  return w;
+}
+
+function opsUsers(){                                          // O-22
+  const w=$("div",{class:"main"});
+  w.append(Table(["Name","Role","State",""],
+    [["Nour","Rider","active"],["Mahmoud A.","Driver","active"],
+     ["Tarek S.","Driver","suspended"],["Yara M.","Support agent","active"]]
+    .map(([n,r,st])=> $("tr",{},
+      $("td",{},$("strong",{text:n})),
+      $("td",{text:r}),
+      $("td",{},Chip({label:st, kind:st==="active"?"ok":"danger"})),
+      $("td",{},Btn({label:t("open"), kind:"ghost", on:()=>toast(n)}))))));
+  return w;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   10. MANAGER
+   ══════════════════════════════════════════════════════════════════════ */
+function managerBoard(){                                      // G-10
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"grid grid--tight"}, ...DATA.metrics.map(Metric)));
+  w.append(MapView({h:200, fleet:true, vehicle:false}));
+  w.append(Section("Alerts", ...DATA.alerts.map(a=>
+    $("div",{class:`alert${a.kind==="ok"?" alert--ok":""}`},
+      $("div",{class:"row gap2"},
+        $("strong",{class:"grow",text:a.zone}),
+        Chip({label:a.kind==="ok"?"clear":"action", kind:a.kind==="ok"?"ok":"warn"})),
+      $("div",{class:"t-cap",text:a.body}),
+      a.kind!=="ok" ? $("div",{class:"row wrap gap2"},
+        Btn({label:t("launchSale"), on:()=>toast(t("launchSale"))}),
+        Btn({label:t("notifyRiders"), kind:"secondary", on:()=>toast(t("notifyRiders"))}),
+        Btn({label:t("dismiss"), kind:"ghost", on:()=>toast(t("dismiss"))})) : null))));
+  return w;
+}
+
+function managerCoverage(){                                   // G-11
+  const w=$("div",{class:"main"});
+  w.append(Banner("warn","2 windows are short of drivers."));
+  w.append(Table(["Slot","Route","Need","Claimed",""],
+    DATA.coverage.map(c=> $("tr",{},
+      $("td",{},$("strong",{class:"ltr",text:c.slot})),
+      $("td",{text:c.route}),
+      $("td",{},$("span",{class:"ltr",text:String(c.need)})),
+      $("td",{},$("span",{class:"ltr",text:String(c.claimed)})),
+      $("td",{}, c.state==="short"
+        ? Btn({label:"Add bonus", kind:"ghost", on:()=>toast("Bonus added")})
+        : Chip({label:"covered", kind:"ok"}))))));
+  return w;
+}
+
+function managerPricing(){                                    // G-13
+  const w=$("div",{class:"main"});
+  w.append(Banner("info","Changes are previewed against recent journeys before publishing."));
+  w.append(Table(["Route","Stop fare","Street fare","Updated",""],
+    DATA.fares.map(f=> $("tr",{},
+      $("td",{},$("strong",{text:f.route})),
+      $("td",{},$("span",{class:"ltr",text:money(f.stop)})),
+      $("td",{},$("span",{class:"ltr",text:money(f.street)})),
+      $("td",{},$("span",{class:"t-cap",text:f.updated})),
+      $("td",{},Btn({label:"Edit", kind:"ghost", on:()=>openSheet("fare")}))))));
+  return w;
+}
+
+function managerPromos(){                                     // G-15
+  const w=$("div",{class:"main"});
+  w.append(Btn({label:"New promotion", icon:"plus", on:()=>toast("New promotion")}));
+  w.append(Table(["Name","Type","Window","State","Uses"],
+    DATA.promos.map(p=> $("tr",{},
+      $("td",{},$("strong",{text:p.name})),
+      $("td",{text:p.type}),
+      $("td",{},$("span",{class:"ltr",text:p.window})),
+      $("td",{},Chip({label:p.state, kind:p.state==="running"?"ok":"warn"})),
+      $("td",{},$("span",{class:"ltr",text:String(p.uses)}))))));
+  return w;
+}
+
+function managerAnalytics(){                                  // G-18
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"grid grid--tight"},
+    ...DATA.analytics.map(a=> $("div",{class:"metric"},
+      $("div",{class:"metric__v ltr",text:a.v}),
+      $("div",{class:"metric__l",text:a.l}),
+      $("div",{class:"t-cap",text:a.d})))));
+  w.append(Card("", $("div",{class:"t-micro",text:"Rides per day"}), sparkline()));
+  return w;
+}
+function sparkline(){
+  const ns="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox","0 0 300 90");
+  svg.setAttribute("role","img");
+  svg.setAttribute("aria-label","Rides per day, last 7 days, trending up");
+  svg.setAttribute("style","width:100%;height:90px");
+  const pts=[38,44,41,52,58,55,68];
+  const d=pts.map((v,i)=>`${i===0?"M":"L"}${i*48+6},${88-v}`).join(" ");
+  svg.innerHTML=`<path d="${d}" fill="none" stroke="var(--brand)" stroke-width="2.5"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map((v,i)=>`<circle cx="${i*48+6}" cy="${88-v}" r="3" fill="var(--brand)"/>`).join("")}`;
+  return svg;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   11. SUPPORT
+   ══════════════════════════════════════════════════════════════════════ */
+function supportLookup(){                                     // S-11
+  const w=$("div",{class:"main"});
+  w.append(Card("",
+    $("div",{class:"row gap3"},
+      $("div",{class:"avatar",text:"N"}),
+      $("div",{class:"stack grow gap1"},
+        $("strong",{text:"Nour"}),
+        $("div",{class:"t-cap ltr",text:DATA.user.phone})),
+      Chip({label:"Active ride", kind:"ok"})),
+    Divider(),
+    KV("Route", DATA.ticket.route),
+    KV("Boarding", DATA.ticket.boarding),
+    KV("Departure", DATA.ticket.time),
+    KV("Fare", money(DATA.ticket.fare)),
+    Divider(),
+    $("div",{class:"row wrap gap2"},
+      Btn({label:"Contact rider", kind:"secondary", on:()=>toast("Calling")}),
+      Btn({label:"Cancel ride", kind:"secondary", on:()=>toast("Cancelled")}),
+      Btn({label:"Refund (max 1 fare)", kind:"secondary", on:()=>toast("Refunded")}),
+      Btn({label:"Escalate", kind:"ghost", on:()=>toast("Escalated")}))));
+  /* Identity documents are not rendered at all for this role — not shown disabled. */
+  return w;
+}
+
+function supportTickets(){                                    // S-12
+  const w=$("div",{class:"main"});
+  w.append(Table(["Ref","Subject","Rider","Age","State"],
+    DATA.tickets.map(k=> $("tr",{},
+      $("td",{},$("strong",{class:"ltr",text:k.ref})),
+      $("td",{text:k.subject}),
+      $("td",{text:k.who}),
+      $("td",{},$("span",{class:"t-cap",text:k.age})),
+      $("td",{},Chip({label:k.state, kind:k.state==="open"?"warn":""}))))));
+  return w;
+}
+
+function supportLost(){                                       // S-14
+  const w=$("div",{class:"main"});
+  w.append(Btn({label:"Log an item", icon:"plus", on:()=>toast("Logged")}));
+  DATA.lost.forEach(l=> w.append(Row({
+    icon:"lost", title:l.item, sub:`${l.route} · ${l.when}`, bordered:true,
+    right:Chip({label:l.state, kind:l.state==="claimed"?"ok":"warn"})})));
+  return w;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   12. SHEETS
+   ══════════════════════════════════════════════════════════════════════ */
+const SHEETS = {
+  qr: () => Sheet(t("boardingCode"),
+    $("div",{class:"t-cap",text:`${DATA.ticket.route} · ${DATA.ticket.boarding} · ${DATA.ticket.time}`}),
+    QRPanel({code:DATA.ticket.code}),
+    $("div",{class:"t-cap",text:`${t("seats")}: ${DATA.ticket.seats} · ${money(DATA.ticket.fare)}`})),
+
+  sos: () => Sheet(t("sos"),
+    Banner("danger", t("sos")),
+    $("div",{class:"t-cap",text:"Choose what you need. Operations sees this immediately."}),
+    Btn({label:"Call emergency services", kind:"danger", block:true, icon:"phone",
+         on:()=>{closeSheet(); toast("Calling");}}),
+    Btn({label:t("callSupport"), kind:"secondary", block:true, icon:"phone",
+         on:()=>{closeSheet(); toast(t("callSupport"));}}),
+    Btn({label:t("shareTrip"), kind:"secondary", block:true, icon:"share",
+         on:()=>{closeSheet(); toast(t("shareTrip"));}})),
+
+  report: () => Sheet(t("reportProblem"),
+    ...["Driver behaviour","Vehicle condition","Route or timing","Payment","Something else"]
+      .map(r=> Row({title:r, chev:true, on:()=>{closeSheet(); toast(t("submit"));}}))),
+
+  contacts: () => Sheet(t("emergency"),
+    Row({icon:"profile", title:"Hana", sub:"+20 100 000 0001", bordered:true}),
+    Row({icon:"profile", title:"Karim", sub:"+20 100 000 0002", bordered:true}),
+    Btn({label:"Add contact", icon:"plus", block:true, on:()=>{closeSheet(); toast("Added");}})),
+
+  topup: () => Sheet(t("addMoney"),
+    $("div",{class:"row wrap gap2"},
+      ...[50,100,200,500].map(v=> Chip({label:money(v), kind:"info", on:()=>{}}))),
+    $("div",{class:"field"},
+      $("label",{text:t("addMoney")}),
+      $("input",{class:"input ltr",attrs:{type:"number",placeholder:"100"}})),
+    Row({icon:"card", title:"Card ending 4821", chev:true, bordered:true}),
+    Btn({label:t("continue"), block:true, on:()=>{closeSheet(); toast(t("addMoney"));}})),
+
+  subs: () => Sheet(t("subs"),
+    $("div",{class:"t-cap",text:t("subsBody")}),
+    ...DATA.subs.map(s=> Row({
+      icon:"trips", title:L(s), sub:`${t("save")||"Save"} ${money(s.save)} / ${s.per}`,
+      right:$("div",{class:"fare",text:money(s.price)}), bordered:true, chev:true,
+      on:()=>{closeSheet(); toast(t("buySub"));}}))),
+
+  trip: () => Sheet(t("trips"),
+    Card("card--tight",
+      KV("Route", DATA.ticket.route),
+      KV("Boarding", DATA.ticket.boarding),
+      KV("Departure", DATA.ticket.time),
+      KV("Fare", money(DATA.ticket.fare))),
+    Btn({label:t("showQr"), icon:"qr", block:true, on:()=>openSheet("qr")}),
+    Btn({label:t("reportProblem"), kind:"secondary", block:true, on:()=>openSheet("report")})),
+
+  claim: () => Sheet(t("claimSlot"),
+    $("div",{class:"stack center gap3"},
+      $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
+      $("h2",{class:"t-head",text:t("claimed")}),
+      $("div",{class:"t-cap",text:"07:15 · "+L(DATA.routes[0])})),
+    Btn({label:"OK", block:true, driver:true, on:()=>{closeSheet(); toast(t("claimed"));}})),
+
+  scan: () => Sheet(t("scan"),
+    $("div",{class:"mapbox",style:{height:"200px",display:"grid",placeItems:"center",
+      background:"var(--bg-inset)"}},
+      $("div",{class:"stack center gap3"}, icon("qr"),
+        $("div",{class:"t-cap",text:"Camera viewfinder"}))),
+    $("div",{class:"field"},
+      $("label",{text:t("boardingCode")}),
+      $("input",{class:"input ltr",attrs:{placeholder:"4 8 2 9 1 7",inputmode:"numeric"}})),
+    Btn({label:t("cashCollected"), kind:"secondary", block:true, driver:true,
+         on:()=>{closeSheet(); toast(t("cashCollected"));}})),
+
+  fare: () => Sheet("Edit fare",
+    Banner("info","Price is locked for anyone who already booked."),
+    $("div",{class:"field"}, $("label",{text:"Stop fare"}),
+      $("input",{class:"input ltr",attrs:{type:"number",value:"15"}})),
+    $("div",{class:"field"}, $("label",{text:"Street fare"}),
+      $("input",{class:"input ltr",attrs:{type:"number",value:"20"}})),
+    $("div",{class:"field"}, $("label",{text:t("reason")}),
+      $("textarea",{class:"input",attrs:{placeholder:t("reason")}})),
+    Btn({label:t("save"), block:true, on:()=>{closeSheet(); toast(t("save"));}}))
+};
+
+/* ══════════════════════════════════════════════════════════════════════
+   13. NAVIGATION — one table. Add a screen here and it exists everywhere.
+   Each entry: page key, icon, screen function, title, and whether the
+   dock shows it. Nothing about navigation is defined anywhere else.
+   ══════════════════════════════════════════════════════════════════════ */
+const PAGES = {
+  rider:[
+    {k:"home",      ic:"home",    fn:riderHome,       dock:true},
+    {k:"trips",     ic:"trips",   fn:riderTrips,      dock:true},
+    {k:"wallet",    ic:"wallet",  fn:riderWallet,     dock:true},
+    {k:"safety",    ic:"safety",  fn:riderSafety,     dock:true},
+    {k:"profile",   ic:"profile", fn:riderProfile,    dock:true, foot:true},
+    {k:"routes",    ic:"routes",  fn:riderRoutes,     title:"searchRoute"},
+    {k:"boarding",  ic:"stops",   fn:riderBoarding,   title:"whereBoard"},
+    {k:"departures",ic:"clock",   fn:riderDepartures, title:"pickDeparture"},
+    {k:"review",    ic:"check",   fn:riderReview,     title:"confirmBooking"},
+    {k:"booked",    ic:"check",   fn:riderBooked,     title:"booked"},
+    {k:"waiting",   ic:"bus",     fn:riderWaiting,    title:"yourRide"},
+    {k:"onboard",   ic:"bus",     fn:riderOnboard,    title:"yourRide"}
+  ],
+  driver:[
+    {k:"duty",     ic:"duty",     fn:driverDuty,      dock:true},
+    {k:"work",     ic:"work",     fn:driverWork,      dock:true},
+    {k:"journey",  ic:"journey",  fn:driverJourney,   dock:true},
+    {k:"earnings", ic:"earnings", fn:driverEarnings,  dock:true},
+    {k:"profile",  ic:"profile",  fn:driverProfile,   dock:true, foot:true}
+  ],
+  ops:[
+    {k:"queue",   ic:"queue",   fn:opsQueue,   dock:true, wide:true},
+    {k:"livemap", ic:"livemap", fn:opsLiveMap, dock:true, wide:true},
+    {k:"stops",   ic:"stops",   fn:opsStops,   dock:true, wide:true},
+    {k:"routes",  ic:"routes",  fn:opsRoutes,  dock:true, wide:true},
+    {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true}
+  ],
+  manager:[
+    {k:"board",     ic:"board",     fn:managerBoard,     dock:true, wide:true},
+    {k:"coverage",  ic:"coverage",  fn:managerCoverage,  dock:true, wide:true},
+    {k:"pricing",   ic:"pricing",   fn:managerPricing,   dock:true, wide:true},
+    {k:"promos",    ic:"promos",    fn:managerPromos,    dock:true, wide:true},
+    {k:"analytics", ic:"analytics", fn:managerAnalytics, dock:true, wide:true}
+  ],
+  support:[
+    {k:"lookup",  ic:"lookup",  fn:supportLookup,  dock:true, wide:true},
+    {k:"tickets", ic:"tickets", fn:supportTickets, dock:true, wide:true},
+    {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true}
+  ]
+};
+const DEFAULT_PAGE = Object.fromEntries(
+  Object.entries(PAGES).map(([r,list])=>[r, list[0].k]));
+const pageDef = () => PAGES[S.role].find(p=>p.k===S.page) || PAGES[S.role][0];
+
+/* ══════════════════════════════════════════════════════════════════════
+   14. CHROME
+   ══════════════════════════════════════════════════════════════════════ */
+function topbar({title, back:onBack, right, plain}){
+  const bar=$("header",{class:"topbar"+(plain?" topbar--plain":"")});
+  if(onBack) bar.append(IconBtn({name:"back", label:t("cancel"), on:onBack, flip:true}));
+  bar.append($("h1",{class:"topbar__title",text:title||""}));
+  if(right) bar.append(right);
+  return bar;
+}
+
+/* Search band — sits directly under the top bar, outside the scroller, so it
+   is always reachable. Present on the screens where finding a route or a
+   record is the primary job. */
+const SEARCHABLE = {
+  rider:  {home:"searchHint", routes:"searchRoute"},
+  ops:    {stops:"searchRoute", users:"Name, phone or ID"},
+  support:{lookup:"Phone or booking reference"}
+};
+function searchBand(){
+  const key = (SEARCHABLE[S.role]||{})[S.page];
+  if(!key) return null;
+  const label = t(key)===key ? key : t(key);
+  const def=pageDef();
+  const band=$("div",{class:"searchband"+(def.wide?" searchband--wide":"")});
+  const inner=$("div",{class:"searchband__inner"});
+  // On the rider home the search navigates to the list; elsewhere it filters
+  // the list already on screen, so it is a real field.
+  inner.append(S.role==="rider" && S.page==="home"
+    ? SearchBar({placeholder:label, on:()=>go("routes")})
+    : SearchBar({placeholder:label, live:true}));
+  band.append(inner);
+  return band;
+}
+
+/* Navigation. One definition, four presentations — the CSS decides which,
+   so there is no JS branch per screen size and no resize listener. */
+function nav(){
+  const el=$("nav",{class:"nav",attrs:{"aria-label":"Primary"}});
+  el.append($("div",{class:"nav__brand"}, icon("logo"), $("span",{text:t("brand")})));
+
+  const items=$("div",{class:"nav__items"});
+  PAGES[S.role].filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
+  el.append(items);
+
+  // Rail footer: profile pinned to the bottom on medium and up. On compact
+  // the same item sits inline in the bottom bar — one component either way.
+  const foot=PAGES[S.role].filter(p=>p.foot);
+  if(foot.length){
+    const f=$("div",{class:"nav__foot"});
+    foot.forEach(p=> f.append(navItem(p)));
+    el.append(f);
+    // compact: the footer is hidden by CSS, so the item must also be in the bar
+    foot.forEach(p=> items.append(navItem(p, "compact-only")));
+  }
+  return el;
+}
+function navItem(p, extra){
+  const label=t("nav."+p.k);
+  return $("button",{class:"navitem"+(extra?" "+extra:""),
+    attrs:{type:"button","aria-label":label,
+      "aria-current":S.page===p.k?"page":null},
+    on:{click:()=>{ S.stack=[]; S.page=p.k; S.sheet=null; S.opsView=null; render(); }}},
+    $("span",{class:"navitem__ico"}, icon(p.ic)),
+    $("span",{class:"navitem__label",text:label}));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   15. RENDER
+   ══════════════════════════════════════════════════════════════════════ */
+function render(){
+  document.documentElement.lang = S.lang;
+  document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
+  document.body.dataset.theme   = S.theme;
+
+  const root=document.getElementById("root");
+  root.innerHTML="";
+  const app=$("div",{class:"app"});
+
+  if(!S.authed){
+    const step={welcome:authWelcome, phone:authPhone, otp:authOtp, name:authName}[S.authStep]
+              || authWelcome;
+    app.append(step());
+    root.append(app);
+    return;
+  }
+
+  const def=pageDef();
+  const col=$("div",{class:"appcol"});
+  const isRoot = def.dock === true;
+
+  col.append(topbar({
+    title: def.title ? t(def.title) : t("nav."+def.k),
+    back: isRoot ? null : back,
+    right: isRoot ? headerActions() : null
+  }));
+  const band=searchBand();
+  if(band) col.append(band);
+
+  /* Every screen returns a .main. The reading-width wrapper is applied here,
+     once, rather than in each of the thirty screen functions. Staff tables
+     opt out of the cap because wide data needs the room. */
+  const body=def.fn();
+  if(body.classList.contains("main")){
+    const inner=$("div",{class:"main__inner"});
+    while(body.firstChild) inner.append(body.firstChild);
+    body.append(inner);
+    if(def.wide) body.classList.add("main--wide");
+  }
+  col.append(body);
+
+  app.append(nav());
+  app.append(col);
+
+  if(S.sheet && SHEETS[S.sheet]){
+    app.append($("div",{class:"scrim",on:{click:closeSheet}}));
+    app.append(SHEETS[S.sheet]());
+  }
+  if(S.toast) app.append($("div",{class:"toast",attrs:{role:"status"}},
+    icon("check"), $("span",{text:S.toast})));
+
+  root.append(app);
+}
+
+/* Header actions. The balance pill is a rider affordance: it shows what you
+   have and opens the wallet. The role switcher exists only because five
+   products share one file; a signed-in build fixes the role and omits it. */
+function headerActions(){
+  const wrap=$("div",{class:"row gap2"});
+  if(S.role==="rider")
+    wrap.append($("button",{class:"chip chip--accent", attrs:{type:"button",
+      "aria-label":`${t("balance")} ${money(DATA.user.balance)}`},
+      on:{click:()=>go("wallet")}},
+      icon("wallet"), $("span",{class:"ltr num",text:money(DATA.user.balance)})));
+  wrap.append(roleSwitcher());
+  return wrap;
+}
+
+function roleSwitcher(){
+  const sel=$("select",{class:"chip", attrs:{"aria-label":"Role"},
+    on:{change:(e)=>{ S.role=e.target.value; S.page=DEFAULT_PAGE[S.role];
+                      S.stack=[]; S.sheet=null; S.opsView=null; render(); }}});
+  Object.keys(PAGES).forEach(r=> sel.append(
+    $("option",{attrs:{value:r, selected:S.role===r?true:null}, text:t("role."+r)})));
+  return sel;
+}
+
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
+
+/* Explicit surface for the verification suite. Declared with const above,
+   which does not attach to window in a classic script. */
+Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
+                        openSheet, closeSheet, SHEETS });
+
+render();
+
+</script>
+</body>
+</html>
