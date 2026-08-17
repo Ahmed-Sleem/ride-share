@@ -130,3 +130,27 @@ output) — see the engineering standard §3.3 and §4.
   → No such file (no secrets baked); compose YAML + railway TOML/JSON + all shell scripts syntax-checked.
 - Not yet proven here (needs a Docker host with bridge networking): a live `docker compose up` of the
   4-service stack. The images are proven individually; the full-stack run is exercised in P0.12 and by CI.
+
+## 2026-08-17 — M0.5 (P0.5): PostGIS, migrations, and the no-ORM guard-rails
+
+- What: `infra/migrations/0001_enable-postgis.sql` (enables PostGIS, nothing else);
+  `packages/shared-types` with a GENERATED `db.generated.ts` (schema-derived, excludes
+  extension-owned tables and views); `scripts/check-sql-location.sh` (SQL only in repositories),
+  `scripts/check-sql-injection.sh` (no interpolated/concatenated SQL), `scripts/check-migrations.sh`
+  (scratch DB → up → pg_dump → compare to committed `infra/schema.sql` → down-all → up-again),
+  `scripts/check-db-types.sh`, `scripts/verify-db.sh`; `pnpm migrate`, `pnpm db:types`, `pnpm db:verify`;
+  CI `verify-db` job against a postgis/postgis:16-3.4 service container.
+- Files: infra/migrations/*, infra/schema.sql, scripts/{gen-db-types.mjs,check-sql-location.sh,
+  check-sql-injection.sh,check-migrations.sh,check-db-types.sh,verify-db.sh}, packages/shared-types/*,
+  .github/workflows/ci.yml, pnpm-workspace.yaml (node-pg-migrate@9, pg@8), package.json.
+- Findings fixed by running it for real: (1) node-pg-migrate loads EVERY file in the migrations dir,
+  so schema.sql lives at infra/schema.sql; (2) the postgis image pre-seeds its default DB with
+  tiger/topology/fuzzystrmatch, so the committed schema is generated from a CLEAN scratch DB
+  (migrations-only); (3) pg_dump 17 emits `\unrestrict` meta-commands → stripped in normalization;
+  (4) the type generator must exclude extension-owned tables (pg_depend) and views.
+- Break cases (all observed failing for the right reason): SQL in a service file → location fails;
+  `SELECT ... ${id}` → injection fails; hand-added column in schema.sql → drift fails; removed the
+  down migration → up/down/up fails ("down migration disabled").
+- Verified: PostGIS_Version() = 3.4; `pnpm db:verify` green (0 drift, cycle clean, types 0 drift);
+  `pnpm verify` green (repo checks incl. both SQL checks, web 198 unit, api tests). DB suite is
+  DB-dependent and lives behind `pnpm db:verify` (run in CI, not in the DB-free `pnpm verify`).

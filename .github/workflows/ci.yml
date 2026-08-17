@@ -39,6 +39,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @ride-share/web verify
 
+  verify-db:
+    name: Verify database (migrations + schema drift + types)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: ride
+          POSTGRES_PASSWORD: ride
+          POSTGRES_DB: rideshare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ride -d rideshare"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:verify
+        env:
+          DATABASE_URL: postgres://ride:ride@localhost:5432/rideshare
+
   images:
     name: Build both container images (non-root)
     needs: verify

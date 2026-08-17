@@ -1,0 +1,6 @@
+{
+  "name": "@ride-share/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Types shared across apps. db.generated.ts is GENERATED from the live schema — never hand-edited (DEC-170 mitigation 1); regenerate with `pnpm db:types`."
+}

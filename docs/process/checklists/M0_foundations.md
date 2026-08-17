@@ -52,14 +52,14 @@
 
 ## P0.5 — Database: PostGIS, migrations, no-ORM guard-rails
 
-- [ ] PostGIS confirmed (`SELECT PostGIS_Version()`), recorded
-- [ ] `node-pg-migrate`, plain-SQL migrations; 0001 enables the extension
-- [ ] Generated types (`pnpm db:types`) from the live schema; CI regenerates + fails on drift
-- [ ] One repository per table (SQL only in `**/infra/*.repository.ts`)
-- [ ] `check-sql-location.sh` + `check-sql-injection.sh` + `check-migrations.sh`
-- [ ] up → down → up cycle clean on a scratch DB; every migration has a working down
-- [ ] BREAK: hand-alter a column → drift fails; SQL in a service → location fails; interpolated query → injection fails; remove a down → cycle fails
-- [ ] `pnpm db:types` produces no diff on a clean tree
+- [x] PostGIS confirmed (`SELECT PostGIS_Version()`), recorded
+- [x] `node-pg-migrate`, plain-SQL migrations; 0001 enables the extension
+- [x] Generated types (`pnpm db:types`) from the live schema; CI regenerates + fails on drift
+- [x] One repository per table (SQL only in `**/infra/*.repository.ts`)
+- [x] `check-sql-location.sh` + `check-sql-injection.sh` + `check-migrations.sh`
+- [x] up → down → up cycle clean on a scratch DB; every migration has a working down
+- [x] BREAK: hand-alter a column → drift fails; SQL in a service → location fails; interpolated query → injection fails; remove a down → cycle fails
+- [x] `pnpm db:types` produces no diff on a clean tree
 
 ## P0.6 — API skeleton: modules, health, one error shape
 

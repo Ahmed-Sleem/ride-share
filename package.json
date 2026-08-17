@@ -10,9 +10,14 @@
   "scripts": {
     "verify": "bash scripts/verify-repo.sh && pnpm -r --if-present build && pnpm -r --if-present typecheck && pnpm -r --if-present lint && pnpm -r --if-present test",
     "verify:full": "bash scripts/verify-repo.sh && pnpm -r --if-present verify",
-    "verify:repo": "bash scripts/verify-repo.sh"
+    "verify:repo": "bash scripts/verify-repo.sh",
+    "migrate": "node-pg-migrate -m infra/migrations --migration-file-language sql",
+    "db:types": "node scripts/gen-db-types.mjs",
+    "db:verify": "bash scripts/verify-db.sh"
   },
   "devDependencies": {
-    "turbo": "catalog:"
+    "turbo": "catalog:",
+    "node-pg-migrate": "catalog:",
+    "pg": "catalog:"
   }
 }

@@ -254,3 +254,13 @@
 - CI workflow added: pnpm verify + full GUI browser suite + both image builds (non-root enforced).
 - Docker proven live in the sandbox: one Dockerfile builds both services, containers run non-root,
   health endpoints answer, the app refuses to start naming missing env vars, no .env baked.
+
+## 2026-08-17 — M0.5: PostGIS, migrations, no-ORM guard-rails; CI db job
+
+- node-pg-migrate plain-SQL migrations (0001 enables PostGIS); schema-derived types
+  (packages/shared-types/db.generated.ts); four no-ORM guard-rails (SQL location, SQL injection,
+  migration drift, type drift) all wired and observed failing for the right reason.
+- `pnpm db:verify` = migrations + drift + types, run against a live PostGIS (local compose or CI
+  service container). PostGIS 3.4 confirmed; committed infra/schema.sql generated from a clean
+  scratch database (migrations-only).
+- CI gains a `verify-db` job with a postgis/postgis:16-3.4 service container.

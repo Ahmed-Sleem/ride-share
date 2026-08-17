@@ -14,6 +14,8 @@ checks=(
   "scripts/check-workspace.sh"
   "scripts/check-secrets.sh"
   "scripts/check-env-example.sh"
+  "scripts/check-sql-location.sh"
+  "scripts/check-sql-injection.sh"
 )
 
 fail=0
