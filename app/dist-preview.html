@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0E7C66">
+<meta name="theme-color" content="#6C63FF">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111318">
 <meta name="description" content="Shared rides on fixed routes at a fixed price.">
 <title>Ride Share</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%236C63FF%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%235A4FD9%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20fill%3D%27url%28%23g%29%27%20fill-rule%3D%27evenodd%27%20d%3D%27M10.6223%203.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122%201.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144%201.2144-1.18669%203.10218.02046%204.30931.96862.9686%202.37548%201.1779%203.52103.5953l1.47896%201.3553c-.05911.3509-.08406.7078-.07998%201.0623.01453%201.26.39197%202.5758%201.00914%203.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969%201.3707-.4979.3764-.0009.7303.1199%201.0473.3317.5919.3956.8671%201.1024.4524%202.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362%201.437-.0553%202.7584-.8034%203.8989-1.9439%201.1842-1.1842%201.7637-2.5978%201.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919%205.71744L9.2479%208.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455%201.03589.02046%201.4809.44501.44501%201.06633.43503%201.4809.02046.37853-.37854.98803-.39183%201.38271-.03016l1.5307%201.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z%27%2F%3E%3C%2Fsvg%3E">
 <style>
 /* ══════════════════════════════════════════════════════════════════════════
    RIDE SHARE — DESIGN SYSTEM
@@ -24,16 +26,28 @@
 :root{
   /* ── PRIMITIVES ─────────────────────────────────────────────────────────
      Raw values. Never referenced by a component; only by semantic tokens.
-     Two-layer model per WCAG 2.2 palette guidance.                        */
-  --teal-50:#E6F2EF;  --teal-100:#C2E0D8; --teal-400:#17A98B; --teal-500:#0E7C66;
-  --teal-600:#0A5F4E; --teal-700:#07463A; --teal-900:#04231C;
-  --violet-50:#F1EDFE; --violet-100:#E0D8FD; --violet-300:#A48BFF;
-  --violet-400:#8B6DFA; --violet-500:#6D45E8; --violet-600:#5A32D4;
-  --violet-700:#43219E; --violet-900:#1E1145;
+     Two-layer model per WCAG 2.2 palette guidance.
+     Violet is the product's primary colour (the act of travelling).
+     Coral is the secondary role (value & continuity). The pops below are the
+     youth palette — used for chips, cards and friendly accents, never for
+     status or semantics.                                              */
+  --violet-50:#F1EEFF; --violet-100:#E3DDFF; --violet-200:#C9BEFF;
+  --violet-300:#A795FF; --violet-400:#8571FF; --violet-500:#6C63FF;
+  --violet-600:#5A4FD9; --violet-700:#463DB0; --violet-900:#241F5E;
+  --coral-50:#FFF1EC; --coral-100:#FFDCCF; --coral-300:#FFAD93;
+  --coral-400:#FF8A6E; --coral-500:#FF6A4D; --coral-600:#E84F30; --coral-900:#5E1F12;
+  --mint-50:#E7F9F0; --mint-100:#C9F1DE; --mint-300:#7FE0BC;
+  --mint-400:#3ECF9A; --mint-500:#1FB87F; --mint-600:#179A6A; --mint-900:#0B3A28;
+  --lime-50:#F7FBE3; --lime-100:#EFF7C2; --lime-300:#E4F083;
+  --lime-400:#D6E75C; --lime-500:#C9DE3D; --lime-600:#A8BD1F; --lime-900:#39400A;
+  --sky-50:#E9F4FF; --sky-100:#CFE7FF; --sky-300:#9ACDFF;
+  --sky-400:#6CB4FF; --sky-500:#3D9AF7; --sky-600:#2A7FD6; --sky-900:#0E2B4F;
+  --pink-50:#FDEFF6; --pink-100:#FBD9E9; --pink-300:#F6A9D0;
+  --pink-400:#F184BB; --pink-500:#E85F9F; --pink-600:#C73F7F; --pink-900:#4E1532;
   --ink-0:#FFFFFF; --ink-25:#FAFBFC; --ink-50:#F5F7F9; --ink-100:#EEF0F4;
   --ink-150:#E4E8ED; --ink-200:#DFE4EA; --ink-300:#C4CCD6; --ink-400:#98A2B0;
   --ink-500:#6B7684; --ink-600:#5B6472; --ink-700:#3D4550; --ink-800:#232A33;
-  --ink-850:#171B21; --ink-900:#151A21; --ink-950:#0F1216; --ink-1000:#0A0D11;
+  --ink-850:#1A1D24; --ink-900:#15181F; --ink-950:#111318; --ink-1000:#0B0C0F;
   --green-500:#1E8E3E; --green-400:#3ECF6B; --green-50:#E8F5EC; --green-950:#12291B;
   --amber-500:#B26A00; --amber-400:#FFB020; --amber-50:#FDF3E2; --amber-950:#2E2410;
   --red-500:#C62828;   --red-400:#FF6B6B;   --red-50:#FCEBEA;   --red-950:#2E1717;
@@ -48,21 +62,31 @@
   --text-muted:var(--ink-500); --text-inverse:var(--ink-0);
 
   /* ── SEMANTIC: BRAND + ACCENT ───────────────────────────────────────────
-     PRIMARY  teal    — the act of travelling: book, claim, confirm, go.
-     ACCENT   violet  — value and continuity: subscriptions, promotions,
-                        recommendations, the walking leg of a journey.
-     Two roles, never interchangeable. A violet button never means "go";
-     a teal surface never means "saving". This is what keeps an accent
+     PRIMARY  violet — the act of travelling: book, claim, confirm, go.
+     ACCENT   coral  — value and continuity: subscriptions, promotions,
+                       recommendations, the walking leg of a journey.
+     Two roles, never interchangeable. A coral button never means "go";
+     a violet surface never means "saving". This is what keeps an accent
      colour meaningful rather than decorative.                            */
-  --brand:var(--teal-500); --brand-hover:var(--teal-600);
-  --brand-soft:var(--teal-50); --brand-border:var(--teal-100);
+  --brand:var(--violet-500); --brand-hover:var(--violet-600);
+  --brand-2:var(--violet-600);           /* second stop of the brand gradient */
+  --brand-soft:var(--violet-50); --brand-border:var(--violet-100);
   --on-brand:var(--ink-0);
-  --accent:var(--violet-500); --accent-hover:var(--violet-600);
-  --accent-soft:var(--violet-50); --accent-border:var(--violet-100);
-  --on-accent:var(--ink-0); --accent-text:var(--violet-600);
+  --accent:var(--coral-500); --accent-hover:var(--coral-600);
+  --accent-soft:var(--coral-50); --accent-border:var(--coral-100);
+  --on-accent:var(--ink-0); --accent-text:var(--coral-600);
+
+  /* ── POPS — the youth palette. Decorative fills for chips, cards and
+     friendly accents. Each has a soft bg and a readable text twin.       */
+  --pop-mint:var(--mint-500);  --pop-mint-bg:var(--mint-50);  --pop-mint-text:var(--mint-600);
+  --pop-lime:var(--lime-500);  --pop-lime-bg:var(--lime-50);  --pop-lime-text:var(--lime-600);
+  --pop-sky:var(--sky-500);    --pop-sky-bg:var(--sky-50);    --pop-sky-text:var(--sky-600);
+  --pop-pink:var(--pink-500);  --pop-pink-bg:var(--pink-50);  --pop-pink-text:var(--pink-600);
+  --pop-coral:var(--coral-400);--pop-coral-bg:var(--coral-50);--pop-coral-text:var(--coral-600);
 
   /* route line stays blue: it is a map convention, not brand expression */
   --route:var(--blue-500); --walk:var(--violet-400);
+  --accent-route:var(--route); --accent-walk:var(--walk);
 
   /* ── SEMANTIC: STATUS ───────────────────────────────────────────────── */
   --ok:var(--green-500); --ok-bg:var(--green-50);
@@ -134,12 +158,18 @@
   --bg-inset:var(--ink-800); --bg-page:var(--ink-1000);
   --text-primary:#F2F5F8; --text-secondary:#9AA5B2; --text-muted:#7C8794;
   --text-inverse:var(--ink-950);
-  --brand:var(--teal-400); --brand-hover:#12C79E;
-  --brand-soft:#10312A; --brand-border:#17493D; --on-brand:var(--teal-900);
-  --accent:var(--violet-300); --accent-hover:#B9A5FF;
-  --accent-soft:#241A46; --accent-border:#382A63;
-  --on-accent:var(--violet-900); --accent-text:var(--violet-300);
+  --brand:var(--violet-400); --brand-hover:var(--violet-300); --brand-2:var(--violet-300);
+  --brand-soft:#241B4E; --brand-border:#3A2E78; --on-brand:var(--violet-900);
+  --accent:var(--coral-400); --accent-hover:var(--coral-300);
+  --accent-soft:#3A1C12; --accent-border:#5C2D1D;
+  --on-accent:var(--coral-900); --accent-text:var(--coral-300);
+  --pop-mint:var(--mint-400); --pop-mint-bg:var(--mint-900); --pop-mint-text:var(--mint-300);
+  --pop-lime:var(--lime-400); --pop-lime-bg:var(--lime-900); --pop-lime-text:var(--lime-300);
+  --pop-sky:var(--sky-400);  --pop-sky-bg:var(--sky-900);  --pop-sky-text:var(--sky-300);
+  --pop-pink:var(--pink-400);--pop-pink-bg:var(--pink-900);--pop-pink-text:var(--pink-300);
+  --pop-coral:var(--coral-400);--pop-coral-bg:var(--coral-900);--pop-coral-text:var(--coral-300);
   --route:var(--blue-400); --walk:var(--violet-300);
+  --accent-route:var(--route); --accent-walk:var(--walk);
   --ok:var(--green-400); --ok-bg:var(--green-950);
   --warn:var(--amber-400); --warn-bg:var(--amber-950);
   --danger:var(--red-400); --danger-bg:var(--red-950);
@@ -147,7 +177,7 @@
   --offline:#9AA5B2;
   --line:#252B33; --line-strong:#333B45;
   --focus:var(--violet-300); --scrim:rgba(0,0,0,.66);
-  --map-land:#1A1F26; --map-water:#16303F; --map-park:#1B2A1E;
+  --map-land:#15181F; --map-water:#16303F; --map-park:#1B2A1E;
   --map-road:#2A313A; --map-road-minor:#222831; --map-building:#232932;
   --sh-1:0 1px 2px rgba(0,0,0,.4);
   --sh-2:0 2px 4px rgba(0,0,0,.3),0 10px 20px -6px rgba(0,0,0,.45);
@@ -238,6 +268,9 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .navitem__label{font-size:var(--f-micro);font-weight:var(--fw-semi);
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* rail collapse control — folds the desktop rail to icons and back */
+.rail-toggle{display:none}
+
 /* compact: bottom bar */
 @media (max-width:599.98px){
   .app{flex-direction:column}
@@ -261,6 +294,13 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   .navitem{flex:none;min-height:var(--tap-driver)}
   .nav__foot{display:flex;flex-direction:column;flex:none;gap:var(--s1);
     padding-top:var(--s3);border-top:1px solid var(--line);margin-top:var(--s3)}
+  .rail-toggle{display:flex;align-items:center;justify-content:center;
+    width:100%;min-height:var(--tap-driver);margin-top:var(--s3);
+    border-radius:var(--r-md);color:var(--text-secondary);flex:none;
+    transition:background var(--fast) var(--ease),color var(--fast) var(--ease)}
+  .rail-toggle:hover{background:var(--bg-sunken);color:var(--text-primary)}
+  .rail-toggle svg{width:var(--icon-md);height:var(--icon-md);fill:none;
+    stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 }
 
 /* expanded and up: rail shows labels beside icons */
@@ -277,6 +317,13 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
     padding-inline:var(--s3);min-height:var(--tap)}
   .navitem[aria-current="page"]{background:var(--brand);color:var(--on-brand)}
   .navitem__label{font-size:var(--f-body);font-weight:var(--fw-semi)}
+  /* user-collapsed rail: icons only, labels and brand name fold away */
+  .app.rail-collapsed .nav{width:var(--rail-collapsed)}
+  .app.rail-collapsed .nav__brand{justify-content:center;padding-inline:0}
+  .app.rail-collapsed .nav__brand span{display:none}
+  .app.rail-collapsed .navitem{flex-direction:column;justify-content:center;
+    gap:2px;padding-inline:var(--s2)}
+  .app.rail-collapsed .navitem__label{display:none}
 }
 
 /* large and up: roomier gutters */
@@ -325,6 +372,7 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   letter-spacing:.07em;text-transform:uppercase;line-height:var(--lh-snug)}
 .muted{color:var(--text-secondary)}
 .num{font-variant-numeric:tabular-nums}
+.emoji{font-size:var(--f-lg);line-height:1}
 
 /* ══════════════════════════════════════════════════════════════════════════
    BUTTONS
@@ -336,8 +384,12 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
              border-color var(--fast) var(--ease);border:1px solid transparent}
 .btn svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
   stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.btn--primary{background:var(--brand);color:var(--on-brand)}
-.btn--primary:hover:not([disabled]){background:var(--brand-hover)}
+.btn--primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  color:var(--on-brand);
+  box-shadow:0 2px 10px -2px color-mix(in srgb,var(--brand) 55%,transparent)}
+.btn--primary:hover:not([disabled]){
+  background:linear-gradient(135deg,var(--brand-hover),var(--brand));
+  transform:translateY(-1px)}
 .btn--accent{background:var(--accent);color:var(--on-accent)}
 .btn--accent:hover:not([disabled]){background:var(--accent-hover)}
 .btn--secondary{background:var(--bg-sunken);color:var(--text-primary)}
@@ -428,6 +480,11 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .chip--warn{background:var(--warn-bg);color:var(--warn)}
 .chip--danger{background:var(--danger-bg);color:var(--danger)}
 .chip--info{background:var(--info-bg);color:var(--info)}
+.chip--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
+.chip--lime{background:var(--pop-lime-bg);color:var(--pop-lime-text)}
+.chip--sky{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
+.chip--pink{background:var(--pop-pink-bg);color:var(--pop-pink-text)}
+.chip--coral{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
 .chip--outline{background:none;border-color:var(--line-strong)}
 button.chip{cursor:pointer;transition:background var(--fast) var(--ease),
   color var(--fast) var(--ease),border-color var(--fast) var(--ease)}
@@ -495,6 +552,10 @@ select.input{cursor:pointer}
    ══════════════════════════════════════════════════════════════════════════ */
 .empty{display:flex;flex-direction:column;align-items:center;text-align:center;
   gap:var(--s3);padding:var(--s8) var(--s4);color:var(--text-secondary)}
+.empty__ico{width:72px;height:72px;border-radius:var(--r-full);flex:none;
+  display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-text)}
+.empty__ico svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
 .empty>svg{width:40px;height:40px;fill:none;stroke:currentColor;stroke-width:1.5;
   opacity:.5;stroke-linecap:round;stroke-linejoin:round}
 .skeleton{background:linear-gradient(90deg,var(--bg-sunken),var(--bg-inset),var(--bg-sunken));
@@ -511,7 +572,8 @@ select.input{cursor:pointer}
   padding:var(--s4);min-height:76px;border:1px solid var(--line);
   border-radius:var(--r-md);text-align:start;background:var(--bg-base);
   transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
-.routecard:hover{border-color:var(--brand);box-shadow:var(--sh-2)}
+.routecard:hover{border-color:var(--brand);box-shadow:var(--sh-2);transform:translateY(-1px)}
+.routecard:active{transform:translateY(0) scale(.99)}
 .routeline{font-weight:var(--fw-semi);font-size:var(--f-lg);line-height:var(--lh-snug)}
 .fare{font-weight:var(--fw-bold);font-size:var(--f-lg);white-space:nowrap;
   font-variant-numeric:tabular-nums}
@@ -641,6 +703,28 @@ select.input{cursor:pointer}
 </style>
 </head>
 <body data-theme="light">
+<script>
+/* Apply the saved theme before first paint so dark users never see a
+   light flash. Mirrors the resolution logic in render(). */
+(function(){
+  var t="light";
+  try{ t=localStorage.getItem("rs.theme")||"auto"; }catch(e){}
+  if(t==="auto"){
+    try{ t=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light"; }
+    catch(e){ t="light"; }
+  }
+  document.documentElement.setAttribute("data-theme",t);
+})();
+</script>
+<!-- brand gradient — one definition, referenced by every logo instance -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" style="stop-color:var(--brand)"/>
+      <stop offset="1" style="stop-color:var(--brand-2)"/>
+    </linearGradient>
+  </defs>
+</svg>
 <div id="root"></div>
 <script>
 /* ══════════════════════════════════════════════════════════════════════
@@ -680,6 +764,9 @@ en:{
   buySub:"Buy subscription", safetyCentre:"Safety centre", shareTrip:"Share trip status",
   emergency:"Emergency contacts", reportProblem:"Report a problem", callSupport:"Call support",
   language:"Language", theme:"Appearance", notifications:"Notifications", signOut:"Sign out",
+  themeAuto:"Auto", themeLight:"Light", themeDark:"Dark",
+  switchLight:"Switch to light", switchDark:"Switch to dark",
+  collapseMenu:"Collapse menu", expandMenu:"Expand menu",
   /* driver */
   goOnline:"Go on duty", goOffline:"Go off duty", online:"On duty", offline:"Off duty",
   today:"Today", cashToSettle:"Cash to settle", claimSlot:"Claim this slot",
@@ -730,6 +817,9 @@ ar:{
   buySub:"اشترك", safetyCentre:"مركز الأمان", shareTrip:"شارك حالة الرحلة",
   emergency:"جهات الطوارئ", reportProblem:"أبلغ عن مشكلة", callSupport:"اتصل بالدعم",
   language:"اللغة", theme:"المظهر", notifications:"الإشعارات", signOut:"تسجيل الخروج",
+  themeAuto:"تلقائي", themeLight:"فاتح", themeDark:"داكن",
+  switchLight:"التبديل إلى الفاتح", switchDark:"التبديل إلى الداكن",
+  collapseMenu:"طي القائمة", expandMenu:"توسيع القائمة",
   goOnline:"ابدأ الدوام", goOffline:"إنهاء الدوام", online:"في الدوام", offline:"خارج الدوام",
   today:"اليوم", cashToSettle:"نقدية للتوريد", claimSlot:"احجز هذا الموعد",
   claimed:"تم حجز الموعد", ridersWaiting:"راكب بحث عن هذا الموعد أمس",
@@ -899,8 +989,24 @@ const DATA = {
 /* ══════════════════════════════════════════════════════════════════════
    3. STATE + HELPERS
    ══════════════════════════════════════════════════════════════════════ */
+/* Safe storage — localStorage throws on opaque origins (file://, jsdom),
+   which must never crash the app. */
+const storeGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const storeSet = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
+
+/* resolvedTheme: S.theme is a preference ("auto"|"light"|"dark"); the resolved
+   value is what the DOM actually renders. Auto follows the device setting. */
+const resolvedTheme = () => {
+  if (S.theme === "auto") {
+    try { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ? "dark" : "light"; } catch(e){ return "light"; }
+  }
+  return S.theme;
+};
+
 const S = {
-  role:"rider", lang:"en", theme:"light",
+  role:"rider", lang:"en", theme: storeGet("rs.theme") || "auto",
+  rail: storeGet("rs.rail") || "open",
   authed:true, authStep:"phone",
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
@@ -977,12 +1083,31 @@ const ICON = {
   bell:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',
   moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>',
   doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   flag:'<path d="M5 21V4M5 5h11l-2 4 2 4H5"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   seat:'<path d="M6 4h3a2 2 0 0 1 2 2v7H8a2 2 0 0 1-2-2z"/><path d="M6 17h11a2 2 0 0 0 2-2v-2h-8"/><path d="M19 17v3"/>',
-  star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>',
-  logo:'<path d="M4 17h16M6 17V9l6-4 6 4v8"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="13" r="1.3"/>'
+  star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>'
+};
+
+/* Brand mark — the user's bookmark-and-pin glyph. Filled (not stroked), and
+   coloured by the brand gradient defined once in the document, or by the
+   given fill. */
+const LOGO_PATH = "M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z";
+const logoSVG = (fill, cls) => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  s.setAttribute("viewBox","0 0 24 24");
+  s.setAttribute("aria-hidden","true");
+  if (cls) s.setAttribute("class", cls);
+  const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("fill", fill || "url(#brandGrad)");
+  p.setAttribute("fill-rule","evenodd");
+  p.setAttribute("clip-rule","evenodd");
+  p.setAttribute("stroke","none");
+  p.setAttribute("d", LOGO_PATH);
+  s.append(p);
+  return s;
 };
 const icon = (n, cls) => {
   const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -1032,7 +1157,7 @@ const KV = (k,v,strong=true) => $("div",{class:"row gap3"},
   $("span",{class:"t-cap grow",text:k}),
   $(strong?"strong":"span",{class:"ltr",text:v}));
 const Empty = (ic, title, body, action) => $("div",{class:"empty"},
-  icon(ic), $("div",{class:"t-head",text:title}),
+  $("div",{class:"empty__ico"}, icon(ic)), $("div",{class:"t-head",text:title}),
   body?$("div",{class:"t-cap",text:body}):null, action||null);
 
 /* Row: one component owning row layout, so padding has exactly one owner. */
@@ -1175,7 +1300,7 @@ const RouteCard = (r, on) => $("button",{class:"routecard", attrs:{type:"button"
 function authWelcome(){                                       // R-01
   return $("div",{class:"appcol"},
     $("div",{class:"hero"},
-      $("div",{class:"logomark"}, icon("logo")),
+      $("div",{class:"logomark"}, logoSVG("currentColor")),
       $("div",{class:"stack gap2 center"},
         $("h1",{class:"t-display",text:t("brand")}),
         $("div",{class:"t-cap",text:t("tagline")})),
@@ -1242,6 +1367,7 @@ function riderHome(){                                         // R-10
   /* active ticket outranks everything else on this screen */
   w.append(Card("card--brand",
     $("div",{class:"row gap2"},
+      $("span",{class:"emoji",text:"🚌"}),
       Chip({label:t("yourRide"), kind:"brand"}),
       $("div",{class:"grow"}),
       $("strong",{class:"ltr",text:DATA.ticket.time})),
@@ -1335,7 +1461,7 @@ function riderBooked(){                                       // R-15
   w.append($("div",{class:"hero"},
     $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
     $("div",{class:"stack gap2 center"},
-      $("h1",{class:"t-title",text:t("booked")}),
+      $("h1",{class:"t-title",text:t("booked")+" 🎉"}),
       $("div",{class:"t-cap",text:t("bookedBody")})),
     QRPanel({code:DATA.ticket.code})));
   w.append(Btn({label:t("yourRide"), block:true, on:()=>{S.stack=[]; go("waiting");}}));
@@ -1459,9 +1585,9 @@ function langSeg(){
 }
 function themeSeg(){
   const seg=$("div",{class:"seg"});
-  [["light","☀"],["dark","☾"]].forEach(([k,lbl])=>
+  [["auto",t("themeAuto")],["light",t("themeLight")],["dark",t("themeDark")]].forEach(([k,lbl])=>
     seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.theme===k),
-      "aria-label":k}, text:lbl, on:{click:()=>{S.theme=k; render();}}})));
+      "aria-label":k}, text:lbl, on:{click:()=>{S.theme=k; storeSet("rs.theme",k); render();}}})));
   return seg;
 }
 function switchEl(on){
@@ -1899,7 +2025,8 @@ const SHEETS = {
 
   topup: () => Sheet(t("addMoney"),
     $("div",{class:"row wrap gap2"},
-      ...[50,100,200,500].map(v=> Chip({label:money(v), kind:"info", on:()=>{}}))),
+      ...[["mint",50],["lime",100],["sky",200],["pink",500]].map(([k,v])=>
+        Chip({label:money(v), kind:k, on:()=>{}}))),
     $("div",{class:"field"},
       $("label",{text:t("addMoney")}),
       $("input",{class:"input ltr",attrs:{type:"number",placeholder:"100"}})),
@@ -2041,7 +2168,7 @@ function searchBand(){
    so there is no JS branch per screen size and no resize listener. */
 function nav(){
   const el=$("nav",{class:"nav",attrs:{"aria-label":"Primary"}});
-  el.append($("div",{class:"nav__brand"}, icon("logo"), $("span",{text:t("brand")})));
+  el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:t("brand")})));
 
   const items=$("div",{class:"nav__items"});
   PAGES[S.role].filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
@@ -2049,6 +2176,8 @@ function nav(){
 
   // Rail footer: profile pinned to the bottom on medium and up. On compact
   // the same item sits inline in the bottom bar — one component either way.
+  // The collapse control sits above the footer so the footer stays last.
+  el.append(railToggle());
   const foot=PAGES[S.role].filter(p=>p.foot);
   if(foot.length){
     const f=$("div",{class:"nav__foot"});
@@ -2059,11 +2188,21 @@ function nav(){
   }
   return el;
 }
+function railToggle(){
+  const collapsed = S.rail==="collapsed";
+  return $("button",{class:"rail-toggle",
+    attrs:{type:"button", "aria-pressed":String(collapsed),
+      "aria-label": collapsed ? t("expandMenu") : t("collapseMenu")},
+    on:{click:()=>{ S.rail = collapsed ? "open" : "collapsed";
+                    storeSet("rs.rail", S.rail); render(); }}},
+    icon(collapsed ? "fwd" : "back"));
+}
 function navItem(p, extra){
   const label=t("nav."+p.k);
   return $("button",{class:"navitem"+(extra?" "+extra:""),
     attrs:{type:"button","aria-label":label,
-      "aria-current":S.page===p.k?"page":null},
+      "aria-current":S.page===p.k?"page":null,
+      title: S.rail==="collapsed" && extra!=="compact-only" ? label : null},
     on:{click:()=>{ S.stack=[]; S.page=p.k; S.sheet=null; S.opsView=null; render(); }}},
     $("span",{class:"navitem__ico"}, icon(p.ic)),
     $("span",{class:"navitem__label",text:label}));
@@ -2075,11 +2214,11 @@ function navItem(p, extra){
 function render(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
-  document.body.dataset.theme   = S.theme;
+  document.body.dataset.theme   = resolvedTheme();
 
   const root=document.getElementById("root");
   root.innerHTML="";
-  const app=$("div",{class:"app"});
+  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
   if(!S.authed){
     const step={welcome:authWelcome, phone:authPhone, otp:authOtp, name:authName}[S.authStep]
@@ -2136,8 +2275,20 @@ function headerActions(){
       "aria-label":`${t("balance")} ${money(DATA.user.balance)}`},
       on:{click:()=>go("wallet")}},
       icon("wallet"), $("span",{class:"ltr num",text:money(DATA.user.balance)})));
+  wrap.append(themeToggle());
   wrap.append(roleSwitcher());
   return wrap;
+}
+
+/* Quick theme toggle in the top bar: flips to the opposite of the resolved
+   theme (an "auto" preference is replaced by the explicit choice). The full
+   three-way control lives in Profile. */
+function themeToggle(){
+  const dark = resolvedTheme()==="dark";
+  return IconBtn({name: dark ? "sun" : "moon",
+    label: dark ? t("switchLight") : t("switchDark"),
+    on:()=>{ S.theme = dark ? "light" : "dark";
+             storeSet("rs.theme", S.theme); render(); }});
 }
 
 function roleSwitcher(){
@@ -2154,7 +2305,7 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
 Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
-                        openSheet, closeSheet, SHEETS });
+                        openSheet, closeSheet, SHEETS, resolvedTheme });
 
 render();
 

@@ -39,3 +39,26 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: fully fixed — the band is genuinely part of the scrollable page
   and no separator line remains; every changed check was observed failing for
   the right reason before passing.
+
+## 2026-08-17 — GUI modernisation (violet pop design)
+
+- What: Re-skinned the interface to a youth "pop" design — violet primary, coral secondary, five
+  pastel pops, near-black dark mode, gradient brand mark + favicon, Auto/Light/Dark theme with a
+  top-bar quick toggle, collapsible desktop rail, and tasteful motion/emoji accents. (User-approved
+  decisions via MCQ: full re-skin; violet-first; Auto+Light+Dark; gradient mark; collapse-to-icons;
+  moderate shapes; tasteful happiness set; near-black dark; violet as primary action, coral as
+  secondary role.)
+- Files: `app/src/styles/shell.html` (tokens, favicon, gradient defs, buttons, chips, empty,
+  rail collapse), `app/src/lib/components.js` (state, resolvedTheme, storage, logoSVG, sun icon,
+  Empty), `app/src/shell/app.js` (logo, railToggle, themeToggle, render), `app/src/screens/rider.js`
+  (themeSeg 3-way, auth logo, emoji accents), `app/src/data/content.js` (i18n keys),
+  `app/tests/unit.test.js`, `app/tests/breaks.sh`.
+- Tests: unit rewritten (accent group for violet/coral, new THEME/RAIL/BRAND groups); break cases
+  updated for the new tokens and 4 added (rail collapse, auto theme, favicon, gradient logo).
+- Verified: `./app/verify.sh` green — 198 unit/accessibility; 5,803 real-browser layout (15
+  viewports × 5 roles × 30 screens); 40 + 7 break cases caught. Functional browser check:
+  auto resolves to the system, dark gives `#0B0C0F` surfaces, the rail collapses to 80px with
+  labels hidden, the gradient logo and favicon render.
+- Self-check: fully wired — the theme preference persists, the rail preference persists, every new
+  check was observed failing for the right reason, and the RTL/Arabic + light/dark matrix still
+  renders all 30 screens.

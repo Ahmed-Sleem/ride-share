@@ -4,7 +4,7 @@
 function authWelcome(){                                       // R-01
   return $("div",{class:"appcol"},
     $("div",{class:"hero"},
-      $("div",{class:"logomark"}, icon("logo")),
+      $("div",{class:"logomark"}, logoSVG("currentColor")),
       $("div",{class:"stack gap2 center"},
         $("h1",{class:"t-display",text:t("brand")}),
         $("div",{class:"t-cap",text:t("tagline")})),
@@ -71,6 +71,7 @@ function riderHome(){                                         // R-10
   /* active ticket outranks everything else on this screen */
   w.append(Card("card--brand",
     $("div",{class:"row gap2"},
+      $("span",{class:"emoji",text:"🚌"}),
       Chip({label:t("yourRide"), kind:"brand"}),
       $("div",{class:"grow"}),
       $("strong",{class:"ltr",text:DATA.ticket.time})),
@@ -164,7 +165,7 @@ function riderBooked(){                                       // R-15
   w.append($("div",{class:"hero"},
     $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
     $("div",{class:"stack gap2 center"},
-      $("h1",{class:"t-title",text:t("booked")}),
+      $("h1",{class:"t-title",text:t("booked")+" 🎉"}),
       $("div",{class:"t-cap",text:t("bookedBody")})),
     QRPanel({code:DATA.ticket.code})));
   w.append(Btn({label:t("yourRide"), block:true, on:()=>{S.stack=[]; go("waiting");}}));
@@ -288,9 +289,9 @@ function langSeg(){
 }
 function themeSeg(){
   const seg=$("div",{class:"seg"});
-  [["light","☀"],["dark","☾"]].forEach(([k,lbl])=>
+  [["auto",t("themeAuto")],["light",t("themeLight")],["dark",t("themeDark")]].forEach(([k,lbl])=>
     seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.theme===k),
-      "aria-label":k}, text:lbl, on:{click:()=>{S.theme=k; render();}}})));
+      "aria-label":k}, text:lbl, on:{click:()=>{S.theme=k; storeSet("rs.theme",k); render();}}})));
   return seg;
 }
 function switchEl(on){

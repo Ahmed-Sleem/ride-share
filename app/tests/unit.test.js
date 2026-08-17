@@ -201,20 +201,70 @@ group("SAFE AREAS AND ZOOM");
 
 group("ACCENT COLOUR HAS A JOB");
 {
-  ok("accent token exists", /--accent:var\(--violet-500\)/.test(CSS));
-  ok("accent has a dark-theme value", /\[data-theme="dark"\]\{[\s\S]*--accent:var\(--violet-300\)/.test(CSS));
+  ok("primary brand is violet", /--brand:var\(--violet-500\)/.test(CSS));
+  ok("accent token exists", /--accent:var\(--coral-500\)/.test(CSS));
+  ok("accent has a dark-theme value", /\[data-theme="dark"\]\{[\s\S]*--accent:var\(--coral-400\)/.test(CSS));
   ok("accent soft/border variants exist",
      /--accent-soft:/.test(CSS) && /--accent-border:/.test(CSS));
   ok("on-accent is defined, not guessed", /--on-accent:/.test(CSS));
-  ok("focus ring uses the accent", /--focus:var\(--violet-500\)/.test(CSS));
-  ok("primary brand is still teal", /--brand:var\(--teal-500\)/.test(CSS));
+  ok("focus ring uses the primary brand", /--focus:var\(--violet-500\)/.test(CSS));
   ok("accent and brand are different roles",
-     !/--accent:var\(--teal/.test(CSS) && !/--brand:var\(--violet/.test(CSS));
+     !/--accent:var\(--violet/.test(CSS) && !/--brand:var\(--coral/.test(CSS));
   ok("primitives are two-layer (raw violet ramp exists)",
-     /--violet-500:#6D45E8/.test(CSS));
+     /--violet-500:#6C63FF/.test(CSS));
+  ok("pops are tokenised",
+     /--pop-mint:/.test(CSS) && /--pop-lime:/.test(CSS) && /--pop-sky:/.test(CSS) &&
+     /--pop-pink:/.test(CSS) && /--pop-coral:/.test(CSS));
   const t=boot();
   t.go("rider","home");
   ok("accent is actually used in the product", !!t.q(".chip--accent"));
+}
+
+group("THEME — AUTO FOLLOWS THE SYSTEM, MANUAL OVERRIDES");
+{
+  const t=boot();
+  ok("default preference is auto", t.w.S.theme==="auto", String(t.w.S.theme));
+  t.w.S.theme="auto";
+  const sysDark = !!(t.w.matchMedia && t.w.matchMedia("(prefers-color-scheme: dark)").matches);
+  ok("auto resolves to the system preference", t.w.resolvedTheme()===(sysDark?"dark":"light"),
+     `${t.w.resolvedTheme()} vs ${sysDark?"dark":"light"}`);
+  t.w.S.theme="dark";
+  ok("manual dark is honoured", t.w.resolvedTheme()==="dark");
+  t.w.S.theme="light"; t.w.render();
+  ok("render applies the resolved theme", t.w.document.body.dataset.theme==="light");
+  t.go("rider","profile");
+  const segs=t.all(".seg");
+  ok("profile offers three theme options",
+     segs.some(s=>s.querySelectorAll("button").length===3),
+     segs.map(s=>s.querySelectorAll("button").length).join(","));
+}
+
+group("RAIL COLLAPSES ON DESKTOP");
+{
+  const t=boot();
+  t.go("rider","home");
+  ok("collapse control exists", !!t.q(".rail-toggle"));
+  ok("footer is still the last child", t.q(".nav").lastElementChild===t.q(".nav__foot"));
+  ok("collapse rule exists in css",
+     /\.app\.rail-collapsed \.nav\{width:var\(--rail-collapsed\)\}/.test(CSS));
+  t.w.S.rail="collapsed"; t.w.render();
+  ok("collapsed state adds the class",
+     !!t.q(".app.rail-collapsed"), t.q(".app")?t.q(".app").className:"");
+  ok("collapsed nav items carry a tooltip", !!t.q(".navitem[title]"));
+  const tg=t.q(".rail-toggle");
+  tg.dispatchEvent(new t.w.Event("click"));
+  ok("toggling reopens the rail", t.w.S.rail==="open", String(t.w.S.rail));
+}
+
+group("BRAND MARK AND FAVICON");
+{
+  ok("favicon is embedded", /rel="icon"/.test(SRC) && /data:image\/svg\+xml/.test(SRC));
+  ok("brand gradient is defined once", /id="brandGrad"/.test(SRC));
+  ok("logo references the gradient", /url\(#brandGrad\)/.test(SRC));
+  ok("theme colour matches the brand", /name="theme-color" content="#6C63FF"/.test(SRC));
+  const t=boot();
+  t.go("rider","home");
+  ok("nav shows the brand mark", !!t.q(".nav__brand svg path[fill]"));
 }
 
 group("EVERY SCREEN RENDERS, IN BOTH LANGUAGES, BOTH THEMES");

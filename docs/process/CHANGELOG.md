@@ -193,3 +193,24 @@
   added under `docs/reference/`; the docs index updated.
 - Repository: confirmed `app/` (interface), `deploy/` (Docker, nginx, Railway), `docs/` (all non-code)
   separation; secret scan clean (no PAT or credentials in tree or history); pushed to GitHub.
+
+## 2026-08-17 — modernised GUI: violet pop design, auto theme, collapsible rail, brand mark
+
+- Design language modernised to a youth pop palette: **violet `#6C63FF` is now the primary
+  brand/action colour**; **coral** takes the secondary "value & continuity" role; five pastel
+  pops (mint, lime, sky, pink, coral) added as first-class tokens. Teal retired. Dark mode uses
+  near-black surfaces with the pops glowing on top.
+- Brand mark: the user's bookmark-and-pin glyph added as the logo, rendered with a violet gradient
+  (defined once) and embedded as an SVG data-URI favicon; theme-color meta updated.
+- Theme system: **Auto / Light / Dark**. Auto follows the device (`prefers-color-scheme`), manual
+  choices persist (localStorage), a quick toggle sits in the top bar, and the three-way control
+  lives in Profile. A pre-paint script prevents a light flash for dark users.
+- Desktop rail: a collapse control folds the expanded rail to a 72–80px icon bar (labels hidden,
+  tooltips on the active items) and back; the choice is remembered.
+- Tasteful "happiness" touches: gradient primary button with a soft glow and hover lift, hover lift
+  on route cards, playful empty states (soft pop blob), emoji accents on the active-ticket and
+  booked screens, and colourful top-up chips.
+- Latent fix: the illustrative map's route/walk colours (`--accent-route`/`--accent-walk`) were
+  referenced but never defined; they now map to `--route`/`--walk`.
+- Verification re-run green: 198 unit/accessibility assertions; 5,803 real-browser layout
+  assertions; 40 break cases and 7 layout break cases all observed failing for the right reason.

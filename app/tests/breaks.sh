@@ -124,7 +124,7 @@ run_break "safe area ignored by the nav" app/src/styles/shell.html \
 
 # ── accent colour ────────────────────────────────────────────────────────
 run_break "accent collapses into the brand" app/src/styles/shell.html \
-  's|  --accent:var(--violet-500); --accent-hover:var(--violet-600);|  --accent:var(--teal-500); --accent-hover:var(--violet-600);|' \
+  's|  --accent:var(--coral-500); --accent-hover:var(--coral-600);|  --accent:var(--violet-500); --accent-hover:var(--coral-600);|' \
   "accent and brand are different roles"
 
 run_break "accent unused in the product" app/src/shell/app.js \
@@ -132,7 +132,7 @@ run_break "accent unused in the product" app/src/shell/app.js \
   "accent is actually used in the product"
 
 run_break "hardcoded hex colour" app/src/styles/shell.html \
-  's|^\.btn--primary{background:var(--brand);color:var(--on-brand)}|.btn--primary{background:#0E7C66;color:var(--on-brand)}|' \
+  's|^\.btn--primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));|.btn--primary{background:linear-gradient(135deg,#6C63FF,var(--brand-2));|' \
   "no hardcoded colour in css rules"
 
 # ── behaviour that must not regress ──────────────────────────────────────
@@ -173,8 +173,25 @@ run_break "back button goes nowhere" app/src/lib/components.js \
   "back returns to routes"
 
 run_break "prototype harness returns" app/src/shell/app.js \
-  's|  el.append(\$("div",{class:"nav__brand"}, icon("logo"), \$("span",{text:t("brand")})));|  el.append($("div",{class:"nav__brand"}, icon("logo"), $("span",{text:"GUI prototype"})));|' \
+  's|  el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:t("brand")})));|  el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:"GUI prototype"})));|' \
   "no prototype harness remains"
+
+# ── modernisation: rail collapse, auto theme, brand mark ─────────────────
+run_break "rail never collapses" app/src/styles/shell.html \
+  's|  .app.rail-collapsed .nav{width:var(--rail-collapsed)}|  .app.rail-collapsed .nav{width:var(--rail-expanded)}|' \
+  "collapse rule exists in css"
+
+run_break "theme loses its auto option" app/src/screens/rider.js \
+  's|\[\["auto",t("themeAuto")\],\["light",t("themeLight")\],\["dark",t("themeDark")\]\]|\[\["light",t("themeLight")\],\["dark",t("themeDark")\]\]|' \
+  "profile offers three theme options"
+
+run_break "favicon removed" app/src/styles/shell.html \
+  's|rel="icon"|rel="iconx"|' \
+  "favicon is embedded"
+
+run_break "logo loses its gradient" app/src/lib/components.js \
+  's|"url(#brandGrad)"|"currentColor"|' \
+  "logo references the gradient"
 
 run_break "input loses its label" app/src/lib/components.js \
   's|      \$("input",{attrs:{type:"search", placeholder, "aria-label":placeholder}}))|      $("input",{attrs:{type:"search", placeholder}}))|' \

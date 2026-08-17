@@ -28,7 +28,8 @@ const SHEETS = {
 
   topup: () => Sheet(t("addMoney"),
     $("div",{class:"row wrap gap2"},
-      ...[50,100,200,500].map(v=> Chip({label:money(v), kind:"info", on:()=>{}}))),
+      ...[["mint",50],["lime",100],["sky",200],["pink",500]].map(([k,v])=>
+        Chip({label:money(v), kind:k, on:()=>{}}))),
     $("div",{class:"field"},
       $("label",{text:t("addMoney")}),
       $("input",{class:"input ltr",attrs:{type:"number",placeholder:"100"}})),
@@ -170,7 +171,7 @@ function searchBand(){
    so there is no JS branch per screen size and no resize listener. */
 function nav(){
   const el=$("nav",{class:"nav",attrs:{"aria-label":"Primary"}});
-  el.append($("div",{class:"nav__brand"}, icon("logo"), $("span",{text:t("brand")})));
+  el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:t("brand")})));
 
   const items=$("div",{class:"nav__items"});
   PAGES[S.role].filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
@@ -178,6 +179,8 @@ function nav(){
 
   // Rail footer: profile pinned to the bottom on medium and up. On compact
   // the same item sits inline in the bottom bar — one component either way.
+  // The collapse control sits above the footer so the footer stays last.
+  el.append(railToggle());
   const foot=PAGES[S.role].filter(p=>p.foot);
   if(foot.length){
     const f=$("div",{class:"nav__foot"});
@@ -188,11 +191,21 @@ function nav(){
   }
   return el;
 }
+function railToggle(){
+  const collapsed = S.rail==="collapsed";
+  return $("button",{class:"rail-toggle",
+    attrs:{type:"button", "aria-pressed":String(collapsed),
+      "aria-label": collapsed ? t("expandMenu") : t("collapseMenu")},
+    on:{click:()=>{ S.rail = collapsed ? "open" : "collapsed";
+                    storeSet("rs.rail", S.rail); render(); }}},
+    icon(collapsed ? "fwd" : "back"));
+}
 function navItem(p, extra){
   const label=t("nav."+p.k);
   return $("button",{class:"navitem"+(extra?" "+extra:""),
     attrs:{type:"button","aria-label":label,
-      "aria-current":S.page===p.k?"page":null},
+      "aria-current":S.page===p.k?"page":null,
+      title: S.rail==="collapsed" && extra!=="compact-only" ? label : null},
     on:{click:()=>{ S.stack=[]; S.page=p.k; S.sheet=null; S.opsView=null; render(); }}},
     $("span",{class:"navitem__ico"}, icon(p.ic)),
     $("span",{class:"navitem__label",text:label}));
@@ -204,11 +217,11 @@ function navItem(p, extra){
 function render(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
-  document.body.dataset.theme   = S.theme;
+  document.body.dataset.theme   = resolvedTheme();
 
   const root=document.getElementById("root");
   root.innerHTML="";
-  const app=$("div",{class:"app"});
+  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
   if(!S.authed){
     const step={welcome:authWelcome, phone:authPhone, otp:authOtp, name:authName}[S.authStep]
@@ -265,8 +278,20 @@ function headerActions(){
       "aria-label":`${t("balance")} ${money(DATA.user.balance)}`},
       on:{click:()=>go("wallet")}},
       icon("wallet"), $("span",{class:"ltr num",text:money(DATA.user.balance)})));
+  wrap.append(themeToggle());
   wrap.append(roleSwitcher());
   return wrap;
+}
+
+/* Quick theme toggle in the top bar: flips to the opposite of the resolved
+   theme (an "auto" preference is replaced by the explicit choice). The full
+   three-way control lives in Profile. */
+function themeToggle(){
+  const dark = resolvedTheme()==="dark";
+  return IconBtn({name: dark ? "sun" : "moon",
+    label: dark ? t("switchLight") : t("switchDark"),
+    on:()=>{ S.theme = dark ? "light" : "dark";
+             storeSet("rs.theme", S.theme); render(); }});
 }
 
 function roleSwitcher(){
@@ -283,6 +308,6 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
 Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
-                        openSheet, closeSheet, SHEETS });
+                        openSheet, closeSheet, SHEETS, resolvedTheme });
 
 render();

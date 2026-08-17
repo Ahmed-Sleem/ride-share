@@ -1,8 +1,24 @@
 /* ══════════════════════════════════════════════════════════════════════
    3. STATE + HELPERS
    ══════════════════════════════════════════════════════════════════════ */
+/* Safe storage — localStorage throws on opaque origins (file://, jsdom),
+   which must never crash the app. */
+const storeGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const storeSet = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
+
+/* resolvedTheme: S.theme is a preference ("auto"|"light"|"dark"); the resolved
+   value is what the DOM actually renders. Auto follows the device setting. */
+const resolvedTheme = () => {
+  if (S.theme === "auto") {
+    try { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ? "dark" : "light"; } catch(e){ return "light"; }
+  }
+  return S.theme;
+};
+
 const S = {
-  role:"rider", lang:"en", theme:"light",
+  role:"rider", lang:"en", theme: storeGet("rs.theme") || "auto",
+  rail: storeGet("rs.rail") || "open",
   authed:true, authStep:"phone",
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
@@ -79,12 +95,31 @@ const ICON = {
   bell:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',
   moon:'<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  sun:'<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>',
   doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   flag:'<path d="M5 21V4M5 5h11l-2 4 2 4H5"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   seat:'<path d="M6 4h3a2 2 0 0 1 2 2v7H8a2 2 0 0 1-2-2z"/><path d="M6 17h11a2 2 0 0 0 2-2v-2h-8"/><path d="M19 17v3"/>',
-  star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>',
-  logo:'<path d="M4 17h16M6 17V9l6-4 6 4v8"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="13" r="1.3"/>'
+  star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>'
+};
+
+/* Brand mark — the user's bookmark-and-pin glyph. Filled (not stroked), and
+   coloured by the brand gradient defined once in the document, or by the
+   given fill. */
+const LOGO_PATH = "M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z";
+const logoSVG = (fill, cls) => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  s.setAttribute("viewBox","0 0 24 24");
+  s.setAttribute("aria-hidden","true");
+  if (cls) s.setAttribute("class", cls);
+  const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("fill", fill || "url(#brandGrad)");
+  p.setAttribute("fill-rule","evenodd");
+  p.setAttribute("clip-rule","evenodd");
+  p.setAttribute("stroke","none");
+  p.setAttribute("d", LOGO_PATH);
+  s.append(p);
+  return s;
 };
 const icon = (n, cls) => {
   const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -134,7 +169,7 @@ const KV = (k,v,strong=true) => $("div",{class:"row gap3"},
   $("span",{class:"t-cap grow",text:k}),
   $(strong?"strong":"span",{class:"ltr",text:v}));
 const Empty = (ic, title, body, action) => $("div",{class:"empty"},
-  icon(ic), $("div",{class:"t-head",text:title}),
+  $("div",{class:"empty__ico"}, icon(ic)), $("div",{class:"t-head",text:title}),
   body?$("div",{class:"t-cap",text:body}):null, action||null);
 
 /* Row: one component owning row layout, so padding has exactly one owner. */
