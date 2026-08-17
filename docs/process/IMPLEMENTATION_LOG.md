@@ -81,3 +81,30 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: fully wired — the workspace installs from a clean clone (`pnpm install` with a
   generated lockfile), the GUI builds and verifies from its new home, and the guard genuinely
   fails when any constraint is violated.
+
+## 2026-08-17 — M0.2 (P0.2) + M0.3 (P0.3): verify harness, secret hygiene, env guard
+
+### P0.2 — The verify command
+- What: `pnpm verify` = repo checks → build → typecheck → lint → test across the workspace.
+  `scripts/verify-repo.sh` runs each check in order, fails on the first non-zero and NAMES it,
+  and flags any sub-check that exits 0 without reporting an "examined N" count (the silent-green
+  guard — P0.2's most important failure mode).
+- Files: `scripts/verify-repo.sh`, `scripts/check-workspace.sh` (summary line), root `package.json`.
+- Tests: two break cases observed — `exit 1` appended to a sub-check → "✗ FAIL: scripts/check-workspace.sh
+  exited 1"; a sub-script that exits 0 silently → "reported no examined-file count (silent green)".
+- Verified: `pnpm verify` exit 0 — repo checks green, web 198 unit, api build/typecheck/lint/test green.
+
+### P0.3 — Secret hygiene
+- What: `.env.example` expanded to document every variable; `scripts/check-secrets.sh` scans the tree
+  for known credential shapes (AKIA, ghp_/github_pat_, sk-, private-key headers, connection strings
+  with passwords, key=value secrets); `apps/api/src/config/env.ts` is the only module reading
+  `process.env` (zod schema + named refusal), `scripts/check-env-example.sh` keeps `.env.example`
+  in lock-step; eslint `no-restricted-syntax` fails on any other `process.env`.
+- Files: `apps/api/{package.json,tsconfig.json,eslint.config.mjs,src/main.ts,src/config/env.ts,src/config/env.test.ts}`,
+  `scripts/check-secrets.sh`, `scripts/check-env-example.sh`, `.env.example`, catalog versions.
+- Tests: 3 unit tests (valid defaults; all missing vars named; short JWT_SECRET named). Break cases:
+  planted `AKIA…` key → scan fails; `process.env.FOO` in a random file → lint fails; removed a
+  required var from `.env.example` → env-doc fails; startup with empty env → exit 1 naming
+  DATABASE_URL, REDIS_URL, JWT_SECRET. False positives fixed (dummy conn string in a test, AKIA
+  literals in two docs) so the scan is clean on a clean tree.
+- Verified: secret scan "examined 112 files, 0 hit(s)"; `git ls-files | grep -c '^.env$'` → 0.

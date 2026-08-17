@@ -2,6 +2,23 @@
   "name": "@ride-share/api",
   "version": "0.1.0",
   "private": true,
-  "description": "The backend — a NestJS modular monolith implementing the MASTER_SPECIFICATION.",
-  "scripts": {}
+  "description": "The backend — NestJS modular monolith implementing MASTER_SPECIFICATION. M0: env config + startup guard.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "pretest": "tsc -p tsconfig.json",
+    "test": "node --test dist/",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "@eslint/js": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
 }

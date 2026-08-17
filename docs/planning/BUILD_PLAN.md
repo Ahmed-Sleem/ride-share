@@ -235,7 +235,7 @@ bash scripts/check-secrets.sh
 3. A lint rule fails on any `process.env` reference outside `config/env.ts`.
 
 **BREAK**
-- Plant `AKIA0000000000000000` in a source file → scan must fail. Remove it.
+- Plant a fake `AKIA` access-key id (AKIA + 16 zeroes) in a source file → scan must fail. Remove it.
 - Delete a required variable from `.env` → startup must fail naming that variable, not crash later.
 - Add `process.env.FOO` to a random file → lint must fail.
 

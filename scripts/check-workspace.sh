@@ -62,5 +62,5 @@ EOF
 done
 
 echo
-echo "workspace check: $examined files examined, $fail failure(s)"
+echo "workspace check: examined $examined files, $fail failure(s)"
 [ "$fail" -eq 0 ]

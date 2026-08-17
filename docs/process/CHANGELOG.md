@@ -233,3 +233,13 @@
   for the right reason.
 - Verification: GUI suite re-run green from the new location — 198 unit, 5,803 layout,
   40 + 7 break cases caught.
+
+## 2026-08-17 — M0.2/M0.3: verify harness + secret hygiene; checklist system
+
+- `pnpm verify` now runs repo checks → build → typecheck → lint → test; `verify-repo.sh` names the
+  failing check and flags silent-green sub-checks (P0.2).
+- Secret hygiene (P0.3): `check-secrets.sh`, `check-env-example.sh`, `apps/api` env config with zod
+  and a named startup refusal, eslint rule restricting `process.env` to one module. All break cases
+  observed failing for the right reason.
+- Added `docs/process/checklists/` — a permanent completion ledger (master index + one file per
+  milestone) so a box is ticked only when a command has proved it.
