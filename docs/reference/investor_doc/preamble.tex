@@ -1,0 +1,91 @@
+% ============================================================
+%  Shared-Ride Platform — Investor Information Document
+%  Typeset with pdfLaTeX. Calm, factual, restrained.
+% ============================================================
+\documentclass[11pt,a4paper,DIV=12,parskip=half-,numbers=noenddot]{scrreprt}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{tgpagella}                 % serif body (Palatino-class)
+\usepackage{tgheros}                   % sans headings (Helvetica-class)
+\renewcommand{\sfdefault}{qhv}
+\usepackage{tgcursor}  % monospace (Courier-class)
+\usepackage{microtype}
+\usepackage[english]{babel}
+
+\usepackage{geometry}
+\geometry{a4paper,top=27mm,bottom=27mm,left=26mm,right=26mm,headsep=8mm,footskip=14mm}
+
+\usepackage{xcolor}
+\definecolor{ink}{HTML}{1C2430}        % near-black text
+\definecolor{slate}{HTML}{2F4858}      % primary accent, muted blue-grey
+\definecolor{teal}{HTML}{2A6F6F}       % secondary accent
+\definecolor{rule}{HTML}{C8CED6}       % hairlines
+\definecolor{soft}{HTML}{F2F4F7}       % panel fill
+\definecolor{muted}{HTML}{5B6472}      % secondary text
+\definecolor{warn}{HTML}{8A5A00}       % caution text (never alarming red)
+
+\usepackage{booktabs,tabularx,longtable,array,multirow}
+\usepackage{enumitem}
+\setlist{noitemsep,topsep=3pt,leftmargin=*}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{graphicx}
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Shared-Ride Platform — Information Document},
+            pdfsubject={Product and operating design},
+            colorlinks=true,linkcolor=slate,urlcolor=teal,citecolor=slate}
+
+% ---------- colour of body text ----------
+\AtBeginDocument{\color{ink}}
+
+% ---------- headings ----------
+\addtokomafont{disposition}{\rmfamily}
+\setkomafont{chapter}{\sffamily\bfseries\LARGE\color{slate}}
+\setkomafont{section}{\sffamily\bfseries\large\color{slate}}
+\setkomafont{subsection}{\sffamily\bfseries\normalsize\color{ink}}
+\setkomafont{captionlabel}{\sffamily\bfseries\small\color{slate}}
+\setkomafont{caption}{\small\color{muted}}
+\renewcommand*{\chapterheadstartvskip}{\vspace*{0.4\baselineskip}}
+\renewcommand*{\chapterheadendvskip}{\vspace{1.1\baselineskip}}
+
+% ---------- running heads ----------
+\usepackage[automark,headsepline=0.4pt]{scrlayer-scrpage}
+\clearpairofpagestyles
+\setkomafont{pageheadfoot}{\sffamily\footnotesize\color{muted}}
+\ihead{\leftmark}
+\ohead{}
+\ofoot*{\sffamily\footnotesize\color{muted}\thepage}
+\ifoot*{\sffamily\footnotesize\color{muted}Shared-Ride Platform \textbar{} Information Document}
+\setlength{\headheight}{16pt}
+
+% ---------- tables ----------
+\renewcommand{\arraystretch}{1.28}
+\setlength{\tabcolsep}{7pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\thead}[1]{\textsf{\bfseries\small\textcolor{slate}{#1}}}
+
+% ---------- panels ----------
+\newtcolorbox{keybox}[1][]{
+  enhanced, breakable, colback=soft, colframe=rule, boxrule=0.4pt,
+  arc=1.2pt, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  borderline west={2.2pt}{0pt}{slate}, #1}
+
+\newtcolorbox{notebox}[1][]{
+  enhanced, breakable, colback=white, colframe=rule, boxrule=0.4pt,
+  arc=1.2pt, left=9pt, right=9pt, top=7pt, bottom=7pt,
+  borderline west={2.2pt}{0pt}{warn}, #1}
+
+\newcommand{\panelhead}[1]{{\sffamily\bfseries\small\textcolor{slate}{\MakeUppercase{#1}}}\par\vspace{2pt}}
+\newcommand{\notehead}[1]{{\sffamily\bfseries\small\textcolor{warn}{\MakeUppercase{#1}}}\par\vspace{2pt}}
+
+% ---------- small helpers ----------
+\newcommand{\dec}[1]{{\sffamily\footnotesize\textcolor{muted}{[#1]}}}
+\newcommand{\srcnote}[1]{{\footnotesize\textcolor{muted}{Source: #1}}}
+\newcommand{\lead}[1]{{\large\color{muted}#1\par}\vspace{4pt}}
+\newcommand{\hairline}{\vspace{2pt}{\color{rule}\hrule height 0.4pt}\vspace{6pt}}
+
+% no widows/orphans
+\widowpenalty=10000 \clubpenalty=10000

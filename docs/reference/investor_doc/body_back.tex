@@ -1,0 +1,224 @@
+% ===================== 5. TECHNOLOGY =====================
+\chapter{Technology}
+
+\section{Shape of the system}
+
+One backend application, internally divided into sixteen modules with enforced boundaries, so that
+any module can later be separated into its own service without rewriting the parts that call it. A
+mobile application for passengers and drivers, and a web application for the public site and the
+operating dashboards.
+
+Everything is written in one language across the applications and the server, with a single shared
+definition of each business object. A single Python service handles overnight optimisation.
+
+\section{Where decisions are made}
+
+\begin{keybox}
+\panelhead{Governing rule}
+If it affects money, safety, or who travels with whom, the server decides. If it affects only what
+one person sees on their own screen, the device may decide.
+\end{keybox}
+
+Client software can be modified and location data can be falsified, so every allocation and every
+charge is computed centrally. The device handles map display, location smoothing, local alarms and
+an offline queue.
+
+\section{Working without a connection}
+
+The driver application treats its own local storage as authoritative. A driver can complete an
+entire journey with no signal: boarding scans, arrival marks and cash records are stored locally and
+transmitted when connectivity returns, each carrying a key that prevents duplication.
+
+Booking and payment remain online-only, because a seat cannot honestly be promised without checking
+that it is free.
+
+\section{Matching}
+
+Assignment runs as a six-stage pipeline. A geographic filter narrows candidates, a feasibility gate
+removes anything impossible or harmful, an insertion heuristic always produces a valid answer within
+milliseconds, and an optimiser improves on that answer within a fixed deadline. If the optimiser is
+interrupted at any moment, the earlier answer remains valid. No passenger ever waits on a solver.
+
+Two findings shaped this. First, published measurements show that collecting requests for a short
+window before matching them together substantially outperforms matching each request instantly:
+reported average total waiting fell from roughly 609 seconds to roughly 427 seconds, and detour
+delay from roughly 190 to roughly 75 seconds. Second, a study using Munich trip data found an
+advanced matcher served up to 8\,\% more requests and saved 10\,\% more distance than a simple
+heuristic, but exceeded real-time limits as the problem grew --- which is why the fast answer is
+always kept.
+
+\section{The fairness rule}
+
+Because passengers do not declare a destination, the system cannot promise an individual arrival
+time. Instead it protects the published timetable: no collection, deviation or wait may put the
+vehicle more than a defined margin behind schedule. Every passenger on a route shares one schedule,
+so protecting the schedule protects all of them.
+
+\section{Configuration rather than code}
+
+Fares, detour limits, waiting times, reward values, batch windows and service areas are stored as
+data and changed from the dashboard. Sixty-five parameters are catalogued with type, permitted
+range, default, who may change them, and --- importantly --- what the system does if the value is
+missing or unreadable. Published guidance on runtime configuration notes that many incidents occur
+during fallback rather than during the change itself, so each parameter declares its own safe
+behaviour: cash defaults to disabled, refund limits default to zero, and safety categories default
+to treating everything as severe.
+
+Opening a new route, changing a price or launching a promotion requires no software release. The
+same mechanism is what allows a new city to be added as configuration.
+
+\section{Verification}
+
+A single command runs type checking, linting, module-boundary checks, unit tests, integration tests,
+contract tests, a build of every application, a secret scan and database migration checks. Nothing
+is merged unless it passes. Money handling carries the strictest testing requirement, and monetary
+values are stored as integers, never as floating-point numbers.
+
+% ===================== 6. TRUST, SAFETY & GOVERNANCE =====================
+\chapter{Trust, safety and governance}
+
+\section{Verification of drivers}
+
+Every driver is reviewed by a person before carrying anyone: national identity document, driving
+licence, vehicle licence, a photograph checked against the identity document, and vehicle
+photographs. Automation may pre-check image quality and expiry dates, but never grants approval.
+Document expiry is monitored, with warnings at thirty, fourteen, seven and one day, and automatic
+suspension on expiry.
+
+\section{In-journey safety}
+
+An emergency control is reachable in one action from any journey screen and sends identity, live
+position, vehicle and driver details to an on-call responder. It can be triggered silently, in which
+case the system deliberately makes no sound --- an audible alert could place the passenger in
+greater danger. A journey can be shared as a live link with a family member, and passengers and
+drivers can contact each other without either seeing the other's telephone number.
+
+\section{How a driver is removed}
+
+Ratings are recorded but carry no automatic consequence. Removal happens through the complaint
+process, which is therefore built to carry that weight:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{48mm}Y@{}}
+\toprule
+\thead{Serious categories} & Immediate precautionary suspension pending investigation. The person stops driving first and is investigated second. \\
+\thead{Complaint rate} & A review is triggered at a complaint rate of 10\,\% of completed journeys, subject to a minimum of twenty journeys, measured over the last hundred. \\
+\thead{Repeated pattern} & Three complaints in the same category within thirty days trigger review even below that rate. \\
+\thead{Human decision} & No automatic removal in any circumstance. A person decides, records a reason, and the driver may appeal. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The 10\,\% figure was checked against published practice. Major platforms deactivate on a rating
+average of roughly 4.6 out of 5, which corresponds to approximately 8--12\,\% of passengers rating
+poorly. The minimum-volume and rolling-window conditions exist because a percentage alone punishes
+new drivers for a single complaint.
+
+\section{Money controls}
+
+Every movement of value is a double-entry record in one append-only ledger. Entries are never
+edited; corrections are new compensating entries. Support staff can cancel a journey and issue a
+refund up to one fare, three times a day, and cannot see identity documents or alter balances.
+Managers set prices but cannot move money. Two-factor authentication is mandatory for all staff.
+Promotional budgets are enforced in the ledger, so a campaign cannot overspend its allocation.
+
+\section{Data}
+
+All operational data is retained, with older records moved to lower-cost storage rather than
+deleted. Movement history is held separately with its own encryption, analytical access is
+pseudonymised by default, and re-identification is a separate action restricted to the highest
+administrative role and recorded. Bulk export requires approval and is logged.
+
+\begin{notebox}
+\notehead{Referred to counsel}
+Indefinite retention of personal movement data, and the regulatory position of the service under
+Egyptian transport law, are matters for legal counsel. They are recorded in the specification as
+open items and are not assessed here.
+\end{notebox}
+
+% ===================== 7. WHAT IS NOT KNOWN =====================
+\chapter{What is not known}
+
+Presenting a design without stating its uncertainties would misrepresent it. This chapter lists what
+has not been established.
+
+\section{Not yet measured}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{46mm}Y@{}}
+\toprule
+\thead{Corridor demand} & No measurement of how many people travel which corridors at which hours. This determines whether the service works at all. \\
+\thead{Map data quality} & Egypt ranks among the least complete in open map coverage. The launch corridors must be surveyed before committing to self-hosted routing. \\
+\thead{Operating parameters} & Waiting times, detour limits, batch windows and walking distances have starting values only. Simulation against synthetic demand is planned before launch. \\
+\thead{Infrastructure cost} & No quotations obtained. \\
+\thead{Willingness to pay} & No pricing research with Alexandrian commuters has been conducted. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Principal risks}
+
+\begin{longtable}{@{}L{27mm}L{72mm}L{47mm}@{}}
+\toprule
+\thead{Risk} & \thead{Description} & \thead{Position} \\
+\midrule
+\endfirsthead
+\toprule
+\thead{Risk} & \thead{Description} & \thead{Position} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Regulatory & An open public transport service falls within Egypt's ride-hailing regulation, which carries substantial licensing obligations. & Referred to legal counsel. \\
+Demand density & Shared transport fails below a demand threshold. Launching across a wide area with thin demand is the recognised failure pattern. & Mitigated by launching on a single corridor. \\
+Driver supply & Matching optimises purely for efficiency, with no weighting toward drivers earning less. Industry practice usually includes such weighting because driver retention is the binding constraint. & A fairness weight exists, set to zero, and can be enabled without engineering work. \\
+Coverage & If drivers do not claim departures, the timetable becomes unreliable and subscriptions cannot be honoured. & Subscriptions may only be sold against departures with committed coverage. \\
+Cancellation policy & The intended penalty is stricter than the local incumbent, which offers a full refund up to three hours before travel. & Accepted, with mandatory disclosure before purchase and monitoring after launch. \\
+Account sharing & Driver identity is verified once, at registration, with no periodic re-check. An unverified person driving on an approved account is the most serious failure the service could have. & Accepted. Mitigated by strict registration, the complaint process and anomaly detection. Recorded for monitoring. \\
+Message delivery & Notifications are sent in-application only, with no SMS fallback. On a poor connection a passenger may not receive an arrival alert. & Mitigated: the arrival alarm fires from cached schedule data without requiring a live message. Delivery failure will be measured. \\
+Team capacity & The specification is complete; construction has not begun. Delivery depends on resourcing that is outside this document. & Owned by the founder. \\
+\end{longtable}
+
+\section{Deliberate omissions}
+
+No revenue, user or growth figures appear in this document because the service has not operated. No
+market size estimate is given because the underlying measurement has not been done. No timeline or
+hiring plan is included, as those decisions sit with the founder. No valuation or funding terms are
+proposed here.
+
+% ===================== 8. ROUTE TO LAUNCH =====================
+\chapter{Route to launch}
+
+The plan is sequential: one corridor working completely before widening. Each phase ends at a
+demonstrable condition rather than a date.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{8mm}L{40mm}Y@{}}
+\toprule
+\thead{} & \thead{Phase} & \thead{Ends when} \\
+\midrule
+0 & Foundations & The repository, automated checks, database, configuration system and audit trail exist and are deployable. \\
+1 & Identity and vehicles & A real driver can be verified and approved by a real administrator. \\
+2 & Geography & The launch corridor is fully surveyed and its boarding points verified. \\
+3 & The core journey & A passenger books, walks to a stop, boards by code and pays --- on one corridor. \\
+4 & Safety and support & A passenger in difficulty reaches a person, and an unsafe driver can be removed. \\
+5 & Commercial control & A manager can change a price and run a promotion without engineering involvement. \\
+6 & Recurring travel & A commuter buys a monthly subscription and travels without further action. \\
+7 & Validation and launch & Simulation sets the operating parameters; a closed trial on one corridor meets defined criteria; public launch follows. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{4pt}
+Widening beyond the first corridor is a dashboard action, not an engineering project. That is a
+direct consequence of holding all commercial values in configuration.
+
+\section{Before construction begins}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+\item Survey the launch corridor's map data and confirm the routing engine performs adequately on it.
+\item Obtain infrastructure quotations.
+\item Obtain a regulatory opinion from Egyptian counsel.
+\item Commission the visual design from the existing design system and screen definitions.
+\item Write the passenger-facing text in Arabic and English.
+\end{enumerate}

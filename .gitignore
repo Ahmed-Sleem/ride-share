@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+**/google-services.json
+**/play-service-account*.json
+**/*secret*
+**/*credential*
+
+# dependencies and build output
+node_modules/
+dist/
+build/
+.turbo/
+coverage/
+*.log
+
+# osrm graphs — large, regenerated
+*.osrm*
+
+# local
+.DS_Store
+.vscode/
+.idea/

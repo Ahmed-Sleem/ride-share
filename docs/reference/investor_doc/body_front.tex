@@ -1,0 +1,137 @@
+% ===================== TITLE PAGE =====================
+\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{28mm}
+{\color{rule}\hrule height 1.2pt}
+\vspace{10mm}
+
+{\sffamily\bfseries\fontsize{27}{31}\selectfont\color{slate}
+Shared-Ride Platform\par}
+\vspace{5mm}
+{\sffamily\fontsize{15}{19}\selectfont\color{ink}
+Scheduled shared transport for Alexandria, Egypt\par}
+
+\vspace{9mm}
+{\color{rule}\hrule height 0.4pt}
+\vspace{9mm}
+
+{\large\color{muted}
+Information document describing the product design, operating model,\\
+revenue mechanics, evidence base and known risks.\par}
+
+\vfill
+
+\begin{tabular}{@{}L{42mm}L{80mm}@{}}
+\thead{Document} & Product and operating design \\
+\thead{Version} & 1.0 \\
+\thead{Date} & August 2026 \\
+\thead{Status} & Pre-development. Specification complete. \\
+\thead{Prepared from} & Master Specification v3.0 (167 recorded decisions) \\
+\end{tabular}
+
+\vspace{10mm}
+{\color{rule}\hrule height 0.4pt}
+\vspace{4mm}
+{\footnotesize\color{muted}
+This document describes work completed to date and design intent. It contains no revenue history,
+no user numbers and no financial projections, because none exist. Figures drawn from third-party
+research are attributed at the point of use and listed in Appendix~B.\par}
+\end{titlepage}
+
+% ===================== CONTENTS =====================
+\pagenumbering{roman}
+\setcounter{page}{2}
+\microtypesetup{protrusion=false}
+\tableofcontents
+\microtypesetup{protrusion=true}
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ===================== 1. SUMMARY =====================
+\chapter{Summary}
+
+\lead{A scheduled shared-transport service in which an operator defines fixed routes and departure
+times, drivers claim the departures they wish to work, and passengers buy a seat at one flat price
+per route.}
+
+\section{What the service is}
+
+A passenger opens the application, selects a route, selects a boarding point on that route, and
+selects a departure time. They pay a single fixed price regardless of how far along the route they
+travel, board by presenting a code, and leave the vehicle wherever they choose along the way.
+
+The operator defines the route network: which stops exist, in what order, at what price, and during
+which hours. The operator also publishes a grid of departure times. Drivers do not design routes or
+set prices; they select the departures they want to run, in two steps.
+
+In structure this is a microbus network operated through software. The organising idea is not to
+replace the informal shared transport that Egyptians already use, but to make it schedulable,
+priced in advance, and accountable.
+
+\section{The four design choices that shape everything else}
+
+\begin{keybox}
+\panelhead{One} \textbf{Passengers buy a route, not a destination.}\\
+A ticket grants travel on a route. The passenger boards at a defined stop and alights wherever they
+wish. No destination is declared at purchase. This mirrors existing microbus behaviour and removes
+a large amount of complexity from pricing and matching.
+
+\vspace{5pt}
+\panelhead{Two} \textbf{One flat fare per route.}\\
+The same price applies whether the passenger travels two stops or twelve. The price is fixed when
+the ticket is bought and does not change afterwards. There is no demand-based pricing.
+
+\vspace{5pt}
+\panelhead{Three} \textbf{Passengers walk to a stop.}\\
+Boarding happens at defined meeting points rather than at the passenger's door. Published industry
+figures indicate that walk-to-a-point services sustain discounts of roughly 25--40\,\% against a
+private ride, while door-to-door shared services sustain roughly 15--22\,\%. The walk is what makes
+the price difference possible.
+
+\vspace{5pt}
+\panelhead{Four} \textbf{The operator schedules; drivers choose when to work.}\\
+Routes, fares and timetables are centrally defined. Drivers claim published departure slots. They
+carry no planning burden and take no pricing decisions.
+\end{keybox}
+
+\section{Current status}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{52mm}Y@{}}
+\toprule
+\thead{Design specification} & Complete. 167 recorded decisions, 22 chapters, 75 defined screens, 65 configuration parameters, 34 system invariants. \\
+\thead{Software} & Not started. No code has been written. \\
+\thead{Operations} & Not started. No routes mapped, no drivers recruited. \\
+\thead{Revenue} & None. The service does not operate. \\
+\thead{Regulatory position} & Referred to legal counsel. Not assessed in this document. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{4pt}
+This document therefore describes a design, not a business in operation. Where evidence exists it is
+external research, cited at the point of use. Where something is unknown, this document says so.
+
+\section{Why the design took this shape}
+
+The specification began as an on-demand pooled-ride concept and changed direction twice, in both
+cases because the available evidence pointed elsewhere.
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+\item \textbf{Towards scheduled routes.} A 2026 evaluation framework covering fourteen studies
+      published between 2007 and 2025 reports that fixed-route transit outperforms
+      demand-responsive transit on cost per passenger, schedule adherence and ridership wherever
+      demand is dense and regular, while demand-responsive services perform better in low-density
+      areas. Published cost comparisons are wide: one North American agency recorded roughly
+      \$72 per passenger on a flexible service against roughly \$25 on the fixed route it replaced.
+      The intended launch context --- university corridors at peak commuting hours --- is the
+      condition under which fixed routes perform best.
+\item \textbf{Towards recurring revenue.} Swvl, founded in Cairo in 2017 with a comparable
+      consumer-facing model, moved away from consumer mass-market operation and reported reaching
+      profitability in 2025 on business and government contracts with a high proportion of
+      recurring revenue. Subscriptions are consequently central to this design rather than an
+      accessory to it.
+\end{enumerate}
+
+\srcnote{full citations in Appendix~B.}

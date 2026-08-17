@@ -1,0 +1,152 @@
+% ===================== APPENDICES =====================
+\appendix
+\chapter{Design decisions of record}
+
+The specification records 167 decisions, each with its reasoning and status. The following are those
+with the greatest bearing on how the service behaves commercially and operationally.
+
+\begin{longtable}{@{}L{14mm}L{48mm}L{84mm}@{}}
+\toprule
+\thead{Ref} & \thead{Decision} & \thead{Effect} \\
+\midrule
+\endfirsthead
+\toprule
+\thead{Ref} & \thead{Decision} & \thead{Effect} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+D-114 & Passengers buy a route, not a destination & Board at a stop, alight anywhere along the route. \\
+D-115 & One flat fare per route & The same price for two stops or twelve. \\
+D-113 & No demand-based pricing & The price never rises with demand. A manager may set a temporary, attributable change. \\
+D-132 & Operator defines routes; drivers claim slots & Drivers carry no planning or pricing burden. \\
+D-038 & Boarding points created and verified by people & Every stop is physically visited before use. \\
+D-140 & Boarding fixed, alighting free & Collection must be predictable; setting down need not be. \\
+D-056 & Price fixed at purchase & The quoted fare never changes afterwards. \\
+D-049 & Boarding confirmed by code & Works without a network connection. \\
+D-078 & Cash always recorded against a booking & No untracked cash sale can exist. \\
+D-070 & Commercial values held as configuration & Prices, routes and promotions change without a software release. \\
+D-031 & No organisational accounts & Universities are a sales channel; everyone uses one open network. \\
+D-051 & Subscriptions with a guaranteed seat & Recurring revenue and the principal retention mechanism. \\
+D-096 & Ratings carry no automatic consequence & Removal happens through the complaint process, under human decision. \\
+D-138 & Complaint-rate review threshold & 10\,\% over a hundred journeys, minimum twenty, triggering human review. \\
+D-110 & One corridor complete, then widen & Concentrates demand where shared transport requires density. \\
+\end{longtable}
+
+\chapter{Sources}
+
+Every external figure in this document is listed here. Nothing quantitative is presented without a
+source, and no figure originates from this project's own operation, because it has none.
+
+\begin{description}[style=unboxed,leftmargin=0pt,itemsep=6pt]
+
+\item[Fixed-route versus demand-responsive transit.]
+\emph{Fixed-route or demand-responsive transit? An evaluation framework for transit service
+structures using dual-perspective indicators}, ScienceDirect, 2026. Includes a comparative table of
+fourteen studies published 2007--2025. Source of the finding that fixed-route services perform
+better on cost, schedule adherence and ridership under dense, regular demand.
+
+\item[Cost per passenger comparison.]
+CivicWell, reporting AC Transit's flexible-service pilot: approximately \$72 per passenger against
+approximately \$25 on the fixed route it replaced. A cited review of rural England reports
+£1.35--1.62 for fixed route against £9--19.96 for demand-responsive.
+
+\item[When not to use demand-responsive transit.]
+Movmi, \emph{What Is DRT? Demand-Responsive Transit Explained}. Lists dense urban routes and
+peak-hour commuter corridors among the conditions where demand-responsive services underperform.
+
+\item[Discount sustainable by walk-to-a-point services.]
+Getridewise, 2026 comparison of shared-ride products: door-to-door shared services measured at
+15--22\,\% below a private ride; walk-to-corner services at 25--40\,\%. Contemporary reporting of
+Uber Express Pool and Lyft Shared Saver corroborates the pattern.
+
+\item[Effect of batching ride requests.]
+\emph{Timing the Match: A Deep Reinforcement Learning Approach for Ride-Hailing and Ride-Pooling
+Services}, arXiv 2503.13200. Reported average total waiting of 608.8 seconds under immediate
+dispatch against 427.0 seconds with a twenty-second batching window; detour delay 190.5 against
+113.1 seconds.
+
+\item[Heuristic versus optimiser in ride-pooling.]
+Engelhardt et al., \emph{Speed-up Heuristic for an On-Demand Ride-Pooling Algorithm}, arXiv
+2007.14877. Using Munich data: an advanced matcher served up to 8\,\% more requests and saved
+10\,\% more distance, but exceeded real-time computation limits as problem size grew.
+
+\item[High-capacity ride-sharing algorithm.]
+Alonso-Mora et al., \emph{On-demand high-capacity ride-sharing via dynamic trip-vehicle
+assignment}, PNAS, 2017. Source of the anytime-optimal approach adopted in the matching design.
+
+\item[Open map data completeness.]
+Barrington-Leigh and Millard-Ball, \emph{The world's user-generated road map is more than 80\%
+complete}, PLOS ONE, 2017. Estimates fewer than one third of streets mapped in Egypt, and finds
+dense cities and main roads best mapped.
+
+\item[Self-hosted routing cost.]
+Published benchmark comparing self-hosted routing engines against commercial matrix services:
+approximately 21 milliseconds per 100$\times$100 matrix self-hosted, against 2{,}500 milliseconds
+and approximately \$510 per day commercially. A practitioner report describes reducing mapping
+spend from approximately \$8{,}000 to approximately \$520 per month.
+
+\item[Comparable operator.]
+Swvl Holdings Corp. Founded Cairo 2017; listed 2022; moved away from consumer mass-market
+operation; reported profitability in 2025 on business and government contracts with a high
+proportion of recurring revenue.
+
+\item[Ride-hailing regulation in Egypt.]
+Egyptian ride-hailing law passed 2018 with implementing regulations in 2019 (Law 2180/2019).
+Reported obligations include a five-year operating licence, individual driver permits, vehicle
+standards and trip-data retention. Referred to legal counsel; not assessed in this document.
+
+\item[Driver deactivation thresholds.]
+Published summaries of major platform practice indicate deactivation at a rating average of
+approximately 4.6 out of 5, and that repeated complaints of the same type are acted on
+independently of the average.
+
+\item[Usability of existing applications.]
+Hsu and Chen, \emph{Usability Study on the User Interface Design of Ride-hailing Applications},
+Springer, 2023. System Usability Scale scores across thirty participants: Uber 66.75, Lyft 60.25,
+Gojek 62.75, against a conventional average of 68.
+
+\item[Notification practice.]
+Published 2026 guidance on notification tiers and frequency limits, and Nielsen Norman Group on
+transactional notifications, including the finding that push delivery is connectivity-dependent and
+may fail in poor-signal environments.
+
+\item[Runtime configuration practice.]
+Published guidance on runtime configuration change management, including the observation that many
+incidents occur during fallback behaviour rather than during the change itself.
+
+\item[Payment infrastructure in Egypt.]
+Central Bank of Egypt materials on the Instant Payment Network, launched March 2022 and operated by
+the Egyptian Banks Company across thirty-eight member banks; Paymob developer documentation for
+collection and disbursement.
+\end{description}
+
+\vspace{8pt}
+\hairline
+{\footnotesize\color{muted}
+Where a source is described as reported or published, it has not been independently verified by the
+author. Items referred to legal counsel are outside the scope of this document.\par}
+
+\chapter{Supporting documents}
+
+This document summarises a larger body of work, available on request.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{52mm}Y@{}}
+\toprule
+\thead{Document} & \thead{Contents} \\
+\midrule
+Master Specification v3.0 & The complete build document. Twenty-two chapters covering the domain model, roles, journey lifecycle, geography, supply model, matching algorithm, money and ledger, pricing, growth mechanics, dashboards, system and code architecture, data model and interface contract, design system, seventy-five screen definitions, safety, privacy, quality, infrastructure, operations runbook, configuration catalogue and message catalogue. Approximately 60{,}000 words. \\
+Questions and Answers & All 167 decisions with the question asked, the answer given, the reasoning and the status, including an appendix of superseded decisions. \\
+Research findings & Eighteen research passes with full citations, covering regulation, comparable operators, matching algorithms, pricing evidence, mapping infrastructure, payment rails, usability and configuration practice. \\
+Item tracker & Fifty-six tracked items with their disposition: closed, specified, monitored, delegated or outstanding. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\vfill
+\begin{center}
+{\color{rule}\hrule height 0.4pt}
+\vspace{5pt}
+{\footnotesize\color{muted}End of document\par}
+\end{center}

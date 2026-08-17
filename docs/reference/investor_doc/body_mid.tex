@@ -1,0 +1,172 @@
+% ===================== 2. PROBLEM & MARKET =====================
+\chapter{The problem and the market}
+
+\section{How people currently travel}
+
+Alexandria's shared transport is dominated by informal microbuses. They are cheap and frequent, and
+they already establish the behaviour this service depends on: people accept sharing a vehicle,
+accept walking to a boarding point, and accept a fixed fare for a known line.
+
+What the informal system does not offer is a guaranteed seat, a known departure time, a recorded
+payment, an identified driver, or any means of complaint. Those five absences are the whole of the
+opportunity. This is a service-quality proposition, not a new mode of travel.
+
+\section{Why universities first}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{40mm}Y@{}}
+\toprule
+\thead{Dense demand} & Shared transport requires demand density to function. Where demand is thin, vehicles run empty and the economics fail. \\
+\thead{Predictable timing} & Students travel at the same hours on the same days, which is the condition scheduled routes are designed for. \\
+\thead{Price sensitivity} & The population most likely to change behaviour for a lower fare. \\
+\thead{Concentrated destinations} & Campus gates create natural route endpoints. \\
+\thead{Word of mouth} & A closely connected population in which a service spreads or fails quickly and visibly. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Market sizing}
+
+\begin{notebox}
+\notehead{Not claimed}
+No total addressable market figure is presented. A credible bottom-up estimate requires corridor
+demand data that has not been collected. Producing a top-down number from national population
+statistics would not inform any decision, and is therefore omitted. The measurements required to
+build a defensible estimate are listed in Chapter~7.
+\end{notebox}
+
+\section{Comparable operators}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{27mm}L{34mm}Y@{}}
+\toprule
+\thead{Operator} & \thead{Model} & \thead{Relevance} \\
+\midrule
+Swvl & Scheduled buses and vans, seat booking, fixed routes & Cairo-founded, closest comparable. Consumer mass-market was loss-making; profitability reported in 2025 on recurring B2B and B2G contracts. \\
+Uber, Careem & On-demand private and pooled rides & Different price tier. Operate under Egypt's ride-hailing regulation. \\
+Informal microbuses & Fixed lines, fixed fares, no booking & The actual incumbent and the real competitor. Cheap and frequent; no guarantee, no record, no accountability. \\
+Via, Lyft (international) & Walk-to-corner shared rides & Source of the pricing evidence used in this design. Confirms walk-to-a-point sustains materially deeper discounts. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ===================== 3. HOW IT WORKS =====================
+\chapter{How the service works}
+
+\section{The passenger}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+\item \textbf{Choose a route.} Routes are named the way people already speak about them, for example
+      Smouha to Alexandria University. The fare and frequency are shown alongside.
+\item \textbf{Choose a boarding point.} Stops on the route are listed nearest first, with the
+      walking time shown honestly. A more expensive option to be collected from the passenger's own
+      street is offered alongside.
+\item \textbf{Choose a departure.} At most three options are shown, each on a single line: departure
+      time, boarding point, timetable arrival, price.
+\item \textbf{Travel.} The passenger walks to the stop, boards by presenting a code, and leaves the
+      vehicle at any point along the route.
+\end{enumerate}
+
+The interface never asks which product the passenger wants. It asks where they are going and when.
+Internal vocabulary does not appear on screen.
+
+\section{The driver}
+
+A driver browses the published departure slots on approved routes and claims the ones they want.
+Two steps. They do not design routes, set prices or forecast demand.
+
+This division was chosen deliberately. Requiring drivers to plan routes and predict demand imposes
+unpaid work before any earnings, which is a recognised cause of supply failure in peer-to-peer
+transport. A study of an in-house microtransit service found that the flexibility drivers valued was
+choosing \emph{shifts}, not designing service.
+
+\section{The operator}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{44mm}Y@{}}
+\toprule
+\thead{Route network} & Which stops exist, in what order, at what fare, during which hours. \\
+\thead{Departure grid} & Published slots, for example every fifteen minutes between 06:00 and 10:00. \\
+\thead{Coverage} & Visibility of unclaimed slots where passengers are waiting, with the ability to offer a bonus for claiming one. \\
+\thead{Verification} & Manual review of every driver: national identity document, driving licence, vehicle licence, photograph. \\
+\thead{Support} & Complaint handling, incident response and an on-call safety line. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Meeting points}
+
+Every boarding point is created and verified by a person who physically visits the location. The
+mandatory record is a name and a position; photographs, a night-safety flag and an accessibility
+flag are optional and encouraged.
+
+This matters for a specific reason. A 2017 study in \emph{PLOS ONE} measuring OpenStreetMap
+completeness worldwide identified Egypt among the least complete, estimating that fewer than one
+third of streets were mapped. The same study found that dense cities and main roads are the
+best-mapped parts of any country. Because boarding points are surveyed by hand and routes follow
+main corridors, the design depends very little on the weakest map data. Verifying this for the
+launch corridors is an engineering task listed in Chapter~7.
+
+% ===================== 4. REVENUE =====================
+\chapter{Revenue and cost mechanics}
+
+\begin{notebox}
+\notehead{No projections}
+This chapter describes how money is intended to move. It contains no forecast of volume, revenue or
+profit. The service has never operated, so any such figure would be invention.
+\end{notebox}
+
+\section{Where revenue comes from}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{34mm}Y@{}}
+\toprule
+\thead{Commission} & A percentage of each fare. The default model. Rate is a configuration value set per city, route or driver segment. \\
+\thead{Subscriptions} & Weekly or monthly commuter passes with a guaranteed seat. Predictable revenue and the strongest retention mechanism. \\
+\thead{Upgraded boarding} & A higher-priced ticket for collection from the passenger's own street rather than a stop. \\
+\thead{Alternative models} & Driver subscription, or a hybrid, are supported as configuration and can be enabled without engineering work. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{How a fare is set}
+
+The stop-boarding fare is one flat figure per route. The street-collection fare is calculated in
+three layers: a fixed uplift, a charge banded by the size of the detour, and a cost-recovery
+component applied only if the first two do not cover the measured cost. The result is clamped
+between a floor and a ceiling, and it is shown to the passenger before they commit.
+
+Beyond a defined detour threshold, street collection is not expensive --- it is unavailable. A
+deviation that would delay the passengers already aboard is refused rather than priced.
+
+\section{Payment}
+
+Wallet balance is the primary method. Card, mobile wallet, kiosk cash-in, bank transfer and Apple
+Pay are supported for topping up or for direct payment, through a single payment provider
+integration.
+
+Cash is accepted, with one rule: it is always recorded against the scanned booking. The driver marks
+the fare as collected, the amount becomes a liability owed by that driver to the platform, and it is
+deducted from their next payout. There is no untracked cash sale. A driver whose outstanding cash
+liability exceeds a configured limit is automatically prevented from accepting further cash
+bookings, having been warned in advance.
+
+\section{Cost structure}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}L{40mm}Y@{}}
+\toprule
+\thead{Routing and mapping} & Self-hosted routing on open map data. Published comparisons put a self-hosted engine at roughly \$20 per month against roughly \$510 per day for equivalent commercial matrix queries at scale. One team reported moving from about \$8{,}000 per month to about \$520. \\
+\thead{Infrastructure} & Self-managed servers rather than managed cloud services, with a database replica and off-site backups. \\
+\thead{Payment processing} & Per-transaction and per-payout fees. \\
+\thead{Messaging} & Verification codes by SMS. All other messages are in-application, which avoids per-message cost. \\
+\thead{Field operations} & Surveying and verifying boarding points, and reviewing driver documents. Labour, not software. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{notebox}
+\notehead{Not yet quoted}
+Infrastructure figures above are drawn from published third-party comparisons, not from quotations
+obtained for this project. Actual costs have not been established.
+\end{notebox}
