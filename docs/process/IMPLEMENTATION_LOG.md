@@ -154,3 +154,32 @@ output) — see the engineering standard §3.3 and §4.
 - Verified: PostGIS_Version() = 3.4; `pnpm db:verify` green (0 drift, cycle clean, types 0 drift);
   `pnpm verify` green (repo checks incl. both SQL checks, web 198 unit, api tests). DB suite is
   DB-dependent and lives behind `pnpm db:verify` (run in CI, not in the DB-free `pnpm verify`).
+
+## 2026-08-17 — M0.6 (P0.6): API skeleton + security foundation (Paymob-ready)
+
+- What: NestJS 11 (Fastify) API with a full security foundation, per OWASP/practitioner research.
+  One error shape `{ code, message_key, details, request_id }` (message_key is a translation key,
+  never prose — prose like "Cannot GET /nope" maps to `error.not_found`); one request context
+  (request id from Fastify + locale/city headers); one strict validation pipe (whitelist +
+  forbidNonWhitelisted, rejects unknown fields); one authority resolver (Role × Capability matrix,
+  deny-by-default, assertCan throws auth.forbidden) + AuthorityGuard/RequireCapability; one pino
+  structured logger with central redaction; helmet security headers; CORS allowlist from env;
+  global rate limiting (@nestjs/throttler, env-tuned); trustProxy for correct IPs behind Railway.
+  /health + /healthz report db (pg) + redis (ioredis) and return 503 when either is down.
+- Paymob-ready: `modules/payments/contracts/` — PaymentProvider interface (checkout/refund/
+  verifyWebhook/normalizeWebhook, integer minor units), a real HMAC-SHA512 webhook verifier
+  (constant-time compare, Paymob's JSON.stringify(obj) scheme), and a PaymobAdapter whose
+  verifier is live-ready while checkout/refund refuse in sandbox mode (no fake success). Mode flips
+  to live when PAYMOB_API_KEY/HMAC_SECRET land.
+- Files: apps/api/src/{main,app.module,config/config.module,common/*,security/*,health/*,
+  modules/payments/contracts/*} + the 16 module dirs (identity, drivers, vehicles, geo, journeys,
+  requests, bookings, matching, pricing, payments, promotions, notifications, analytics, support,
+  audit, config) each with a "why" README + contracts/domain seam. .env.example + catalog extended.
+- Tests (21, all green): env (3), health e2e (2, 503-when-down), error filter (4, incl. prose→key
+  and no-internals-leak), authority (6), webhook verifier (4, incl. tamper/wrong-secret), validation
+  e2e (2, unknown field → 400). Break cases observed: console.log → lint fails; redis down → 503;
+  raw Error → INTERNAL shape. Live proof (native Postgres 17 + PostGIS + Redis in sandbox): /healthz
+  200 {db:up,redis:up}; helmet headers present; 404 → {code,message_key,request_id}; rate limit →
+  429; redis shutdown → 503 → restart → 200.
+- Self-check: fully wired — security is applied ONCE at bootstrap/root module; feature modules get
+  the same filter/pipe/guard/authority with no per-route re-implementation.

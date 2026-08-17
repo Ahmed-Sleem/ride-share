@@ -63,14 +63,14 @@
 
 ## P0.6 — API skeleton: modules, health, one error shape
 
-- [ ] NestJS app; the 16 module directories each with a README (why it exists)
-- [ ] One error shape `{ code, message_key, details, request_id }` — message_key, never prose
-- [ ] One request context (request id, actor, locale, city)
-- [ ] One validation entry point rejecting unknown fields
-- [ ] One authority resolver (only place answering "may this actor do this")
-- [ ] One structured logger; lint fails on `console.log`
-- [ ] `/health` returns db + redis status; 503 when either is down
-- [ ] BREAK: stop db → /health 503; raw Error → same shape; `console.log` → lint fails
+- [x] NestJS app; the 16 module directories each with a README (why it exists)
+- [x] One error shape `{ code, message_key, details, request_id }` — message_key, never prose
+- [x] One request context (request id, actor, locale, city)
+- [x] One validation entry point rejecting unknown fields
+- [x] One authority resolver (only place answering "may this actor do this")
+- [x] One structured logger; lint fails on `console.log`
+- [x] `/health` returns db + redis status; 503 when either is down
+- [x] BREAK: stop db → /health 503; raw Error → same shape; `console.log` → lint fails
 - [ ] Boundary check (P0.9) passes over the empty modules
 
 ## P0.7 — Web skeleton, theme object, i18n, RTL

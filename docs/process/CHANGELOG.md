@@ -264,3 +264,15 @@
   service container). PostGIS 3.4 confirmed; committed infra/schema.sql generated from a clean
   scratch database (migrations-only).
 - CI gains a `verify-db` job with a postgis/postgis:16-3.4 service container.
+
+## 2026-08-17 — M0.6: API skeleton + security foundation (Paymob-ready)
+
+- NestJS 11 / Fastify API: one error shape (translation-key message_key, request_id), one request
+  context, strict global validation (unknown fields rejected), one authority resolver + guard, one
+  pino logger with central redaction, helmet, env-driven CORS allowlist, global rate limiting,
+  trust-proxy for Railway. /health returns db+redis, 503 when down.
+- Paymob contract: PaymentProvider interface + real HMAC-SHA512 webhook verifier (constant-time) +
+  PaymobAdapter (sandbox refuses live actions; flips to live on keys). 16 module directories with
+  "why" READMEs. 21 tests green; all break cases observed failing for the right reason.
+- Sandbox: rebuilt with native Postgres 17 + PostGIS + Redis (Docker not available this turn);
+  live API proof recorded (200/503/429/404/headers).

@@ -15,6 +15,10 @@ export default tseslint.config(
       // TypeScript (strict) already rejects undefined identifiers; no-undef is
       // redundant for .ts and this is the typescript-eslint recommended stance.
       'no-undef': 'off',
+      // The TS-aware rule understands enum members and type-only usage, which
+      // the core no-unused-vars gets wrong.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': 'off',
       'no-console': ['error', { allow: ['error', 'warn'] }],
       'no-restricted-syntax': [
         'error',

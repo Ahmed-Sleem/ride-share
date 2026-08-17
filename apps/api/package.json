@@ -2,7 +2,7 @@
   "name": "@ride-share/api",
   "version": "0.1.0",
   "private": true,
-  "description": "The backend — NestJS modular monolith implementing MASTER_SPECIFICATION. M0: env config + startup guard.",
+  "description": "The backend — NestJS modular monolith implementing MASTER_SPECIFICATION (M0: env guard, health, one error shape, security foundation).",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -12,11 +12,26 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "pg": "catalog:",
+    "ioredis": "catalog:",
+    "pino": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-fastify": "catalog:",
+    "@nestjs/throttler": "catalog:",
+    "@fastify/helmet": "catalog:",
+    "fastify": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "class-validator": "catalog:",
+    "class-transformer": "catalog:"
   },
   "devDependencies": {
+    "@nestjs/testing": "catalog:",
     "typescript": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "eslint": "catalog:",
     "@eslint/js": "catalog:",
     "typescript-eslint": "catalog:",
