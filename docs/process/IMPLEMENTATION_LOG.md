@@ -212,3 +212,16 @@ output) — see the engineering standard §3.3 and §4.
 - Verified: `pnpm verify` green — 9 repo checks (workspace 7, secrets 191, env-doc, sql-location 34,
   sql-injection 34, tokens 7, authority 13, hide-not-disable 7, boundaries 22), web 198 unit +
   14 axe, api 21 tests, typecheck + lint clean.
+
+## 2026-08-17 — P0.12/P0.13 prep + critical fix: check-secrets.sh was untracked
+
+- What: `infra/compose/production.yml` (identical images on a plain Docker host, same env names),
+  `infra/MIGRATION.md` (concrete move, real commands), Railway click-path in
+  `infra/railway/README.md` incl. the PostGIS-not-in-managed-Postgres note (R19.2). Portability audit:
+  clean — no platform SDKs or platform URLs in code (only explanatory comments + infra/railway config).
+- CRITICAL FIX: `scripts/check-secrets.sh` had been silently IGNORED by `.gitignore` since P0.3
+  (its name matches `**/*secret*`), so it was never pushed — GitHub's CI verify job would call a
+  script that does not exist there. Fixed with a negation (`!scripts/check-secrets.sh`) and audited
+  `git status --ignored` for other surprises (only `main.log`, correctly ignored). Also extended the
+  scan skip to compose files (${VAR} placeholders, not secrets) — a planted AKIA key still fails.
+- Verified: `pnpm verify` green (9 repo checks, 198 web, axe 14, 21 api).

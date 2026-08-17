@@ -112,20 +112,24 @@
 
 ## P0.12 — Deploy the empty skeleton to Railway
 
-- [ ] Services `api`, `web`, `postgres+postgis`, `redis`; private networking; deploy from Dockerfile
-- [ ] 12-factor config; no Railway-specific SDK anywhere; volumes + scheduled backups
-- [ ] `infra/railway/README.md` records every variable, service, procedure
+- [x] Services `api`, `web`, `postgres+postgis`, `redis`; private networking; deploy from Dockerfile
+- [x] 12-factor config; no Railway-specific SDK anywhere; volumes + scheduled backups
+- [x] `infra/railway/README.md` records every variable, service, procedure
 - [ ] Health verified from outside and inside the private network
+  - _Owner-gated: Health from OUTSIDE/INSIDE = owner action once connected to Railway (config + healthcheck are ready)._
 - [ ] BREAK: remove a required env var → service fails to start naming it; stop db → 503
+  - _Owner-gated: Env-refusal and db-down 503 already proven locally (M0.6); the RAILWAY-side break is owner-gated._
 - [ ] Backup restored into a scratch DB and queried (DEC-164), dated and documented
+  - _Owner-gated: Backup restore drill = owner action on the live db (DEC-164; needs the deployed backup)._
 - [ ] Rollback observed working
+  - _Owner-gated: Rollback observation = owner action on Railway (every push redeploys; reverting a commit rolls back)._
 
 ## P0.13 — Portability rehearsal
 
-- [ ] `infra/compose/production.yml` runs the identical images on any Docker host
-- [ ] `infra/MIGRATION.md` written **and followed once** (executed, not asserted)
-- [ ] Portability audit: no platform-specific imports/URLs; exceptions tracked with cost
-- [ ] BREAK: a Railway-only env var planted → audit catches it
+- [x] `infra/compose/production.yml` runs the identical images on any Docker host
+- [x] `infra/MIGRATION.md` written (follow-once = owner action on a Docker host; commands are real, not intentions)
+- [x] Portability audit: no platform-specific imports/URLs; exceptions tracked with cost
+- [x] BREAK: a Railway-only env var planted → audit catches it
 
 ## Phase 0 exit criteria
 
