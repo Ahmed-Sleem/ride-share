@@ -29,6 +29,49 @@ volume**, not the managed plugin. (Recorded as R19.2 in BUILD_PLAN P0.5.)
    publicly (Railway's default for services with a healthcheck).
 6. Every push to `main` rebuilds and redeploys.
 
+## Copy-paste variable blocks (Raw Editor)
+
+Railway's **Raw Editor** accepts one `KEY=VALUE` per line. `${{Service.VAR}}`
+references another service (stays in sync). Service names below must match
+yours (`db`, `redis`, `api`, `web`).
+
+**`db` service** (Docker image `postgis/postgis:16-3.4`, volume mounted at
+`/var/lib/postgresql/data`):
+
+```
+POSTGRES_USER=ride
+POSTGRES_PASSWORD=<generate: openssl rand -hex 24>
+POSTGRES_DB=rideshare
+```
+
+**`redis` service** (Docker image `redis:7-alpine`): no variables needed.
+
+**`api` service** (from the repo):
+
+```
+NODE_ENV=production
+PORT=3000
+LOG_LEVEL=info
+DATABASE_URL=postgres://ride:${{db.POSTGRES_PASSWORD}}@${{db.RAILWAY_PRIVATE_DOMAIN}}:5432/rideshare
+REDIS_URL=redis://${{redis.RAILWAY_PRIVATE_DOMAIN}}:6379
+JWT_SECRET=<generate: openssl rand -hex 32>
+CORS_ORIGINS=
+THROTTLE_TTL=60000
+THROTTLE_LIMIT=100
+```
+
+`CORS_ORIGINS` starts empty (allow all, dev-style); set it to the web service's
+public domain once it has one. Leave `PAYMOB_*` unset until M3.
+
+**`web` service** (from the repo):
+
+```
+PORT=8080
+```
+
+If `${{db.RAILWAY_PRIVATE_DOMAIN}}` does not resolve, the literal private
+hostname is `<service-name>.railway.internal` (e.g. `db.railway.internal`).
+
 ## Services
 
 | Service | Image / source | Public? | Health |
