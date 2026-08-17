@@ -309,6 +309,13 @@ in production" becomes untestable before deployment.
 
 ## P0.5 — Database: PostGIS, migrations, and the no-ORM guard-rails
 
+> **SUPERSEDED by DEC-184 (2026-08-17).** The launch platform is Railway's
+> **managed PostgreSQL**, which does not ship PostGIS, and the free-trial plan
+> cannot run the postgis Docker-image service. Migration 0001 is now a
+> **baseline** (`SELECT 1`) that runs on any PostgreSQL; the no-ORM guard-rails
+> (migrations, generated types, SQL location/injection, schema drift) below are
+> unchanged and still in force. **PostGIS returns at M2** — see G-061.
+
 **Implements:** CH9, DEC-170 and its four mandatory mitigations, R19.2, R20.1
 **Depends on:** P0.4
 

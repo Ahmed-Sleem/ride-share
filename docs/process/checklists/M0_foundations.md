@@ -52,8 +52,8 @@
 
 ## P0.5 — Database: PostGIS, migrations, no-ORM guard-rails
 
-- [x] PostGIS confirmed (`SELECT PostGIS_Version()`), recorded
-- [x] `node-pg-migrate`, plain-SQL migrations; 0001 enables the extension
+- [x] ~~PostGIS confirmed~~ → SUPERSEDED by DEC-184: migration 0001 is now a baseline (`SELECT 1`); PostGIS deferred to M2 (G-061). Managed Postgres + managed Redis for launch.
+- [x] `node-pg-migrate`, plain-SQL migrations; 0001 is a baseline that runs on any PostgreSQL (DEC-184)
 - [x] Generated types (`pnpm db:types`) from the live schema; CI regenerates + fails on drift
 - [x] One repository per table (SQL only in `**/infra/*.repository.ts`)
 - [x] `check-sql-location.sh` + `check-sql-injection.sh` + `check-migrations.sh`

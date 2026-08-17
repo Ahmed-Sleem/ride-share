@@ -546,3 +546,10 @@ Because there is no ORM generating types, the plan must include, as first-class 
 | DEC-181 | Web frontend path | **Keep the approved single-file GUI as the real web client**, wired to the real API. Capacitor wraps it for mobile (DEC-176). | Reuses 100% of the tested bilingual, adaptive UI (30 screens × 5 roles, 5,803 layout assertions); fastest correct path; consistent with "one UI codebase". | CONFIRMED |
 | DEC-182 | Build sequencing | **Vertical slice** — foundations (M0), then the core journey on one corridor (M3) as the first usable product, then safety, commercial, subscriptions, mobile, launch. | DEC-086 vertical slices + DEC-110 one-corridor-first; something real is usable at every step. | CONFIRMED |
 | DEC-183 | Railway access | **Agent prepares everything** (`railway.toml`, Dockerfiles, healthchecks, env schema); the owner connects the private repo in the Railway dashboard. | No token shared; Railway auto-detects Dockerfile/railway.toml and redeploys on every push. | CONFIRMED |
+
+## Batch 34 — Managed databases for launch (2026-08-17, owner-directed for the free trial)
+
+| ID | Question | DECISION | Rationale | Status |
+|----|----------|----------|-----------|--------|
+| DEC-184 | Database hosting for launch (supersedes the PostGIS-first clauses of DEC-012/DEC-170/P0.5) | **Railway managed PostgreSQL + managed Redis.** PostGIS is **DEFERRED to M2**: migration 0001 is a baseline (`SELECT 1`) that runs on any PostgreSQL; geo returns at M2 via either a PostGIS-capable host (once off the trial) or numeric lat/lng + OSRM/geocoder. | Railway's managed Postgres does not ship PostGIS and the trial cannot run the postgis Docker-image service; no geo feature exists yet (zero domain tables), so deferring costs nothing today. Managed databases add automatic backups — an ops improvement over a self-run container. Tracked as G-061. | CONFIRMED |
+| DEC-185 | Local/CI parity | Local `docker-compose.yml` and CI use plain `postgres:16-alpine` to match the managed production database. | Same schema surface everywhere; no PostGIS drift between local and deployed. | CONFIRMED |

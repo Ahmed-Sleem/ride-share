@@ -287,3 +287,13 @@
   Branch protection + red-PR observation = owner actions in GitHub settings (recorded).
 - Phase 0 is now only missing the deploy (P0.12) and portability (P0.13) — plus two owner-gated
   items (branch protection, Railway connection).
+
+## 2026-08-17 — DEC-184: managed databases for launch (PostGIS deferred to M2)
+
+- Owner-directed for the free trial (Railway refuses the postgis/redis Docker-image services).
+- Production now runs Railway **managed PostgreSQL + managed Redis** (automatic backups; no
+  containers). PostGIS is DEFERRED to M2: migration 0001 is a baseline (`SELECT 1`) that runs on
+  any PostgreSQL; geo returns at M2 via a PostGIS-capable host or numeric lat/lng + OSRM/geocoder
+  (G-061). Local compose + CI use plain `postgres:16-alpine` for parity (DEC-185).
+- `infra/schema.sql` regenerated from a clean plain-PostgreSQL scratch DB (pgmigrations only);
+  `pnpm db:verify` green (0 drift, cycle clean); `pnpm verify` green.

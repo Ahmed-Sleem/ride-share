@@ -225,3 +225,20 @@ output) — see the engineering standard §3.3 and §4.
   `git status --ignored` for other surprises (only `main.log`, correctly ignored). Also extended the
   scan skip to compose files (${VAR} placeholders, not secrets) — a planted AKIA key still fails.
 - Verified: `pnpm verify` green (9 repo checks, 198 web, axe 14, 21 api).
+
+## 2026-08-17 — DEC-184/DEC-185: managed Postgres + Redis, PostGIS deferred
+
+- What: switched the launch database to Railway's managed PostgreSQL + managed Redis (the trial
+  cannot run Docker-image services, and managed Postgres does not ship PostGIS). Migration 0001
+  is now `0001_baseline.sql` (`SELECT 1`), which runs on any PostgreSQL. PostGIS deferred to M2
+  (G-061, DEC-184); local docker-compose and CI use `postgres:16-alpine` for parity (DEC-185).
+- Files: infra/migrations/0001_baseline.sql (renamed), infra/schema.sql (regenerated from a clean
+  plain-PG scratch DB), docker-compose.yml, .github/workflows/ci.yml, infra/railway/README.md
+  (managed DB click-path + reference variables `${{Postgres.DATABASE_URL}}` / `${{Redis.REDIS_URL}}`),
+  infra/README.md, README.md, .env.example, docs/planning/EXECUTION_PLAN.md + BUILD_PLAN.md (P0.5
+  superseding note), docs/decisions/DECISIONS_REGISTER.md (Batch 34), OPEN_ITEMS.md (G-061),
+  checklist M0 (P0.5 items restated).
+- Verified: `pnpm migrate up` on plain PG 17; `pnpm db:verify` green (0 drift, up/down/up cycle
+  clean); `pnpm db:types` (0 tables); `pnpm verify` green (9 repo checks, 198 web, 21 api).
+- Self-check: the migration machinery and all no-ORM guard-rails are proven on the SAME database
+  surface production uses — no PostGIS anywhere in the committed schema.

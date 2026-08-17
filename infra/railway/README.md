@@ -1,109 +1,84 @@
 # Railway deployment
 
-## The right way to start
+## Architecture (DEC-184 — updated for the free trial)
 
-Railway's built-in **"Add PostgreSQL" plugin is managed Postgres WITHOUT
-PostGIS** — and our schema enables PostGIS in migration 0001 (P0.5). So the
-database service is the **`postgis/postgis:16-3.4` Docker image with a
-volume**, not the managed plugin. (Recorded as R19.2 in BUILD_PLAN P0.5.)
+Production runs on Railway's **managed databases** (automatic backups, no
+containers to run), not self-hosted image services:
 
-## Exact click-path (owner actions, ~5 minutes)
+| Service | What | Source |
+|---|---|---|
+| `api` | NestJS backend | the repo (Dockerfile) |
+| `web` | the interface | the repo (Dockerfile) |
+| `Postgres` | managed PostgreSQL | **+ New → Database → PostgreSQL** |
+| `Redis` | managed Redis | **+ New → Database → Redis** |
 
-1. **railway.com → New Project** (or open your project).
-2. **Connect the repo:** project → `New Service` → **GitHub Repo** →
-   authorize Railway for GitHub → choose **`Ahmed-Sleem/ride-share`**.
-   Railway auto-detects `infra/docker/Dockerfile.node` and `railway.toml`.
-3. Add services:
+**PostGIS is deferred** (DEC-184): Railway's managed PostgreSQL does not ship
+PostGIS, and no geo feature exists yet (zero domain tables). Migration 0001 is
+a baseline that runs anywhere. Geo returns at M2 — either a PostGIS-capable
+host (once off the trial) or numeric lat/lng + OSRM/geocoder.
 
-   | Service | Source |
-   |---|---|
-   | `api` | the repo (Dockerfile detected); set variables below |
-   | `web` | the repo (Dockerfile detected); set `PORT=8080` |
-   | `db` | Docker image **`postgis/postgis:16-3.4`** + a **volume**; set `POSTGRES_USER=ride`, `POSTGRES_PASSWORD=…`, `POSTGRES_DB=rideshare` |
-   | `redis` | Docker image **`redis:7-alpine`** |
+## Exact click-path
 
-4. Set `api` variables (values are secrets — only in Railway, never the repo):
-   `DATABASE_URL` (from the db service's private URL), `REDIS_URL`,
-   `JWT_SECRET` (≥32 chars), `NODE_ENV=production`, `CORS_ORIGINS`.
-5. **Networking:** keep `db` and `redis` private; expose `api` and `web`
-   publicly (Railway's default for services with a healthcheck).
-6. Every push to `main` rebuilds and redeploys.
+1. **railway.com → New Project → New Service → GitHub Repo** → authorize
+   Railway → choose `Ahmed-Sleem/ride-share`.
+2. Railway auto-imports one service per app it finds. **Delete `mobile`**
+   (empty Phase-7 placeholder — it will fail to build). Keep `api` and `web`.
+3. **Add the databases** (these are allowed on the free trial — they are
+   database plugins, not Docker-image services):
+   - **+ New → Database → PostgreSQL** — this is the `Postgres` service.
+   - **+ New → Database → Redis** — this is the `Redis` service.
+4. Configure services (see blocks below).
+5. Deploy order: databases first, then `api`, then `web`.
 
 ## Copy-paste variable blocks (Raw Editor)
 
-Railway's **Raw Editor** accepts one `KEY=VALUE` per line. `${{Service.VAR}}`
-references another service (stays in sync). Service names below must match
-yours (`db`, `redis`, `api`, `web`).
+`${{Service.VAR}}` references another service and stays in sync.
 
-**`db` service** (Docker image `postgis/postgis:16-3.4`, volume mounted at
-`/var/lib/postgresql/data`):
-
-```
-POSTGRES_USER=ride
-POSTGRES_PASSWORD=<generate: openssl rand -hex 24>
-POSTGRES_DB=rideshare
-```
-
-**`redis` service** (Docker image `redis:7-alpine`): no variables needed.
-
-**`api` service** (from the repo):
+**`api`** (from the repo):
 
 ```
 NODE_ENV=production
 PORT=3000
 LOG_LEVEL=info
-DATABASE_URL=postgres://ride:${{db.POSTGRES_PASSWORD}}@${{db.RAILWAY_PRIVATE_DOMAIN}}:5432/rideshare
-REDIS_URL=redis://${{redis.RAILWAY_PRIVATE_DOMAIN}}:6379
-JWT_SECRET=<generate: openssl rand -hex 32>
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+REDIS_URL=${{Redis.REDIS_URL}}
+JWT_SECRET=9aa8b56fdffc9833e440a0dd2f2801b7779faa57116c0f954b3f62e958528bd8
 CORS_ORIGINS=
 THROTTLE_TTL=60000
 THROTTLE_LIMIT=100
 ```
 
-`CORS_ORIGINS` starts empty (allow all, dev-style); set it to the web service's
-public domain once it has one. Leave `PAYMOB_*` unset until M3.
+- `DATABASE_URL` / `REDIS_URL` are reference variables — no credentials pasted.
+  The service name in the reference must match what Railway names the database
+  service (default: `Postgres` / `Redis`).
+- `JWT_SECRET`: the value above is pre-generated; treat it as a secret.
+- `CORS_ORIGINS` starts empty (allow all + a log warning); set it to the web
+  service's public domain once it has one.
+- Leave `PAYMOB_*` unset until M3.
 
-**`web` service** (from the repo):
+**`web`** (from the repo):
 
 ```
 PORT=8080
 ```
 
-If `${{db.RAILWAY_PRIVATE_DOMAIN}}` does not resolve, the literal private
-hostname is `<service-name>.railway.internal` (e.g. `db.railway.internal`).
+**`Postgres`** and **`Redis`**: no variables needed — Railway provisions
+credentials and exposes `DATABASE_URL` / `REDIS_URL` automatically.
 
-## Services
+## Service settings
 
-| Service | Image / source | Public? | Health |
+| Service | Healthcheck path | Timeout | Networking |
 |---|---|---|---|
-| `api` | `infra/docker/Dockerfile.node` (PROJECT=api) | yes | `GET /healthz` |
-| `web` | `infra/docker/Dockerfile.node` (PROJECT=web) | yes | `GET /healthz` |
-| `db` | `postgis/postgis:16-3.4` + volume | no (private) | `pg_isready` |
-| `redis` | `redis:7-alpine` | no (private) | `redis-cli ping` |
-
-- Deploy from the **Dockerfile**, not a buildpack — the platform receives a
-  container (portability; see `../MIGRATION.md`).
-- All configuration is environment variables (12-factor). No Railway SDK on
-  any code path. `.env.example` documents every name.
-
-## Variables (names only — values are secrets)
-
-| Variable | Used by | Purpose |
-|---|---|---|
-| `PORT` | api, web | assigned by Railway; never hardcoded in the image |
-| `DATABASE_URL` | api | PostGIS connection |
-| `REDIS_URL` | api | Redis connection |
-| `JWT_SECRET` | api | token signing (≥32 chars) |
-| `NODE_ENV` | api | `production` |
-| `CORS_ORIGINS` | api | comma-separated allowlist |
-| `THROTTLE_TTL` / `THROTTLE_LIMIT` | api | rate limiting (defaults 60000/100) |
-| `PAYMOB_*` | api | M3 — leave unset until merchant keys exist |
+| `api` | `/healthz` | 120 | private (no public domain needed) |
+| `web` | `/healthz` | 120 | **Generate Domain** (public URL) |
+| `Postgres` | — (managed) | — | private |
+| `Redis` | — (managed) | — | private |
 
 ## Platform facts (R19.1 — operational risks, not inconveniences)
 
-1. **Unmanaged templates:** backup, recovery, tuning and monitoring are our
-   responsibility. The monthly restore drill (DEC-164) is the only thing
-   between the ledger and permanent loss.
+1. **Managed Postgres gives automatic backups** — but the restore drill
+   (DEC-164) still must be *performed*, not assumed: restore a backup into a
+   scratch database and query it.
 2. **A hard spending limit can take workloads offline.** Configure limits and
    alerting deliberately, with a stated threshold.
 

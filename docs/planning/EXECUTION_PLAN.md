@@ -32,7 +32,7 @@ as product. The approved GUI is the front door; it gets wired to the real system
 |---|---|---|
 | Repo | pnpm workspaces + Turborepo, one **private** monorepo | DEC-177, DEC-085 |
 | API | NestJS modular monolith (16 modules, enforced boundaries) | DEC-069, CH08a |
-| DB | PostgreSQL 16 + **PostGIS**, `node-pg-migrate`, **no ORM** | DEC-170, DEC-107 |
+| DB | PostgreSQL (Railway **managed**, `node-pg-migrate`, **no ORM**). PostGIS **deferred** to M2 (DEC-184) | DEC-170, DEC-107, DEC-184 |
 | DB types | Schema-introspection-generated types (never hand-maintained) | DEC-170 mitigation 1 |
 | SQL rules | One repository per table; parameterised queries only; enforced by scripts | DEC-170 |
 | Auth | Phone OTP (SMS provider) + JWT (access/refresh) + passcode | CH02, CH03 |
@@ -41,7 +41,7 @@ as product. The approved GUI is the front door; it gets wired to the real system
 | Payments | One provider interface; Paymob-class card rails + exact cash sequence; double-entry ledger | DEC-077…081, CH06 |
 | Web UI | **Decision below (M0)** — recommended: keep the approved single-file GUI as the real client | this plan |
 | Mobile | Capacitor wrapping the web app (Android APK) | DEC-176 |
-| Deploy | Railway (API + web + PostGIS + OSRM services), GitHub Actions CI, VPS later | DEC-104/105, CH15 |
+| Deploy | Railway (managed Postgres + managed Redis + api + web; OSRM later), GitHub Actions CI, VPS later | DEC-104/105, CH15, DEC-184 |
 
 ## 3. Target repository layout
 
@@ -73,8 +73,9 @@ ride-share/
 |---|---|---|---|
 | `api` | NestJS backend | Dockerfile (or Nixpacks) | 3000 → `GET /healthz` |
 | `web` | the GUI (static) | Dockerfile (nginx) or static build | 80 → `GET /` |
-| `db` | PostgreSQL 16 + PostGIS | `postgis/postgis:16` service with a volume | 5432, `pg_isready` |
-| `osrm` | routing engine, one instance per city (DEC-163) | `osrm/osrm-backend` image, preprocessed graph volume | 5000 → `GET /route/v1/…` |
+| `db` | PostgreSQL (managed, DEC-184) | **+ New → Database → PostgreSQL** | managed, exposes `DATABASE_URL` |
+| `redis` | managed Redis | **+ New → Database → Redis** | managed, exposes `REDIS_URL` |
+| `osrm` | routing engine, one instance per city (DEC-163, M2+) | `osrm/osrm-backend` image, preprocessed graph volume | 5000 → `GET /route/v1/…` |
 
 - Railway connects to the **private** GitHub repo; every push to `main` rebuilds and redeploys [docs](https://docs.railway.com/services).
 - `railway.toml` pins the build command, start command, healthcheck path/timeout, restart policy, and the `watchPatterns` so only the affected service rebuilds.
@@ -197,6 +198,7 @@ None of these are committed to the repo, ever (§10.1). `.env.example` carries n
    development never blocks on a key.
 2. **Scope** — the honest cost of "everything, production-ready" is many milestones; sequencing
    them as vertical slices (D2) keeps something real usable at every step.
-3. **PostGIS on Railway** is a Docker service, not the managed plugin — needs a volume and its own
-   backups; already in the plan.
+3. **PostGIS on Railway** is unavailable on the managed plugin — resolved by DEC-184: defer geo
+   to M2, at which point we choose a PostGIS-capable host (once off the trial) or numeric
+   lat/lng + OSRM/geocoder. Tracked as G-061.
 4. **Account sharing** risk accepted at DEC-157 — compensating controls land in M1/M4.
