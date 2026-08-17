@@ -263,3 +263,28 @@ output) — see the engineering standard §3.3 and §4.
   (historical decision rows and research stay, per append-only rules).
 - Self-check: fully wired — the runtime path has no Redis import, dependency, env var, or health
   check; the spec's architecture statements match the code.
+
+## 2026-08-18 — M1 backend: identity, auth, admin bootstrap (real system core)
+
+- What: the backend identity layer — the first real vertical slice. Migrations 0002 (users) and
+  0003 (otps, sessions); scrypt password hashing (self-describing format, constant-time verify);
+  JWT access tokens via jose (HS256, pinned iss/aud, 15m) + opaque refresh tokens hashed with
+  SHA-256 (deterministic lookup — a salted hash cannot look up) in revocable sessions; 6-digit OTP
+  (hashed, 5-min TTL, 5 attempts) with a dev transport that logs the code and a production refusal
+  without an SMS provider (honest, no fake success); admin seeder (ADMIN_EMAIL/ADMIN_PASSWORD,
+  idempotent, password never logged); endpoints: staff login, otp/request, otp/verify (self-register
+  rider), refresh (rotates), /me, me/password, admin/staff create+list (super_admin only, §8.2).
+- Files: infra/migrations/0002_users.sql, 0003_auth.sql; infra/schema.sql + db.generated.ts
+  (regenerated, 3 tables); apps/api/src/modules/identity/** (contracts, domain password/token/otp,
+  infra users/otp/sessions repositories, application service + admin seeder, api controller/guard,
+  module); config (PG_POOL + logger providers, ADMIN_*/SMS_* env); authority resolver +MANAGE_STAFF;
+  .env.example; jose@6.2.9 added.
+- Tests (42 green): password (4), token (3), otp (5), identity service (8, incl. rider-cannot-create-
+  staff and refresh rotation), authority (7), health (2), env (3), webhook (4), validation (2), etc.
+  Two bugs found by tests and fixed: salted-hash lookup for refresh tokens (→ SHA-256 hashToken) and
+  the OTP transport test reading the wrong arg.
+- Verified LIVE (sandbox Postgres 17 + migrations): seeded super_admin login → creates manager;
+  manager create-staff → 403; rider OTP request (code logged) → verify self-registers; wrong code
+  → 401; change password → old 401 / new 201; unknown field → 400 (mass-assignment guard).
+  `pnpm db:verify` + `pnpm verify` green (see final run).
+- Not pushed — owner confirmation gate (build-everything-then-confirm instruction).

@@ -24,10 +24,21 @@ export const envSchema = {
   THROTTLE_TTL: z.coerce.number().int().min(1000).default(60000),
   THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
 
+  // ── identity / bootstrap ──────────────────────────────────────────────
+  // Bootstrap admin (DEC — one account ships with the system). Both or neither;
+  // a missing one is warned about and the seed is skipped.
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_PASSWORD: z.string().min(12).optional(),
+
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),
   PAYMOB_HMAC_SECRET: z.string().optional(),
   PAYMOB_INTEGRATION_ID: z.string().optional(),
+
+  // ── notifications ─────────────────────────────────────────────────────
+  // SMS provider key for rider OTP. Development logs the code server-side;
+  // production refuses OTP issuance without a provider (honest, no fake).
+  SMS_API_KEY: z.string().optional(),
 } as const;
 
 const schema = z.object(envSchema);

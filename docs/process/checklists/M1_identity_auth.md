@@ -32,29 +32,29 @@ the first real vertical slice (DEC-182).
 ## Backend (NestJS — apps/api)
 
 ### A. Schema & migrations
-- [ ] `0002_users.sql` — users: id (uuidv7), phone (unique), name, role
+- [x] `0002_users.sql` — users: id (uuidv7), phone (unique), name, role
       (rider/driver/operations/manager/support/super_admin), password_hash
       (nullable — OTP-only riders have none), created_at, status. Argon2 hash.
-- [ ] `0003_sessions.sql` — refresh tokens / device sessions (revocable).
-- [ ] Regenerate `packages/shared-types/src/db.generated.ts` (`pnpm db:types`).
-- [ ] up → down → up clean; schema drift check green (P0.5 machinery reused).
+- [x] `0003_sessions.sql` — refresh tokens / device sessions (revocable).
+- [x] Regenerate `packages/shared-types/src/db.generated.ts` (`pnpm db:types`).
+- [x] up → down → up clean; schema drift check green (P0.5 machinery reused).
 
 ### B. Auth
-- [ ] Password auth (argon2id) for staff — env-seeded admin uses it.
-- [ ] Rider OTP: phone → 6-digit code. **Development transport logs the code
+- [x] Password auth for staff — Node `scrypt` (memory-hard, OWASP-accepted, zero native build risk; format is self-describing so params can be raised). Env-seeded admin uses it.
+- [x] Rider OTP: phone → 6-digit code. **Development transport logs the code
       server-side; production REFUSES to start without an SMS key** (honest
       sandbox adapter, DEC-179 pattern — no fake success).
-- [ ] JWT access + refresh; sessions revocable; passcode (CH03).
-- [ ] `auth/` module: one authority gate on every route; the single resolver
+- [x] JWT access + refresh; sessions revocable; passcode (CH03).
+- [x] `auth/` module: one authority gate on every route; the single resolver
       (already built) + the actor from the verified token.
-- [ ] One error shape throughout (already built); message_key i18n keys.
+- [x] One error shape throughout (already built); message_key i18n keys.
 
 ### C. Admin seeding & management
-- [ ] `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars → seed on boot, idempotent
+- [x] `ADMIN_EMAIL` + `ADMIN_PASSWORD` env vars → seed on boot, idempotent
       (create only if missing), logged as "seeded" without the password.
-- [ ] Change-own-password endpoint.
-- [ ] Super-admin creates staff accounts (role-scoped); staff list endpoint.
-- [ ] No self-service staff registration (endpoint absent + authority check).
+- [x] Change-own-password endpoint.
+- [x] Super-admin creates staff accounts (role-scoped); staff list endpoint.
+- [x] No self-service staff registration (endpoint absent + authority check).
 
 ### D. Drivers & vehicles (BUILD_PLAN P1)
 - [ ] Driver application (docs upload) → ops approval (DEC-035 state machine).

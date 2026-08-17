@@ -12,6 +12,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
 import { loadEnv } from './config/env.js';
 import { ConfigModule } from './config/config.module.js';
 import { HealthModule } from './health/health.module.js';
+import { IdentityModule } from './modules/identity/identity.module.js';
 import { SecurityModule } from './security/security.module.js';
 
 const env = loadEnv(); // throws with the missing variable's name — by design (P0.3)
@@ -21,6 +22,7 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
     ConfigModule,
     ThrottlerModule.forRoot([{ name: 'default', ttl: env.THROTTLE_TTL, limit: env.THROTTLE_LIMIT }]),
     HealthModule,
+    IdentityModule,
     SecurityModule,
   ],
   providers: [

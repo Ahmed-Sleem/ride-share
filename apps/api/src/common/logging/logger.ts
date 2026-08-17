@@ -5,7 +5,7 @@
    No console.log in production paths (enforced by lint).
    ══════════════════════════════════════════════════════════════════════ */
 import { pino, type Logger } from 'pino';
-import { LoggerService } from '@nestjs/common';
+import { Injectable, LoggerService } from '@nestjs/common';
 
 export const REDACT_PATHS = [
   'req.headers.authorization',
@@ -31,6 +31,7 @@ export function createLogger(level = 'info'): Logger {
 }
 
 /** Nest-compatible logger service backed by the one pino instance. */
+@Injectable()
 export class PinoLoggerService implements LoggerService {
   constructor(private readonly pino: Logger = createLogger()) {}
 

@@ -312,3 +312,10 @@
   decision rows, changelog) left intact — decisions are append-only.
 - Verified: `pnpm verify` green (198 web, 21 api, 9 repo checks); `pnpm db:verify` green; LIVE:
   `/healthz` → `{"ok":true,"service":"api","db":"up"}` (no redis), db down → 503.
+
+## 2026-08-18 — M1 backend: identity & auth (real system core)
+
+- Migrations users/otps/sessions; scrypt password hashing + jose JWTs + revocable refresh sessions;
+  6-digit OTP (dev logs code, prod refuses without SMS provider); env-seeded bootstrap admin;
+  super_admin-only staff creation. Live-proven end to end. 42 API tests green. Local commit only —
+  push pending owner confirmation.

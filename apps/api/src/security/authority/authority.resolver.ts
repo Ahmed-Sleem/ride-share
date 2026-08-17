@@ -44,6 +44,7 @@ export enum Capability {
   SUPPORT_REFUND = 'support.refund',
   SUPPORT_TICKETS = 'support.tickets',
   // super admin / cross-cutting
+  MANAGE_STAFF = 'staff.manage',
   MANAGE_CONFIG = 'config.manage',
   VIEW_AUDIT = 'audit.view',
 }

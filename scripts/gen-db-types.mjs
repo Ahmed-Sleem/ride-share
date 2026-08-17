@@ -12,10 +12,13 @@ import { Client } from 'pg';
 const OUT = new URL('../packages/shared-types/src/db.generated.ts', import.meta.url).pathname;
 
 const PG_TO_TS = {
+  // information_schema reports the internal names (int4, int8, bool, …)
+  int2: 'number', int4: 'number', int8: 'string',
   smallint: 'number', integer: 'number', bigint: 'string',
-  real: 'number', 'double precision': 'number', numeric: 'string',
-  money: 'string', text: 'string', varchar: 'string', bpchar: 'string',
-  uuid: 'string', boolean: 'boolean', date: 'string',
+  float4: 'number', float8: 'number', real: 'number', 'double precision': 'number',
+  numeric: 'string', money: 'string',
+  text: 'string', varchar: 'string', bpchar: 'string', char: 'string', name: 'string',
+  uuid: 'string', bool: 'boolean', boolean: 'boolean', date: 'string',
   timestamp: 'Date', 'timestamp without time zone': 'Date',
   'timestamp with time zone': 'Date', timestamptz: 'Date',
   time: 'string', interval: 'string', json: 'unknown', jsonb: 'unknown',
