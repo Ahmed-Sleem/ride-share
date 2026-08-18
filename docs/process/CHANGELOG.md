@@ -427,3 +427,12 @@
   dark mode brightens the doodle accents; feature-card hover is bouncier.
 - 77 API / 246 unit / 14 axe / 47 landing / 6904 layout / 53 breaks / 8 layout-breaks green;
   pnpm verify + db:verify green.
+
+## 2026-08-19 — Slider illustration + motion polish (M1.8b)
+
+- Slider doodle is now dark ink + white accents over the solid colour cards.
+- Slides pop in with a springy overshoot (card scale + doodle bounce-rotate +
+  copy rise + pulsing active dot) — reduced-motion guarded.
+- Hero background glows drift very slowly (42s alternate) — reduced-motion guarded.
+- Mailo SMTP values documented for ride.share.signup@mailo.com.
+- 249 unit / 56 breaks / 14 axe / 47 landing green; repo checks green.

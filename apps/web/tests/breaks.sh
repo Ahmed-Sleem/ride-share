@@ -256,6 +256,18 @@ run_break "otp boxes collapse to five" src/lib/components.js \
   's|for (let i = 0; i < 6; i++)|for (let i = 0; i < 5; i++)|' \
   "OTP step renders six code boxes"
 
+run_break "slider doodle reverts to white ink" src/styles/shell.html \
+  's|  --sticker-ink:var(--ink-900);|  --sticker-ink:var(--on-solid);|' \
+  "slider doodle is dark ink + white accents on the colour card"
+
+run_break "slide pop animation removed" src/styles/shell.html \
+  's|@keyframes slidepop{0%{transform:scale(.82) translateY(12px)}55%{transform:scale(1.06)}100%{transform:scale(1) translateY(0)}}||' \
+  "slides pop in with a springy overshoot"
+
+run_break "hero drift animation removed" src/styles/shell.html \
+  's|  animation:herodrift 42s ease-in-out infinite alternate}|  /* drift removed */}|' \
+  "hero glow drifts very slowly"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

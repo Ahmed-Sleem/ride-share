@@ -631,6 +631,11 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      /\.slide--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
      /\.slide--mint\{background:var\(--mint-700\)\}/.test(CSS));
   ok("slider text is white on the solid card", /\.slide\{[^}]*color:var\(--on-solid\)/.test(CSS));
+  ok("slider doodle is dark ink + white accents on the colour card",
+     /\.slide__sticker\{[^}]*--sticker-ink:var\(--ink-900\)/.test(CSS) &&
+     /--sticker-accent:var\(--on-solid\)/.test(CSS));
+  ok("slides pop in with a springy overshoot", /@keyframes slidepop/.test(CSS) && /@keyframes stickerpop/.test(CSS));
+  ok("hero glow drifts very slowly", /\.landing__hero\{[^}]*animation:herodrift/.test(CSS) && /@keyframes herodrift/.test(CSS));
 
   // bounce easing drives the feature-card hover
   ok("bounce easing token is defined", /--bounce:cubic-bezier\(\.34,1\.56,\.64,1\)/.test(CSS));

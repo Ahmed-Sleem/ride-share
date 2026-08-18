@@ -477,3 +477,12 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: email-only auth end-to-end (allowlist → OTP → account) is real, tested and documented;
   every new check was observed failing; schema/types/schema.sql all regenerated from the migrated DB.
 
+
+## M1.8b — Slider illustration + motion (owner: dark ink doodle, pop animation, drifting glow)
+
+- Changed: apps/web/src/styles/shell.html (.slide__sticker ink=--ink-900 accent=--on-solid;
+  slidepop/stickerpop/rise/dotpulse keyframes on .slide--on; herodrift 42s on .landing__hero),
+  apps/web/tests/{unit.test.js (+4 assertions), breaks.sh (+3 breaks)}.
+- Verified: 249 unit, 56 breaks (0 missed), 14 axe, 47 landing, verify:repo green. Browser audit:
+  slide solid rgb(70,61,176) no gradient; animationName slidepop/stickerpop/herodrift; sticker ink
+  #15181F + accent #FFFFFF; hero animationDuration 42s.
