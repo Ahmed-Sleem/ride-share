@@ -37,10 +37,14 @@ const S = {
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
   signupRole:"rider",                          // rider | driver (the only signup choices)
   loginMethod:null, authIdentifier:"",          // smart sign-in: 'password' | 'otp'
-  forgot:null, resendUntil:null, lockedUntil:null,
+  forgot:null,
+  /* cooldown & lockout persist across refresh — the server is authoritative
+     (verification_codes in Postgres), the client only mirrors the countdown */
+  resendUntil: (Number(storeGet("rs.resendUntil")) || 0) || null,
+  lockedUntil: storeGet("rs.lockedUntil") ? new Date(Number(storeGet("rs.lockedUntil"))) : null,
   emailToast:null, emailToastKind:"info",
-  authStep:"phone", authBusy:false, authError:null,
-  authPhone:"", authName:"",
+  authStep:"email", authBusy:false, authError:null,
+  authEmail:"", authName:"",
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
@@ -68,6 +72,21 @@ function signOut() {
 }
 
 const t = k => k.split(".").reduce((o,p)=>o&&o[p], T[S.lang]) ?? k;
+
+/* error keys (message_key) → friendly, localized copy; unknown keys fall
+   back to the generic message instead of leaking the raw key */
+const errText = key => {
+  const copy = t(key);
+  return copy && copy !== key ? copy : t("error.internal");
+};
+
+/* Cooldown & lockout deadlines — persisted so a page refresh keeps the
+   countdown honest (the server re-derives them on every request anyway). */
+const setResendUntil = ms => { S.resendUntil = Date.now() + ms; storeSet("rs.resendUntil", String(S.resendUntil)); };
+const setLockedUntil = date => {
+  if (date) { S.lockedUntil = new Date(date); storeSet("rs.lockedUntil", String(S.lockedUntil.getTime())); }
+  else { S.lockedUntil = null; try{localStorage.removeItem("rs.lockedUntil");}catch(e){} }
+};
 const L = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
 const money = n => {
   const v = Math.abs(n), sign = n<0 ? "−" : "";
@@ -249,6 +268,48 @@ const Sheet = (title, ...k) => $("div",{class:"sheet", attrs:{role:"dialog","ari
     $("h2",{class:"t-head grow",text:title}),
     IconBtn({name:"close", label:t("cancel"), on:closeSheet})) : null,
   ...k);
+
+/* Six-box one-time-code input — the industry-standard shape. Digits only,
+   auto-advance, backspace/arrow navigation, paste and mobile one-time-code
+   autofill distribute across the boxes. `onComplete` fires when all six are
+   filled. Read the value with otpValue(). */
+const otpValue = () =>
+  [...document.querySelectorAll(".otp__box")].map((b) => b.value || "").join("").replace(/\D/g, "");
+function OtpInput({ onComplete }) {
+  const wrap = $("div", { class: "otp", attrs: { role: "group", "aria-label": t("codeLabel") } });
+  const boxes = [];
+  const allFilled = () => boxes.every((b) => b.value);
+  for (let i = 0; i < 6; i++) {
+    const inp = $("input", {
+      class: "otp__box ltr",
+      attrs: {
+        type: "text", inputmode: "numeric", autocomplete: "one-time-code", maxlength: "6",
+        "aria-label": `${t("codeLabel")} ${i + 1}`,
+      },
+    });
+    inp.addEventListener("input", () => {
+      const v = inp.value.replace(/\D/g, "");
+      if (v.length > 1) { // paste or one-time-code autofill
+        inp.value = "";
+        v.slice(0, 6).split("").forEach((d, k) => { boxes[k].value = d; });
+        boxes[Math.min(v.length, 6) - 1].focus();
+      } else {
+        inp.value = v;
+        if (v && i < 5) boxes[i + 1].focus();
+      }
+      if (allFilled() && onComplete) onComplete(otpValue());
+    });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !inp.value && i > 0) {
+        boxes[i - 1].value = ""; boxes[i - 1].focus(); e.preventDefault();
+      } else if (e.key === "ArrowLeft" && i > 0) { boxes[i - 1].focus(); }
+      else if (e.key === "ArrowRight" && i < 5) { boxes[i + 1].focus(); }
+    });
+    boxes.push(inp);
+  }
+  wrap.append(...boxes);
+  return wrap;
+}
 
 /* Map — drawn illustration. Labelled, never presented as live tiles. */
 function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false}){

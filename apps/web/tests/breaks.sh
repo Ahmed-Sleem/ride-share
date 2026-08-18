@@ -222,7 +222,7 @@ run_break "forgot-password link removed" src/screens/auth.js \
   "sign-in shows the forgot-password link"
 
 run_break "resend button removed" src/screens/auth.js \
-  's|resendButton(()=>identify()),|null,|' \
+  's|    resendButton(onResend),|    null,|' \
   "resend button shows a countdown and is disabled"
 
 
@@ -230,6 +230,31 @@ run_break "resend button removed" src/screens/auth.js \
 run_break "slideshow removed from the hero" src/screens/landing.js \
   's|heroSlideshow()))),|null))),|' \
   "landing shows the features slideshow"
+
+# ── M1.8: email auth + slider polish ──────────────────────────────────────
+run_break "role-choice chevron loses its size" src/styles/shell.html \
+  's|.rolechoice .chev{color:var(--text-muted);width:var(--icon-md);height:var(--icon-md);flex:none}|.rolechoice .chev{color:var(--text-muted);flex:none}|' \
+  "role-choice chevron has an explicit size"
+
+run_break "streamline credit loses its link" src/screens/landing.js \
+  's|href:"https://www.streamlinehq.com"|href:"#"|' \
+  "Streamline credit is a link"
+
+run_break "slider card returns a gradient" src/styles/shell.html \
+  's|.slide--violet{background:var(--violet-700)}|.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
+  "slider cards are solid (violet card has no gradient)"
+
+run_break "feature hover loses the bounce" src/styles/shell.html \
+  's|transform var(--slow) var(--bounce),border-color|transform var(--slow) var(--ease),border-color|' \
+  "feature hover uses the bounce easing"
+
+run_break "dark doodle accents removed" src/styles/shell.html \
+  's|\[data-theme="dark"\] \.landing__step--violet \.landing__stepart{--sticker-accent:var(--violet-300)}|[data-theme="dark"] .landing__step--violet .landing__stepart{--sticker-accent:var(--accent)}|' \
+  "dark mode gives step cards brighter accents"
+
+run_break "otp boxes collapse to five" src/lib/components.js \
+  's|for (let i = 0; i < 6; i++)|for (let i = 0; i < 5; i++)|' \
+  "OTP step renders six code boxes"
 
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"

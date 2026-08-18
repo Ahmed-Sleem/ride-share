@@ -40,6 +40,12 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 expires_at timestamp with time zone NOT NULL,
 revoked_at timestamp with time zone
 );
+CREATE TABLE public.throttle_records (
+key text NOT NULL,
+hits jsonb DEFAULT '{}'::jsonb NOT NULL,
+expires_at timestamp with time zone NOT NULL,
+blocked_until timestamp with time zone
+);
 CREATE TABLE public.users (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 email text,
@@ -79,7 +85,7 @@ expires_at timestamp with time zone NOT NULL,
 consumed_at timestamp with time zone,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT verification_codes_channel_check CHECK ((channel = ANY (ARRAY['sms'::text, 'email'::text]))),
-CONSTRAINT verification_codes_kind_check CHECK ((kind = ANY (ARRAY['sms_login'::text, 'email_verify'::text, 'password_reset'::text])))
+CONSTRAINT verification_codes_kind_check CHECK ((kind = ANY (ARRAY['email_login'::text, 'email_verify'::text, 'password_reset'::text])))
 );
 ALTER TABLE ONLY public.pgmigrations ALTER COLUMN id SET DEFAULT nextval('public.pgmigrations_id_seq'::regclass);
 ALTER TABLE ONLY public.audit_log
@@ -92,6 +98,8 @@ ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.sessions
 ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.throttle_records
+ADD CONSTRAINT throttle_records_pkey PRIMARY KEY (key);
 ALTER TABLE ONLY public.users
 ADD CONSTRAINT users_email_key UNIQUE (email);
 ALTER TABLE ONLY public.users
@@ -106,6 +114,7 @@ ALTER TABLE ONLY public.verification_codes
 ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
+CREATE INDEX throttle_records_expires_idx ON public.throttle_records USING btree (expires_at);
 CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;

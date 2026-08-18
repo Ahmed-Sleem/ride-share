@@ -10,19 +10,31 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware.js';
 import { loadEnv } from './config/env.js';
-import { ConfigModule } from './config/config.module.js';
+import { ConfigModule, PG_POOL } from './config/config.module.js';
+import { PostgresThrottlerStorage } from './common/throttle/postgres-throttler-storage.js';
+import { ThrottleRepository } from './common/throttle/infra/throttle.repository.js';
 import { HealthModule } from './health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { DriversModule } from './modules/drivers/drivers.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { SecurityModule } from './security/security.module.js';
+import type { Pool } from 'pg';
 
 const env = loadEnv(); // throws with the missing variable's name — by design (P0.3)
 
 @Module({
   imports: [
     ConfigModule,
-    ThrottlerModule.forRoot([{ name: 'default', ttl: env.THROTTLE_TTL, limit: env.THROTTLE_LIMIT }]),
+    // Rate limiting keeps its state in PostgreSQL (DEC-186, G-062): limits
+    // survive restarts and are shared across instances.
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => ({
+        storage: new PostgresThrottlerStorage(new ThrottleRepository(pool)),
+        throttlers: [{ name: 'default', ttl: env.THROTTLE_TTL, limit: env.THROTTLE_LIMIT }],
+      }),
+    }),
     HealthModule,
     IdentityModule,
     DriversModule,

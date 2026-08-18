@@ -55,12 +55,18 @@ AUTO_MIGRATE=true
 - `JWT_SECRET`: the value above is pre-generated; treat it as a secret.
 - `CORS_ORIGINS` starts empty (allow all + a log warning); set it to the web
   service's public domain once it has one.
-- **Email verification & password reset by email** (optional): `SMTP_HOST`,
-  `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM`.
-- **SMS OTP** (optional): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
-  `TWILIO_AUTH_TOKEN`, `SMS_FROM`. Until then, development logs the code and
-  production refuses to send (honest, no fake) — the code appears in the `api`
-  service deploy logs, so you can test the whole flow without a provider.
+- **Email (login codes + verification + password reset)** — required for riders
+  to sign in/sign up. Generic SMTP; with **Resend** set exactly:
+  `SMTP_HOST=smtp.resend.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`,
+  `SMTP_USER=resend`, `SMTP_PASS=<your Resend API key, starts with re_>`,
+  `EMAIL_FROM=<an address on a domain you verified in Resend>`.
+  Until these are set, development logs the code server-side and production
+  refuses to send (honest, no fake) — the code appears in the `api` service
+  deploy logs, so you can test the whole flow without a provider.
+- **Email sign-up policy** (optional): `EMAIL_ALLOWED_DOMAINS` — a
+  comma-separated list of EXTRA allowed domains (exact or wildcard-by-suffix,
+  e.g. `mycompany.eg,corp.com`). The built-in allowlist (popular providers +
+  every `.edu` / `.edu.<cc>`) always applies.
 - Leave `PAYMOB_*` unset until M3.
 
 **`web`** (from the repo):

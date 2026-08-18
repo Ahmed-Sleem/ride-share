@@ -26,11 +26,11 @@ class IdentifyDto {
 }
 
 class OtpRequestDto {
-  @Matches(/^\+?[0-9]{8,15}$/, { message: 'validation.phone' }) phone!: string;
+  @IsEmail({}, { message: 'validation.email' }) email!: string;
 }
 
 class OtpVerifyDto {
-  @Matches(/^\+?[0-9]{8,15}$/, { message: 'validation.phone' }) phone!: string;
+  @IsEmail({}, { message: 'validation.email' }) email!: string;
   @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
   @IsOptional() @IsString() @MinLength(1) name?: string;
 }
@@ -91,13 +91,13 @@ export class IdentityController {
   @Post('auth/otp/request')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   requestOtp(@Body() dto: OtpRequestDto) {
-    return this.identity.riderRequestOtp(dto.phone);
+    return this.identity.riderRequestOtp(dto.email);
   }
 
   @Post('auth/otp/verify')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   verifyOtp(@Body() dto: OtpVerifyDto) {
-    return this.identity.riderVerifyOtp(dto.phone, dto.code, dto.name);
+    return this.identity.riderVerifyOtp(dto.email, dto.code, dto.name);
   }
 
   @Post('auth/refresh')

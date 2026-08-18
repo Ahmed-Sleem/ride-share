@@ -2,17 +2,20 @@
    Auth screens — the REAL flows, wired to the API. No fabricated success.
 
    Sign-up: the user chooses Rider or Driver (the only two self-service
-   roles). Both self-register by phone OTP; choosing Driver also submits the
-   driver application after the account exists. Staff never self-register
-   (DEC-032/033) — there is no staff option anywhere.
+   roles). Both self-register by EMAIL code; the domain must be one the
+   server accepts (allowlist — temporary mailboxes are refused with a
+   friendly message). Choosing Driver also submits the driver application
+   after the account exists. Staff never self-register (DEC-032/033).
 
-   Sign-in: ONE form. The system auto-detects the account: a password account
-   (staff) is asked for its password; an OTP account (rider/driver) gets a
-   login code automatically. No visible role toggle.
+   Sign-in: ONE field. The system auto-detects the account: a password
+   account (staff) is asked for its password; an OTP account (rider/driver)
+   gets a login code emailed automatically. No visible role toggle.
 
    Resend respects the backend 60s cooldown (live countdown); a 1-hour lockout
-   after 3 failures is shown honestly. Forgot-password and email verification
-   share the same style and error-key handling.
+   after 3 failures is shown honestly; both survive a page refresh (the
+   server re-derives them from PostgreSQL on every request — the client only
+   mirrors the countdown). Forgot-password and email verification share the
+   same style and error-key handling.
    ══════════════════════════════════════════════════════════════════════ */
 function auth() {
   if (S.forgot) return forgotPassword();
@@ -27,16 +30,17 @@ function signupAuth() {
       $("div",{class:"t-head center",text:t("signupChoose")}),
       roleChoice("rider", t("roleLabel.rider"), t("signupRiderSub"), "wallet"),
       roleChoice("driver", t("roleLabel.driver"), t("signupDriverSub"), "bus"));
-  } else if (S.authStep === "phone") {
+  } else if (S.authStep === "email") {
     body = $("div",{class:"stack gap3"},
-      field("auth-phone", t("phoneLabel"), "tel"),
+      field("auth-email", t("emailLabel"), "email", "email"),
+      $("p",{class:"t-cap",text:t("emailHelp")}),
       Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>riderSendCode()}));
   } else if (S.authStep === "otp") {
-    body = $("div",{class:"stack gap3"},
-      $("p",{class:"t-cap"}, `${t("codeSent")} `, $("span",{class:"ltr",text:S.authPhone})),
-      field("auth-code", t("codeLabel"), "text"),
-      Btn({label:S.authBusy? "…" : t("continue"), block:true, dis:S.authBusy, on:()=>{ S.authStep="name"; render(); }}),
-      resendButton(()=>{ S.authStep="phone"; render(); }));
+    body = otpStep(
+      `${t("codeSent")} `,
+      () => riderVerifyCode(null),
+      () => riderSendCode(),
+      () => { S.authStep="email"; S.authError=null; render(); });
   } else { // name
     body = $("div",{class:"stack gap3"},
       field("auth-name", t("yourName"), "text"),
@@ -55,20 +59,33 @@ function signinAuth() {
       Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy, on:()=>staffLogin()}),
       backBtn(()=>{ S.loginMethod=null; render(); }));
   } else if (S.loginMethod === "otp") {
-    body = $("div",{class:"stack gap3"},
-      $("p",{class:"t-cap"}, `${t("codeSentTo")} `, $("span",{class:"ltr",text:S.authIdentifier})),
-      field("auth-code", t("codeLabel"), "text"),
-      Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(null)}),
-      resendButton(()=>identify()),
-      backBtn(()=>{ S.loginMethod=null; render(); }));
+    body = otpStep(
+      `${t("codeSentTo")} `,
+      () => riderVerifyCode(null),
+      () => identify(),
+      () => { S.loginMethod=null; render(); });
   } else {
     body = $("div",{class:"stack gap3"},
-      field("auth-identifier", t("identifierLabel"), "text"),
+      field("auth-identifier", t("identifierLabel"), "email", "email"),
       Btn({label:S.authBusy? "…" : t("signinContinue"), block:true, dis:S.authBusy, on:()=>identify()}),
       $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("forgotPassword"),
         on:{click:()=>{ S.forgot="identify"; S.authError=null; render(); }}}));
   }
   return card(t("signIn"), body, true);
+}
+
+/* Shared OTP step: the sent-to line, the six boxes, the attempts hint, the
+   verify button, the resend countdown, and a way back to the email field. */
+function otpStep(sentPrefix, onVerify, onResend, onBack) {
+  return $("div",{class:"stack gap3"},
+    $("p",{class:"t-cap center"}, sentPrefix,
+      $("span",{class:"ltr",text:S.authEmail})),
+    OtpInput({ onComplete: onVerify }),
+    S.attemptsLeft != null
+      ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
+    Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:onVerify}),
+    resendButton(onResend),
+    backBtn(onBack));
 }
 
 /* ── shared card chrome ────────────────────────────────────────────────── */
@@ -94,7 +111,7 @@ function card(title, body, showSignupToggle) {
 
 function roleChoice(role, title, sub, iconName) {
   return $("button",{class:"rolechoice", attrs:{type:"button","aria-pressed":String(S.signupRole===role)},
-    on:{click:()=>{ S.signupRole=role; S.authStep="phone"; S.authError=null; render(); }}},
+    on:{click:()=>{ S.signupRole=role; S.authStep="email"; S.authError=null; render(); }}},
     $("div",{class:"rolechoice__ico"}, icon(iconName)),
     $("div",{class:"rolechoice__text"},
       $("strong",{class:"rolechoice__title",text:title}),
@@ -112,15 +129,15 @@ function resendButton(onClick) {
   return btn;
 }
 
-function backBtn(onClick) {
-  return $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("landingBack"),
+function backBtn(onClick, label) {
+  return $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:label || t("changeEmail"),
     on:{click:onClick}});
 }
 
 function lockoutBanner() {
   if (!S.lockedUntil) return null;
   if (new Date(S.lockedUntil).getTime() <= Date.now()) return null;
-  return Banner("danger", t("tooManyAttempts"));
+  return Banner("danger", t("auth.code_locked"));
 }
 
 /* ── forgot password ──────────────────────────────────────────────────── */
@@ -129,7 +146,7 @@ function forgotPassword() {
   const w=$("div",{class:"stack gap3"});
   if(step==="identify"){
     w.append($("p",{class:"t-cap",text:t("resetIdentify")}),
-      field("reset-identifier", t("identifierLabel"), "text"),
+      field("reset-identifier", t("identifierLabel"), "email", "email"),
       Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>resetRequest()}));
   } else if(step==="code"){
     w.append($("p",{class:"t-cap",text:t("resetCodeSent")}),
@@ -150,31 +167,38 @@ function forgotPassword() {
       S.authError ? Banner("danger", S.authError) : null,
       step==="done"
         ? Btn({label:t("signInAction"), block:true, on:()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }})
-        : backBtn(()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; render(); })));
+        : backBtn(()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; render(); }, t("landingBack"))));
 }
 
 /* ── helpers + actions ────────────────────────────────────────────────── */
-function field(id, label, type) {
+function field(id, label, type, autocomplete) {
   return $("div",{class:"field"},
     $("label",{attrs:{for:id}, text:label}),
-    $("input",{class:"input ltr", attrs:{id, type, autocomplete:"off", "aria-label":label}}));
+    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label}}));
 }
 const val = (id) => (document.getElementById(id)||{}).value || "";
 const resetLockout = (e) => {
   const d = e.payload && e.payload.details;
-  if (d && d.retryAfterMs) { S.resendUntil = Date.now() + d.retryAfterMs; }
-  if (d && d.lockedUntil) { S.lockedUntil = d.lockedUntil; }
+  if (d && d.retryAfterMs) setResendUntil(d.retryAfterMs);
+  if (d && d.lockedUntil) setLockedUntil(d.lockedUntil);
 };
+const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s||"").trim());
 
 async function identify() {
+  const id = val("auth-identifier");
+  if(!id){ S.authError=t("validation.email"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.identify(val("auth-identifier"));
-    S.authIdentifier = val("auth-identifier");
+    const res = await API.identify(id);
+    S.authIdentifier = id;
     if (res.method === "password") { S.loginMethod="password"; }
-    else { S.loginMethod="otp"; S.resendUntil = Date.now() + (res.resendInMs || 60000); }
+    else {
+      S.authEmail = id;
+      S.loginMethod="otp";
+      setResendUntil(res.resendInMs || 60000);
+    }
     S.authBusy=false; render();
-  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+  } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function staffLogin() {
@@ -183,32 +207,40 @@ async function staffLogin() {
     const res = await API.login(S.authIdentifier || val("auth-identifier"), val("auth-password"));
     API.saveSession(res);
     enterApp(res.user);
-  } catch(e) { S.authError = e.messageKey || "error.internal"; S.authBusy=false; render(); }
+  } catch(e) { S.authError = errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function riderSendCode() {
-  const phone = val("auth-phone");
-  if(!phone){ S.authError="validation.phone"; render(); return; }
-  S.authBusy=true; S.authError=null; S.lockedUntil=null; render();
+  const email = val("auth-email").trim().toLowerCase();
+  if(!isEmail(email)){ S.authError=t("validation.email"); render(); return; }
+  S.authBusy=true; S.authError=null; S.attemptsLeft=null; S.lockedUntil=null;
+  setLockedUntil(null); render();
   try {
-    const res = await API.requestOtp(phone);
-    S.authPhone=phone; S.authStep="otp"; S.authBusy=false;
-    S.resendUntil = Date.now() + (res.resendInMs || 60000);
+    const res = await API.requestOtp(email);
+    S.authEmail=email; S.authStep="otp"; S.authBusy=false;
+    setResendUntil(res.resendInMs || 60000);
     render();
-  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+  } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function riderVerifyCode(name) {
+  const code = otpValue();
+  if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.verifyOtp(S.authPhone, val("auth-code"), name || undefined);
+    const res = await API.verifyOtp(S.authEmail, code, name || undefined);
     API.saveSession(res);
     if (S.authMode==="signup" && S.signupRole==="driver") {
-      try { await API.driverApply(); } catch {}
+      try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }
       toast(t("driverAppliedToast"));
     }
     enterApp(res.user);
-  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+  } catch(e) {
+    resetLockout(e);
+    const d = e.payload && e.payload.details;
+    if (d && d.remainingAttempts != null) S.attemptsLeft = d.remainingAttempts;
+    S.authError=errText(e.messageKey); S.authBusy=false; render();
+  }
 }
 
 async function resetRequest() {
@@ -216,7 +248,7 @@ async function resetRequest() {
   try {
     await API.requestPasswordReset(val("reset-identifier"));
     S.forgot="code"; S.authBusy=false; render();
-  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+  } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function resetConfirm() {
@@ -224,5 +256,5 @@ async function resetConfirm() {
   try {
     await API.confirmPasswordReset(val("reset-identifier"), val("reset-code"), val("reset-password"));
     S.forgot="done"; S.authBusy=false; render();
-  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+  } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }

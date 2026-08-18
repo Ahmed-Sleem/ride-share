@@ -436,3 +436,44 @@ output) — see the engineering standard §3.3 and §4.
   6,904 layout, 47 breaks, 8 layout-breaks; live browser audit: 4 colored slides with stickers,
   112px step art, tooltip with number+title+body, theme flips html==body ×4, AR sign-up heading +
   role cards (16/15px, no overflow), zero console errors; bundle hex-free.
+
+## M1.8 — Email sign-in/sign-up, styled emails, DB-backed throttle, slider/landing polish
+
+- What changed: (1) Email sign-up/sign-in REPLACES phone/SMS for riders & drivers: `/auth/otp/request`
+  and `/auth/otp/verify` now take `email`; smart sign-in emails the login code; the Twilio SMS path is
+  removed as dead code. (2) Email allowlist (DEC-193) in `identity/domain/email-policy.ts` — popular
+  providers + every `.edu`/`.edu.<cc>` + env `EMAIL_ALLOWED_DOMAINS`; temp mailboxes (playboot.com,
+  mailinator, 10minutemail…) are refused BEFORE sending, with `auth.email_domain_not_allowed`.
+  (3) New `email_login` verification kind (migration 0008) on the existing DEC-189 machinery (60s
+  cooldown, 3 tries → 1h lockout, scrypt-hashed codes, all in PostgreSQL); audit events for otp_request /
+  signup / login / code_locked. (4) Branded HTML email (one template, violet/coral, big code block)
+  via generic SMTP — Resend works by env only (smtp.resend.com:465, user "resend", pass = API key).
+  (5) Rate limiting moves to PostgreSQL (DEC-195): `throttle_records` (migration 0009) + a pure
+  `nextThrottleState()` transition + a `ThrottleRepository` (SQL only in `infra/*.repository.ts`) +
+  a `PostgresThrottlerStorage` adapter — limits survive restarts and share across instances (G-062
+  clause 1). (6) Frontend: sign-up "choose → email → OTP (6 boxes, auto-advance/paste/one-time-code) →
+  name"; resend countdown + lockout persist across refresh via localStorage; friendly error copy for
+  every message_key. (7) Landing: "Vectors by Streamline" is now a smaller link on its own line;
+  role-choice chevrons sized 20px (were rendering ~194–276px and crushing the card text to 0 width);
+  slider cards are ONE solid 700-shade each (no gradient) with white text + white doodle (AA contrast);
+  dark mode brightens the doodle accents to 300-level; feature-card hover is bouncier (--bounce,
+  --slow).
+- Files: apps/api/src/modules/identity/{domain/email-policy.ts(+test), domain/verification.ts(+test),
+  application/identity.service.ts(+test), api/identity.controller.ts, infra/notifications.ts,
+  infra/verifications.repository.ts}, apps/api/src/common/throttle/{throttle-logic.ts(+test),
+  postgres-throttler-storage.ts, infra/throttle.repository.ts}, apps/api/src/{config/env.ts, app.module.ts},
+  infra/migrations/{0008_email_login.sql, 0009_throttle_records.sql}, infra/schema.sql,
+  packages/shared-types/src/db.generated.ts, apps/web/src/{data/content.js, lib/components.js,
+  lib/api.js, screens/auth.js, screens/landing.js, shell/app.js, styles/shell.html},
+  apps/web/tests/{unit.test.js, breaks.sh}, .env.example, infra/railway/README.md,
+  docs/decisions/{DECISIONS_REGISTER.md, OPEN_ITEMS.md}, docs/planning/EXECUTION_PLAN.md,
+  docs/process/checklists/M1_email_auth.md.
+- Verified: API 77 tests green (new: email-policy 9, throttle-logic 7 — each break-observed failing for
+  the right reason before restore); web 246 unit + 14 axe + 47 landing + 6904 layout + 53 breaks +
+  8 layout-breaks green; `pnpm verify` green (repo checks incl. env-doc parity 22 vars, token check,
+  SQL-location/injection, secrets); `pnpm db:verify` migrations up→down→up + schema drift clean
+  (post-commit); browser measures: role-choice chevron 20×20 (text width 174px, was 0), slide solid
+  rgb(70,61,176)=violet-700 with white text and no gradient, footer credit <a href=streamlinehq.com 11px.
+- Self-check: email-only auth end-to-end (allowlist → OTP → account) is real, tested and documented;
+  every new check was observed failing; schema/types/schema.sql all regenerated from the migrated DB.
+

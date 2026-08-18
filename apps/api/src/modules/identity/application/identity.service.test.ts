@@ -1,7 +1,8 @@
 /* Identity service tests — repository fakes, no database. Proves the rules:
-   staff password login, rider OTP self-register, resend cooldown (60s),
-   3-attempt lockout (1h), session rotation, change password, email
-   verification, password reset (no enumeration), and §8.2 authority. */
+   staff password login, rider EMAIL OTP self-register, the email-domain
+   allowlist, resend cooldown (60s), 3-attempt lockout (1h), session rotation,
+   change password, email verification, password reset (no enumeration),
+   audit events, and §8.2 authority. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ForbiddenException, HttpException, UnauthorizedException } from '@nestjs/common';
@@ -84,8 +85,7 @@ class FakeSessions {
 class FakeNotifications {
   calls: string[] = [];
   codes: string[] = [];
-  async sendOtp(phone: string, code: string) { this.calls.push(`otp:${phone}`); this.codes.push(code); }
-  async sendReset(phone: string, code: string) { this.calls.push(`reset-sms:${phone}`); this.codes.push(code); }
+  async sendLoginCode(email: string, code: string) { this.calls.push(`login:${email}`); this.codes.push(code); }
   async sendVerification(email: string, code: string) { this.calls.push(`verify:${email}`); this.codes.push(code); }
   async sendPasswordReset(email: string, code: string) { this.calls.push(`reset-mail:${email}`); this.codes.push(code); }
 }
@@ -96,7 +96,7 @@ function env(): Env {
   return {
     NODE_ENV: 'development', PORT: 3000, LOG_LEVEL: 'info', DATABASE_URL: 'postgres://localhost/x',
     JWT_SECRET: 'c'.repeat(32), CORS_ORIGINS: '', THROTTLE_TTL: 60000, THROTTLE_LIMIT: 100,
-    SMTP_PORT: 587, SMTP_SECURE: 'false', AUTO_MIGRATE: 'true',
+    SMTP_PORT: 587, SMTP_SECURE: 'false', AUTO_MIGRATE: 'true', EMAIL_ALLOWED_DOMAINS: '',
   } as Env;
 }
 
@@ -124,46 +124,67 @@ test('staff login rejects a wrong password with a translation key', async () => 
   await assert.rejects(() => svc.login('admin@x.com', 'wrong'), UnauthorizedException);
 });
 
-test('identify returns password method for staff, otp for riders', async () => {
-  const { svc, users } = setup();
+test('identify returns password method for staff, otp for riders (email)', async () => {
+  const { svc, users, notifications } = setup();
   await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  await users.create({ phone: '+201000000000', role: 'rider' });
+  await users.create({ email: 'rider@gmail.com', role: 'rider' });
   assert.deepEqual(await svc.identifyLogin('admin@x.com'), { method: 'password' });
-  const otp = await svc.identifyLogin('+201000000000');
+  const otp = await svc.identifyLogin('rider@gmail.com');
   assert.equal(otp.method, 'otp');
   assert.ok((otp as { resendInMs: number }).resendInMs > 0);
+  assert.equal(notifications.calls.length, 1, 'a login code was emailed');
 });
 
 test('identify for an unknown identifier is a 401 (no enumeration)', async () => {
   const { svc } = setup();
-  await assert.rejects(() => svc.identifyLogin('ghost@x.com'), UnauthorizedException);
+  await assert.rejects(() => svc.identifyLogin('ghost@gmail.com'), UnauthorizedException);
 });
 
-test('a rider with no password gets the OTP flow, not a password error', async () => {
-  const { svc, users, notifications } = setup();
-  await users.create({ phone: '+201000000000', role: 'rider' });
-  const r = await svc.identifyLogin('+201000000000');
-  assert.equal(r.method, 'otp');
-  assert.equal(notifications.codes.length, 1);
-});
-
-test('rider OTP: request then verify self-registers', async () => {
-  const { svc, notifications } = setup();
-  const phone = '+201000000000';
-  void phone;
-  const req = await svc.riderRequestOtp(phone);
+test('rider OTP: request then verify self-registers by email (audited)', async () => {
+  const { svc, notifications, audit } = setup();
+  const email = 'ahmed@ejust.edu.eg';
+  const req = await svc.riderRequestOtp(email);
   assert.equal(req.ok, true);
   assert.equal(req.resendInMs, 60000);
   assert.equal(notifications.codes.length, 1);
-  const res = await svc.riderVerifyOtp(phone, notifications.codes[0]!);
+  const res = await svc.riderVerifyOtp(email, notifications.codes[0]!);
   assert.equal(res.user.role, 'rider');
-  assert.equal(res.user.phone, phone);
+  assert.equal(res.user.email, email);
+  const actions = audit.entries.map((e) => (e as [unknown, string])[1]);
+  assert.ok(actions.includes('auth.otp_request'), 'otp request audited');
+  assert.ok(actions.includes('auth.signup'), 'signup audited');
+});
+
+test('temporary-mail domains are refused before any email is sent', async () => {
+  const { svc, notifications } = setup();
+  for (const email of ['fetajav577@playboot.com', 'a@mailinator.com', 'a@10minutemail.com']) {
+    await assert.rejects(
+      () => svc.riderRequestOtp(email),
+      (e: unknown) => e instanceof ForbiddenException &&
+        JSON.stringify((e as HttpException).getResponse()).includes('auth.email_domain_not_allowed'),
+      `expected refusal for ${email}`
+    );
+  }
+  assert.equal(notifications.calls.length, 0, 'no code was sent to a disposable mailbox');
+});
+
+test('unknown corporate domains are refused; env-extended domains pass', async () => {
+  const { svc } = setup();
+  await assert.rejects(() => svc.riderRequestOtp('a@randomcorp.com'), ForbiddenException);
+  // extension via EMAIL_ALLOWED_DOMAINS
+  const envX = env();
+  (envX as { EMAIL_ALLOWED_DOMAINS: string }).EMAIL_ALLOWED_DOMAINS = 'mycompany.eg';
+  const users = new FakeUsers(); const codes = new FakeCodes(); const sessions = new FakeSessions(users);
+  const notifications = new FakeNotifications(); const audit = new FakeAudit();
+  const svc2 = new IdentityService(envX, users as never, codes as never, sessions as never, notifications as never, audit as never);
+  const req = await svc2.riderRequestOtp('a@mycompany.eg');
+  assert.equal(req.ok, true);
 });
 
 test('resend within 60s is rejected with 429 and retryAfterMs', async () => {
   const { svc } = setup();
-  void (await svc.riderRequestOtp('+201000000000'));
-  await assert.rejects(() => svc.riderRequestOtp('+201000000000'), (e: unknown) => {
+  void (await svc.riderRequestOtp('rider@gmail.com'));
+  await assert.rejects(() => svc.riderRequestOtp('rider@gmail.com'), (e: unknown) => {
     return e instanceof HttpException && e.getStatus() === 429 &&
       JSON.stringify(e.getResponse()).includes('auth.resend_wait');
   });
@@ -171,13 +192,13 @@ test('resend within 60s is rejected with 429 and retryAfterMs', async () => {
 
 test('3 wrong attempts lock the code for 1 hour', async () => {
   const { svc } = setup();
-  const phone = '+201000000000';
-  await svc.riderRequestOtp(phone);
+  const email = 'rider@gmail.com';
+  await svc.riderRequestOtp(email);
   for (let i = 0; i < MAX_ATTEMPTS; i++) {
     const expectLock = i === MAX_ATTEMPTS - 1;
-    await assert.rejects(() => svc.riderVerifyOtp(phone, '000000'), expectLock ? HttpException : UnauthorizedException);
+    await assert.rejects(() => svc.riderVerifyOtp(email, '000000'), expectLock ? HttpException : UnauthorizedException);
   }
-  await assert.rejects(() => svc.riderRequestOtp(phone), (e: unknown) => {
+  await assert.rejects(() => svc.riderRequestOtp(email), (e: unknown) => {
     return e instanceof HttpException && e.getStatus() === 429 &&
       JSON.stringify(e.getResponse()).includes('auth.code_locked');
   });
@@ -204,9 +225,9 @@ test('change password revokes all sessions', async () => {
 
 test('email verification: request, then verify, marks verified', async () => {
   const { svc, users, notifications } = setup();
-  const u = await users.create({ phone: '+201000000000', role: 'rider' });
+  const u = await users.create({ email: 'rider@gmail.com', role: 'rider' });
   const actor = { id: u.id, role: 'rider' as const };
-  await svc.requestEmailVerification(actor, 'rider@x.com');
+  await svc.requestEmailVerification(actor, 'rider@gmail.com');
   assert.equal(notifications.codes.length, 1);
   await svc.verifyEmail(actor, notifications.codes[0]!);
   assert.equal(users.rows.get(u.id)!.email_verified_at !== null, true);
@@ -214,7 +235,7 @@ test('email verification: request, then verify, marks verified', async () => {
 
 test('password reset: request never reveals existence, confirm resets + revokes', async () => {
   const { svc, users, notifications, sessions } = setup();
-  await svc.requestPasswordReset('nobody@x.com'); // no user — still ok
+  await svc.requestPasswordReset('nobody@gmail.com'); // no user — still ok
   assert.equal(notifications.calls.length, 0);
 
   const u = await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
@@ -236,7 +257,7 @@ test('resetPassword rejects a wrong code', async () => {
 
 test('a rider actor cannot create staff accounts (§8.2 — authority in one place)', async () => {
   const { svc, users } = setup();
-  await users.create({ phone: '+201000000000', role: 'rider' });
+  await users.create({ email: 'rider@gmail.com', role: 'rider' });
   await assert.rejects(
     () => svc.createStaff({ id: 'r1', role: 'rider' }, { email: 'new@x.com', password: 'pw-12345678', role: 'manager' }),
     ForbiddenException

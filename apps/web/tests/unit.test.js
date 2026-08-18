@@ -602,6 +602,52 @@ group("M1 — VERIFICATION & RECOVERY (reset, email, resend)");
   ok("resend button shows a countdown and is disabled", !!rb && rb.hasAttribute("disabled"));
 }
 
+group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
+{
+  const t=boot();
+
+  // the oversized role-choice arrows are sized now (owner-reported regression)
+  const chev = rule(".rolechoice .chev") || "";
+  ok("role-choice chevron has an explicit size",
+     /width:var\(--icon-md\)/.test(chev) && /height:var\(--icon-md\)/.test(chev), chev);
+
+  // footer credit: a real link, smaller text, on its own line
+  t.w.S.view="landing"; t.w.render();
+  const cr = t.q(".landing__credits");
+  ok("Streamline credit is a link", !!cr && cr.tagName==="A" &&
+     (cr.getAttribute("href")||"").includes("streamlinehq.com"), cr && cr.tagName);
+  ok("credit uses the micro size (smaller than the tagline)",
+     /\.landing__credits\{[^}]*font-size:var\(--f-micro\)/.test(CSS));
+  ok("credit sits on its own line under the tagline",
+     !!cr && cr.parentElement === t.q(".landing__foot") &&
+     t.q(".landing__foot").children.length >= 2);
+
+  // slider cards: ONE solid pop colour each, no gradient
+  ok("slider cards are solid (violet card has no gradient)",
+     /\.slide--violet\{background:var\(--violet-700\)\}/.test(CSS) &&
+     !/\.slide--violet\{background:linear-gradient/.test(CSS));
+  ok("all four slider cards use the solid 700 shades",
+     /\.slide--coral\{background:var\(--coral-700\)\}/.test(CSS) &&
+     /\.slide--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
+     /\.slide--mint\{background:var\(--mint-700\)\}/.test(CSS));
+  ok("slider text is white on the solid card", /\.slide\{[^}]*color:var\(--on-solid\)/.test(CSS));
+
+  // bounce easing drives the feature-card hover
+  ok("bounce easing token is defined", /--bounce:cubic-bezier\(\.34,1\.56,\.64,1\)/.test(CSS));
+  ok("feature hover uses the bounce easing", /\.landing__feature\{[^}]*var\(--bounce\)/.test(CSS));
+
+  // dark mode brightens the doodle accents (light stays coral)
+  ok("dark mode gives step cards brighter accents",
+     /\[data-theme="dark"\] \.landing__step--violet \.landing__stepart\{[^}]*var\(--violet-300\)/.test(CSS));
+
+  // email sign-up flow
+  t.w.S.view="auth"; t.w.S.authMode="signup"; t.w.S.authStep="email"; t.w.render();
+  ok("sign-up asks for email (not phone)", !!t.q("#auth-email") && t.q("#auth-email").type==="email");
+  t.w.S.authStep="otp"; t.w.render();
+  ok("OTP step renders six code boxes", t.all(".otp__box").length===6, String(t.all(".otp__box").length));
+  ok("phone copy is gone from the auth flow", !/phoneLabel/.test(SRC) && !/by SMS/.test(SRC));
+}
+
 group("BUILD INTEGRITY");
 {
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),

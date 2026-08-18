@@ -355,6 +355,8 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
    which does not attach to window in a classic script. */
 Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
-                        enterApp, signOut, boot, API });
+                        enterApp, signOut, boot, API,
+                        errText, OtpInput, otpValue,
+                        setResendUntil, setLockedUntil });
 
 boot();

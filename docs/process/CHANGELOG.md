@@ -411,3 +411,19 @@
 - Footer credits: "Vectors by Streamline" (free license permits commercial use without attribution;
   added as good practice).
 - 233 unit / 14 axe / 47 landing / 6904 layout / 47 breaks / 8 layout-breaks green.
+
+## 2026-08-18 — Email sign-in/sign-up + slider/landing polish (M1.8)
+
+- Sign-in/sign-up is now EMAIL + OTP for riders and drivers (SMS/Twilio removed as dead code).
+- Email allowlist: popular providers + all .edu/.edu.<cc> + env-extensible; temporary mailboxes
+  (playboot.com, mailinator, 10minutemail…) are refused before any email is sent.
+- Branded HTML emails (login code / verify / reset) over generic SMTP — Resend works by env only.
+- Rate limiting now lives in PostgreSQL (throttle_records) — survives restarts, shared across
+  instances (G-062 clause 1 resolved).
+- Frontend: 6-box OTP input with auto-advance/paste/one-time-code; resend countdown and 1-hour
+  lockout survive page refresh; friendly localized errors.
+- Landing: "Vectors by Streamline" is a smaller link on its own line; role-choice chevrons sized
+  (was rendering ~194–276px); slider cards are one solid pop colour each (white text, AA contrast);
+  dark mode brightens the doodle accents; feature-card hover is bouncier.
+- 77 API / 246 unit / 14 axe / 47 landing / 6904 layout / 53 breaks / 8 layout-breaks green;
+  pnpm verify + db:verify green.

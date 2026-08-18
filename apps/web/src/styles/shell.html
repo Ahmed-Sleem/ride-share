@@ -44,6 +44,8 @@
   --sky-400:#6CB4FF; --sky-500:#3D9AF7; --sky-600:#2A7FD6; --sky-900:#0E2B4F;
   --pink-50:#FDEFF6; --pink-100:#FBD9E9; --pink-300:#F6A9D0;
   --pink-400:#F184BB; --pink-500:#E85F9F; --pink-600:#C73F7F; --pink-900:#4E1532;
+  /* 700 steps for the vivid slider cards — dark enough for white text (AA) */
+  --coral-700:#C43E22; --mint-700:#0F7A4E; --sky-700:#1E63A8;
   --ink-0:#FFFFFF; --ink-25:#FAFBFC; --ink-50:#F5F7F9; --ink-100:#EEF0F4;
   --ink-150:#E4E8ED; --ink-200:#DFE4EA; --ink-300:#C4CCD6; --ink-400:#98A2B0;
   --ink-500:#6B7684; --ink-600:#5B6472; --ink-700:#3D4550; --ink-800:#232A33;
@@ -152,6 +154,7 @@
 
   /* ── MOTION ─────────────────────────────────────────────────────────── */
   --ease:cubic-bezier(.2,.7,.3,1); --fast:140ms; --med:240ms;
+  --slow:420ms; --bounce:cubic-bezier(.34,1.56,.64,1);
 }
 
 [data-theme="dark"]{
@@ -763,9 +766,9 @@ select.input{cursor:pointer}
 .landing__feature{position:relative;overflow:hidden;background:var(--bg-raised);
   border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s5);
   display:flex;flex-direction:column;
-  transition:transform var(--fast) var(--ease),border-color var(--fast) var(--ease),
-             box-shadow var(--fast) var(--ease)}
-.landing__feature:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--sh-2)}
+  transition:transform var(--slow) var(--bounce),border-color var(--med) var(--ease),
+             box-shadow var(--med) var(--ease)}
+.landing__feature:hover{transform:translateY(-8px) scale(1.02);border-color:var(--accent);box-shadow:var(--sh-2)}
 .landing__feature::after{content:"";position:absolute;inset:0;border-radius:inherit;
   background:linear-gradient(105deg,transparent 40%,color-mix(in srgb,var(--ink-0) 22%,transparent) 50%,transparent 60%);
   transform:translateX(-130%);transition:transform var(--med) var(--ease);pointer-events:none}
@@ -773,8 +776,8 @@ select.input{cursor:pointer}
 [dir="rtl"] .landing__feature::after{transform:translateX(130%)}
 [dir="rtl"] .landing__feature:hover::after{transform:translateX(-130%)}
 .landing__featureico{width:44px;height:44px;border-radius:var(--r-md);display:grid;
-  place-items:center;flex:none;transition:transform var(--fast) var(--ease)}
-.landing__feature:hover .landing__featureico{transform:scale(1.12) rotate(-5deg)}
+  place-items:center;flex:none;transition:transform var(--slow) var(--bounce)}
+.landing__feature:hover .landing__featureico{transform:scale(1.18) rotate(-6deg)}
 .landing__featureico svg{width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .landing__featureico--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
@@ -798,6 +801,11 @@ select.input{cursor:pointer}
 /* bigger illustration in the how-it-works cards */
 .landing__stepart{width:112px;height:112px;flex:none;--sticker-ink:var(--text-primary)}
 .landing__step .landing__stepart{--sticker-accent:var(--accent)}
+/* dark mode: brighter 300-level accents so the doodles glow on dark surfaces
+   (light mode keeps the coral accent — unchanged) */
+[data-theme="dark"] .landing__step--violet .landing__stepart{--sticker-accent:var(--violet-300)}
+[data-theme="dark"] .landing__step--sky .landing__stepart{--sticker-accent:var(--sky-300)}
+[data-theme="dark"] .landing__step--mint .landing__stepart{--sticker-accent:var(--mint-300)}
 /* number stays on the PHYSICAL right in both languages (owner request) */
 .landing__stepnum{position:absolute;top:var(--s4);right:var(--s4);
   font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
@@ -817,7 +825,13 @@ select.input{cursor:pointer}
 .landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
   text-align:center;padding:var(--s7) var(--s6)}
 .landing__foot{padding:var(--s5) var(--s6) calc(var(--s5) + var(--safe-b));
-  border-top:1px solid var(--line);text-align:center;color:var(--text-muted)}
+  border-top:1px solid var(--line);text-align:center;color:var(--text-muted);
+  display:flex;flex-direction:column;align-items:center;gap:var(--s2)}
+/* the vector credit: smaller than the tagline, on its own line, a real link */
+.landing__credits{font-size:var(--f-micro);color:var(--text-muted);text-decoration:none;
+  transition:color var(--fast) var(--ease)}
+.landing__credits:hover{color:var(--accent-text);text-decoration:underline}
+.landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
 
 /* ── the hero slideshow (modern, youth, same palette) ──────────────────── */
 .slideshow{position:relative;width:100%;min-width:0;border-radius:var(--r-xl);
@@ -830,25 +844,27 @@ select.input{cursor:pointer}
   transition:opacity var(--med) var(--ease),transform var(--med) var(--ease);
   pointer-events:none}
 .slide--on{opacity:1;transform:none;pointer-events:auto}
-/* each slide is a coloured card from the palette (tinted bg in both themes) */
-.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent 70%)}
-.slide--coral {background:linear-gradient(160deg,var(--pop-coral-bg),transparent 70%)}
-.slide--sky   {background:linear-gradient(160deg,var(--pop-sky-bg),transparent 70%)}
-.slide--mint  {background:linear-gradient(160deg,var(--pop-mint-bg),transparent 70%)}
-.slide--violet{--sticker-accent:var(--violet-500)}
-.slide--coral {--sticker-accent:var(--coral-500)}
-.slide--sky   {--sticker-accent:var(--sky-500)}
-.slide--mint  {--sticker-accent:var(--mint-500)}
-.slide__sticker{width:150px;height:150px;filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--ink-900) 18%,transparent))}
+/* each slide is ONE saturated pop colour — no gradient — with white text and
+   a white doodle sticker. The 700 shades keep white text at AA contrast. */
+.slide{color:var(--on-solid)}
+.slide--violet{background:var(--violet-700)}
+.slide--coral{background:var(--coral-700)}
+.slide--sky{background:var(--sky-700)}
+.slide--mint{background:var(--mint-700)}
+.slide__sticker{width:150px;height:150px;
+  --sticker-ink:var(--on-solid);
+  --sticker-accent:color-mix(in srgb,var(--on-solid) 55%,transparent);
+  filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--ink-900) 26%,transparent))}
 .slide__sticker svg{width:100%;height:100%;display:block}
 .slide__t{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0}
-.slide__b{font-size:var(--f-lg);color:var(--text-secondary);max-width:34ch;margin:0;line-height:var(--lh-body)}
+.slide__b{font-size:var(--f-lg);color:var(--on-solid);opacity:.92;max-width:34ch;margin:0;line-height:var(--lh-body)}
 .slideshow__dots{position:absolute;bottom:var(--s4);inset-inline:0;display:flex;
   justify-content:center;gap:var(--s2);z-index:5}
-.slide-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--line-strong);
+.slide-dot{width:10px;height:10px;border-radius:var(--r-full);
+  background:color-mix(in srgb,var(--on-solid) 45%,transparent);
   border:0;padding:0;cursor:pointer;transition:background var(--fast) var(--ease),
   transform var(--fast) var(--ease)}
-.slide-dot--on{background:var(--brand);transform:scale(1.3)}
+.slide-dot--on{background:var(--on-solid);transform:scale(1.3)}
 
 /* reveal-on-scroll — scroll-driven, transform/opacity only, reduced-motion
    guarded (the static page is the fallback) */
@@ -900,7 +916,7 @@ select.input{cursor:pointer}
 .rolechoice__title{font-size:var(--f-lg);font-weight:var(--fw-bold);color:var(--text-primary);
   line-height:var(--lh-snug)}
 .rolechoice__sub{font-size:var(--f-body);color:var(--text-secondary);line-height:var(--lh-snug)}
-.rolechoice .chev{color:var(--text-muted)}
+.rolechoice .chev{color:var(--text-muted);width:var(--icon-md);height:var(--icon-md);flex:none}
 [dir="rtl"] .rolechoice .chev{transform:scaleX(-1)}
 
 /* map: hero zoom crop + real-map + locate */

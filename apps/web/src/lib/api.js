@@ -77,8 +77,8 @@ const API = {
   /* ── auth ─────────────────────────────────────────────────────────── */
   identify: (identifier) => API.request("POST", "/auth/login/identify", { identifier }),
   login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
-  requestOtp: (phone) => API.request("POST", "/auth/otp/request", { phone }),
-  verifyOtp: (phone, code, name) => API.request("POST", "/auth/otp/verify", { phone, code, name }),
+  requestOtp: (email) => API.request("POST", "/auth/otp/request", { email }),
+  verifyOtp: (email, code, name) => API.request("POST", "/auth/otp/verify", { email, code, name }),
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
   getConfig: () => API.request("GET", "/config"),

@@ -173,7 +173,7 @@ vertical-slice sequencing the user chose (DEC-086).
 
 | When | Item | Used for |
 |---|---|---|
-| M1 | SMS provider key (e.g. Twilio / Unifonic / VictoryLink) | OTP sign-in (sandbox until then) |
+| M1 | Email sending account (e.g. Resend / Gmail SMTP) | OTP sign-in codes by email (sandbox until then) |
 | M2 | Commercial maps API key (Google Maps Platform class) | map surface + geocoding |
 | M3 | Payment gateway keys (Paymob-class sandbox first) | card payments |
 | M4+ | (nothing new — all internal) | — |

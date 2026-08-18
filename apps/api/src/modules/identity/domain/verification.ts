@@ -15,12 +15,12 @@ export const MAX_ATTEMPTS = 3;                     // then locked
 export const LOCKOUT_MS = 60 * 60 * 1000;          // 1 hour
 
 export const CODE_TTL_MS: Record<VerificationKind, number> = {
-  sms_login: 5 * 60_000,
+  email_login: 5 * 60_000,
   email_verify: 15 * 60_000,
   password_reset: 15 * 60_000,
 };
 
-export type VerificationKind = 'sms_login' | 'email_verify' | 'password_reset';
+export type VerificationKind = 'email_login' | 'email_verify' | 'password_reset';
 export type VerificationChannel = 'sms' | 'email';
 
 export interface VerificationRecord {

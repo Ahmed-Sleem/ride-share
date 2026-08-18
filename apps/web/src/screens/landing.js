@@ -37,9 +37,9 @@ function landing() {
       $("section",{class:"landing__section"},
         $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
         $("div",{class:"landing__steps"},
-          stepCard("1", "route", t("landingHow1T"), t("landingHow1B")),
-          stepCard("2", "seat",  t("landingHow2T"), t("landingHow2B")),
-          stepCard("3", "board", t("landingHow3T"), t("landingHow3B")))),
+          stepCard("1", "route", t("landingHow1T"), t("landingHow1B"), "violet"),
+          stepCard("2", "seat",  t("landingHow2T"), t("landingHow2B"), "sky"),
+          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint"))),
 
       $("section",{class:"landing__cta"},
         $("h2",{class:"landing__h2",text:t("landingFoot")}),
@@ -49,7 +49,8 @@ function landing() {
 
       $("footer",{class:"landing__foot"},
         $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}),
-        $("span",{class:"landing__credits",text:t("creditsVectors")}))));
+        $("a",{class:"landing__credits", attrs:{href:"https://www.streamlinehq.com",
+          target:"_blank", rel:"noopener noreferrer"}, text:t("creditsVectors")}))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */
@@ -117,12 +118,12 @@ function featureCard(ic, title, body, tone) {
 
 /* ── how-it-works steps: number stays on the SAME side in RTL (physical
       right), and a floating tooltip follows the cursor on hover ─────────── */
-function stepCard(n, ic, title, body) {
+function stepCard(n, ic, title, body, tone) {
   const tip = $("div",{class:"step-tip"},
     $("span",{class:"step-tip__num ltr",text:n}),
     $("strong",{text:title}),
     $("span",{class:"step-tip__body",text:body}));
-  const card = $("div",{class:"landing__step reveal"}, tip,
+  const card = $("div",{class:"landing__step reveal"+(tone? " landing__step--"+tone : "")}, tip,
     $("div",{class:"landing__stepnum ltr",text:n}),
     $("div",{class:"landing__stepbody"},
       stickerEl(ic, "landing__stepart"),

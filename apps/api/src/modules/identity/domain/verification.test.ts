@@ -11,7 +11,7 @@ const NOW = new Date('2026-08-18T12:00:00.000Z');
 
 function record(over: Partial<VerificationRecord> = {}): VerificationRecord {
   return {
-    id: 'c1', kind: 'sms_login', channel: 'sms', target: '+201000000000',
+    id: 'c1', kind: 'email_login', channel: 'email', target: 'rider@example.com',
     codeHash: hashCode('123456'), attempts: 0,
     lastSentAt: new Date(NOW.getTime() - 120_000),
     lastAttemptAt: null,

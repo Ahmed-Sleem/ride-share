@@ -35,24 +35,23 @@ export const envSchema = {
   PAYMOB_HMAC_SECRET: z.string().optional(),
   PAYMOB_INTEGRATION_ID: z.string().optional(),
 
-  // ── notifications ─────────────────────────────────────────────────────
-  // SMS: 'twilio' is the wired provider. Development logs the code server-side;
-  // production refuses OTP issuance without a provider (honest, no fake).
-  SMS_API_KEY: z.string().optional(),
-  SMS_PROVIDER: z.enum(['twilio', 'none']).default('none'),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  SMS_FROM: z.string().optional(),
-
-  // ── email (verification + password reset) ────────────────────────────
-  // SMTP config; when SMTP_HOST is unset, development logs the code and
-  // production refuses email sends (same honest-sandbox rule as SMS).
+  // ── email (login codes + verification + password reset) ──────────────
+  // Generic SMTP — works with Resend (smtp.resend.com:465, user "resend",
+  // pass = API key), Gmail SMTP, Zoho, or any relay. When SMTP_HOST is unset,
+  // development logs the code server-side and production REFUSES to send
+  // (honest sandbox — never a fake success).
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_SECURE: z.enum(['true', 'false']).default('false'),
   EMAIL_FROM: z.string().optional(),
+
+  // ── email sign-up policy ──────────────────────────────────────────────
+  // Comma-separated EXTRA allowed email domains (exact or wildcard-by-suffix).
+  // The built-in allowlist (popular providers + all .edu/.edu.<cc>) always
+  // applies; this extends it for company/private domains without a code change.
+  EMAIL_ALLOWED_DOMAINS: z.string().default(''),
 
   // ── migrations on boot ────────────────────────────────────────────────
   // 'true' (default) runs `node-pg-migrate up` before the app starts — the

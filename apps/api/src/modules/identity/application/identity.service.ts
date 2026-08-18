@@ -1,9 +1,13 @@
 /* ══════════════════════════════════════════════════════════════════════
    Identity service — the application layer (use cases). Business rules stay
    in domain/; persistence in infra/. No business logic in HTTP handlers.
-   Verification & recovery (DEC-189): resend cooldown (>= 60s), 3 failed
-   attempts → 1-hour lockout, email verification, password reset (no user
-   enumeration), all enforced against the domain rules in verification.ts.
+
+   Sign-in/sign-up is EMAIL-based (owner decision 2026-08-18): riders and
+   drivers self-register by email code; the email domain must pass the
+   allowlist in domain/email-policy.ts (temporary mailboxes are refused).
+   Verification & recovery (DEC-189) reuse the same machinery: resend cooldown
+   (>= 60s), 3 failed attempts → 1-hour lockout, codes hashed at rest, all
+   state in PostgreSQL. Every meaningful event is written to the audit log.
    ══════════════════════════════════════════════════════════════════════ */
 import {
   ForbiddenException,
@@ -18,8 +22,9 @@ import { hashPassword, verifyPassword } from '../domain/password.js';
 import { hashToken, newRefreshToken, signAccessToken } from '../../../security/token.js';
 import {
   canResend, CODE_TTL_MS, evaluateCode, generateCode, hashCode,
-  LOCKOUT_MS, RESEND_COOLDOWN_MS, type VerificationChannel,
+  LOCKOUT_MS, RESEND_COOLDOWN_MS,
 } from '../domain/verification.js';
+import { isAllowedEmail, parseExtraDomains } from '../domain/email-policy.js';
 import { STAFF_ROLES, toPublicUser, type Actor, type PublicUser, type UserRole, type UserRow } from '../contracts/types.js';
 import { UsersRepository } from '../infra/users.repository.js';
 import { VerificationsRepository } from '../infra/verifications.repository.js';
@@ -52,69 +57,63 @@ export class IdentityService {
 
   /** Smart sign-in step 1 — identify the account without revealing whether
       staff or rider: a password account gets 'password', an OTP-only account
-      gets 'otp' AND has a code sent (cooldown applies). Unknown identifiers
+      gets 'otp' AND has a code emailed (cooldown applies). Unknown identifiers
       are a 401, exactly like a wrong password — no enumeration. */
   async identifyLogin(identifier: string): Promise<{ method: 'password' | 'otp'; resendInMs?: number; target?: string }> {
-    const user = await this.users.findByIdentifier(identifier);
+    const user = await this.users.findByIdentifier(identifier.trim());
     if (!user) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
     if (user.status !== 'active') throw new ForbiddenException({ message_key: 'auth.account_suspended' });
     if (user.password_hash) return { method: 'password' };
-    // OTP-only account (rider / driver): send a login code now.
-    const phone = user.phone;
-    if (!phone) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
-    const existing = await this.codes.findActive('sms_login', 'sms', phone);
-    const resend = canResend(existing, new Date());
-    if (!resend.ok) {
-      if (resend.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: resend.lockedUntil });
-      throw tooMany('auth.resend_wait', { retryAfterMs: resend.retryAfterMs });
-    }
-    const code = generateCode();
-    await this.codes.upsert({
-      kind: 'sms_login', channel: 'sms', target: phone,
-      codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.sms_login),
-    });
-    await this.notifications.sendOtp(phone, code);
-    return { method: 'otp', resendInMs: RESEND_COOLDOWN_MS, target: phone };
+    // OTP-only account (rider / driver): email a login code now.
+    const email = user.email;
+    if (!email) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
+    const resendInMs = await this.issueLoginCode(email, 'auth');
+    return { method: 'otp', resendInMs, target: email };
   }
 
   /** Smart sign-in step 2 — password path. Staff (and any password account). */
   async login(identifier: string, password: string): Promise<AuthResult> {
-    const user = await this.users.findByIdentifier(identifier);
+    const user = await this.users.findByIdentifier(identifier.trim());
     if (!user || !user.password_hash || !verifyPassword(password, user.password_hash)) {
       throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
     }
     if (user.status !== 'active') {
       throw new ForbiddenException({ message_key: 'auth.account_suspended' });
     }
-    return this.issueTokens(user);
-  }
-
-  /** Rider: request a one-time code (>= 60s between sends; 3 fails → 1h lock). */
-  async riderRequestOtp(phone: string): Promise<{ ok: true; resendInMs: number }> {
-    const existing = await this.codes.findActive('sms_login', 'sms', phone);
-    const resend = canResend(existing, new Date());
-    if (!resend.ok) {
-      if (resend.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: resend.lockedUntil });
-      throw tooMany('auth.resend_wait', { retryAfterMs: resend.retryAfterMs });
-    }
-    const code = generateCode();
-    await this.codes.upsert({
-      kind: 'sms_login', channel: 'sms', target: phone,
-      codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.sms_login),
+    const result = await this.issueTokens(user);
+    await this.audit.record({ id: user.id, role: user.role }, 'auth.login', {
+      targetType: 'user', targetId: user.id, after: { method: 'password' },
     });
-    await this.notifications.sendOtp(phone, code);
-    return { ok: true, resendInMs: RESEND_COOLDOWN_MS };
+    return result;
   }
 
-  /** Rider: verify the code; creates the rider on first use (self-register). */
-  async riderVerifyOtp(phone: string, code: string, name?: string): Promise<AuthResult> {
-    const record = await this.codes.findActive('sms_login', 'sms', phone);
+  /** Rider/driver sign-up step 1: request a one-time code by email.
+      The domain must pass the allowlist BEFORE anything is sent. */
+  async riderRequestOtp(email: string): Promise<{ ok: true; resendInMs: number }> {
+    const normalized = email.trim().toLowerCase();
+    if (!isAllowedEmail(normalized, parseExtraDomains(this.env.EMAIL_ALLOWED_DOMAINS))) {
+      throw new ForbiddenException({ message_key: 'auth.email_domain_not_allowed' });
+    }
+    const resendInMs = await this.issueLoginCode(normalized, 'signup');
+    return { ok: true, resendInMs };
+  }
+
+  /** Rider/driver sign-up step 2: verify the code; creates the rider on first
+      use (self-register). The account is keyed by email. */
+  async riderVerifyOtp(email: string, code: string, name?: string): Promise<AuthResult> {
+    const normalized = email.trim().toLowerCase();
+    const record = await this.codes.findActive('email_login', 'email', normalized);
     const result = evaluateCode(record, code, new Date());
     if (!result.ok) {
       if (result.reason === 'mismatch' && record) {
         await this.codes.incrementAttempts(record.id);
         const attempts = record.attempts + 1;
-        if (attempts >= 3) throw tooMany('auth.code_locked', { lockedUntil: new Date(Date.now() + LOCKOUT_MS) });
+        if (attempts >= 3) {
+          await this.audit.record(null, 'auth.code_locked', {
+            targetType: 'email', targetId: normalized, after: { purpose: 'email_login' },
+          });
+          throw tooMany('auth.code_locked', { lockedUntil: new Date(Date.now() + LOCKOUT_MS) });
+        }
         throw new UnauthorizedException({
           message_key: 'auth.otp_mismatch', details: { remainingAttempts: 3 - attempts },
         });
@@ -124,33 +123,38 @@ export class IdentityService {
     }
 
     await this.codes.markConsumed(record!.id);
-    const existing = await this.users.findByPhone(phone);
-    const user = existing ?? (await this.users.create({ phone, name, role: 'rider' }));
+    const existing = await this.users.findByEmail(normalized);
+    const user = existing ?? (await this.users.create({ email: normalized, name, role: 'rider' }));
     if (user.status !== 'active') {
       throw new ForbiddenException({ message_key: 'auth.account_suspended' });
     }
-    return this.issueTokens(user);
+    const tokens = await this.issueTokens(user);
+    await this.audit.record({ id: user.id, role: user.role }, existing ? 'auth.login' : 'auth.signup', {
+      targetType: 'user', targetId: user.id, after: { method: 'email_otp' },
+    });
+    return tokens;
   }
 
   /** Request an email verification code (>= 60s between sends). */
   async requestEmailVerification(actor: Actor, email: string): Promise<{ ok: true; resendInMs: number }> {
-    const taken = await this.users.findByEmail(email);
+    const normalized = email.trim().toLowerCase();
+    const taken = await this.users.findByEmail(normalized);
     if (taken && taken.id !== actor.id) {
       throw new ForbiddenException({ message_key: 'auth.email_taken' });
     }
-    const existing = await this.codes.findActive('email_verify', 'email', email);
+    const existing = await this.codes.findActive('email_verify', 'email', normalized);
     const resend = canResend(existing, new Date());
     if (!resend.ok) {
       if (resend.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: resend.lockedUntil });
       throw tooMany('auth.resend_wait', { retryAfterMs: resend.retryAfterMs });
     }
-    await this.users.setEmail(actor.id, email);
+    await this.users.setEmail(actor.id, normalized);
     const code = generateCode();
     await this.codes.upsert({
-      kind: 'email_verify', channel: 'email', target: email,
+      kind: 'email_verify', channel: 'email', target: normalized,
       codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.email_verify),
     });
-    await this.notifications.sendVerification(email, code);
+    await this.notifications.sendVerification(normalized, code);
     return { ok: true, resendInMs: RESEND_COOLDOWN_MS };
   }
 
@@ -173,35 +177,31 @@ export class IdentityService {
     return { ok: true };
   }
 
-  /** Password reset — step 1. NEVER reveals whether the account exists. */
+  /** Password reset — step 1. NEVER reveals whether the account exists.
+      Email-only delivery (the login channel is email). */
   async requestPasswordReset(identifier: string): Promise<{ ok: true }> {
-    const user = await this.users.findByIdentifier(identifier);
-    if (!user) return { ok: true };
-    const channel = this.channelFor(user);
-    if (!channel) return { ok: true };
-    const target = channel === 'email' ? user.email! : user.phone!;
-    const existing = await this.codes.findActive('password_reset', channel, target);
+    const user = await this.users.findByIdentifier(identifier.trim());
+    if (!user?.email) return { ok: true };
+    const email = user.email;
+    const existing = await this.codes.findActive('password_reset', 'email', email);
     const resend = canResend(existing, new Date());
     if (!resend.ok) return { ok: true }; // keep cooldown opaque to avoid enumeration timing
     const code = generateCode();
     await this.codes.upsert({
-      kind: 'password_reset', channel, target,
+      kind: 'password_reset', channel: 'email', target: email,
       codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.password_reset),
     });
-    if (channel === 'email') await this.notifications.sendPasswordReset(target, code);
-    else await this.notifications.sendReset(target, code);
+    await this.notifications.sendPasswordReset(email, code);
     return { ok: true };
   }
 
   /** Password reset — step 2. Verifies the code, sets the new password,
       and revokes every session (the account is logged out everywhere). */
   async resetPassword(identifier: string, code: string, newPassword: string): Promise<{ ok: true }> {
-    const user = await this.users.findByIdentifier(identifier);
-    if (!user) throw new UnauthorizedException({ message_key: 'auth.reset_invalid' });
-    const channel = this.channelFor(user);
-    if (!channel) throw new UnauthorizedException({ message_key: 'auth.reset_invalid' });
-    const target = channel === 'email' ? user.email! : user.phone!;
-    const record = await this.codes.findActive('password_reset', channel, target);
+    const user = await this.users.findByIdentifier(identifier.trim());
+    if (!user?.email) throw new UnauthorizedException({ message_key: 'auth.reset_invalid' });
+    const email = user.email;
+    const record = await this.codes.findActive('password_reset', 'email', email);
     const result = evaluateCode(record, code, new Date());
     if (!result.ok) {
       if (result.reason === 'mismatch' && record) {
@@ -278,10 +278,26 @@ export class IdentityService {
   }
 
   // ── internals ───────────────────────────────────────────────────────────
-  private channelFor(user: UserRow): VerificationChannel | null {
-    if (user.email) return 'email';
-    if (user.phone) return 'sms';
-    return null;
+  /** Issue (and log) a login code for `email`, enforcing the >= 60s cooldown
+      and the 1-hour lockout. Shared by smart sign-in and self sign-up so the
+      rule exists exactly once (§0.3 / §8.2). */
+  private async issueLoginCode(email: string, purpose: 'auth' | 'signup'): Promise<number> {
+    const existing = await this.codes.findActive('email_login', 'email', email);
+    const resend = canResend(existing, new Date());
+    if (!resend.ok) {
+      if (resend.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: resend.lockedUntil });
+      throw tooMany('auth.resend_wait', { retryAfterMs: resend.retryAfterMs });
+    }
+    const code = generateCode();
+    await this.codes.upsert({
+      kind: 'email_login', channel: 'email', target: email,
+      codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.email_login),
+    });
+    await this.notifications.sendLoginCode(email, code);
+    await this.audit.record(null, 'auth.otp_request', {
+      targetType: 'email', targetId: email, after: { purpose },
+    });
+    return RESEND_COOLDOWN_MS;
   }
 
   private async issueTokens(user: UserRow): Promise<AuthResult> {
