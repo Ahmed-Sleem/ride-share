@@ -5,11 +5,13 @@
 set -u
 cd "$(dirname "$0")/.."
 P=0; F=0
-lb(){ local n="$1" f="$2" e="$3"
+lb(){ _lb "$1" "$2" "$3" "node tests/layout.test.js"; }
+lbl(){ _lb "$1" "$2" "$3" "node tests/landing.test.js"; }
+_lb(){ local n="$1" f="$2" e="$3" testcmd="$4"
   cp "$f" "$f.bak"; sed -i "$e" "$f"
   if cmp -s "$f" "$f.bak"; then echo "  BROKEN-BREAK  $n → edit did not change the file"; F=$((F+1)); mv "$f.bak" "$f"; return; fi
   node build.js >/dev/null 2>&1
-  local out; out="$(node tests/layout.test.js 2>&1)"
+  local out; out="$(eval "$testcmd" 2>&1)"
   mv "$f.bak" "$f"; node build.js >/dev/null 2>&1
   local n_fail; n_fail=$(echo "$out" | grep -c '^  FAIL')
   if [ "$n_fail" -gt 0 ]; then
@@ -34,6 +36,12 @@ lb "shell taller than the viewport" src/styles/shell.html \
   's@^#root{height:100vh;height:100dvh;width:100%;display:flex}@#root{min-height:100vh;width:100%;display:flex}@'
 lb "main no longer scrolls (content pushes the shell)" src/styles/shell.html \
   's@^\.main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;@.main{flex:1;@'
+
+# The landing width regression: without width:100% the landing (a flex child of
+# #root) shrinks to its content width — the exact ~50%-viewport bug reported.
+lbl "landing loses its full width" src/styles/shell.html \
+  's@^\.landing{width:100%;min-width:0;height:100%@.landing{height:100%@' \
+  "landing fills the viewport width"
 echo
 echo "──────── layout breaks caught: $P   missed: $F ────────"
 [ "$F" -eq 0 ] || exit 1

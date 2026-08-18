@@ -388,3 +388,14 @@ output) — see the engineering standard §3.3 and §4.
 - Verified LIVE: /auth/login/identify → {method:password} (staff) and 401 for unknown; login → super_admin;
   browser: hero 839px in a 900px viewport (fullscreen), scrollbarWidth none, auth card centered
   (220/204), selection = coral accent, no tabs, no console errors.
+
+## 2026-08-18 — fix(web): landing fills the viewport; adaptive hero
+
+- What: fixed the ~50%-width landing bug (flex-child shrink under #root's row flex) and made the
+  landing genuinely adaptive: full-width, capped+centered content (--landing-max), clamp() hero
+  title, two-column hero from 840px, nav padding aligned to the cap, viewport-scaled hero map.
+- Files: apps/web/src/styles/shell.html, apps/web/tests/landing.test.js (new, 46 assertions),
+  apps/web/package.json, apps/web/verify.sh, apps/web/tests/layout-breaks.sh (landing break helper
+  + width break case).
+- Verified: landing 46/46 (7 viewports + RTL), layout 6,904, unit 229, a11y 14, breaks 46,
+  layout-breaks 8 (the width break caught 4 assertions when reintroduced). pnpm verify green.

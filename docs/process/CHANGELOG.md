@@ -365,3 +365,14 @@
   scrollbars (still scrollable); text selection uses the accent colour; sign-up role cards styled.
 - 229 web / 60 api / 14 axe / 6,904 layout / 46 breaks green; live-proven (identify/password/otp,
   full-screen + centered + no-scrollbar measured in a real browser).
+
+## 2026-08-18 — fix(web): landing page fills the full viewport; truly adaptive hero
+
+- Root cause: #root is display:flex (row), so the landing/authwrap flex children had no width and
+  shrank to their content (~50% of the viewport). Fixed with width:100%;min-width:0 on both.
+- Adaptive hero: stacked on phones, two-column (text start-aligned + map beside it) from 840px;
+  title uses clamp() type; landing content capped at --landing-max (1120px) and centered; nav
+  padding aligns to the cap; hero map height scales with the viewport.
+- New browser test suite `tests/landing.test.js` (46 assertions): landing fills width, hero ≥ 1
+  viewport, no horizontal overflow, centered auth card, RTL parity — across 7 viewports 320→2560.
+  Wired into verify.sh, and a break case proves the width regression fails the suite.

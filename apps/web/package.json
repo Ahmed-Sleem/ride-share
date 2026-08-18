@@ -8,6 +8,7 @@
     "start": "node server.js",
     "test": "node tests/unit.test.js && node --test tests/server.test.js",
     "test:layout": "node tests/layout.test.js",
+    "test:landing": "node tests/landing.test.js",
     "test:breaks": "./tests/breaks.sh",
     "test:layout-breaks": "./tests/layout-breaks.sh",
     "verify": "./verify.sh"

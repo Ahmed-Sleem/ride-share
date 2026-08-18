@@ -134,6 +134,7 @@
   /* ── LAYOUT ─────────────────────────────────────────────────────────── */
   --rail-collapsed:80px; --rail-expanded:248px;
   --content-max:840px;      /* reading measure for single-pane content */
+  --landing-max:1120px;     /* marketing-page cap — generous, still readable */
   --shell-max:1600px;       /* beyond x-large the shell stops growing  */
   --topbar-h:60px; --dock-h:64px;
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -714,11 +715,15 @@ select.input{cursor:pointer}
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
 
-/* landing — its own scroller; light/dark + RTL via tokens */
-.landing{height:100%;overflow-y:auto;overflow-x:hidden;background:var(--bg-page);
-  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* landing — its own scroller; light/dark + RTL via tokens. width:100% is
+   REQUIRED: #root is display:flex (row), so a child without width shrinks to
+   its content instead of filling the viewport. */
+.landing{width:100%;min-width:0;height:100%;overflow-y:auto;overflow-x:hidden;
+  background:var(--bg-page);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .landing__nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;
-  justify-content:space-between;gap:var(--s3);padding:var(--s3) var(--s4);
+  justify-content:space-between;gap:var(--s3);
+  padding-inline:clamp(var(--s4), calc((100% - var(--landing-max))/2 + var(--s4)), var(--s6));
+  padding-block:var(--s3);
   background:color-mix(in srgb,var(--bg-page) 86%,transparent);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line)}
@@ -726,18 +731,28 @@ select.input{cursor:pointer}
   font-weight:var(--fw-bold);font-size:var(--f-head);color:var(--text-primary)}
 .landing__brand svg{width:26px;height:26px;flex:none}
 .landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.landing__body{display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
+.landing__body{width:100%;max-width:var(--landing-max);margin-inline:auto;
+  display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
 .landing__hero{position:relative;padding:var(--s8) var(--s6) var(--s6);
   min-height:calc(100dvh - 61px);display:flex;flex-direction:column;
   justify-content:center;gap:var(--s6);
   background:radial-gradient(120% 90% at 50% 0%,var(--brand-soft),transparent 70%)}
-.landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
-.landing__title{font-size:var(--f-display);font-weight:var(--fw-bold);line-height:var(--lh-tight);
-  letter-spacing:-.02em;max-width:16ch;margin:0}
+.landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4);
+  min-width:0}
+.landing__title{font-size:clamp(var(--f-title),4.5vw,var(--f-display));font-weight:var(--fw-bold);
+  line-height:var(--lh-tight);letter-spacing:-.02em;max-width:16ch;margin:0}
 .landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
 .landing__heromap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);
-  box-shadow:var(--sh-2);width:100%}
+  box-shadow:var(--sh-2);width:100%;min-width:0}
 .landing__heromap .mapbox{height:min(440px,52dvh)!important}
+
+/* tablet and up: hero becomes two columns — text start-aligned, map beside it */
+@media (min-width:840px){
+  .landing__hero{flex-direction:row;align-items:center;gap:var(--s8)}
+  .landing__herotext{flex:1 1 42%;align-items:flex-start;text-align:start}
+  .landing__heromap{flex:1 1 52%;width:auto}
+  .landing__heromap .mapbox{height:min(520px,60dvh)!important}
+}
 .landing__section{padding:0 var(--s6)}
 .landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
 .landing__h3{font-size:var(--f-head);font-weight:var(--fw-bold);margin:var(--s2) 0 0}
@@ -780,8 +795,10 @@ select.input{cursor:pointer}
   @keyframes heromap{from{transform:translateY(-3%)}to{transform:translateY(3%)}}
 }
 
-/* auth — centered card over the page background */
-.authwrap{height:100%;overflow-y:auto;display:flex;align-items:center;justify-content:center;
+/* auth — centered card over the page background. width:100% for the same
+   #root-flex reason as .landing. */
+.authwrap{width:100%;min-width:0;height:100%;overflow-y:auto;display:flex;
+  align-items:center;justify-content:center;
   padding:var(--s6) var(--s4);background:var(--bg-page);
   -webkit-overflow-scrolling:touch}
 .authwrap__card{position:relative;width:min(440px,100%);display:flex;flex-direction:column;
