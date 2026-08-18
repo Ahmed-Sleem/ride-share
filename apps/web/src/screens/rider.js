@@ -1,67 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   6. AUTH SCREENS  (R-01 … R-05)
-   ══════════════════════════════════════════════════════════════════════ */
-function authWelcome(){                                       // R-01
-  return $("div",{class:"appcol"},
-    $("div",{class:"hero"},
-      $("div",{class:"logomark"}, logoSVG("currentColor")),
-      $("div",{class:"stack gap2 center"},
-        $("h1",{class:"t-display",text:t("brand")}),
-        $("div",{class:"t-cap",text:t("tagline")})),
-      MapView({h:180, walk:true})),
-    $("div",{class:"authfoot"},
-      Btn({label:t("getStarted"), block:true, on:()=>{S.authStep="phone"; S.authed=false; render();}}),
-      Btn({label:t("browse"), kind:"secondary", block:true,
-           on:()=>{S.authed=true; S.page="routes"; render();}})));
-}
-
-function authPhone(){                                         // R-02
-  return $("div",{class:"appcol"},
-    topbar({title:"", back:()=>{S.authStep="welcome"; render();}, plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("phoneLabel")}),
-      $("div",{class:"t-cap",text:t("phoneHelp")}),
-      $("div",{class:"row gap2 mt4"},
-        $("span",{class:"chip chip--outline ltr",text:"+20"}),
-        $("input",{class:"input grow ltr",attrs:{type:"tel", inputmode:"numeric",
-          placeholder:"100 000 0000", "aria-label":t("phoneLabel")}}))),
-    $("div",{class:"authfoot"},
-      Btn({label:t("continue"), block:true, on:()=>{S.authStep="otp"; render();}})));
-}
-
-function authOtp(){                                           // R-03
-  const boxes=$("div",{class:"otp"});
-  for(let i=0;i<6;i++) boxes.append($("input",{
-    attrs:{inputmode:"numeric", maxlength:"1", "aria-label":`Digit ${i+1}`}}));
-  return $("div",{class:"appcol"},
-    topbar({title:"", back:()=>{S.authStep="phone"; render();}, plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("otpTitle")}),
-      $("div",{class:"t-cap"}, `${t("otpSent")} `, $("span",{class:"ltr",text:DATA.user.phone})),
-      $("div",{class:"mt4"}, boxes),
-      $("div",{class:"row gap3 mt4",style:{justifyContent:"center"}},
-        $("span",{class:"t-cap",text:`${t("resendIn")} 0:42`}),
-        Btn({label:t("wrongNumber"), kind:"ghost", on:()=>{S.authStep="phone"; render();}}))),
-    $("div",{class:"authfoot"},
-      Btn({label:t("verify"), block:true, on:()=>{S.authStep="name"; render();}})));
-}
-
-function authName(){                                          // R-05
-  return $("div",{class:"appcol"},
-    topbar({title:"", plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("yourName")}),
-      $("div",{class:"t-cap",text:t("nameWhy")}),
-      $("input",{class:"input mt4",attrs:{placeholder:t("yourName"),"aria-label":t("yourName")}})),
-    $("div",{class:"authfoot"},
-      Btn({label:t("finish"), block:true,
-           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}}),
-      Btn({label:t("skip"), kind:"ghost", block:true,
-           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}})));
-}
-
-/* ══════════════════════════════════════════════════════════════════════
-   7. RIDER SCREENS
+   6. RIDER SCREENS — auth screens live in screens/auth.js
    ══════════════════════════════════════════════════════════════════════ */
 function riderHome(){                                         // R-10
   const w=$("div",{class:"main"});
@@ -275,7 +213,7 @@ function riderProfile(){                                      // R-80
     Row({icon:"trips", title:t("subs"), chev:true, on:()=>openSheet("subs")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
-    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+    on:()=>signOut()}));
   return w;
 }
 

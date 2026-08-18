@@ -12,12 +12,13 @@ import {
 import { CONFIG, type Env } from '../../../config/env.js';
 import { PinoLoggerService } from '../../../common/logging/logger.js';
 import { hashPassword, verifyPassword } from '../domain/password.js';
-import { hashToken, newRefreshToken, signAccessToken } from '../domain/token.js';
+import { hashToken, newRefreshToken, signAccessToken } from '../../../security/token.js';
 import { evaluateOtp, generateOtp, hashOtp, OTP_TTL_MS } from '../domain/otp.js';
-import { STAFF_ROLES, toPublicUser, type PublicUser, type UserRole, type UserRow } from '../contracts/types.js';
+import { STAFF_ROLES, toPublicUser, type Actor, type PublicUser, type UserRole, type UserRow } from '../contracts/types.js';
 import { UsersRepository } from '../infra/users.repository.js';
 import { OtpRepository } from '../infra/otp.repository.js';
 import { SessionsRepository } from '../infra/sessions.repository.js';
+import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -35,12 +36,13 @@ export class IdentityService {
     private readonly logger: PinoLoggerService,
     private readonly users: UsersRepository,
     private readonly otps: OtpRepository,
-    private readonly sessions: SessionsRepository
+    private readonly sessions: SessionsRepository,
+    private readonly audit: AuditService
   ) {}
 
-  /** Staff sign-in (email + password). Riders use OTP. */
-  async staffLogin(email: string, password: string): Promise<AuthResult> {
-    const user = await this.users.findByEmail(email);
+  /** Staff sign-in (phone OR email + password). Riders use OTP. */
+  async staffLogin(identifier: string, password: string): Promise<AuthResult> {
+    const user = await this.users.findByIdentifier(identifier);
     if (!user || !user.password_hash || !verifyPassword(password, user.password_hash)) {
       throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
     }
@@ -100,19 +102,40 @@ export class IdentityService {
     await this.users.setPassword(userId, hashPassword(next));
   }
 
-  /** Super-admin creates a staff account (never self-service — DEC-032/033). */
-  async createStaff(actor: { role: UserRole }, email: string, password: string, role: UserRole): Promise<PublicUser> {
+  /** Super-admin creates a staff account (never self-service — DEC-032/033).
+      Identity is phone OR email (the owner chose "either"): at least one is
+      required, and each provided one must be unique. */
+  async createStaff(
+    actor: Actor,
+    input: { phone?: string | null; email?: string | null; name?: string; password: string; role: UserRole }
+  ): Promise<PublicUser> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STAFF);
-    if (!STAFF_ROLES.includes(role)) {
+    if (!STAFF_ROLES.includes(input.role)) {
       throw new ForbiddenException({ message_key: 'auth.staff_roles_only' });
     }
-    const existing = await this.users.findByEmail(email);
-    if (existing) throw new ForbiddenException({ message_key: 'auth.email_taken' });
-    const created = await this.users.create({ email, role, passwordHash: hashPassword(password) });
+    if (!input.phone && !input.email) {
+      throw new ForbiddenException({ message_key: 'auth.identifier_required' });
+    }
+    if (input.email && (await this.users.findByEmail(input.email))) {
+      throw new ForbiddenException({ message_key: 'auth.email_taken' });
+    }
+    if (input.phone && (await this.users.findByPhone(input.phone))) {
+      throw new ForbiddenException({ message_key: 'auth.phone_taken' });
+    }
+    const created = await this.users.create({
+      email: input.email ?? null,
+      phone: input.phone ?? null,
+      name: input.name,
+      role: input.role,
+      passwordHash: hashPassword(input.password),
+    });
+    await this.audit.record(actor, 'staff.create', {
+      targetType: 'user', targetId: created.id, after: { email: created.email, phone: created.phone, role: created.role },
+    });
     return toPublicUser(created);
   }
 
-  async listStaff(actor: { role: UserRole }): Promise<PublicUser[]> {
+  async listStaff(actor: Actor): Promise<PublicUser[]> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STAFF);
     const all = await this.users.list();
     return all.filter((u) => STAFF_ROLES.includes(u.role)).map(toPublicUser);

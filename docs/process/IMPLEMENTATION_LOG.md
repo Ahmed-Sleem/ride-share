@@ -288,3 +288,55 @@ output) — see the engineering standard §3.3 and §4.
   → 401; change password → old 401 / new 201; unknown field → 400 (mass-assignment guard).
   `pnpm db:verify` + `pnpm verify` green (see final run).
 - Not pushed — owner confirmation gate (build-everything-then-confirm instruction).
+
+## 2026-08-18 — M1 backend complete: identifier login, drivers, vehicles, audit (DEC-188)
+
+- What: completed the identity/driver/vehicle backend, per the validated domain model
+  (read CH02/CH04a/CH10b-c-d/DEC-046 before building). Findings applied: SIX roles (DEC-046);
+  phone is the identity of record (staff log in with phone OR email — owner choice); routes are
+  created by Ops/Manager, drivers only CLAIM slots; drivers self-register (Door 1) then get
+  approved; staff never self-register.
+- DEC-188 (M1 driver model): a driver is a rider account whose driver_profiles row is APPROVED;
+  on approval users.role becomes 'driver' (atomic transaction). Drivers keep BOOK_RIDE (CH02 2.4:
+  a driver may ride). State machines enumerated (submitted→under_review→approved|rejected), and
+  approval walks the legal chain — a fresh application is approved via under_review, never a jump.
+- New: migrations 0004 driver_profiles, 0005 vehicles, 0006 audit_log; drivers module (apply, my
+  profile, add vehicle, ops list/review applications + vehicles); audit module (append-only,
+  super_admin-only list) recording staff.create / driver.apply / driver.approve|reject /
+  vehicle.approve|reject; identity gains findByIdentifier (phone OR email) and phone/email staff
+  creation; authority matrix: DRIVER += BOOK_RIDE/MANAGE_OWN_ACCOUNT/APPLY_AS_DRIVER,
+  RIDER += APPLY_AS_DRIVER.
+- Architecture fixes the guard-rails themselves demanded: SQL moved from service into the
+  repository (SQL-location check); cross-module imports moved to contracts/ (boundary check);
+  the auth guard + token utils moved to security/ as cross-cutting infrastructure, breaking the
+  identity↔audit cycle (boundary check) — the "third concept" was auth infrastructure.
+- Tests: 52 green (password, token, otp, identity incl. identifier login + phone/email staff +
+  audited staff creation, driver/vehicle state machines, authority, health, env, webhook,
+  validation, error filter). Live-proven end to end: staff create (phone), manager 403 on audit,
+  rider OTP self-register, driver apply→approve (role becomes driver), vehicle add→approve, audit
+  trail shows every action.
+- LOCAL COMMIT ONLY — push pending owner confirmation (build-everything-then-confirm).
+
+## 2026-08-18 — M1 frontend Stage 1: landing, auth, splash, motion, real session
+
+- What: turned the shell from a demo into a real entry flow. Boot splash (bouncy logo, reduced-motion
+  safe) → landing page (scroll-driven hero + features + how-it-works + the map illustration, city-
+  agnostic copy, light/dark + RTL) → sign-in / create-account wired to the REAL API → the signed-in
+  app. Rail is collapsed by default. The demo role switcher is gone: the identity chip shows the
+  session user and sign-out clears the session.
+- API plumbing: `apps/web/src/lib/api.js` (the ONE api client: bearer token, one refresh on 401,
+  session save/clear, all endpoints); `apps/web/server.js` now proxies `/v1/*` to `API_INTERNAL_URL`
+  over the private network (503 API_NOT_CONFIGURED when unset — honest, no CORS, no key in client).
+- New screens: landing.js, auth.js (staff password / rider OTP with name-collected-once, staff
+  no-self-signup notice, driver path hint), admin.js (Administration: staff list + create + audit log,
+  real API, empty/error states). super_admin added as the 6th role in PAGES (admin, adminStaff,
+  adminAudit, queue, board, profile).
+- Motion: `.main__inner` page-enter animation; landing `.reveal` + hero parallax via CSS scroll-driven
+  animations (view-timeline), all wrapped in prefers-reduced-motion no-preference; splash bounce.
+- Bugs found & fixed by the smoke/tests: shadowed `icon` params in featureCard/stepCard/adminStat;
+  auth tabs built but never appended; breaks.sh new cases used stale `app/src/` paths (the script runs
+  from apps/web).
+- Tests: 218 unit (new M1 group: splash/landing/auth/rail-default/no-role-switcher/sign-out/enterApp),
+  14 axe, 6,904 layout (super_admin screens added), 44 break cases (4 new M1 breaks) — all green.
+  Real-browser check: boot→splash→landing (hero+map, 4 CTAs), auth card renders, zero console errors.
+- LOCAL COMMIT ONLY — push pending owner confirmation.

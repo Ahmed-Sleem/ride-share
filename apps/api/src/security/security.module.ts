@@ -6,10 +6,11 @@
    ══════════════════════════════════════════════════════════════════════ */
 import { Global, Module } from '@nestjs/common';
 import { AuthorityGuard } from './authority/authority.guard.js';
+import { IdentityGuard } from './identity.guard.js';
 
 @Global()
 @Module({
-  providers: [AuthorityGuard],
-  exports: [AuthorityGuard],
+  providers: [AuthorityGuard, IdentityGuard],
+  exports: [AuthorityGuard, IdentityGuard],
 })
 export class SecurityModule {}

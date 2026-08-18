@@ -13,6 +13,8 @@ import { loadEnv } from './config/env.js';
 import { ConfigModule } from './config/config.module.js';
 import { HealthModule } from './health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
+import { DriversModule } from './modules/drivers/drivers.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
 import { SecurityModule } from './security/security.module.js';
 
 const env = loadEnv(); // throws with the missing variable's name — by design (P0.3)
@@ -23,6 +25,8 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
     ThrottlerModule.forRoot([{ name: 'default', ttl: env.THROTTLE_TTL, limit: env.THROTTLE_LIMIT }]),
     HealthModule,
     IdentityModule,
+    DriversModule,
+    AuditModule,
     SecurityModule,
   ],
   providers: [

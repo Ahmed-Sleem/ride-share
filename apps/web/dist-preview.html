@@ -700,6 +700,104 @@ select.input{cursor:pointer}
 .authmain{flex:1;min-height:0;overflow-y:auto;padding:var(--s5) var(--s6);
   display:flex;flex-direction:column;gap:var(--s4);
   width:100%;max-width:480px;margin-inline:auto}
+/* ══════════════════════════════════════════════════════════════════════
+   BOOT SPLASH · LANDING · AUTH · MOTION
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* boot splash — bouncy logo; the bounce collapses under reduced motion */
+.splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--s4);background:var(--bg-page);z-index:var(--z-toast)}
+.splash__logo{width:92px;height:92px;animation:splashbounce 1.1s var(--ease) infinite}
+.splash__logo svg{width:100%;height:100%}
+.splash__name{font-size:var(--f-title);font-weight:var(--fw-bold);color:var(--text-primary)}
+@keyframes splashbounce{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-14px) scale(1.05)}}
+
+/* landing — its own scroller; light/dark + RTL via tokens */
+.landing{height:100%;overflow-y:auto;overflow-x:hidden;background:var(--bg-page);
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.landing__nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;
+  justify-content:space-between;gap:var(--s3);padding:var(--s3) var(--s4);
+  background:color-mix(in srgb,var(--bg-page) 86%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line)}
+.landing__brand{display:flex;align-items:center;gap:var(--s2);min-width:0;
+  font-weight:var(--fw-bold);font-size:var(--f-head);color:var(--text-primary)}
+.landing__brand svg{width:26px;height:26px;flex:none}
+.landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.landing__body{display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
+.landing__hero{position:relative;padding:var(--s8) var(--s6) 0;
+  background:radial-gradient(120% 90% at 50% 0%,var(--brand-soft),transparent 70%)}
+.landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
+.landing__title{font-size:var(--f-display);font-weight:var(--fw-bold);line-height:var(--lh-tight);
+  letter-spacing:-.02em;max-width:16ch;margin:0}
+.landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
+.landing__heromap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);
+  box-shadow:var(--sh-2);margin-top:var(--s6)}
+.landing__section{padding:0 var(--s6)}
+.landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
+.landing__h3{font-size:var(--f-head);font-weight:var(--fw-bold);margin:var(--s2) 0 0}
+.landing__p{color:var(--text-secondary);margin:var(--s1) 0 0;line-height:var(--lh-body)}
+.landing__grid{display:grid;gap:var(--s4);
+  grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
+.landing__feature{background:var(--bg-raised);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:var(--s5);display:flex;flex-direction:column}
+.landing__featureico{width:44px;height:44px;border-radius:var(--r-md);display:grid;
+  place-items:center;flex:none}
+.landing__featureico svg{width:22px;height:22px;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.landing__featureico--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
+.landing__featureico--sky{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
+.landing__featureico--pink{background:var(--pop-pink-bg);color:var(--pop-pink-text)}
+.landing__featureico--lime{background:var(--pop-lime-bg);color:var(--pop-lime-text)}
+.landing__steps{display:grid;gap:var(--s4);
+  grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
+.landing__step{position:relative;background:var(--bg-raised);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:var(--s5)}
+.landing__stepnum{position:absolute;top:var(--s4);inset-inline-end:var(--s4);
+  font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
+.landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
+  text-align:center;padding:var(--s7) var(--s6)}
+.landing__foot{padding:var(--s5) var(--s6) calc(var(--s5) + var(--safe-b));
+  border-top:1px solid var(--line);text-align:center;color:var(--text-muted)}
+
+/* reveal-on-scroll + hero parallax — scroll-driven, transform/opacity only,
+   wrapped so reduced motion (and unsupported browsers) get the static page */
+@media (prefers-reduced-motion: no-preference){
+  @supports (animation-timeline: view()){
+    .reveal{animation:revealup linear both;animation-timeline:view();
+      animation-range:entry 0% entry 30%}
+    .landing__heromap{animation:heromap linear both;animation-timeline:view();
+      animation-range:cover 0% cover 100%}
+  }
+  @keyframes revealup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes heromap{from{transform:translateY(-3%)}to{transform:translateY(3%)}}
+}
+
+/* auth — centered card over the page background */
+.authwrap{height:100%;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;
+  padding:var(--s7) var(--s4) var(--s6);background:var(--bg-page);
+  -webkit-overflow-scrolling:touch}
+.authwrap__card{position:relative;width:min(440px,100%);display:flex;flex-direction:column;
+  gap:var(--s4);background:var(--bg-base);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:var(--s6);box-shadow:var(--sh-2);
+  animation:pagein var(--med) var(--ease)}
+.authwrap__back{position:absolute;top:var(--s3);inset-inline-start:var(--s3);
+  width:var(--tap-sm);height:var(--tap-sm);border-radius:var(--r-full);
+  display:grid;place-items:center;color:var(--text-secondary)}
+.authwrap__back:hover{background:var(--bg-sunken);color:var(--text-primary)}
+.authwrap__back svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.authwrap__card>.center>svg{width:56px;height:56px}
+
+/* page-enter motion — every screen transitions in; killed by reduced-motion */
+.main__inner{animation:pagein var(--med) var(--ease)}
+.metric--link{cursor:pointer;transition:border-color var(--fast) var(--ease),
+  transform var(--fast) var(--ease)}
+.metric--link:hover{border-color:var(--accent);transform:translateY(-1px)}
+@keyframes pagein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
 </style>
 </head>
 <body data-theme="light">
@@ -784,7 +882,41 @@ en:{
   needsFix:"Needs correction", reason:"Reason", launchSale:"Launch flash sale",
   notifyRiders:"Notify riders", dismiss:"Dismiss", save:"Save changes", cancel:"Cancel",
   mapMock:"Illustrative map",
-  na:"Not available at your role."
+  na:"Not available at your role.",
+  /* landing */
+  landingHero:"Fixed routes. One price. Your seat, booked.",
+  landingHeroSub:"A shared ride you can plan around — published stops, published times, a flat fare per route, and a seat you booked before you left home. Built for any city, one corridor at a time.",
+  landingCtaStart:"Create account",
+  landingCtaSignIn:"Sign in",
+  landingHowTitle:"How it works",
+  landingHow1T:"Pick a route", landingHow1B:"Browse published routes and stops near you.",
+  landingHow2T:"Book a seat", landingHow2B:"Choose a departure and pay one fixed fare.",
+  landingHow3T:"Board by code", landingHow3B:"Show your boarding code at the stop and ride.",
+  landingF1T:"One fixed price", landingF1B:"No surge, no surprises. The fare is the fare.",
+  landingF2T:"Book before you walk", landingF2B:"Know when it leaves and whether there's a seat.",
+  landingF3T:"Any city, one system", landingF3B:"Stops, routes and fares are configured per city.",
+  landingF4T:"Arabic first", landingF4B:"Full RTL and both languages, designed in.",
+  landingFoot:"Shared rides, fixed routes, one price.",
+  landingBack:"Back to sign in",
+  /* auth */
+  signIn:"Sign in", createAccount:"Create account",
+  staffTab:"Staff", riderTab:"Rider", staffNoSelfSignup:"Staff accounts are created by an administrator — there is no staff self-signup.",
+  identifierLabel:"Phone or email", passwordLabel:"Password",
+  signInAction:"Sign in", sendCode:"Send code", verifyCode:"Verify",
+  codeLabel:"6-digit code", codeSent:"We sent a code to",
+  haveAccount:"Already have an account?", needAccount:"New here?",
+  driverPathHint:"Want to drive? Create a rider account first, then apply to drive from your profile.",
+  applyToDrive:"Apply to drive",
+  driverApplied:"Application submitted — we'll review your documents.",
+  signOutConfirm:"Signed out", signedInAs:"Signed in as",
+  /* admin */
+  adminArea:"Administration", adminStaff:"Staff", adminAudit:"Audit log",
+  adminCreateStaff:"Create staff account",
+  adminName:"Name", adminRole:"Role", adminPhone:"Phone (optional)", adminEmail:"Email (optional)",
+  adminPassword:"Temporary password", adminCreate:"Create",
+  adminStaffEmpty:"No staff accounts yet.", adminAuditEmpty:"No audit entries yet.",
+  adminDriverQueue:"Driver applications", adminVehicleQueue:"Vehicles",
+  roleLabel:{rider:"Rider",driver:"Driver",operations:"Operations Admin",manager:"Manager",support:"Support Agent",super_admin:"Super Admin"},
 },
 ar:{
   brand:"رايد شير", tagline:"شارك الرحلة. سعر ثابت.",
@@ -835,8 +967,43 @@ ar:{
   needsFix:"يحتاج تصحيح", reason:"السبب", launchSale:"أطلق عرضًا",
   notifyRiders:"أبلغ الركاب", dismiss:"تجاهل", save:"حفظ التغييرات", cancel:"إلغاء",
   mapMock:"خريطة توضيحية",
-  na:"غير متاح لدورك."
-}};
+  na:"غير متاح لدورك.",
+  /* landing */
+  landingHero:"مسارات ثابتة. سعر واحد. مقعدك محجوز.",
+  landingHeroSub:"ركوبة مشتركة تقدر تخطط عليها — محطات منشورة، مواعيد منشورة، أجرة ثابتة لكل مسار، ومقعد حجزته قبل ما تخرج من البيت. مصممة لأي مدينة، مسار بعد مسار.",
+  landingCtaStart:"أنشئ حسابًا",
+  landingCtaSignIn:"تسجيل الدخول",
+  landingHowTitle:"كيف تعمل",
+  landingHow1T:"اختر المسار", landingHow1B:"تصفح المسارات والمحطات القريبة منك.",
+  landingHow2T:"احجز مقعدًا", landingHow2B:"اختر موعد القيام وادفع أجرة ثابتة واحدة.",
+  landingHow3T:"اركب بالكود", landingHow3B:"اعرض كود الركوب عند المحطة واركب.",
+  landingF1T:"سعر ثابت واحد", landingF1B:"لا زيادة مفاجئة ولا مفاجآت. الأجرة هي الأجرة.",
+  landingF2T:"احجز قبل ما تمشي", landingF2B:"اعرف موعد القيام وهل فيه مقعد.",
+  landingF3T:"أي مدينة، نظام واحد", landingF3B:"المحطات والمسارات والأسعار تُضبط لكل مدينة.",
+  landingF4T:"العربية أولًا", landingF4B:"دعم كامل لليمين-لليسار واللغتين معًا.",
+  landingFoot:"ركوبات مشتركة، مسارات ثابتة، سعر واحد.",
+  landingBack:"العودة لتسجيل الدخول",
+  /* auth */
+  signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
+  staffTab:"الموظفون", riderTab:"الراكب", staffNoSelfSignup:"حسابات الموظفين يُنشئها مدير — لا يوجد تسجيل ذاتي للموظفين.",
+  identifierLabel:"الهاتف أو البريد", passwordLabel:"كلمة المرور",
+  signInAction:"دخول", sendCode:"أرسل الكود", verifyCode:"تحقق",
+  codeLabel:"كود من ٦ أرقام", codeSent:"أرسلنا كودًا إلى",
+  haveAccount:"لديك حساب بالفعل؟", needAccount:"جديد هنا؟",
+  driverPathHint:"تريد القيادة؟ أنشئ حساب راكب أولًا ثم قدّم للقيادة من حسابك.",
+  applyToDrive:"قدّم للقيادة",
+  driverApplied:"تم إرسال الطلب — سنراجع مستنداتك.",
+  signOutConfirm:"تم تسجيل الخروج", signedInAs:"مسجل الدخول كـ",
+  /* admin */
+  adminArea:"الإدارة", adminStaff:"الموظفون", adminAudit:"سجل التدقيق",
+  adminCreateStaff:"إنشاء حساب موظف",
+  adminName:"الاسم", adminRole:"الدور", adminPhone:"الهاتف (اختياري)", adminEmail:"البريد (اختياري)",
+  adminPassword:"كلمة مرور مؤقتة", adminCreate:"إنشاء",
+  adminStaffEmpty:"لا توجد حسابات موظفين بعد.", adminAuditEmpty:"لا توجد سجلات تدقيق بعد.",
+  adminDriverQueue:"طلبات السائقين", adminVehicleQueue:"المركبات",
+  roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
+}
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    2. CONTENT — sample content for every screen.
@@ -1006,13 +1173,37 @@ const resolvedTheme = () => {
 
 const S = {
   role:"rider", lang:"en", theme: storeGet("rs.theme") || "auto",
-  rail: storeGet("rs.rail") || "open",
-  authed:true, authStep:"phone",
+  rail: storeGet("rs.rail") ?? "collapsed",   // collapsed is the DEFAULT (owner)
+  view:"boot",                                // boot | landing | auth | app
+  authed:false, user:null,                    // user comes from the session
+  authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
+  authStep:"phone", authBusy:false, authError:null,
+  authPhone:"", authName:"",
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
   opsView:null, stack:[]
 };
+
+/* enter the signed-in app with the session user; role comes from auth, never
+   a switcher (§8 — the demo role switcher is gone). */
+function enterApp(user) {
+  S.user = user;
+  S.role = user.role;
+  S.authed = true;
+  S.view = "app";
+  S.page = DEFAULT_PAGE[S.role] || "home";
+  S.stack = [];
+  S.sheet = null; S.opsView = null;
+  render();
+}
+
+function signOut() {
+  API.clearSession();
+  S.user = null; S.authed = false; S.view = "landing";
+  S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
+  render();
+}
 
 const t = k => k.split(".").reduce((o,p)=>o&&o[p], T[S.lang]) ?? k;
 const L = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
@@ -1071,6 +1262,7 @@ const ICON = {
   tickets:'<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/>',
   lost:'<path d="M20 7H4v13h16z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>',
   back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
+  signout:'<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="m10 8 4 4-4 4"/><path d="M14 12H4"/>',
   qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
   sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
   share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
@@ -1295,69 +1487,411 @@ const RouteCard = (r, on) => $("button",{class:"routecard", attrs:{type:"button"
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   6. AUTH SCREENS  (R-01 … R-05)
-   ══════════════════════════════════════════════════════════════════════ */
-function authWelcome(){                                       // R-01
-  return $("div",{class:"appcol"},
-    $("div",{class:"hero"},
-      $("div",{class:"logomark"}, logoSVG("currentColor")),
-      $("div",{class:"stack gap2 center"},
-        $("h1",{class:"t-display",text:t("brand")}),
-        $("div",{class:"t-cap",text:t("tagline")})),
-      MapView({h:180, walk:true})),
-    $("div",{class:"authfoot"},
-      Btn({label:t("getStarted"), block:true, on:()=>{S.authStep="phone"; S.authed=false; render();}}),
-      Btn({label:t("browse"), kind:"secondary", block:true,
-           on:()=>{S.authed=true; S.page="routes"; render();}})));
+   API client — the ONE place the interface talks to the backend (§0.3).
+   The browser only ever calls the same origin (the web server proxies
+   /v1/* to the API over the private network), so there is no CORS and no
+   key in the client. Session = access + refresh tokens in localStorage;
+   refresh happens exactly once here, on 401.
+
+   No mocks: a request that cannot reach a backend is a real error state,
+   never a fabricated success.                                       */
+const API = {
+  base: "/v1",
+  access: () => storeGet("rs.access"),
+  refreshToken: () => storeGet("rs.refresh"),
+  user: () => { try { return JSON.parse(storeGet("rs.user") || "null"); } catch { return null; } },
+
+  saveSession({ user, accessToken, refreshToken }) {
+    storeSet("rs.access", accessToken);
+    storeSet("rs.refresh", refreshToken);
+    storeSet("rs.user", JSON.stringify(user));
+  },
+
+  clearSession() {
+    try { localStorage.removeItem("rs.access"); } catch {}
+    try { localStorage.removeItem("rs.refresh"); } catch {}
+    try { localStorage.removeItem("rs.user"); } catch {}
+  },
+
+  async request(method, path, body) {
+    if (typeof fetch !== "function") throw new ApiError("NETWORK", "error.network", null);
+    const headers = { "content-type": "application/json" };
+    const token = this.access();
+    if (token) headers["authorization"] = "Bearer " + token;
+    let res;
+    try {
+      res = await fetch(this.base + path, {
+        method,
+        headers,
+        body: body != null ? JSON.stringify(body) : undefined,
+      });
+    } catch {
+      throw new ApiError("NETWORK", "error.network", null);
+    }
+    let payload = null;
+    try { payload = await res.json(); } catch { /* non-JSON */ }
+    if (!res.ok) {
+      const err = new ApiError(
+        (payload && payload.code) || String(res.status),
+        (payload && payload.message_key) || "error.internal",
+        payload
+      );
+      // one refresh attempt on expired access, then retry exactly once
+      if (res.status === 401 && token && path !== "/auth/refresh" && path !== "/auth/login") {
+        const refreshed = await this._refresh();
+        if (refreshed) return this.request(method, path, body);
+      }
+      throw err;
+    }
+    return payload;
+  },
+
+  async _refresh() {
+    const refreshToken = this.refreshToken();
+    if (!refreshToken) return false;
+    try {
+      const r = await fetch(this.base + "/auth/refresh", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!r.ok) { this.clearSession(); return false; }
+      const p = await r.json();
+      this.saveSession(p);
+      return true;
+    } catch { return false; }
+  },
+
+  /* ── auth ─────────────────────────────────────────────────────────── */
+  login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
+  requestOtp: (phone) => API.request("POST", "/auth/otp/request", { phone }),
+  verifyOtp: (phone, code, name) => API.request("POST", "/auth/otp/verify", { phone, code, name }),
+  me: () => API.request("GET", "/me"),
+  changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
+
+  /* ── staff administration (super_admin) ───────────────────────────── */
+  listStaff: () => API.request("GET", "/admin/staff"),
+  createStaff: (payload) => API.request("POST", "/admin/staff", payload),
+  listAudit: () => API.request("GET", "/admin/audit"),
+
+  /* ── drivers & vehicles ───────────────────────────────────────────── */
+  driverApply: () => API.request("POST", "/driver/apply"),
+  driverMe: () => API.request("GET", "/driver/me"),
+  addVehicle: (plate, model, colour) => API.request("POST", "/driver/vehicles", { plate, model, colour }),
+  listDriverApplications: () => API.request("GET", "/ops/driver-applications"),
+  reviewDriverApplication: (id, decision, reason) =>
+    API.request("POST", `/ops/driver-applications/${id}/review`, { decision, reason }),
+  listVehicles: () => API.request("GET", "/ops/vehicles"),
+  reviewVehicle: (id, decision) => API.request("POST", `/ops/vehicles/${id}/review`, { decision }),
+};
+
+class ApiError extends Error {
+  constructor(code, messageKey, payload) {
+    super(messageKey);
+    this.code = code;
+    this.messageKey = messageKey;
+    this.payload = payload;
+  }
 }
 
-function authPhone(){                                         // R-02
-  return $("div",{class:"appcol"},
-    topbar({title:"", back:()=>{S.authStep="welcome"; render();}, plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("phoneLabel")}),
-      $("div",{class:"t-cap",text:t("phoneHelp")}),
-      $("div",{class:"row gap2 mt4"},
-        $("span",{class:"chip chip--outline ltr",text:"+20"}),
-        $("input",{class:"input grow ltr",attrs:{type:"tel", inputmode:"numeric",
-          placeholder:"100 000 0000", "aria-label":t("phoneLabel")}}))),
-    $("div",{class:"authfoot"},
-      Btn({label:t("continue"), block:true, on:()=>{S.authStep="otp"; render();}})));
+/* Resolve the session on boot: a stored session is validated against /me
+   (refresh on 401). Returns the user or null. Never throws. */
+async function resolveSession() {
+  const user = API.user();
+  if (!user || !API.access()) return null;
+  try {
+    const me = await API.me();           // { actor: { id, role } }
+    const fresh = { ...user };
+    if (me && me.actor) {
+      fresh.id = me.actor.id;
+      fresh.role = me.actor.role;
+    }
+    storeSet("rs.user", JSON.stringify(fresh));
+    return fresh;
+  } catch {
+    API.clearSession();
+    return null;
+  }
 }
 
-function authOtp(){                                           // R-03
-  const boxes=$("div",{class:"otp"});
-  for(let i=0;i<6;i++) boxes.append($("input",{
-    attrs:{inputmode:"numeric", maxlength:"1", "aria-label":`Digit ${i+1}`}}));
-  return $("div",{class:"appcol"},
-    topbar({title:"", back:()=>{S.authStep="phone"; render();}, plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("otpTitle")}),
-      $("div",{class:"t-cap"}, `${t("otpSent")} `, $("span",{class:"ltr",text:DATA.user.phone})),
-      $("div",{class:"mt4"}, boxes),
-      $("div",{class:"row gap3 mt4",style:{justifyContent:"center"}},
-        $("span",{class:"t-cap",text:`${t("resendIn")} 0:42`}),
-        Btn({label:t("wrongNumber"), kind:"ghost", on:()=>{S.authStep="phone"; render();}}))),
-    $("div",{class:"authfoot"},
-      Btn({label:t("verify"), block:true, on:()=>{S.authStep="name"; render();}})));
-}
-
-function authName(){                                          // R-05
-  return $("div",{class:"appcol"},
-    topbar({title:"", plain:true}),
-    $("div",{class:"main"},
-      $("h1",{class:"t-title",text:t("yourName")}),
-      $("div",{class:"t-cap",text:t("nameWhy")}),
-      $("input",{class:"input mt4",attrs:{placeholder:t("yourName"),"aria-label":t("yourName")}})),
-    $("div",{class:"authfoot"},
-      Btn({label:t("finish"), block:true,
-           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}}),
-      Btn({label:t("skip"), kind:"ghost", block:true,
-           on:()=>{S.authed=true; S.page="home"; S.stack=[]; render();}})));
-}
 
 /* ══════════════════════════════════════════════════════════════════════
-   7. RIDER SCREENS
+   Landing page — the front door. Clean, branded, city-agnostic (DEC —
+   "general and suitable for expansion"). One scroller of its own; light/
+   dark and RTL via the shared tokens and logical properties. The hero uses
+   CSS scroll-driven animation (view-timeline) with a reduced-motion
+   fallback — transform/opacity only, no JS scroll handlers.
+   ══════════════════════════════════════════════════════════════════════ */
+function landing() {
+  return $("div",{class:"landing"},
+    $("header",{class:"landing__nav"},
+      $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
+      $("div",{class:"row gap2"},
+        langToggle(), themeToggle())),
+    $("div",{class:"landing__body"},
+
+      /* ── HERO ───────────────────────────────────────────────────────── */
+      $("section",{class:"landing__hero"},
+        $("div",{class:"landing__herotext"},
+          $("h1",{class:"landing__title",text:t("landingHero")}),
+          $("p",{class:"landing__sub",text:t("landingHeroSub")}),
+          $("div",{class:"row gap3 mt4"},
+            Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
+            Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
+        $("div",{class:"landing__heromap"},
+          MapView({h:420, walk:true, route:true, stops:true, vehicle:true}))),
+
+      /* ── FEATURES ──────────────────────────────────────────────────── */
+      $("section",{class:"landing__section"},
+        $("div",{class:"landing__grid"},
+          featureCard("wallet", t("landingF1T"), t("landingF1B"), "mint"),
+          featureCard("clock",  t("landingF2T"), t("landingF2B"), "sky"),
+          featureCard("routes", t("landingF3T"), t("landingF3B"), "pink"),
+          featureCard("globe",  t("landingF4T"), t("landingF4B"), "lime"))),
+
+      /* ── HOW IT WORKS ──────────────────────────────────────────────── */
+      $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
+        $("div",{class:"landing__steps"},
+          stepCard("1", "routes", t("landingHow1T"), t("landingHow1B")),
+          stepCard("2", "seat",   t("landingHow2T"), t("landingHow2B")),
+          stepCard("3", "qr",      t("landingHow3T"), t("landingHow3B")))),
+
+      /* ── CTA band ──────────────────────────────────────────────────── */
+      $("section",{class:"landing__cta"},
+        $("h2",{class:"landing__h2",text:t("landingFoot")}),
+        $("div",{class:"row gap3 center"},
+          Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
+          Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
+
+      $("footer",{class:"landing__foot"},
+        $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}))));
+}
+
+function featureCard(ic, title, body, tone) {
+  return $("div",{class:"landing__feature reveal"},
+    $("div",{class:"landing__featureico landing__featureico--"+tone}, icon(ic)),
+    $("h3",{class:"landing__h3",text:title}),
+    $("p",{class:"landing__p",text:body}));
+}
+
+function stepCard(n, ic, title, body) {
+  return $("div",{class:"landing__step reveal"},
+    $("div",{class:"landing__stepnum ltr",text:n}),
+    $("div",{class:"landing__featureico"}, icon(ic)),
+    $("h3",{class:"landing__h3",text:title}),
+    $("p",{class:"landing__p",text:body}));
+}
+
+function langToggle() {
+  return IconBtn({name:"globe", label:t("language"),
+    on:()=>{ S.lang = S.lang==="en" ? "ar" : "en"; storeSet("rs.lang", S.lang); render(); }});
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Auth screens — the REAL flows, wired to the API. No fabricated success:
+   every action shows its true state (busy / error key / success). Staff sign
+   in with phone-or-email + password; riders self-register with phone OTP
+   (name collected once, before the single verify call); drivers apply from
+   inside the app after their rider account exists.
+   ══════════════════════════════════════════════════════════════════════ */
+function auth() {
+  const seg=$("div",{class:"seg"});
+  [["staff",t("staffTab")],["rider",t("riderTab")]].forEach(([k,lbl])=>
+    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.authTab===k)},
+      text:lbl, on:{click:()=>{ S.authTab=k; S.authStep="phone"; S.authError=null; render(); }}})));
+
+  return $("div",{class:"authwrap"},
+    $("div",{class:"authwrap__card"},
+      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+        on:{click:()=>{ S.view="landing"; S.authError=null; render(); }}}, icon("back")),
+      $("div",{class:"center"}, logoSVG(), null),
+      $("h1",{class:"t-title center", text: S.authMode==="signup" ? t("createAccount") : t("signIn")}),
+      seg,
+      S.authTab==="staff" ? (S.authMode==="signin" ? staffSignin() : staffNotice()) : riderFlow(),
+      S.authError ? Banner("danger", S.authError) : null,
+      $("div",{class:"center mt3 stack gap1"},
+        $("span",{class:"t-cap", text: S.authMode==="signin" ? t("needAccount") : t("haveAccount")}),
+        $("button",{class:"btn btn--ghost", attrs:{type:"button"},
+          text: S.authMode==="signin" ? t("createAccount") : t("signIn"),
+          on:{click:()=>{ S.authMode = S.authMode==="signin" ? "signup" : "signin";
+                          S.authStep="phone"; S.authError=null; render(); }}}))));
+}
+
+function staffSignin() {
+  return $("div",{class:"stack gap3"},
+    field("auth-identifier", t("identifierLabel"), "text"),
+    field("auth-password", t("passwordLabel"), "password"),
+    Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy,
+         on:()=>staffLogin()}));
+}
+
+/* Staff never self-register (DEC-032/033). Say so plainly, don't fake it. */
+function staffNotice() {
+  return $("div",{class:"stack gap3"},
+    Banner("info", t("staffNoSelfSignup")));
+}
+
+function riderFlow() {
+  const w=$("div",{class:"stack gap3"});
+  if(S.authStep==="phone"){
+    w.append(
+      field("auth-phone", t("phoneLabel"), "tel"),
+      Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>riderSendCode()}));
+  } else if(S.authStep==="otp"){
+    w.append(
+      $("p",{class:"t-cap"}, `${t("codeSent")} `, $("span",{class:"ltr",text:S.authPhone})),
+      field("auth-code", t("codeLabel"), "text"),
+      S.authMode==="signup"
+        ? Btn({label:S.authBusy? "…" : t("continue"), block:true, dis:S.authBusy, on:()=>{ S.authStep="name"; render(); }})
+        : Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(null)}),
+      $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("wrongNumber"),
+        on:{click:()=>{ S.authStep="phone"; S.authError=null; render(); }}}));
+  } else if(S.authStep==="name"){
+    w.append(
+      field("auth-name", t("yourName"), "text"),
+      Btn({label:S.authBusy? "…" : t("finish"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(val("auth-name"))}));
+  }
+  return w;
+}
+
+/* ── helpers ──────────────────────────────────────────────────────────── */
+function field(id, label, type) {
+  return $("div",{class:"field"},
+    $("label",{attrs:{for:id}, text:label}),
+    $("input",{class:"input ltr", attrs:{id, type, autocomplete:"off", "aria-label":label}}));
+}
+const val = (id) => (document.getElementById(id)||{}).value || "";
+
+async function staffLogin() {
+  S.authBusy=true; S.authError=null; render();
+  try {
+    const res = await API.login(val("auth-identifier"), val("auth-password"));
+    API.saveSession(res);
+    enterApp(res.user);
+  } catch(e) { S.authError = e.messageKey || "error.internal"; S.authBusy=false; render(); }
+}
+
+async function riderSendCode() {
+  const phone = val("auth-phone");
+  if(!phone){ S.authError="validation.phone"; render(); return; }
+  S.authBusy=true; S.authError=null; render();
+  try {
+    await API.requestOtp(phone);
+    S.authPhone=phone; S.authStep="otp"; S.authBusy=false; render();
+  } catch(e) { S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+}
+
+async function riderVerifyCode(name) {
+  S.authBusy=true; S.authError=null; render();
+  try {
+    const res = await API.verifyOtp(S.authPhone, val("auth-code"), name || undefined);
+    API.saveSession(res);
+    enterApp(res.user);
+  } catch(e) { S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Administration screens — the Super Admin's platform power (staff
+   management + audit log), per CH02 §2.4 ("Grant staff roles", "View audit
+   log"). Everything is REAL data from the API; every action is guarded by
+   the single authority resolver server-side. Loading / empty / error states
+   are honest — no fabricated rows.
+   ══════════════════════════════════════════════════════════════════════ */
+function adminHome() {
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"grid"},
+    adminStat("adminStaff", t("adminStaff"), ()=>go("adminStaff")),
+    adminStat("adminAudit", t("adminAudit"), ()=>go("adminAudit")),
+    adminStat("queue",   t("adminDriverQueue"), ()=>go("queue")),
+    adminStat("vehicles", t("adminVehicleQueue"), ()=>go("vehicles"))));
+  w.append(Banner("info", t("staffNoSelfSignup")));
+  return w;
+}
+
+function adminStat(ic, label, on) {
+  return $("button",{class:"metric metric--link", attrs:{type:"button"}, on:{click:on}},
+    $("div",{class:"row gap2"}, icon(ic), $("div",{class:"metric__l",text:label})));
+}
+
+function adminStaff() {
+  const w=$("div",{class:"main"});
+  w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
+  w.append(Card("card--tight",
+    $("div",{class:"grid grid--tight"},
+      field("staff-name", t("adminName"), "text"),
+      field("staff-phone", t("adminPhone"), "tel"),
+      field("staff-email", t("adminEmail"), "email")),
+    field("staff-password", t("adminPassword"), "password"),
+    $("div",{class:"field"},
+      $("label",{text:t("adminRole")}),
+      $("select",{class:"input", id:"staff-role"},
+        ["operations","manager","support","super_admin"].map(r=>
+          $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
+    Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
+  w.append($("div",{id:"staff-list"}), null);
+  loadStaffInto(document.getElementById("staff-list"));
+  return w;
+}
+
+function adminAudit() {
+  const w=$("div",{class:"main"});
+  w.append($("h2",{class:"t-head",text:t("adminAudit")}));
+  w.append($("div",{id:"audit-list"}), null);
+  loadAuditInto(document.getElementById("audit-list"));
+  return w;
+}
+
+/* ── data + actions ───────────────────────────────────────────────────── */
+async function createStaff() {
+  const payload = {
+    name: val("staff-name") || undefined,
+    phone: val("staff-phone") || undefined,
+    email: val("staff-email") || undefined,
+    password: val("staff-password"),
+    role: val("staff-role") || "operations",
+  };
+  try {
+    await API.createStaff(payload);
+    toast(t("save"));
+    loadStaffInto(document.getElementById("staff-list"));
+  } catch(e) { toast(e.messageKey || "error.internal"); }
+}
+
+async function loadStaffInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const staff = await API.listStaff();
+    if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
+    el.append($("h2",{class:"t-head",text:t("adminStaff")}));
+    staff.forEach(s=> el.append(Row({
+      icon: s.role==="super_admin" ? "safety" : "profile",
+      title: s.name || s.phone || s.email,
+      sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
+      right: Chip({label:s.status}), bordered:true })));
+  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+}
+
+async function loadAuditInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const entries = await API.listAudit();
+    if(!entries.length){ el.append(Empty("board", t("adminAudit"), t("adminAuditEmpty"))); return; }
+    entries.forEach(e=> el.append(Row({
+      icon:"flag",
+      title: e.action,
+      sub: `${e.actor_name || "—"} · ${(e.created_at||"").slice(0,16).replace("T"," ")}${e.reason ? " · "+e.reason : ""}`,
+      bordered:true })));
+  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. RIDER SCREENS — auth screens live in screens/auth.js
    ══════════════════════════════════════════════════════════════════════ */
 function riderHome(){                                         // R-10
   const w=$("div",{class:"main"});
@@ -1571,7 +2105,7 @@ function riderProfile(){                                      // R-80
     Row({icon:"trips", title:t("subs"), chev:true, on:()=>openSheet("subs")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
-    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+    on:()=>signOut()}));
   return w;
 }
 
@@ -1748,7 +2282,7 @@ function driverProfile(){                                     // D-40
     Row({icon:"doc",   title:t("documents"), chev:true, on:()=>go("earnings")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>openSheet("sos")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
-    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+    on:()=>signOut()}));
   return w;
 }
 
@@ -2123,6 +2657,14 @@ const PAGES = {
     {k:"lookup",  ic:"lookup",  fn:supportLookup,  dock:true, wide:true},
     {k:"tickets", ic:"tickets", fn:supportTickets, dock:true, wide:true},
     {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true}
+  ],
+  super_admin:[
+    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
+    {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
+    {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
+    {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
+    {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
+    {k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}
   ]
 };
 const DEFAULT_PAGE = Object.fromEntries(
@@ -2218,15 +2760,14 @@ function render(){
 
   const root=document.getElementById("root");
   root.innerHTML="";
-  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
-  if(!S.authed){
-    const step={welcome:authWelcome, phone:authPhone, otp:authOtp, name:authName}[S.authStep]
-              || authWelcome;
-    app.append(step());
-    root.append(app);
-    return;
-  }
+  /* view machine: boot splash → landing → auth → the signed-in app */
+  if(S.view==="boot"){ root.append(bootSplash()); return; }
+  if(S.view==="landing"){ root.append(landing()); return; }
+  if(S.view==="auth"){ root.append(auth()); return; }
+  if(!S.authed){ S.view="landing"; root.append(landing()); return; }
+
+  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
   const def=pageDef();
   const col=$("div",{class:"appcol"});
@@ -2265,18 +2806,19 @@ function render(){
   root.append(app);
 }
 
-/* Header actions. The balance pill is a rider affordance: it shows what you
-   have and opens the wallet. The role switcher exists only because five
-   products share one file; a signed-in build fixes the role and omits it. */
+/* Header actions. The identity chip shows WHO is signed in (role comes from
+   the session, never a switcher — §8). Sign-out and the theme toggle are the
+   only other actions. The demo role switcher is gone. */
 function headerActions(){
   const wrap=$("div",{class:"row gap2"});
-  if(S.role==="rider")
+  if(S.user)
     wrap.append($("button",{class:"chip chip--accent", attrs:{type:"button",
-      "aria-label":`${t("balance")} ${money(DATA.user.balance)}`},
-      on:{click:()=>go("wallet")}},
-      icon("wallet"), $("span",{class:"ltr num",text:money(DATA.user.balance)})));
+      "aria-label":t("signedInAs")},
+      on:{click:()=>go("profile")}},
+      icon("profile"),
+      $("span",{text: S.user.name || t("roleLabel."+(S.user.role||"rider"))})));
   wrap.append(themeToggle());
-  wrap.append(roleSwitcher());
+  wrap.append(IconBtn({name:"signout", label:t("signOut"), on:()=>signOut()}));
   return wrap;
 }
 
@@ -2291,13 +2833,25 @@ function themeToggle(){
              storeSet("rs.theme", S.theme); render(); }});
 }
 
-function roleSwitcher(){
-  const sel=$("select",{class:"chip", attrs:{"aria-label":"Role"},
-    on:{change:(e)=>{ S.role=e.target.value; S.page=DEFAULT_PAGE[S.role];
-                      S.stack=[]; S.sheet=null; S.opsView=null; render(); }}});
-  Object.keys(PAGES).forEach(r=> sel.append(
-    $("option",{attrs:{value:r, selected:S.role===r?true:null}, text:t("role."+r)})));
-  return sel;
+/* Boot splash — the bouncy logo shown while the session resolves. The bounce
+   is decorative and collapses under prefers-reduced-motion. */
+function bootSplash(){
+  return $("div",{class:"splash", attrs:{"aria-label":t("brand")}},
+    $("div",{class:"splash__logo"}, logoSVG()),
+    $("div",{class:"splash__name",text:t("brand")}));
+}
+
+/* Boot: show the splash, resolve any stored session, then land. The minimum
+   splash time is a single tick of human perception, not a fake wait. */
+function boot(){
+  S.view="boot"; render();
+  const minDelay = new Promise(r=>setTimeout(r, 900));
+  const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
+    .catch(()=>null);
+  Promise.all([minDelay, session]).then(([, user])=>{
+    if(S.view!=="boot") return;                 // a test or a tap already left
+    if(user){ enterApp(user); } else { S.view="landing"; render(); }
+  });
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
@@ -2305,9 +2859,10 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
 Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
-                        openSheet, closeSheet, SHEETS, resolvedTheme });
+                        openSheet, closeSheet, SHEETS, resolvedTheme,
+                        enterApp, signOut, boot, API });
 
-render();
+boot();
 
 </script>
 </body>

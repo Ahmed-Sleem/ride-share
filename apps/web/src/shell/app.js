@@ -126,6 +126,14 @@ const PAGES = {
     {k:"lookup",  ic:"lookup",  fn:supportLookup,  dock:true, wide:true},
     {k:"tickets", ic:"tickets", fn:supportTickets, dock:true, wide:true},
     {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true}
+  ],
+  super_admin:[
+    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
+    {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
+    {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
+    {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
+    {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
+    {k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}
   ]
 };
 const DEFAULT_PAGE = Object.fromEntries(
@@ -221,15 +229,14 @@ function render(){
 
   const root=document.getElementById("root");
   root.innerHTML="";
-  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
-  if(!S.authed){
-    const step={welcome:authWelcome, phone:authPhone, otp:authOtp, name:authName}[S.authStep]
-              || authWelcome;
-    app.append(step());
-    root.append(app);
-    return;
-  }
+  /* view machine: boot splash → landing → auth → the signed-in app */
+  if(S.view==="boot"){ root.append(bootSplash()); return; }
+  if(S.view==="landing"){ root.append(landing()); return; }
+  if(S.view==="auth"){ root.append(auth()); return; }
+  if(!S.authed){ S.view="landing"; root.append(landing()); return; }
+
+  const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
   const def=pageDef();
   const col=$("div",{class:"appcol"});
@@ -268,18 +275,19 @@ function render(){
   root.append(app);
 }
 
-/* Header actions. The balance pill is a rider affordance: it shows what you
-   have and opens the wallet. The role switcher exists only because five
-   products share one file; a signed-in build fixes the role and omits it. */
+/* Header actions. The identity chip shows WHO is signed in (role comes from
+   the session, never a switcher — §8). Sign-out and the theme toggle are the
+   only other actions. The demo role switcher is gone. */
 function headerActions(){
   const wrap=$("div",{class:"row gap2"});
-  if(S.role==="rider")
+  if(S.user)
     wrap.append($("button",{class:"chip chip--accent", attrs:{type:"button",
-      "aria-label":`${t("balance")} ${money(DATA.user.balance)}`},
-      on:{click:()=>go("wallet")}},
-      icon("wallet"), $("span",{class:"ltr num",text:money(DATA.user.balance)})));
+      "aria-label":t("signedInAs")},
+      on:{click:()=>go("profile")}},
+      icon("profile"),
+      $("span",{text: S.user.name || t("roleLabel."+(S.user.role||"rider"))})));
   wrap.append(themeToggle());
-  wrap.append(roleSwitcher());
+  wrap.append(IconBtn({name:"signout", label:t("signOut"), on:()=>signOut()}));
   return wrap;
 }
 
@@ -294,13 +302,25 @@ function themeToggle(){
              storeSet("rs.theme", S.theme); render(); }});
 }
 
-function roleSwitcher(){
-  const sel=$("select",{class:"chip", attrs:{"aria-label":"Role"},
-    on:{change:(e)=>{ S.role=e.target.value; S.page=DEFAULT_PAGE[S.role];
-                      S.stack=[]; S.sheet=null; S.opsView=null; render(); }}});
-  Object.keys(PAGES).forEach(r=> sel.append(
-    $("option",{attrs:{value:r, selected:S.role===r?true:null}, text:t("role."+r)})));
-  return sel;
+/* Boot splash — the bouncy logo shown while the session resolves. The bounce
+   is decorative and collapses under prefers-reduced-motion. */
+function bootSplash(){
+  return $("div",{class:"splash", attrs:{"aria-label":t("brand")}},
+    $("div",{class:"splash__logo"}, logoSVG()),
+    $("div",{class:"splash__name",text:t("brand")}));
+}
+
+/* Boot: show the splash, resolve any stored session, then land. The minimum
+   splash time is a single tick of human perception, not a fake wait. */
+function boot(){
+  S.view="boot"; render();
+  const minDelay = new Promise(r=>setTimeout(r, 900));
+  const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
+    .catch(()=>null);
+  Promise.all([minDelay, session]).then(([, user])=>{
+    if(S.view!=="boot") return;                 // a test or a tap already left
+    if(user){ enterApp(user); } else { S.view="landing"; render(); }
+  });
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
@@ -308,6 +328,7 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
 Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
-                        openSheet, closeSheet, SHEETS, resolvedTheme });
+                        openSheet, closeSheet, SHEETS, resolvedTheme,
+                        enterApp, signOut, boot, API });
 
-render();
+boot();

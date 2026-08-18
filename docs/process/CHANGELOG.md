@@ -319,3 +319,19 @@
   6-digit OTP (dev logs code, prod refuses without SMS provider); env-seeded bootstrap admin;
   super_admin-only staff creation. Live-proven end to end. 42 API tests green. Local commit only —
   push pending owner confirmation.
+
+## 2026-08-18 — M1 backend complete: identifier login, drivers, vehicles, audit
+
+- Staff log in with phone OR email + password; staff accounts accept phone and/or email.
+- Driver self-registration (apply) → ops approval (state machine, atomic role promotion); vehicle
+  registry + approval; append-only audit log (super_admin view) recording every privileged action.
+- DEC-188 recorded. Guard-rails enforced themselves (SQL→repository, contracts-only imports, no
+  cycles). 52 api tests green. Local only — push pending owner confirmation.
+
+## 2026-08-18 — M1 frontend Stage 1: real entry flow (splash → landing → auth → app)
+
+- Boot splash (bouncy logo); landing page with scroll-driven hero + features + map illustration;
+  sign-in/create-account wired to the real API (staff password, rider OTP, staff no-self-signup);
+  session persistence + sign-out; rail collapsed by default; demo role switcher removed; super_admin
+  Administration section (staff + audit). API client + /v1 proxy. 218 unit / 14 axe / 6,904 layout /
+  44 breaks green. Local only — push pending confirmation.

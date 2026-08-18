@@ -8,10 +8,14 @@ const SRC   = path.join(__dirname, "src");
 const OUT   = path.join(__dirname, "dist-preview.html");
 const shell = fs.readFileSync(path.join(SRC, "styles", "shell.html"), "utf8");
 
-/* Order matters: data → components → screens → shell wiring. */
+/* Order matters: data → components → api → screens → shell wiring. */
 const PARTS = [
   "data/content.js",
   "lib/components.js",
+  "lib/api.js",
+  "screens/landing.js",
+  "screens/auth.js",
+  "screens/admin.js",
   "screens/rider.js",
   "screens/driver.js",
   "screens/staff.js",

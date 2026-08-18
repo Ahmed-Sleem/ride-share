@@ -15,6 +15,9 @@ class FakeUsers {
   async findByEmail(email: string) {
     return [...this.rows.values()].find((u) => u.email === email) ?? null;
   }
+  async findByIdentifier(identifier: string) {
+    return [...this.rows.values()].find((u) => u.email === identifier || u.phone === identifier) ?? null;
+  }
   async findByPhone(phone: string) {
     return [...this.rows.values()].find((u) => u.phone === phone) ?? null;
   }
@@ -101,12 +104,19 @@ function env(): Env {
 
 const silentLogger = { info: () => undefined, warn: () => undefined, error: () => undefined, debug: () => undefined, log: () => undefined, verbose: () => undefined, fatal: () => undefined };
 
+class FakeAudit {
+  entries: unknown[] = [];
+  async record(...args: unknown[]) { this.entries.push(args); }
+  async list() { return []; }
+}
+
 function setup() {
   const users = new FakeUsers();
   const otps = new FakeOtps();
   const sessions = new FakeSessions(users);
-  const svc = new IdentityService(env(), silentLogger as never, users as never, otps as never, sessions as never);
-  return { svc, users, otps, sessions };
+  const audit = new FakeAudit();
+  const svc = new IdentityService(env(), silentLogger as never, users as never, otps as never, sessions as never, audit as never);
+  return { svc, users, otps, sessions, audit };
 }
 
 test('staff login succeeds with correct password', async () => {
@@ -147,7 +157,7 @@ test('OTP verify with the real code creates the rider (transport-captured code)'
   const svc2 = new IdentityService(env(), { ...silentLogger, warn: (m: string) => {
     const found = m.match(/code for \S+: (\d{6})/);
     if (found) captured.push(found[1]!);
-  } } as never, users as never, new FakeOtps() as never, new FakeSessions(users) as never);
+  } } as never, users as never, new FakeOtps() as never, new FakeSessions(users) as never, new FakeAudit() as never);
   await svc2.riderRequestOtp(phone);
   assert.equal(captured.length, 1);
   const res = await svc2.riderVerifyOtp(phone, captured[0]!);
@@ -178,15 +188,37 @@ test('a rider actor cannot create staff accounts (§8.2 — authority in one pla
   const { svc, users } = setup();
   await users.create({ phone: '+201000000000', role: 'rider' });
   await assert.rejects(
-    () => svc.createStaff({ role: 'rider' }, 'new@x.com', 'pw-12345678', 'manager'),
+    () => svc.createStaff({ id: 'r1', role: 'rider' }, { email: 'new@x.com', password: 'pw-12345678', role: 'manager' }),
     ForbiddenException
   );
 });
 
-test('super_admin creates a staff account', async () => {
+test('super_admin creates a staff account (phone + email both accepted)', async () => {
+  const { svc, users, audit } = setup();
+  await users.create({ email: 'boss@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
+  const created = await svc.createStaff(
+    { id: 'a1', role: 'super_admin' },
+    { phone: '+201234567890', email: 'ops@x.com', name: 'Ops', password: 'pw-12345678', role: 'operations' }
+  );
+  assert.equal(created.role, 'operations');
+  assert.equal(created.phone, '+201234567890');
+  assert.equal(created.email, 'ops@x.com');
+  assert.ok((audit as FakeAudit).entries.length >= 1, 'staff creation is audited');
+});
+
+test('staff creation requires phone or email', async () => {
   const { svc, users } = setup();
   await users.create({ email: 'boss@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  const created = await svc.createStaff({ role: 'super_admin' }, 'ops@x.com', 'pw-12345678', 'operations');
-  assert.equal(created.role, 'operations');
-  assert.equal(created.email, 'ops@x.com');
+  await assert.rejects(
+    () => svc.createStaff({ id: 'a1', role: 'super_admin' }, { password: 'pw-12345678', role: 'manager' }),
+    ForbiddenException
+  );
+});
+
+test('staff login accepts phone OR email as identifier', async () => {
+  const { svc, users } = setup();
+  await users.create({ email: 'admin@x.com', phone: '+201111111111', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
+  const byEmail = await svc.staffLogin('admin@x.com', 'pw-12345678');
+  const byPhone = await svc.staffLogin('+201111111111', 'pw-12345678');
+  assert.equal(byEmail.user.id, byPhone.user.id);
 });

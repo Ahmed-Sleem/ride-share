@@ -11,9 +11,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
-import { CONFIG, type Env } from '../../../config/env.js';
-import { verifyAccessToken } from '../domain/token.js';
-import type { Actor } from '../contracts/types.js';
+import { CONFIG, type Env } from '../config/env.js';
+import { verifyAccessToken } from './token.js';
+import type { Actor } from '../modules/identity/contracts/types.js';
 
 type RequestWithActor = FastifyRequest & { actor?: Actor };
 

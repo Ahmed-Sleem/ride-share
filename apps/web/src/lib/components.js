@@ -18,13 +18,37 @@ const resolvedTheme = () => {
 
 const S = {
   role:"rider", lang:"en", theme: storeGet("rs.theme") || "auto",
-  rail: storeGet("rs.rail") || "open",
-  authed:true, authStep:"phone",
+  rail: storeGet("rs.rail") ?? "collapsed",   // collapsed is the DEFAULT (owner)
+  view:"boot",                                // boot | landing | auth | app
+  authed:false, user:null,                    // user comes from the session
+  authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
+  authStep:"phone", authBusy:false, authError:null,
+  authPhone:"", authName:"",
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
   opsView:null, stack:[]
 };
+
+/* enter the signed-in app with the session user; role comes from auth, never
+   a switcher (§8 — the demo role switcher is gone). */
+function enterApp(user) {
+  S.user = user;
+  S.role = user.role;
+  S.authed = true;
+  S.view = "app";
+  S.page = DEFAULT_PAGE[S.role] || "home";
+  S.stack = [];
+  S.sheet = null; S.opsView = null;
+  render();
+}
+
+function signOut() {
+  API.clearSession();
+  S.user = null; S.authed = false; S.view = "landing";
+  S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
+  render();
+}
 
 const t = k => k.split(".").reduce((o,p)=>o&&o[p], T[S.lang]) ?? k;
 const L = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
@@ -83,6 +107,7 @@ const ICON = {
   tickets:'<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/>',
   lost:'<path d="M20 7H4v13h16z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>',
   back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
+  signout:'<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="m10 8 4 4-4 4"/><path d="M14 12H4"/>',
   qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
   sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
   share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',

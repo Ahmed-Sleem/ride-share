@@ -17,6 +17,16 @@ export class UsersRepository {
     return rows[0] ?? null;
   }
 
+  /** Staff sign-in identifier: phone OR email (the owner chose "either"). */
+  async findByIdentifier(identifier: string): Promise<UserRow | null> {
+    const { rows } = await this.pool.query<UserRow>(
+      `SELECT id, email, phone, name, role, password_hash, status, created_at
+       FROM users WHERE phone = $1 OR email = lower($1)`,
+      [identifier]
+    );
+    return rows[0] ?? null;
+  }
+
   async findByPhone(phone: string): Promise<UserRow | null> {
     const { rows } = await this.pool.query<UserRow>(
       'SELECT id, email, phone, name, role, password_hash, status, created_at FROM users WHERE phone = $1',

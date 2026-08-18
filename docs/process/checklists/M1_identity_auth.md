@@ -57,25 +57,25 @@ the first real vertical slice (DEC-182).
 - [x] No self-service staff registration (endpoint absent + authority check).
 
 ### D. Drivers & vehicles (BUILD_PLAN P1)
-- [ ] Driver application (docs upload) → ops approval (DEC-035 state machine).
-- [ ] Vehicle registry with fleet labels (DEC-033/039).
-- [ ] Real endpoints behind the `drivers` / `vehicles` module seams.
+- [x] Driver application (docs upload) → ops approval (DEC-035 state machine).
+- [x] Vehicle registry with fleet labels (DEC-033/039).
+- [x] Real endpoints behind the `drivers` / `vehicles` module seams.
 
 ## Frontend (apps/web — the approved GUI, wired)
 
 ### E. Landing & auth
-- [ ] Landing page: logo, tagline, "Sign in" and "Create account" (rider).
-- [ ] Auth screens wired to the real API: OTP (rider), password (staff).
-- [ ] Session persistence (refresh token); sign-out clears it.
-- [ ] Role selector removed from the signed-in shell — role comes from auth
+- [x] Landing page: logo, tagline, "Sign in" and "Create account" (rider).
+- [x] Auth screens wired to the real API: OTP (rider), password (staff).
+- [x] Session persistence (refresh token); sign-out clears it.
+- [x] Role selector removed from the signed-in shell — role comes from auth
       (kept only behind a dev flag, per §8 no fake).
 
 ### F. Boot splash & motion
-- [ ] Bouncy spinning-logo boot splash on first load; removed when the app
+- [x] Bouncy spinning-logo boot splash on first load; removed when the app
       has either a session or shows landing/auth.
-- [ ] Side rail **collapsed by default** (stored preference defaults to
+- [x] Side rail **collapsed by default** (stored preference defaults to
       collapsed; user can expand, choice remembered).
-- [ ] One motion system: tokens for page transition, sheet, toast, nav-item,
+- [x] One motion system: tokens for page transition, sheet, toast, nav-item,
       button/card hover — all respecting `prefers-reduced-motion` (already
       present). Page-level enter transition on render.
 

@@ -18,9 +18,9 @@ function boot(){
   const dom=new JSDOM(SRC,{runScripts:"dangerously",pretendToBeVisual:true});
   const w=dom.window, d=w.document;
   return {w,d,
-    go:(role,page)=>{ w.S.role=role; w.S.page=page; w.S.stack=[]; w.S.sheet=null;
+    go:(role,page)=>{ w.S.view="app"; w.S.authed=true; w.S.role=role; w.S.page=page; w.S.stack=[]; w.S.sheet=null;
                       w.S.opsView=null; w.render(); },
-    set:(o)=>{ Object.assign(w.S,o); w.render(); },
+    set:(o)=>{ w.S.view="app"; w.S.authed=true; Object.assign(w.S,o); w.render(); },
     q:(s)=>d.querySelector(s), all:(s)=>[...d.querySelectorAll(s)],
     txt:()=>{ const a=d.querySelector(".app"); return a?a.textContent:""; }};
 }
@@ -216,6 +216,7 @@ group("ACCENT COLOUR HAS A JOB");
      /--pop-mint:/.test(CSS) && /--pop-lime:/.test(CSS) && /--pop-sky:/.test(CSS) &&
      /--pop-pink:/.test(CSS) && /--pop-coral:/.test(CSS));
   const t=boot();
+  t.set({user:{id:"u1",role:"rider",name:"Nour"}});
   t.go("rider","home");
   ok("accent is actually used in the product", !!t.q(".chip--accent"));
 }
@@ -272,7 +273,7 @@ group("EVERY SCREEN RENDERS, IN BOTH LANGUAGES, BOTH THEMES");
   const t=boot();
   const roles=Object.keys(t.w.PAGES);
   let count=0;
-  ok("there are five roles", roles.length===5, roles.join(","));
+  ok("there are six roles", roles.length===6, roles.join(","));
   for(const lang of ["en","ar"]) for(const theme of ["light","dark"]){
     t.set({lang,theme});
     for(const role of roles) for(const p of t.w.PAGES[role]){
@@ -504,6 +505,39 @@ group("DESIGN TOKENS — one place to change a value");
   ok("dark theme overrides the same names", /\[data-theme="dark"\]\{[^}]*--brand:/.test(css));
   const rootVars=[...css.matchAll(/--([a-z0-9-]+):/g)].map(m=>m[1]);
   ok("token set is substantial", new Set(rootVars).size>40, String(new Set(rootVars).size));
+}
+
+group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
+{
+  const t=boot();
+  t.w.S.view="boot"; t.w.render();
+  ok("boot shows the splash", !!t.q(".splash"));
+  ok("splash shows the brand mark", !!t.q(".splash svg"));
+
+  t.w.S.view="landing"; t.w.render();
+  ok("landing renders the hero", !!t.q(".landing__hero"));
+  ok("landing has both CTAs", t.all(".landing .btn").length>=2, String(t.all(".landing .btn").length));
+  ok("landing shows the map illustration", !!t.q(".landing__heromap .mapsvg"));
+
+  t.w.S.view="auth"; t.w.render();
+  ok("auth renders a card", !!t.q(".authwrap__card"));
+  ok("staff tab is the default", t.w.S.authTab==="staff");
+  ok("auth has staff/rider tabs", t.all(".seg button").length===2, String(t.all(".seg button").length));
+
+  // rail is COLLAPSED by default (owner requirement)
+  ok("rail defaults to collapsed", t.w.S.rail==="collapsed", String(t.w.S.rail));
+
+  // the demo role switcher is gone — role comes from the session
+  t.w.S.view="app"; t.w.S.authed=true; t.w.S.user={id:"u1",role:"rider",name:"Nour"}; t.w.render();
+  ok("no demo role switcher", !t.q("select[aria-label='Role']"));
+  ok("identity chip shows who is signed in", !!t.q(".chip--accent"));
+  ok("sign-out is available", !!t.q("[aria-label='"+t.w.T[t.w.S.lang].signOut+"']"));
+
+  // enterApp derives role from the session user (a manager gets the manager dock)
+  t.w.S.view="landing"; t.w.render();
+  t.w.enterApp({id:"u2",role:"manager",name:"Ops"});
+  ok("enterApp derives role from the user", t.w.S.role==="manager");
+  ok("enterApp lands on the role's default page", t.w.S.page===t.w.DEFAULT_PAGE.manager, t.w.S.page);
 }
 
 group("BUILD INTEGRITY");

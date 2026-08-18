@@ -55,7 +55,41 @@ en:{
   needsFix:"Needs correction", reason:"Reason", launchSale:"Launch flash sale",
   notifyRiders:"Notify riders", dismiss:"Dismiss", save:"Save changes", cancel:"Cancel",
   mapMock:"Illustrative map",
-  na:"Not available at your role."
+  na:"Not available at your role.",
+  /* landing */
+  landingHero:"Fixed routes. One price. Your seat, booked.",
+  landingHeroSub:"A shared ride you can plan around — published stops, published times, a flat fare per route, and a seat you booked before you left home. Built for any city, one corridor at a time.",
+  landingCtaStart:"Create account",
+  landingCtaSignIn:"Sign in",
+  landingHowTitle:"How it works",
+  landingHow1T:"Pick a route", landingHow1B:"Browse published routes and stops near you.",
+  landingHow2T:"Book a seat", landingHow2B:"Choose a departure and pay one fixed fare.",
+  landingHow3T:"Board by code", landingHow3B:"Show your boarding code at the stop and ride.",
+  landingF1T:"One fixed price", landingF1B:"No surge, no surprises. The fare is the fare.",
+  landingF2T:"Book before you walk", landingF2B:"Know when it leaves and whether there's a seat.",
+  landingF3T:"Any city, one system", landingF3B:"Stops, routes and fares are configured per city.",
+  landingF4T:"Arabic first", landingF4B:"Full RTL and both languages, designed in.",
+  landingFoot:"Shared rides, fixed routes, one price.",
+  landingBack:"Back to sign in",
+  /* auth */
+  signIn:"Sign in", createAccount:"Create account",
+  staffTab:"Staff", riderTab:"Rider", staffNoSelfSignup:"Staff accounts are created by an administrator — there is no staff self-signup.",
+  identifierLabel:"Phone or email", passwordLabel:"Password",
+  signInAction:"Sign in", sendCode:"Send code", verifyCode:"Verify",
+  codeLabel:"6-digit code", codeSent:"We sent a code to",
+  haveAccount:"Already have an account?", needAccount:"New here?",
+  driverPathHint:"Want to drive? Create a rider account first, then apply to drive from your profile.",
+  applyToDrive:"Apply to drive",
+  driverApplied:"Application submitted — we'll review your documents.",
+  signOutConfirm:"Signed out", signedInAs:"Signed in as",
+  /* admin */
+  adminArea:"Administration", adminStaff:"Staff", adminAudit:"Audit log",
+  adminCreateStaff:"Create staff account",
+  adminName:"Name", adminRole:"Role", adminPhone:"Phone (optional)", adminEmail:"Email (optional)",
+  adminPassword:"Temporary password", adminCreate:"Create",
+  adminStaffEmpty:"No staff accounts yet.", adminAuditEmpty:"No audit entries yet.",
+  adminDriverQueue:"Driver applications", adminVehicleQueue:"Vehicles",
+  roleLabel:{rider:"Rider",driver:"Driver",operations:"Operations Admin",manager:"Manager",support:"Support Agent",super_admin:"Super Admin"},
 },
 ar:{
   brand:"رايد شير", tagline:"شارك الرحلة. سعر ثابت.",
@@ -106,8 +140,43 @@ ar:{
   needsFix:"يحتاج تصحيح", reason:"السبب", launchSale:"أطلق عرضًا",
   notifyRiders:"أبلغ الركاب", dismiss:"تجاهل", save:"حفظ التغييرات", cancel:"إلغاء",
   mapMock:"خريطة توضيحية",
-  na:"غير متاح لدورك."
-}};
+  na:"غير متاح لدورك.",
+  /* landing */
+  landingHero:"مسارات ثابتة. سعر واحد. مقعدك محجوز.",
+  landingHeroSub:"ركوبة مشتركة تقدر تخطط عليها — محطات منشورة، مواعيد منشورة، أجرة ثابتة لكل مسار، ومقعد حجزته قبل ما تخرج من البيت. مصممة لأي مدينة، مسار بعد مسار.",
+  landingCtaStart:"أنشئ حسابًا",
+  landingCtaSignIn:"تسجيل الدخول",
+  landingHowTitle:"كيف تعمل",
+  landingHow1T:"اختر المسار", landingHow1B:"تصفح المسارات والمحطات القريبة منك.",
+  landingHow2T:"احجز مقعدًا", landingHow2B:"اختر موعد القيام وادفع أجرة ثابتة واحدة.",
+  landingHow3T:"اركب بالكود", landingHow3B:"اعرض كود الركوب عند المحطة واركب.",
+  landingF1T:"سعر ثابت واحد", landingF1B:"لا زيادة مفاجئة ولا مفاجآت. الأجرة هي الأجرة.",
+  landingF2T:"احجز قبل ما تمشي", landingF2B:"اعرف موعد القيام وهل فيه مقعد.",
+  landingF3T:"أي مدينة، نظام واحد", landingF3B:"المحطات والمسارات والأسعار تُضبط لكل مدينة.",
+  landingF4T:"العربية أولًا", landingF4B:"دعم كامل لليمين-لليسار واللغتين معًا.",
+  landingFoot:"ركوبات مشتركة، مسارات ثابتة، سعر واحد.",
+  landingBack:"العودة لتسجيل الدخول",
+  /* auth */
+  signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
+  staffTab:"الموظفون", riderTab:"الراكب", staffNoSelfSignup:"حسابات الموظفين يُنشئها مدير — لا يوجد تسجيل ذاتي للموظفين.",
+  identifierLabel:"الهاتف أو البريد", passwordLabel:"كلمة المرور",
+  signInAction:"دخول", sendCode:"أرسل الكود", verifyCode:"تحقق",
+  codeLabel:"كود من ٦ أرقام", codeSent:"أرسلنا كودًا إلى",
+  haveAccount:"لديك حساب بالفعل؟", needAccount:"جديد هنا؟",
+  driverPathHint:"تريد القيادة؟ أنشئ حساب راكب أولًا ثم قدّم للقيادة من حسابك.",
+  applyToDrive:"قدّم للقيادة",
+  driverApplied:"تم إرسال الطلب — سنراجع مستنداتك.",
+  signOutConfirm:"تم تسجيل الخروج", signedInAs:"مسجل الدخول كـ",
+  /* admin */
+  adminArea:"الإدارة", adminStaff:"الموظفون", adminAudit:"سجل التدقيق",
+  adminCreateStaff:"إنشاء حساب موظف",
+  adminName:"الاسم", adminRole:"الدور", adminPhone:"الهاتف (اختياري)", adminEmail:"البريد (اختياري)",
+  adminPassword:"كلمة مرور مؤقتة", adminCreate:"إنشاء",
+  adminStaffEmpty:"لا توجد حسابات موظفين بعد.", adminAuditEmpty:"لا توجد سجلات تدقيق بعد.",
+  adminDriverQueue:"طلبات السائقين", adminVehicleQueue:"المركبات",
+  roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
+}
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    2. CONTENT — sample content for every screen.

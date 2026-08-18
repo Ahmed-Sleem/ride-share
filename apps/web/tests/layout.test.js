@@ -37,19 +37,19 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  โ
   page.on("console",m=>{ if(m.type()==="error") errors.push(m.text()); });
   page.on("pageerror",e=>errors.push(String(e)));
 
-  const ROLES=["rider","driver","ops","manager","support"];
+  const ROLES=["rider","driver","ops","manager","support","super_admin"];
 
   for(const vp of VIEWPORTS){
     await page.setViewport({width:vp.w,height:vp.h,deviceScaleFactor:1});
     await page.goto(FILE,{waitUntil:"load"});
 
     for(const role of ROLES){
-      const pages=await page.evaluate(r=>{ S.role=r; S.page=DEFAULT_PAGE[r]; S.stack=[];
+      const pages=await page.evaluate(r=>{ S.view="app"; S.authed=true; S.role=r; S.page=DEFAULT_PAGE[r]; S.stack=[];
         render(); return PAGES[r].map(p=>p.k); }, role);
 
       for(const pk of pages){
         const m=await page.evaluate((r,k)=>{
-          S.role=r; S.page=k; S.stack=[]; S.sheet=null; S.opsView=null; render();
+          S.view="app"; S.authed=true; S.rail="open"; S.role=r; S.page=k; S.stack=[]; S.sheet=null; S.opsView=null; render();
           const de=document.documentElement;
           const q=s=>document.querySelector(s);
           const box=el=>{ if(!el) return null; const b=el.getBoundingClientRect();
@@ -182,7 +182,7 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  โ
   await page.goto(FILE,{waitUntil:"load"});
   for(const sheet of ["qr","sos","topup","subs","scan","claim","report","contacts","trip","fare"]){
     await page.evaluate(s=>{
-      S.role = (s==="scan"||s==="claim") ? "driver" : (s==="fare" ? "manager" : "rider");
+      S.view="app"; S.authed=true; S.role = (s==="scan"||s==="claim") ? "driver" : (s==="fare" ? "manager" : "rider");
       S.page = DEFAULT_PAGE[S.role]; openSheet(s);
     }, sheet);
     // measure AFTER the entry animation; mid-flight geometry is not a defect
@@ -204,7 +204,7 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  โ
 
   for(const theme of ["light","dark"]) for(const lang of ["en","ar"]){
     const m=await page.evaluate((th,lg)=>{
-      S.theme=th; S.lang=lg; S.role="rider"; S.page="home"; S.sheet=null; render();
+      S.view="app"; S.authed=true; S.theme=th; S.lang=lg; S.role="rider"; S.page="home"; S.sheet=null; render();
       const de=document.documentElement;
       return {dir:de.dir, over:de.scrollWidth-de.clientWidth,
               bg:getComputedStyle(document.body).backgroundColor};
@@ -215,7 +215,7 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  โ
 
   // 200% zoom (GUI rules ยง18.3) โ€” emulated by halving the viewport in CSS px
   await page.setViewport({width:640,height:512,deviceScaleFactor:2});
-  const z=await page.evaluate(()=>{ S.theme="light"; S.lang="en"; S.role="rider";
+  const z=await page.evaluate(()=>{ S.view="app"; S.authed=true; S.theme="light"; S.lang="en"; S.role="rider";
     S.page="home"; render();
     const de=document.documentElement;
     return {over:de.scrollWidth-de.clientWidth, navVisible:!!document.querySelector(".nav")};
@@ -227,7 +227,7 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  โ
   await page.setViewport({width:375,height:812});
   const long=await page.evaluate(()=>{
     DATA.routes[0].en="A".repeat(160); DATA.user.name="B".repeat(80);
-    S.role="rider"; S.page="home"; render();
+    S.view="app"; S.authed=true; S.role="rider"; S.page="home"; render();
     const de=document.documentElement;
     return {over:de.scrollWidth-de.clientWidth, vover:de.scrollHeight-de.clientHeight};
   });

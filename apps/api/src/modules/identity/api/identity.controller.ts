@@ -14,12 +14,14 @@ import {
 import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
 import { IdentityService } from '../application/identity.service.js';
-import { IdentityGuard } from './identity.guard.js';
+import { IdentityGuard } from '../../../security/identity.guard.js';
 import type { Actor, UserRole } from '../contracts/types.js';
 import { STAFF_ROLES } from '../contracts/types.js';
 
 class LoginDto {
-  @IsEmail() email!: string;
+  // phone OR email + password (owner choice). Minimum 3 chars to allow a
+  // phone or an email; the service matches either column.
+  @IsString() @MinLength(3) identifier!: string;
   @IsString() @MinLength(1) password!: string;
 }
 
@@ -43,7 +45,9 @@ class ChangePasswordDto {
 }
 
 class CreateStaffDto {
-  @IsEmail() email!: string;
+  @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @Matches(/^\+?[0-9]{8,15}$/, { message: 'validation.phone' }) phone?: string;
+  @IsOptional() @IsString() @MinLength(1) name?: string;
   @IsString() @MinLength(12) password!: string;
   @IsIn([...STAFF_ROLES]) role!: UserRole;
 }
@@ -56,7 +60,7 @@ export class IdentityController {
 
   @Post('auth/login')
   login(@Body() dto: LoginDto) {
-    return this.identity.staffLogin(dto.email, dto.password);
+    return this.identity.staffLogin(dto.identifier, dto.password);
   }
 
   @Post('auth/otp/request')
@@ -91,7 +95,13 @@ export class IdentityController {
   @Post('admin/staff')
   @UseGuards(IdentityGuard)
   createStaff(@Req() req: ReqWithActor, @Body() dto: CreateStaffDto) {
-    return this.identity.createStaff(req.actor!, dto.email, dto.password, dto.role);
+    return this.identity.createStaff(req.actor!, {
+      phone: dto.phone ?? null,
+      email: dto.email ?? null,
+      name: dto.name,
+      password: dto.password,
+      role: dto.role,
+    });
   }
 
   @Get('admin/staff')

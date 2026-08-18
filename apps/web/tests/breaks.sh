@@ -197,6 +197,24 @@ run_break "input loses its label" src/lib/components.js \
   's|      \$("input",{attrs:{type:"search", placeholder, "aria-label":placeholder}}))|      $("input",{attrs:{type:"search", placeholder}}))|' \
   "every input is labelled|field is labelled"
 
+
+# ── M1: splash, landing, collapsed-by-default, no demo switcher ──────────
+run_break "rail not collapsed by default" src/lib/components.js \
+  's|rail: storeGet("rs.rail") ?? "collapsed",|rail: storeGet("rs.rail") ?? "open",|' \
+  "rail defaults to collapsed"
+
+run_break "splash loses its container" src/shell/app.js \
+  's|return \$("div",{class:"splash"|return $("div",{class:"nosplash"|' \
+  "boot shows the splash"
+
+run_break "landing loses its hero" src/screens/landing.js \
+  's|class:"landing__hero"|class:"landing__heroX"|' \
+  "landing renders the hero"
+
+run_break "demo role switcher returns" src/shell/app.js \
+  's|  wrap.append(themeToggle());|  wrap.append($("select",{class:"chip", attrs:{"aria-label":"Role"}}));\n  wrap.append(themeToggle());|' \
+  "no demo role switcher"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

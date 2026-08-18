@@ -148,6 +148,6 @@ function driverProfile(){                                     // D-40
     Row({icon:"doc",   title:t("documents"), chev:true, on:()=>go("earnings")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>openSheet("sos")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
-    on:()=>{ S.authed=false; S.authStep="welcome"; render(); }}));
+    on:()=>signOut()}));
   return w;
 }
