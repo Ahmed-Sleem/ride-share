@@ -340,3 +340,28 @@ output) — see the engineering standard §3.3 and §4.
   14 axe, 6,904 layout (super_admin screens added), 44 break cases (4 new M1 breaks) — all green.
   Real-browser check: boot→splash→landing (hero+map, 4 CTAs), auth card renders, zero console errors.
 - LOCAL COMMIT ONLY — push pending owner confirmation.
+
+## 2026-08-18 — M1.5: verification & recovery (DEC-189/190/191)
+
+- What: full verification & recovery. Migration 0007: `verification_codes` (kind/channel/target,
+  attempts, last_sent_at, last_attempt_at, expires_at, consumed_at) replaces `otps`; users gain
+  email_verified_at. Domain `verification.ts`: 60s RESEND_COOLDOWN, MAX_ATTEMPTS=3, LOCKOUT=1h,
+  per-kind TTL, hashed codes. Identity service: riderRequestOtp (cooldown/lockout → 429 with
+  retryAfterMs/lockedUntil), riderVerifyOtp (mismatch counts down, 3rd → locked), email verify
+  (request → code → verified), password reset (request never enumerates; confirm resets + revokes
+  all sessions). Notifications: SMS + SMTP (nodemailer) behind one interface, honest sandbox.
+  Migrations-on-boot via node-pg-migrate `runner()` (AUTO_MIGRATE); Dockerfile ships
+  infra/migrations. Route-level @Throttle on all auth endpoints.
+- Frontend: forgot-password flow (identify → code+new pass → done), resend button with a live
+  60s countdown + disabled state, 1-hour lockout banner, email verification section in rider and
+  driver profiles (add → code → verified chip).
+- Tests: 63 api (new: verification domain cooldown/lockout/evaluate ×11, identity service reset/
+  email/cooldown/lockout ×8); 226 web unit (new M1 verification group); 46 break cases (2 new).
+  Fixes along the way: fake repo mutation fidelity, Notifications DI, a swallowed Nest bootstrap
+  error (logger:false hid it — reproduced via --trace-exit), SQL-location false positive on a
+  comment (check now strips comments, still catches real SQL).
+- Verified LIVE: OTP request → resendInMs 60000; resend <60s → 429 {retryAfterMs}; wrong code
+  → 401; verify → rider created (emailVerified false); email request → verify → ok; reset request
+  (unknown identifier → ok, no enumeration); reset confirm → old password 401 / new 201;
+  auto-migrate log "migrations complete". `pnpm verify` + `pnpm db:verify` green.
+- LOCAL COMMIT ONLY — push pending owner confirmation.

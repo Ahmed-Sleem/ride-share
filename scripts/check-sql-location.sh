@@ -13,15 +13,17 @@ while IFS= read -r f; do
   [ -n "$f" ] && [ -f "$f" ] || continue
   examined=$((examined+1))
   # a file "contains SQL" if it has a statement: SELECT/INSERT/UPDATE/DELETE
-  # followed by a table, star, FROM or INTO.
-  if grep -qE '\b(SELECT|INSERT|UPDATE|DELETE)\s+(\*|FROM|INTO|[A-Za-z_`"'"'"'])' "$f" 2>/dev/null; then
+  # followed by a table, star, FROM or INTO — after stripping comments, so a
+  # prose mention of "UPDATE" in a comment is not a false positive.
+  code="$(sed -E 's@//[^\n]*@@g; s@/\*[^*]*\*+([^/*][^*]*\*+)*/@@g' "$f" 2>/dev/null)"
+  if printf '%s\n' "$code" | grep -qE '\b(SELECT|INSERT|UPDATE|DELETE)\s+(\*|FROM|INTO|[A-Za-z_`"'"'"'])' 2>/dev/null; then
     case "$f" in
       */infra/*.repository.ts) : ;;   # sanctioned home
       *.repository.ts)        : ;;
       *migrations/*.sql)      : ;;
       *)
         echo "  FAIL SQL outside a repository: $f"
-        grep -nE '\b(SELECT|INSERT|UPDATE|DELETE)\s+(\*|FROM|INTO|[A-Za-z_`"'"'"'])' "$f" | head -1 | sed 's/^/        /'
+        printf '%s\n' "$code" | grep -nE '\b(SELECT|INSERT|UPDATE|DELETE)\s+(\*|FROM|INTO|[A-Za-z_`"'"'"'])' | head -1 | sed 's/^/        /'
         hits=$((hits+1))
         ;;
     esac

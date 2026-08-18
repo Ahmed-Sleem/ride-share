@@ -1,16 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════════
-   Identity HTTP surface. Thin — all logic lives in the application layer.
+   Identity HTTP surface — thin. All logic lives in the application layer.
    Unknown fields are rejected by the global validation pipe; errors carry
-   translation keys (never prose) via the single exception filter.
+   translation keys (never prose) via the single exception filter. Auth
+   endpoints are rate-limited tighter than the global default (OWASP: login,
+   OTP and reset are brute-force magnets).
    ══════════════════════════════════════════════════════════════════════ */
 import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  UseGuards,
+  Body, Controller, Get, Post, Req, UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
 import { IdentityService } from '../application/identity.service.js';
@@ -19,8 +17,6 @@ import type { Actor, UserRole } from '../contracts/types.js';
 import { STAFF_ROLES } from '../contracts/types.js';
 
 class LoginDto {
-  // phone OR email + password (owner choice). Minimum 3 chars to allow a
-  // phone or an email; the service matches either column.
   @IsString() @MinLength(3) identifier!: string;
   @IsString() @MinLength(1) password!: string;
 }
@@ -52,6 +48,24 @@ class CreateStaffDto {
   @IsIn([...STAFF_ROLES]) role!: UserRole;
 }
 
+class EmailRequestDto {
+  @IsEmail() email!: string;
+}
+
+class EmailVerifyDto {
+  @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
+}
+
+class ResetRequestDto {
+  @IsString() @MinLength(3) identifier!: string;
+}
+
+class ResetConfirmDto {
+  @IsString() @MinLength(3) identifier!: string;
+  @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
+  @IsString() @MinLength(12) newPassword!: string;
+}
+
 type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
@@ -59,23 +73,39 @@ export class IdentityController {
   constructor(private readonly identity: IdentityService) {}
 
   @Post('auth/login')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   login(@Body() dto: LoginDto) {
     return this.identity.staffLogin(dto.identifier, dto.password);
   }
 
   @Post('auth/otp/request')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   requestOtp(@Body() dto: OtpRequestDto) {
-    return this.identity.riderRequestOtp(dto.phone).then(() => ({ ok: true }));
+    return this.identity.riderRequestOtp(dto.phone);
   }
 
   @Post('auth/otp/verify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   verifyOtp(@Body() dto: OtpVerifyDto) {
     return this.identity.riderVerifyOtp(dto.phone, dto.code, dto.name);
   }
 
   @Post('auth/refresh')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   refresh(@Body() dto: RefreshDto) {
     return this.identity.refresh(dto.refreshToken);
+  }
+
+  @Post('auth/reset/request')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  requestReset(@Body() dto: ResetRequestDto) {
+    return this.identity.requestPasswordReset(dto.identifier);
+  }
+
+  @Post('auth/reset/confirm')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  confirmReset(@Body() dto: ResetConfirmDto) {
+    return this.identity.resetPassword(dto.identifier, dto.code, dto.newPassword);
   }
 
   @Get('me')
@@ -90,6 +120,20 @@ export class IdentityController {
     return this.identity
       .changePassword(req.actor!.id, dto.current, dto.next)
       .then(() => ({ ok: true }));
+  }
+
+  @Post('me/email/request')
+  @UseGuards(IdentityGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  requestEmail(@Req() req: ReqWithActor, @Body() dto: EmailRequestDto) {
+    return this.identity.requestEmailVerification(req.actor!, dto.email);
+  }
+
+  @Post('me/email/verify')
+  @UseGuards(IdentityGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  verifyEmail(@Req() req: ReqWithActor, @Body() dto: EmailVerifyDto) {
+    return this.identity.verifyEmail(req.actor!, dto.code);
   }
 
   @Post('admin/staff')

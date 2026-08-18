@@ -44,6 +44,8 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY --from=pruner /repo/out/json/ .
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=pruner /repo/out/full/ .
+# Migrations ship with the api image so AUTO_MIGRATE can run them on boot.
+COPY infra/migrations ./infra/migrations
 COPY --from=builder /repo/apps/${PROJECT}/dist ./apps/${PROJECT}/dist
 # Ship build output and the runtime entry only — strip source and tests.
 RUN rm -rf apps/*/src packages/*/src 2>/dev/null || true \

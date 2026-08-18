@@ -11,10 +11,21 @@ import helmet from '@fastify/helmet';
 import { AppModule } from './app.module.js';
 import { loadEnv } from './config/env.js';
 import { createLogger, PinoLoggerService } from './common/logging/logger.js';
+import { runMigrations } from './db/migrate.js';
 
 async function bootstrap(): Promise<void> {
   const env = loadEnv();
   const logger = createLogger(env.LOG_LEVEL);
+
+  // Migrations before anything else — the schema is the only way it changes.
+  if (env.AUTO_MIGRATE !== 'false') {
+    try {
+      await runMigrations(env.DATABASE_URL, (m) => logger.info(m), env.MIGRATIONS_DIR);
+    } catch (err) {
+      logger.error({ msg: 'migration failed', err });
+      process.exit(1);
+    }
+  }
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,

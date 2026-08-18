@@ -540,6 +540,45 @@ group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
   ok("enterApp lands on the role's default page", t.w.S.page===t.w.DEFAULT_PAGE.manager, t.w.S.page);
 }
 
+group("M1 — VERIFICATION & RECOVERY (reset, email, resend)");
+{
+  const t=boot();
+
+  // the staff sign-in shows a forgot-password link, and the flow has a card
+  t.w.S.view="auth"; t.w.S.authTab="staff"; t.w.S.authMode="signin"; t.w.S.forgot=null; t.w.render();
+  ok("sign-in shows the forgot-password link",
+     [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.forgotPassword)));
+  t.w.S.forgot="identify"; t.w.render();
+  ok("forgot-password card renders", !!t.q(".authwrap__card"));
+  ok("forgot-password asks for the identifier", !!t.q("#reset-identifier"));
+
+  t.w.S.forgot="code"; t.w.render();
+  ok("reset code step asks for code + new password",
+     !!t.q("#reset-code") && !!t.q("#reset-password"));
+
+  t.w.S.forgot=null;
+
+  // email verification section in the rider profile (no email yet)
+  t.w.S.view="app"; t.w.S.authed=true; t.w.S.user={id:"u1",role:"rider",name:"Nour",email:null,emailVerified:false};
+  t.w.S.role="rider"; t.w.S.page="profile"; t.w.render();
+  ok("profile shows the email input when unset", !!t.q("#em-addr"));
+
+  t.w.S.user={id:"u1",role:"rider",name:"Nour",email:"nour@x.com",emailVerified:false};
+  t.w.render();
+  ok("unverified email shows a code input", !!t.q("#em-code"));
+
+  t.w.S.user={id:"u1",role:"rider",name:"Nour",email:"nour@x.com",emailVerified:true};
+  t.w.render();
+  ok("verified email shows the verified chip",
+     (t.txt().includes(t.w.T.en.emailVerified) || t.txt().includes(t.w.T.ar.emailVerified)));
+
+  // resend button is disabled during the 60s cooldown
+  t.w.S.view="auth"; t.w.S.authTab="rider"; t.w.S.authMode="signin"; t.w.S.authStep="otp";
+  t.w.S.authPhone="+201000000000"; t.w.S.resendUntil=Date.now()+50000; t.w.render();
+  const rb=[...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.resendIn));
+  ok("resend button shows a countdown and is disabled", !!rb && rb.hasAttribute("disabled"));
+}
+
 group("BUILD INTEGRITY");
 {
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),

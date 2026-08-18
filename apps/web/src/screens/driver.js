@@ -141,6 +141,7 @@ function driverProfile(){                                     // D-40
     $("div",{class:"stack grow gap1"},
       $("strong",{class:"t-head",text:DATA.vehicle.driver}),
       $("div",{class:"t-cap",text:`★ ${DATA.vehicle.rating} · ${DATA.vehicle.plate}`}))));
+  w.append(emailSection());
   w.append(Card("card--tight", $("div",{class:"t-micro",text:t("vehicle")}), VehicleId(DATA.vehicle)));
   w.append($("div",{class:"rowgroup"},
     Row({icon:"globe", title:t("language"), right:langSeg()}),

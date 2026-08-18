@@ -40,21 +40,35 @@ JWT_SECRET=9aa8b56fdffc9833e440a0dd2f2801b7779faa57116c0f954b3f62e958528bd8
 CORS_ORIGINS=
 THROTTLE_TTL=60000
 THROTTLE_LIMIT=100
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=replace-with-a-strong-password
+AUTO_MIGRATE=true
 ```
 
 - `DATABASE_URL` is a reference variable — no credentials pasted. The service
-  name in the reference must match what Railway names the database service
-  (default: `Postgres`).
+  name must match what Railway names the database service (default: `Postgres`).
+- `ADMIN_EMAIL` + `ADMIN_PASSWORD` seed the ONE bootstrap admin on first boot
+  (idempotent). Change the password from inside the app afterwards.
+- `AUTO_MIGRATE=true` runs migrations before the app starts (single-instance
+  path) — the schema is created automatically, no manual step.
 - `JWT_SECRET`: the value above is pre-generated; treat it as a secret.
 - `CORS_ORIGINS` starts empty (allow all + a log warning); set it to the web
   service's public domain once it has one.
+- **Optional — email verification & password reset by email:** set `SMTP_HOST`,
+  `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM`.
+  Without SMTP, development logs the code and production refuses email sends
+  (honest, no fake). SMS OTP: set `SMS_API_KEY` when a provider key exists.
 - Leave `PAYMOB_*` unset until M3.
 
 **`web`** (from the repo):
 
 ```
 PORT=8080
+API_INTERNAL_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3000
 ```
+
+`API_INTERNAL_URL` wires the web server's `/v1/*` proxy to the api service over
+the private network (no CORS, no key in the client).
 
 **`Postgres`**: no variables needed — Railway provisions credentials and
 exposes `DATABASE_URL` automatically.

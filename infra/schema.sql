@@ -19,14 +19,6 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT driver_profiles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'under_review'::text, 'approved'::text, 'rejected'::text])))
 );
-CREATE TABLE public.otps (
-id uuid DEFAULT gen_random_uuid() NOT NULL,
-phone text NOT NULL,
-code_hash text NOT NULL,
-attempts integer DEFAULT 0 NOT NULL,
-expires_at timestamp with time zone NOT NULL,
-created_at timestamp with time zone DEFAULT now() NOT NULL
-);
 CREATE TABLE public.pgmigrations (
 id integer NOT NULL,
 name character varying(255) NOT NULL,
@@ -58,6 +50,7 @@ password_hash text,
 status text DEFAULT 'active'::text NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
+email_verified_at timestamp with time zone,
 CONSTRAINT users_role_check CHECK ((role = ANY (ARRAY['rider'::text, 'driver'::text, 'operations'::text, 'manager'::text, 'support'::text, 'super_admin'::text]))),
 CONSTRAINT users_status_check CHECK ((status = ANY (ARRAY['active'::text, 'suspended'::text, 'pending_verification'::text])))
 );
@@ -73,6 +66,21 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT vehicles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'under_review'::text, 'approved'::text, 'rejected'::text, 'suspended'::text, 'retired'::text])))
 );
+CREATE TABLE public.verification_codes (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+kind text NOT NULL,
+channel text NOT NULL,
+target text NOT NULL,
+code_hash text NOT NULL,
+attempts integer DEFAULT 0 NOT NULL,
+last_sent_at timestamp with time zone DEFAULT now() NOT NULL,
+last_attempt_at timestamp with time zone,
+expires_at timestamp with time zone NOT NULL,
+consumed_at timestamp with time zone,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT verification_codes_channel_check CHECK ((channel = ANY (ARRAY['sms'::text, 'email'::text]))),
+CONSTRAINT verification_codes_kind_check CHECK ((kind = ANY (ARRAY['sms_login'::text, 'email_verify'::text, 'password_reset'::text])))
+);
 ALTER TABLE ONLY public.pgmigrations ALTER COLUMN id SET DEFAULT nextval('public.pgmigrations_id_seq'::regclass);
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
@@ -80,8 +88,6 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_key UNIQUE (user_id);
-ALTER TABLE ONLY public.otps
-ADD CONSTRAINT otps_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.sessions
@@ -96,9 +102,11 @@ ALTER TABLE ONLY public.vehicles
 ADD CONSTRAINT vehicles_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.vehicles
 ADD CONSTRAINT vehicles_plate_key UNIQUE (plate);
+ALTER TABLE ONLY public.verification_codes
+ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
-CREATE INDEX otps_phone_idx ON public.otps USING btree (phone);
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
+CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.driver_profiles

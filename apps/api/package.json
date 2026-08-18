@@ -14,7 +14,9 @@
   "dependencies": {
     "zod": "catalog:",
     "pg": "catalog:",
+    "node-pg-migrate": "catalog:",
     "jose": "catalog:",
+    "nodemailer": "catalog:",
     "pino": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
@@ -32,6 +34,7 @@
     "typescript": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "@types/nodemailer": "catalog:",
     "eslint": "catalog:",
     "@eslint/js": "catalog:",
     "typescript-eslint": "catalog:",

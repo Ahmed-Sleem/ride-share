@@ -22,6 +22,8 @@ const S = {
   view:"boot",                                // boot | landing | auth | app
   authed:false, user:null,                    // user comes from the session
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
+  forgot:null, resendUntil:null, lockedUntil:null,
+  emailToast:null, emailToastKind:"info",
   authStep:"phone", authBusy:false, authError:null,
   authPhone:"", authName:"",
   page:"home", sheet:null, toast:null,
@@ -116,6 +118,7 @@ const ICON = {
   walk:'<circle cx="13" cy="4" r="2"/><path d="m9 21 2-6-2-3V8l4-1 3 4 3 1"/><path d="m11 15-2 6M15 12l1 9"/>',
   bus:'<rect x="4" y="4" width="16" height="13" rx="2"/><path d="M4 10h16M7 21v-2M17 21v-2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',
   phone:'<path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 6.5 6.5L17 13l4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4 5.2 2 2 0 0 1 6.5 3z"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   card:'<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>',
   bell:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>',

@@ -65,4 +65,12 @@ export class SessionsRepository {
   async revoke(id: string): Promise<void> {
     await this.pool.query('UPDATE sessions SET revoked_at = now() WHERE id = $1', [id]);
   }
+
+  /** Revoke every session for a user — used on password change/reset. */
+  async revokeAllForUser(userId: string): Promise<void> {
+    await this.pool.query(
+      'UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL',
+      [userId]
+    );
+  }
 }

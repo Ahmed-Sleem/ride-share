@@ -30,6 +30,9 @@ catalogs:
     '@types/node':
       specifier: 20.19.43
       version: 20.19.43
+    '@types/nodemailer':
+      specifier: 8.0.1
+      version: 8.0.1
     '@types/pg':
       specifier: 8.23.1
       version: 8.23.1
@@ -57,6 +60,9 @@ catalogs:
     node-pg-migrate:
       specifier: 9.0.0
       version: 9.0.0
+    nodemailer:
+      specifier: 9.0.5
+      version: 9.0.5
     pg:
       specifier: 8.23.0
       version: 8.23.0
@@ -128,6 +134,12 @@ importers:
       jose:
         specifier: 'catalog:'
         version: 6.2.9
+      node-pg-migrate:
+        specifier: 'catalog:'
+        version: 9.0.0(@types/pg@8.23.1)(pg@8.23.0)
+      nodemailer:
+        specifier: 'catalog:'
+        version: 9.0.5
       pg:
         specifier: 'catalog:'
         version: 8.23.0
@@ -156,6 +168,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 20.19.43
+      '@types/nodemailer':
+        specifier: 'catalog:'
+        version: 8.0.1
       '@types/pg':
         specifier: 'catalog:'
         version: 8.23.1
@@ -413,6 +428,9 @@ packages:
 
   '@types/node@26.2.0':
     resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
+
+  '@types/nodemailer@8.0.1':
+    resolution: {integrity: sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==}
 
   '@types/pg@8.23.1':
     resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
@@ -1175,6 +1193,10 @@ packages:
     peerDependenciesMeta:
       '@types/pg':
         optional: true
+
+  nodemailer@9.0.5:
+    resolution: {integrity: sha512-wvjiKvjczmsN7U/8006JOdXubgBk2XFAbioDMbT+sM7cPs0QrhJTa6KBRX7P5REGGkDcLUz/EarWidb8G8C1jQ==}
+    engines: {node: '>=6.0.0'}
 
   nwsapi@2.2.24:
     resolution: {integrity: sha512-7YRhZ3jS45LwmSCT4b2sVFHt/WuovaktDU07QrtOBY2PXskss5a9jfmR9jptyumwXST+rFjrmppMY1KT/yn35A==}
@@ -1949,6 +1971,10 @@ snapshots:
   '@types/node@26.2.0':
     dependencies:
       undici-types: 8.3.0
+
+  '@types/nodemailer@8.0.1':
+    dependencies:
+      '@types/node': 26.2.0
 
   '@types/pg@8.23.1':
     dependencies:
@@ -2740,6 +2766,8 @@ snapshots:
       yargs: 18.0.0
     optionalDependencies:
       '@types/pg': 8.23.1
+
+  nodemailer@9.0.5: {}
 
   nwsapi@2.2.24: {}
 

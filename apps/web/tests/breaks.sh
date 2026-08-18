@@ -215,6 +215,16 @@ run_break "demo role switcher returns" src/shell/app.js \
   's|  wrap.append(themeToggle());|  wrap.append($("select",{class:"chip", attrs:{"aria-label":"Role"}}));\n  wrap.append(themeToggle());|' \
   "no demo role switcher"
 
+
+# ── M1.5: verification & recovery UI ─────────────────────────────────────
+run_break "forgot-password link removed" src/screens/auth.js \
+  's|S.authMode==="signin" \&\& S.authTab==="staff"|false \&\& S.authTab==="staff"|' \
+  "sign-in shows the forgot-password link"
+
+run_break "resend button removed" src/screens/auth.js \
+  's|resendButton(),|null,|' \
+  "resend button shows a countdown and is disabled"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

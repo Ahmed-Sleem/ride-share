@@ -11,7 +11,7 @@ export class UsersRepository {
 
   async findByEmail(email: string): Promise<UserRow | null> {
     const { rows } = await this.pool.query<UserRow>(
-      'SELECT id, email, phone, name, role, password_hash, status, created_at FROM users WHERE email = $1',
+      'SELECT id, email, phone, name, role, password_hash, status, email_verified_at, created_at FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
     return rows[0] ?? null;
@@ -20,7 +20,7 @@ export class UsersRepository {
   /** Staff sign-in identifier: phone OR email (the owner chose "either"). */
   async findByIdentifier(identifier: string): Promise<UserRow | null> {
     const { rows } = await this.pool.query<UserRow>(
-      `SELECT id, email, phone, name, role, password_hash, status, created_at
+      `SELECT id, email, phone, name, role, password_hash, status, email_verified_at, created_at
        FROM users WHERE phone = $1 OR email = lower($1)`,
       [identifier]
     );
@@ -29,7 +29,7 @@ export class UsersRepository {
 
   async findByPhone(phone: string): Promise<UserRow | null> {
     const { rows } = await this.pool.query<UserRow>(
-      'SELECT id, email, phone, name, role, password_hash, status, created_at FROM users WHERE phone = $1',
+      'SELECT id, email, phone, name, role, password_hash, status, email_verified_at, created_at FROM users WHERE phone = $1',
       [phone]
     );
     return rows[0] ?? null;
@@ -37,7 +37,7 @@ export class UsersRepository {
 
   async findById(id: string): Promise<UserRow | null> {
     const { rows } = await this.pool.query<UserRow>(
-      'SELECT id, email, phone, name, role, password_hash, status, created_at FROM users WHERE id = $1',
+      'SELECT id, email, phone, name, role, password_hash, status, email_verified_at, created_at FROM users WHERE id = $1',
       [id]
     );
     return rows[0] ?? null;
@@ -53,7 +53,7 @@ export class UsersRepository {
     const { rows } = await this.pool.query<UserRow>(
       `INSERT INTO users (email, phone, name, role, password_hash)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, phone, name, role, password_hash, status, created_at`,
+       RETURNING id, email, phone, name, role, password_hash, status, email_verified_at, created_at`,
       [
         input.email ? input.email.toLowerCase() : null,
         input.phone ?? null,
@@ -72,9 +72,24 @@ export class UsersRepository {
     ]);
   }
 
+  /** Set the email (unverified) — verification is a separate step. */
+  async setEmail(id: string, email: string): Promise<void> {
+    await this.pool.query(
+      "UPDATE users SET email = $1, email_verified_at = NULL, updated_at = now() WHERE id = $2",
+      [email.toLowerCase(), id]
+    );
+  }
+
+  async markEmailVerified(id: string): Promise<void> {
+    await this.pool.query(
+      'UPDATE users SET email_verified_at = now(), updated_at = now() WHERE id = $1',
+      [id]
+    );
+  }
+
   async list(): Promise<UserRow[]> {
     const { rows } = await this.pool.query<UserRow>(
-      'SELECT id, email, phone, name, role, password_hash, status, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, email, phone, name, role, password_hash, status, email_verified_at, created_at FROM users ORDER BY created_at DESC'
     );
     return rows;
   }

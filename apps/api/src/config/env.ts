@@ -39,6 +39,22 @@ export const envSchema = {
   // SMS provider key for rider OTP. Development logs the code server-side;
   // production refuses OTP issuance without a provider (honest, no fake).
   SMS_API_KEY: z.string().optional(),
+
+  // ── email (verification + password reset) ────────────────────────────
+  // SMTP config; when SMTP_HOST is unset, development logs the code and
+  // production refuses email sends (same honest-sandbox rule as SMS).
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  EMAIL_FROM: z.string().optional(),
+
+  // ── migrations on boot ────────────────────────────────────────────────
+  // 'true' (default) runs `node-pg-migrate up` before the app starts — the
+  // single-instance Railway path. Set 'false' to migrate out-of-band.
+  AUTO_MIGRATE: z.enum(['true', 'false']).default('true'),
+  MIGRATIONS_DIR: z.string().optional(),
 } as const;
 
 const schema = z.object(envSchema);

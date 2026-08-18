@@ -335,3 +335,16 @@
   session persistence + sign-out; rail collapsed by default; demo role switcher removed; super_admin
   Administration section (staff + audit). API client + /v1 proxy. 218 unit / 14 axe / 6,904 layout /
   44 breaks green. Local only — push pending confirmation.
+
+## 2026-08-18 — M1.5: verification & recovery (email codes, password reset, cooldown/lockout)
+
+- DEC-189/DEC-190/DEC-191. Generalized `verification_codes` table (replaces `otps`): sms_login,
+  email_verify, password_reset; 60s resend cooldown; 3 failed attempts → 1-hour lockout; codes
+  hashed at rest. Email verification + password reset (no user enumeration; resets revoke all
+  sessions). SMTP via nodemailer behind the one Notifications interface; honest sandbox.
+- Migrations now run on boot (AUTO_MIGRATE) and ship inside the api image (Dockerfile copies
+  infra/migrations) — the deployed DB gets the schema automatically.
+- Route-level throttling on auth endpoints (login 10/min, OTP request 5/min, reset 5/min, …).
+- Frontend: resend button with a live 60s countdown, 1-hour lockout banner, forgot-password flow,
+  email verification section in rider/driver profiles. 226 web / 63 api / 14 axe / 6,904 layout /
+  46 breaks green; live-proven end to end.

@@ -198,12 +198,15 @@ function riderSafety(){                                       // R-60
 }
 
 function riderProfile(){                                      // R-80
+  const u = S.user || {};
+  const initials = (u.name || "?").slice(0,1).toUpperCase();
   const w=$("div",{class:"main"});
   w.append($("div",{class:"row gap3"},
-    $("div",{class:"avatar avatar--lg",text:DATA.user.initials}),
+    $("div",{class:"avatar avatar--lg",text:initials}),
     $("div",{class:"stack grow gap1"},
-      $("strong",{class:"t-head",text:DATA.user.name}),
-      $("div",{class:"t-cap ltr",text:DATA.user.phone}))));
+      $("strong",{class:"t-head",text:u.name || "—"}),
+      $("div",{class:"t-cap ltr",text:u.phone || u.email || "—"}))));
+  w.append(emailSection());
   w.append($("div",{class:"rowgroup"},
     Row({icon:"globe", title:t("language"), right:langSeg()}),
     Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
@@ -215,6 +218,63 @@ function riderProfile(){                                      // R-80
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));
   return w;
+}
+
+/* Email verification — real API flow: add email → code → verified. Shared by
+   rider and driver profiles. Honest states, no fake success. */
+function emailSection() {
+  const u = S.user || {};
+  const card = Card("card--tight", $("div",{class:"t-micro",text:t("verifyEmailTitle")}));
+  if (u.email && u.emailVerified) {
+    card.append(Row({ icon:"check", title:$("span",{class:"ltr",text:u.email}),
+      right:Chip({label:t("emailVerified"), kind:"ok"}), bordered:true }));
+  } else {
+    if (!u.email) {
+      card.append(
+        $("div",{class:"field"},
+          $("label",{attrs:{for:"em-addr"}, text:t("emailLabel")}),
+          $("input",{class:"input ltr", attrs:{id:"em-addr", type:"email", "aria-label":t("emailLabel")}})),
+        Btn({label:t("sendVerify"), block:true, on:()=>emailSend()}));
+    } else {
+      card.append(Row({ icon:"mail", title:$("span",{class:"ltr",text:u.email}),
+        right:Chip({label:t("emailNotVerified"), kind:"warn"}), bordered:true }));
+      card.append(
+        $("div",{class:"field"},
+          $("label",{attrs:{for:"em-code"}, text:t("codeLabel")}),
+          $("input",{class:"input ltr", attrs:{id:"em-code", type:"text", "aria-label":t("codeLabel")}})),
+        $("div",{class:"row gap2"},
+          Btn({label:t("verifyEmailAction"), block:true, on:()=>emailVerify()}),
+          Btn({label:t("emailResend"), kind:"ghost", on:()=>emailSend()})));
+    }
+  }
+  if (S.emailToast) card.append(Banner(S.emailToastKind || "info", S.emailToast));
+  return card;
+}
+
+async function emailSend() {
+  const email = val("em-addr") || (S.user && S.user.email);
+  if (!email) { S.emailToast = "validation.email"; S.emailToastKind = "danger"; render(); return; }
+  try {
+    await API.requestEmailVerification(email);
+    S.emailToast = t("emailSaved"); S.emailToastKind = "ok";
+    // refresh the session user so the email shows immediately
+    const me = await API.me();
+    if (me && me.actor && API.user()) {
+      API.saveSession({ ...API.user(), email, emailVerified:false });
+      S.user = API.user();
+    }
+    render();
+  } catch(e) { S.emailToast = e.messageKey || "error.internal"; S.emailToastKind = "danger"; render(); }
+}
+
+async function emailVerify() {
+  try {
+    await API.verifyEmail(val("em-code"));
+    S.emailToast = t("emailDone"); S.emailToastKind = "ok";
+    API.saveSession({ ...API.user(), emailVerified:true });
+    S.user = API.user();
+    render();
+  } catch(e) { S.emailToast = e.messageKey || "error.internal"; S.emailToastKind = "danger"; render(); }
 }
 
 /* shared small controls */

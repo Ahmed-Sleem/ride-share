@@ -81,6 +81,13 @@ const API = {
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
 
+  /* ── verification & recovery (DEC-189) ────────────────────────────── */
+  requestEmailVerification: (email) => API.request("POST", "/me/email/request", { email }),
+  verifyEmail: (code) => API.request("POST", "/me/email/verify", { code }),
+  requestPasswordReset: (identifier) => API.request("POST", "/auth/reset/request", { identifier }),
+  confirmPasswordReset: (identifier, code, newPassword) =>
+    API.request("POST", "/auth/reset/confirm", { identifier, code, newPassword }),
+
   /* ── staff administration (super_admin) ───────────────────────────── */
   listStaff: () => API.request("GET", "/admin/staff"),
   createStaff: (payload) => API.request("POST", "/admin/staff", payload),

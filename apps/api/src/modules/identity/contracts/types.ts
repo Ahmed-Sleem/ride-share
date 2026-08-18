@@ -24,6 +24,7 @@ export interface UserRow {
   role: UserRole;
   password_hash: string | null;
   status: 'active' | 'suspended' | 'pending_verification';
+  email_verified_at?: Date | null;
   created_at: Date;
 }
 
@@ -34,6 +35,7 @@ export interface PublicUser {
   name: string;
   role: UserRole;
   status: string;
+  emailVerified: boolean;
 }
 
 /** The authenticated actor attached to the request by the JWT guard. */
@@ -50,5 +52,6 @@ export function toPublicUser(u: UserRow): PublicUser {
     name: u.name,
     role: u.role,
     status: u.status,
+    emailVerified: !!u.email_verified_at,
   };
 }
