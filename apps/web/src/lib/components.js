@@ -7,17 +7,30 @@ const storeGet = k => { try{ return localStorage.getItem(k); }catch(e){ return n
 const storeSet = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
 
 /* resolvedTheme: S.theme is a preference ("auto"|"light"|"dark"); the resolved
-   value is what the DOM actually renders. Auto follows the device setting. */
-const resolvedTheme = () => {
+   value is what the DOM actually renders. Auto = the device's prefers-color-
+   scheme when the OS signals it, otherwise the local time of day (06:00–18:00
+   light, night dark). An explicit choice always wins. */
+const resolvedTheme = (now = new Date()) => {
   if (S.theme === "auto") {
-    try { return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
-      ? "dark" : "light"; } catch(e){ return "light"; }
+    try {
+      if (window.matchMedia) {
+        if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+        if (window.matchMedia("(prefers-color-scheme: light)").matches) return "light";
+      }
+    } catch (e) { /* no matchMedia — fall through to time */ }
+    const h = now.getHours();
+    return (h >= 6 && h < 18) ? "light" : "dark";
   }
   return S.theme;
 };
 
+const detectLang = () => {
+  try { return (navigator && navigator.language && String(navigator.language).toLowerCase().startsWith("ar"))
+    ? "ar" : "en"; } catch(e){ return "en"; }
+};
+
 const S = {
-  role:"rider", lang:"en", theme: storeGet("rs.theme") || "auto",
+  role:"rider", lang: storeGet("rs.lang") || detectLang(), theme: storeGet("rs.theme") || "auto",
   rail: storeGet("rs.rail") ?? "collapsed",   // collapsed is the DEFAULT (owner)
   view:"boot",                                // boot | landing | auth | app
   authed:false, user:null,                    // user comes from the session

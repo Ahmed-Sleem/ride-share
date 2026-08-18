@@ -74,6 +74,7 @@ en:{
   slide3T:"Book before you walk", slide3B:"Know when it leaves and that there's a seat.",
   slide4T:"Track your ride live", slide4B:"See where your vehicle is and when it arrives.",
   landingFoot:"Shared rides, fixed routes, one price.",
+  creditsVectors:"Vectors by Streamline",
   landingBack:"Back to sign in",
   /* auth */
   signIn:"Sign in", createAccount:"Create account",
@@ -180,6 +181,7 @@ ar:{
   slide3T:"احجز قبل ما تمشي", slide3B:"اعرف موعد القيام وأن فيه مقعد.",
   slide4T:"تتبع رحلتك مباشرة", slide4B:"شاهد مركبتك واعرف موعد وصولها.",
   landingFoot:"ركوبات مشتركة، مسارات ثابتة، سعر واحد.",
+  creditsVectors:"Vectors by Streamline",
   landingBack:"العودة لتسجيل الدخول",
   /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",

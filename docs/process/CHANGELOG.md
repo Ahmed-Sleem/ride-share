@@ -391,3 +391,23 @@
   capped/centered; a second accent glow adds depth in both themes.
 - 230 unit / 47 landing / 14 axe / 6904 layout / 47 breaks / 8 layout-breaks green; verified live
   (slideshow advances 0→1, tooltip on hover, dark glow = full 1440px viewport, zero console errors).
+
+## 2026-08-18 — feat(web): stickers, colored slideshow, RTL numbers, auto lang/theme, theme-toggle fix
+
+- Sticker packs unpacked and reviewed; chose the Streamline "Manila" doodle set (youth/lively,
+  two-colour, recolorable). 7 stickers copied to apps/web/assets/stickers/ and recolored at build
+  time to tokens (navy→--sticker-ink, blue→per-slide --sticker-accent) so they follow the theme and
+  palette. Hero slideshow: each slide is now a coloured card (violet/coral/sky/mint tint) with its
+  sticker; "How it works" cards carry a 112px sticker illustration; tooltips carry number + title +
+  full description; step numbers stay on the physical right in BOTH languages.
+- Sign-up audit: "ماذا تريد أن تفعل؟" was a 13px caption — now a real heading; role cards have
+  16px titles / 15px subtitles with proper RTL wrap.
+- Text-box focus/selection border is now the accent colour in both themes (--focus:var(--accent)).
+- THEME-TOGGLE BUG fixed: the pre-paint script set data-theme on <html> while render() only set
+  <body>, so the stale <html> attribute won and the toggle "did nothing". render() now keeps both
+  in sync.
+- Auto language (device language) + auto theme (device prefers-color-scheme, else time-of-day
+  06:00–18:00) with persistent explicit overrides.
+- Footer credits: "Vectors by Streamline" (free license permits commercial use without attribution;
+  added as good practice).
+- 233 unit / 14 axe / 47 landing / 6904 layout / 47 breaks / 8 layout-breaks green.

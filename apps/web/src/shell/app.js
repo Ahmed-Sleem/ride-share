@@ -225,7 +225,12 @@ function navItem(p, extra){
 function render(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
-  document.body.dataset.theme   = resolvedTheme();
+  // One source of truth: the pre-paint script sets <html data-theme>, so
+  // render() must update <html> too — if only <body> is set, the stale <html>
+  // attribute wins and the theme toggle "does nothing" (reported bug).
+  const theme = resolvedTheme();
+  document.documentElement.dataset.theme = theme;
+  document.body.dataset.theme = theme;
 
   const root=document.getElementById("root");
   root.innerHTML="";

@@ -24,7 +24,7 @@ function signupAuth() {
   let body;
   if (S.authStep === "choose") {
     body = $("div",{class:"stack gap3"},
-      $("p",{class:"t-cap center",text:t("signupChoose")}),
+      $("div",{class:"t-head center",text:t("signupChoose")}),
       roleChoice("rider", t("roleLabel.rider"), t("signupRiderSub"), "wallet"),
       roleChoice("driver", t("roleLabel.driver"), t("signupDriverSub"), "bus"));
   } else if (S.authStep === "phone") {
@@ -96,9 +96,9 @@ function roleChoice(role, title, sub, iconName) {
   return $("button",{class:"rolechoice", attrs:{type:"button","aria-pressed":String(S.signupRole===role)},
     on:{click:()=>{ S.signupRole=role; S.authStep="phone"; S.authError=null; render(); }}},
     $("div",{class:"rolechoice__ico"}, icon(iconName)),
-    $("div",{class:"stack gap1 grow"},
-      $("strong",{text:title}),
-      $("div",{class:"t-cap",text:sub})),
+    $("div",{class:"rolechoice__text"},
+      $("strong",{class:"rolechoice__title",text:title}),
+      $("div",{class:"rolechoice__sub",text:sub})),
     icon("fwd","chev"));
 }
 

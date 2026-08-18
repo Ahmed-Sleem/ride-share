@@ -414,3 +414,25 @@ output) — see the engineering standard §3.3 and §4.
   tests/breaks.sh (+slideshow break case).
 - Verified: 230 unit / 47 landing / 14 axe / 6904 layout / 47 breaks / 8 layout-breaks; live browser:
   slideshow 0→1 after 4s, tooltip on hover, dark hero glow 1440==1440, zero console errors.
+
+## 2026-08-18 — M1.7: stickers, colored slideshow, RTL numbers, auto lang/theme, theme-toggle fix
+
+- What: (1) chose Streamline "Manila" over the other two packs (lively/youth doodle style, 2 colours,
+  recolorable); copied 7 stickers to apps/web/assets/stickers/ (outside src so the token check skips
+  them); build.js reads+minifies+recolors (fill=#001434→style fill:var(--sticker-ink);
+  #3D9CFB→var(--sticker-accent)) and injects STICKERS — the bundle stays hex-free. (2) Slideshow cards
+  colored per palette (tinted bg + accent) with a sticker each; how-it-works cards carry a 112px
+  sticker; tooltips now show number+title+full description. (3) Step numbers use physical right:
+  (no RTL mirror). (4) Sign-up: the question was a 13px caption → now a heading; role cards enlarged
+  (16/15px) with robust wrap. (5) Focus ring = accent in both themes. (6) THEME-TOGGLE BUG: html vs
+  body data-theme disagreement — render() now sets both. (7) Auto lang (navigator.language) + auto
+  theme (prefers-color-scheme, else time-of-day) with stored overrides. (8) Footer "Vectors by
+  Streamline" (not legally required — Streamline free license allows commercial use without
+  attribution — added as good practice).
+- Files: apps/web/{build.js, assets/stickers/* (7), src/screens/landing.js, src/screens/auth.js,
+  src/lib/components.js, src/shell/app.js, src/styles/shell.html, src/data/content.js,
+  tests/unit.test.js, tests/landing.test.js, docs/process/checklists/M1_landing_polish.md}.
+- Verified: 233 unit (new auto-theme/auto-lang + focus-accent assertions), 14 axe, 47 landing,
+  6,904 layout, 47 breaks, 8 layout-breaks; live browser audit: 4 colored slides with stickers,
+  112px step art, tooltip with number+title+body, theme flips html==body ×4, AR sign-up heading +
+  role cards (16/15px, no overflow), zero console errors; bundle hex-free.

@@ -207,7 +207,7 @@ group("ACCENT COLOUR HAS A JOB");
   ok("accent soft/border variants exist",
      /--accent-soft:/.test(CSS) && /--accent-border:/.test(CSS));
   ok("on-accent is defined, not guessed", /--on-accent:/.test(CSS));
-  ok("focus ring uses the primary brand", /--focus:var\(--violet-500\)/.test(CSS));
+  ok("focus ring uses the accent colour", /--focus:var\(--accent\)/.test(CSS));
   ok("accent and brand are different roles",
      !/--accent:var\(--violet/.test(CSS) && !/--brand:var\(--coral/.test(CSS));
   ok("primitives are two-layer (raw violet ramp exists)",
@@ -226,13 +226,24 @@ group("THEME — AUTO FOLLOWS THE SYSTEM, MANUAL OVERRIDES");
   const t=boot();
   ok("default preference is auto", t.w.S.theme==="auto", String(t.w.S.theme));
   t.w.S.theme="auto";
-  const sysDark = !!(t.w.matchMedia && t.w.matchMedia("(prefers-color-scheme: dark)").matches);
-  ok("auto resolves to the system preference", t.w.resolvedTheme()===(sysDark?"dark":"light"),
-     `${t.w.resolvedTheme()} vs ${sysDark?"dark":"light"}`);
+
+  // stub matchMedia so the device-signal branch is deterministic
+  t.w.matchMedia = (q) => ({ matches: q.includes("dark"), addEventListener(){}, removeEventListener(){} });
+  ok("auto resolves to the device preference (dark)", t.w.resolvedTheme()==="dark");
+  t.w.matchMedia = (q) => ({ matches: !q.includes("dark"), addEventListener(){}, removeEventListener(){} });
+  ok("auto resolves to the device preference (light)", t.w.resolvedTheme()==="light");
+
+  // with no device signal, auto falls back to time of day
+  t.w.matchMedia = undefined;
+  ok("no device signal → night is dark", t.w.resolvedTheme(new Date(2026,0,1,3))==="dark");
+  ok("no device signal → midday is light", t.w.resolvedTheme(new Date(2026,0,1,12))==="light");
+
   t.w.S.theme="dark";
   ok("manual dark is honoured", t.w.resolvedTheme()==="dark");
   t.w.S.theme="light"; t.w.render();
-  ok("render applies the resolved theme", t.w.document.body.dataset.theme==="light");
+  ok("render applies the resolved theme to html AND body",
+     t.w.document.documentElement.dataset.theme==="light" &&
+     t.w.document.body.dataset.theme==="light");
   t.go("rider","profile");
   const segs=t.all(".seg");
   ok("profile offers three theme options",

@@ -97,7 +97,7 @@
 
   /* ── SEMANTIC: LINES + FOCUS ────────────────────────────────────────── */
   --line:var(--ink-200); --line-strong:var(--ink-300);
-  --focus:var(--violet-500); --focus-width:2px; --focus-offset:2px;
+  --focus:var(--accent); --focus-width:2px; --focus-offset:2px;
   --scrim:rgba(12,18,26,.5);
 
   /* ── MAP ────────────────────────────────────────────────────────────── */
@@ -177,7 +177,7 @@
   --info:var(--blue-400); --info-bg:var(--blue-950);
   --offline:#9AA5B2;
   --line:#252B33; --line-strong:#333B45;
-  --focus:var(--violet-300); --scrim:rgba(0,0,0,.66);
+  --focus:var(--accent); --scrim:rgba(0,0,0,.66);
   --map-land:#15181F; --map-water:#16303F; --map-park:#1B2A1E;
   --map-road:#2A313A; --map-road-minor:#222831; --map-building:#232932;
   --sh-1:0 1px 2px rgba(0,0,0,.4);
@@ -788,9 +788,16 @@ select.input{cursor:pointer}
   border-radius:var(--r-lg);padding:var(--s5);transition:transform var(--fast) var(--ease),
   border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
 .landing__step:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--sh-2)}
-.landing__stepbody{display:flex;flex-direction:row;align-items:flex-start;gap:var(--s4);min-width:0;
+.landing__stepbody{display:flex;flex-direction:row;align-items:center;gap:var(--s4);min-width:0;
   padding-top:var(--s2)}
 .landing__steptext{flex:1;min-width:0}
+/* stickers: theme-aware ink + per-card accent (set on the parent) */
+.sticker{--sticker-ink:var(--text-primary);--sticker-accent:var(--accent);
+  display:grid;place-items:center}
+.sticker svg{width:100%;height:100%;display:block}
+/* bigger illustration in the how-it-works cards */
+.landing__stepart{width:112px;height:112px;flex:none;--sticker-ink:var(--text-primary)}
+.landing__step .landing__stepart{--sticker-accent:var(--accent)}
 /* number stays on the PHYSICAL right in both languages (owner request) */
 .landing__stepnum{position:absolute;top:var(--s4);right:var(--s4);
   font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
@@ -802,8 +809,11 @@ select.input{cursor:pointer}
   background:var(--bg-base);border:1px solid var(--line);border-radius:var(--r-md);
   padding:var(--s3) var(--s4);box-shadow:var(--sh-3);max-width:min(280px,calc(100% - 16px))}
 .step-tip--on{opacity:1;transform:translateY(0) scale(1)}
+.step-tip__num{display:inline-block;font-size:var(--f-cap);font-weight:var(--fw-bold);
+  color:var(--on-accent);background:var(--accent);border-radius:var(--r-full);
+  width:22px;height:22px;line-height:22px;text-align:center;margin-bottom:var(--s1)}
 .step-tip strong{display:block;color:var(--accent-text);font-size:var(--f-cap);margin-bottom:2px}
-.step-tip span{color:var(--text-primary);font-size:var(--f-cap);line-height:var(--lh-snug)}
+.step-tip__body{display:block;color:var(--text-primary);font-size:var(--f-cap);line-height:var(--lh-snug)}
 .landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
   text-align:center;padding:var(--s7) var(--s6)}
 .landing__foot{padding:var(--s5) var(--s6) calc(var(--s5) + var(--safe-b));
@@ -820,15 +830,19 @@ select.input{cursor:pointer}
   transition:opacity var(--med) var(--ease),transform var(--med) var(--ease);
   pointer-events:none}
 .slide--on{opacity:1;transform:none;pointer-events:auto}
-.slide__ico{width:74px;height:74px;border-radius:var(--r-full);display:grid;place-items:center}
-.slide__ico svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.8;
-  stroke-linecap:round;stroke-linejoin:round}
+/* each slide is a coloured card from the palette (tinted bg in both themes) */
+.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent 70%)}
+.slide--coral {background:linear-gradient(160deg,var(--pop-coral-bg),transparent 70%)}
+.slide--sky   {background:linear-gradient(160deg,var(--pop-sky-bg),transparent 70%)}
+.slide--mint  {background:linear-gradient(160deg,var(--pop-mint-bg),transparent 70%)}
+.slide--violet{--sticker-accent:var(--violet-500)}
+.slide--coral {--sticker-accent:var(--coral-500)}
+.slide--sky   {--sticker-accent:var(--sky-500)}
+.slide--mint  {--sticker-accent:var(--mint-500)}
+.slide__sticker{width:150px;height:150px;filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--ink-900) 18%,transparent))}
+.slide__sticker svg{width:100%;height:100%;display:block}
 .slide__t{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0}
 .slide__b{font-size:var(--f-lg);color:var(--text-secondary);max-width:34ch;margin:0;line-height:var(--lh-body)}
-.slide--violet .slide__ico{background:var(--brand-soft);color:var(--brand)}
-.slide--coral  .slide__ico{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
-.slide--sky    .slide__ico{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
-.slide--mint   .slide__ico{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
 .slideshow__dots{position:absolute;bottom:var(--s4);inset-inline:0;display:flex;
   justify-content:center;gap:var(--s2);z-index:5}
 .slide-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--line-strong);
@@ -878,10 +892,14 @@ select.input{cursor:pointer}
   background var(--fast) var(--ease),transform var(--fast) var(--ease)}
 .rolechoice:hover{border-color:var(--accent);transform:translateY(-1px)}
 .rolechoice[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
-.rolechoice__ico{width:44px;height:44px;border-radius:var(--r-md);display:grid;place-items:center;
+.rolechoice__ico{width:48px;height:48px;border-radius:var(--r-md);display:grid;place-items:center;
   flex:none;background:var(--accent-soft);color:var(--accent-text)}
-.rolechoice__ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;
+.rolechoice__ico svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
+.rolechoice__text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rolechoice__title{font-size:var(--f-lg);font-weight:var(--fw-bold);color:var(--text-primary);
+  line-height:var(--lh-snug)}
+.rolechoice__sub{font-size:var(--f-body);color:var(--text-secondary);line-height:var(--lh-snug)}
 .rolechoice .chev{color:var(--text-muted)}
 [dir="rtl"] .rolechoice .chev{transform:scaleX(-1)}
 
