@@ -225,6 +225,12 @@ run_break "resend button removed" src/screens/auth.js \
   's|resendButton(()=>identify()),|null,|' \
   "resend button shows a countdown and is disabled"
 
+
+# ── M1.7: hero slideshow ──────────────────────────────────────────────────
+run_break "slideshow removed from the hero" src/screens/landing.js \
+  's|heroSlideshow()))),|null))),|' \
+  "landing shows the features slideshow"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

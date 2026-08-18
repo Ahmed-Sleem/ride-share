@@ -399,3 +399,18 @@ output) — see the engineering standard §3.3 and §4.
   + width break case).
 - Verified: landing 46/46 (7 viewports + RTL), layout 6,904, unit 229, a11y 14, breaks 46,
   layout-breaks 8 (the width break caught 4 assertions when reintroduced). pnpm verify green.
+
+## 2026-08-18 — feat(web): landing slideshow hero + user-facing features + hover tooltips
+
+- What: replaced the hero map with a feature slideshow (heroSlideshow: 4 slides, crossfade,
+  4s auto-advance, pause on hover, dots); swapped the two internal features for "Save on every
+  ride" + "Track your ride live" (Swvl/Careem/Uber value props); added feature hover animation
+  (lift + shine ::after sweep + icon pop); step cards now show a cursor-following floating tooltip
+  (mousemove-positioned .step-tip, tap-to-toggle on touch); step numbers use physical `right:` so
+  they stay put in RTL; the hero is full-bleed (gradient spans the viewport in light and dark) with
+  capped inner content and a second accent glow.
+- Files: apps/web/src/screens/landing.js, src/styles/shell.html, src/data/content.js,
+  tests/unit.test.js (+slideshow assertions), tests/landing.test.js (+RTL number-side check),
+  tests/breaks.sh (+slideshow break case).
+- Verified: 230 unit / 47 landing / 14 axe / 6904 layout / 47 breaks / 8 layout-breaks; live browser:
+  slideshow 0→1 after 4s, tooltip on hover, dark hero glow 1440==1440, zero console errors.

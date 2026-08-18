@@ -517,7 +517,8 @@ group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
   t.w.S.view="landing"; t.w.render();
   ok("landing renders the hero", !!t.q(".landing__hero"));
   ok("landing has both CTAs", t.all(".landing .btn").length>=2, String(t.all(".landing .btn").length));
-  ok("landing shows the map illustration", !!t.q(".landing__heromap .mapsvg"));
+  ok("landing shows the features slideshow", !!t.q(".slideshow"));
+  ok("slideshow has exactly 4 slides", t.all(".slideshow .slide").length===4, String(t.all(".slideshow .slide").length));
 
   t.w.S.view="auth"; t.w.render();
   ok("auth renders a card", !!t.q(".authwrap__card"));

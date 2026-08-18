@@ -376,3 +376,18 @@
 - New browser test suite `tests/landing.test.js` (46 assertions): landing fills width, hero ≥ 1
   viewport, no horizontal overflow, centered auth card, RTL parity — across 7 viewports 320→2560.
   Wired into verify.sh, and a break case proves the width regression fails the suite.
+
+## 2026-08-18 — feat(web): landing slideshow hero, user-facing features, hover tooltips
+
+- Hero map replaced with an auto-advancing feature slideshow (same palette, pause on hover, dot
+  controls, crossfade) — modern youth style.
+- The two internal features ("Any city, one system", "Arabic first") replaced with end-user value
+  props grounded in Swvl/Careem/Uber research: "Save on every ride" (fixed routes cost a fraction
+  of ride-hailing) and "Track your ride live".
+- Feature cards animate (lift + shine sweep + icon pop); the "how it works" steps reveal a floating
+  tooltip that follows the cursor (tap-to-toggle on touch); step numbers stay on the physical right
+  in BOTH languages (RTL no longer mirrors them).
+- Hero is now full-bleed (the glow spans the whole viewport in light AND dark); content stays
+  capped/centered; a second accent glow adds depth in both themes.
+- 230 unit / 47 landing / 14 axe / 6904 layout / 47 breaks / 8 layout-breaks green; verified live
+  (slideshow advances 0→1, tooltip on hover, dark glow = full 1440px viewport, zero console errors).

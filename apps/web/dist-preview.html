@@ -733,25 +733,26 @@ select.input{cursor:pointer}
 .landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .landing__body{width:100%;max-width:var(--landing-max);margin-inline:auto;
   display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
-.landing__hero{position:relative;padding:var(--s8) var(--s6) var(--s6);
-  min-height:calc(100dvh - 61px);display:flex;flex-direction:column;
-  justify-content:center;gap:var(--s6);
-  background:radial-gradient(120% 90% at 50% 0%,var(--brand-soft),transparent 70%)}
+/* hero is FULL-BLEED: the glow spans the whole viewport in both themes */
+.landing__hero{position:relative;width:100%;min-width:0;padding:var(--s8) var(--s6) var(--s6);
+  display:flex;justify-content:center;
+  background:
+    radial-gradient(60% 70% at 20% 10%,var(--accent-soft),transparent 60%),
+    radial-gradient(130% 100% at 50% 0%,var(--brand-soft),transparent 72%)}
+.landing__heroinner{width:100%;max-width:var(--landing-max);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:var(--s6);min-height:calc(100dvh - 120px)}
 .landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4);
   min-width:0}
 .landing__title{font-size:clamp(var(--f-title),4.5vw,var(--f-display));font-weight:var(--fw-bold);
   line-height:var(--lh-tight);letter-spacing:-.02em;max-width:16ch;margin:0}
 .landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
-.landing__heromap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);
-  box-shadow:var(--sh-2);width:100%;min-width:0}
-.landing__heromap .mapbox{height:min(440px,52dvh)!important}
+.landing__heroslide{width:100%;max-width:560px;min-width:0}
 
-/* tablet and up: hero becomes two columns — text start-aligned, map beside it */
+/* tablet and up: hero becomes two columns — text start-aligned, slideshow beside it */
 @media (min-width:840px){
-  .landing__hero{flex-direction:row;align-items:center;gap:var(--s8)}
-  .landing__herotext{flex:1 1 42%;align-items:flex-start;text-align:start}
-  .landing__heromap{flex:1 1 52%;width:auto}
-  .landing__heromap .mapbox{height:min(520px,60dvh)!important}
+  .landing__heroinner{flex-direction:row;align-items:center;gap:var(--s8)}
+  .landing__herotext{flex:1 1 44%;align-items:flex-start;text-align:start}
+  .landing__heroslide{flex:1 1 52%;max-width:none}
 }
 .landing__section{padding:0 var(--s6)}
 .landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
@@ -759,40 +760,90 @@ select.input{cursor:pointer}
 .landing__p{color:var(--text-secondary);margin:var(--s1) 0 0;line-height:var(--lh-body)}
 .landing__grid{display:grid;gap:var(--s4);
   grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
-.landing__feature{background:var(--bg-raised);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:var(--s5);display:flex;flex-direction:column}
+.landing__feature{position:relative;overflow:hidden;background:var(--bg-raised);
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s5);
+  display:flex;flex-direction:column;
+  transition:transform var(--fast) var(--ease),border-color var(--fast) var(--ease),
+             box-shadow var(--fast) var(--ease)}
+.landing__feature:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--sh-2)}
+.landing__feature::after{content:"";position:absolute;inset:0;border-radius:inherit;
+  background:linear-gradient(105deg,transparent 40%,color-mix(in srgb,var(--ink-0) 22%,transparent) 50%,transparent 60%);
+  transform:translateX(-130%);transition:transform var(--med) var(--ease);pointer-events:none}
+.landing__feature:hover::after{transform:translateX(130%)}
+[dir="rtl"] .landing__feature::after{transform:translateX(130%)}
+[dir="rtl"] .landing__feature:hover::after{transform:translateX(-130%)}
 .landing__featureico{width:44px;height:44px;border-radius:var(--r-md);display:grid;
-  place-items:center;flex:none}
+  place-items:center;flex:none;transition:transform var(--fast) var(--ease)}
+.landing__feature:hover .landing__featureico{transform:scale(1.12) rotate(-5deg)}
 .landing__featureico svg{width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .landing__featureico--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
 .landing__featureico--sky{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
 .landing__featureico--pink{background:var(--pop-pink-bg);color:var(--pop-pink-text)}
 .landing__featureico--lime{background:var(--pop-lime-bg);color:var(--pop-lime-text)}
+.landing__featureico--coral{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
 .landing__steps{display:grid;gap:var(--s4);
   grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
 .landing__step{position:relative;background:var(--bg-raised);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:var(--s5)}
-.landing__stepbody{display:flex;flex-direction:row;align-items:flex-start;gap:var(--s4);min-width:0}
+  border-radius:var(--r-lg);padding:var(--s5);transition:transform var(--fast) var(--ease),
+  border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+.landing__step:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--sh-2)}
+.landing__stepbody{display:flex;flex-direction:row;align-items:flex-start;gap:var(--s4);min-width:0;
+  padding-top:var(--s2)}
 .landing__steptext{flex:1;min-width:0}
-.landing__stepnum{position:absolute;top:var(--s4);inset-inline-end:var(--s4);
+/* number stays on the PHYSICAL right in both languages (owner request) */
+.landing__stepnum{position:absolute;top:var(--s4);right:var(--s4);
   font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
+[dir="rtl"] .landing__stepbody{padding-top:var(--s5)} /* clear the number in RTL */
+/* cursor-following floating tooltip for the step detail */
+.step-tip{position:absolute;z-index:20;pointer-events:none;opacity:0;
+  transform:translateY(8px) scale(.95);transition:opacity var(--fast) var(--ease),
+  transform var(--fast) var(--ease);
+  background:var(--bg-base);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s3) var(--s4);box-shadow:var(--sh-3);max-width:min(280px,calc(100% - 16px))}
+.step-tip--on{opacity:1;transform:translateY(0) scale(1)}
+.step-tip strong{display:block;color:var(--accent-text);font-size:var(--f-cap);margin-bottom:2px}
+.step-tip span{color:var(--text-primary);font-size:var(--f-cap);line-height:var(--lh-snug)}
 .landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
   text-align:center;padding:var(--s7) var(--s6)}
 .landing__foot{padding:var(--s5) var(--s6) calc(var(--s5) + var(--safe-b));
   border-top:1px solid var(--line);text-align:center;color:var(--text-muted)}
 
-/* reveal-on-scroll + hero parallax — scroll-driven, transform/opacity only,
-   wrapped so reduced motion (and unsupported browsers) get the static page */
+/* ── the hero slideshow (modern, youth, same palette) ──────────────────── */
+.slideshow{position:relative;width:100%;min-width:0;border-radius:var(--r-xl);
+  border:1px solid var(--line);overflow:hidden;background:var(--bg-raised);
+  box-shadow:var(--sh-2)}
+.slideshow__track{position:relative;height:min(420px,54dvh)}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--s3);text-align:center;padding:var(--s6);
+  opacity:0;transform:translateX(26px) scale(.97);
+  transition:opacity var(--med) var(--ease),transform var(--med) var(--ease);
+  pointer-events:none}
+.slide--on{opacity:1;transform:none;pointer-events:auto}
+.slide__ico{width:74px;height:74px;border-radius:var(--r-full);display:grid;place-items:center}
+.slide__ico svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.slide__t{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0}
+.slide__b{font-size:var(--f-lg);color:var(--text-secondary);max-width:34ch;margin:0;line-height:var(--lh-body)}
+.slide--violet .slide__ico{background:var(--brand-soft);color:var(--brand)}
+.slide--coral  .slide__ico{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
+.slide--sky    .slide__ico{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
+.slide--mint   .slide__ico{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
+.slideshow__dots{position:absolute;bottom:var(--s4);inset-inline:0;display:flex;
+  justify-content:center;gap:var(--s2);z-index:5}
+.slide-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--line-strong);
+  border:0;padding:0;cursor:pointer;transition:background var(--fast) var(--ease),
+  transform var(--fast) var(--ease)}
+.slide-dot--on{background:var(--brand);transform:scale(1.3)}
+
+/* reveal-on-scroll — scroll-driven, transform/opacity only, reduced-motion
+   guarded (the static page is the fallback) */
 @media (prefers-reduced-motion: no-preference){
   @supports (animation-timeline: view()){
     .reveal{animation:revealup linear both;animation-timeline:view();
       animation-range:entry 0% entry 30%}
-    .landing__heromap{animation:heromap linear both;animation-timeline:view();
-      animation-range:cover 0% cover 100%}
   }
   @keyframes revealup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes heromap{from{transform:translateY(-3%)}to{transform:translateY(3%)}}
 }
 
 /* auth — centered card over the page background. width:100% for the same
@@ -950,8 +1001,12 @@ en:{
   landingHow3T:"Board by code", landingHow3B:"Show your boarding code at the stop and ride.",
   landingF1T:"One fixed price", landingF1B:"No surge, no surprises. The fare is the fare.",
   landingF2T:"Book before you walk", landingF2B:"Know when it leaves and whether there's a seat.",
-  landingF3T:"Any city, one system", landingF3B:"Stops, routes and fares are configured per city.",
-  landingF4T:"Arabic first", landingF4B:"Full RTL and both languages, designed in.",
+  landingF3T:"Save on every ride", landingF3B:"Fixed routes cost a fraction of ride-hailing. You keep the difference.",
+  landingF4T:"Track your ride live", landingF4B:"See your vehicle on the map and know exactly when it arrives.",
+  slide1T:"One fixed price", slide1B:"No surge, no surprises — the fare is the fare.",
+  slide2T:"Save on every ride", slide2B:"Fixed routes cost a fraction of ride-hailing.",
+  slide3T:"Book before you walk", slide3B:"Know when it leaves and that there's a seat.",
+  slide4T:"Track your ride live", slide4B:"See where your vehicle is and when it arrives.",
   landingFoot:"Shared rides, fixed routes, one price.",
   landingBack:"Back to sign in",
   /* auth */
@@ -1052,8 +1107,12 @@ ar:{
   landingHow3T:"اركب بالكود", landingHow3B:"اعرض كود الركوب عند المحطة واركب.",
   landingF1T:"سعر ثابت واحد", landingF1B:"لا زيادة مفاجئة ولا مفاجآت. الأجرة هي الأجرة.",
   landingF2T:"احجز قبل ما تمشي", landingF2B:"اعرف موعد القيام وهل فيه مقعد.",
-  landingF3T:"أي مدينة، نظام واحد", landingF3B:"المحطات والمسارات والأسعار تُضبط لكل مدينة.",
-  landingF4T:"العربية أولًا", landingF4B:"دعم كامل لليمين-لليسار واللغتين معًا.",
+  landingF3T:"وفّر في كل رحلة", landingF3B:"المسارات الثابتة تكلف جزءًا بسيطًا من تطبيقات الركوب — الفرق يبقى لك.",
+  landingF4T:"تتبع رحلتك مباشرة", landingF4B:"شاهد مركبتك على الخريطة واعرف موعد وصولها بدقة.",
+  slide1T:"سعر ثابت واحد", slide1B:"لا زيادة مفاجئة ولا مفاجآت — الأجرة هي الأجرة.",
+  slide2T:"وفّر في كل رحلة", slide2B:"المسارات الثابتة تكلف جزءًا بسيطًا من تطبيقات الركوب.",
+  slide3T:"احجز قبل ما تمشي", slide3B:"اعرف موعد القيام وأن فيه مقعد.",
+  slide4T:"تتبع رحلتك مباشرة", slide4B:"شاهد مركبتك واعرف موعد وصولها.",
   landingFoot:"ركوبات مشتركة، مسارات ثابتة، سعر واحد.",
   landingBack:"العودة لتسجيل الدخول",
   /* auth */
@@ -1780,11 +1839,12 @@ async function resolveSession() {
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   Landing page — the front door. Clean, branded, city-agnostic (DEC —
-   "general and suitable for expansion"). One scroller of its own; light/
-   dark and RTL via the shared tokens and logical properties. The hero uses
-   CSS scroll-driven animation (view-timeline) with a reduced-motion
-   fallback — transform/opacity only, no JS scroll handlers.
+   Landing page — the front door. Clean, branded, city-agnostic. The hero is
+   full-bleed (its glow spans the whole viewport) with capped content; the
+   right side is a modern auto-advancing feature slideshow (pause on hover,
+   dot controls). Feature cards animate on hover; the "how it works" steps
+   reveal a cursor-following tooltip. Light/dark + RTL via the shared tokens
+   and logical properties; scroll-driven reveals are reduced-motion guarded.
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
   return $("div",{class:"landing"},
@@ -1792,28 +1852,28 @@ function landing() {
       $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
       $("div",{class:"row gap2"},
         langToggle(), themeToggle())),
-    $("div",{class:"landing__body"},
 
-      /* ── HERO ───────────────────────────────────────────────────────── */
-      $("section",{class:"landing__hero"},
+    /* ── HERO (full-bleed) ───────────────────────────────────────────── */
+    $("section",{class:"landing__hero"},
+      $("div",{class:"landing__heroinner"},
         $("div",{class:"landing__herotext"},
           $("h1",{class:"landing__title",text:t("landingHero")}),
           $("p",{class:"landing__sub",text:t("landingHeroSub")}),
-          $("div",{class:"row gap3 mt4"},
-            Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
-            Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
-        $("div",{class:"landing__heromap"},
-          MapView({h:440, walk:true, route:true, stops:true, vehicle:true, zoom:true, locate:true}))),
+          $("div",{class:"row gap3"},
+            Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="choose"; S.authError=null; render(); }}),
+            Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }}))),
+        $("div",{class:"landing__heroslide"}, heroSlideshow()))),
 
-      /* ── FEATURES ──────────────────────────────────────────────────── */
+    /* ── capped content ──────────────────────────────────────────────── */
+    $("div",{class:"landing__body"},
+
       $("section",{class:"landing__section"},
         $("div",{class:"landing__grid"},
           featureCard("wallet", t("landingF1T"), t("landingF1B"), "mint"),
           featureCard("clock",  t("landingF2T"), t("landingF2B"), "sky"),
-          featureCard("routes", t("landingF3T"), t("landingF3B"), "pink"),
-          featureCard("globe",  t("landingF4T"), t("landingF4B"), "lime"))),
+          featureCard("promos", t("landingF3T"), t("landingF3B"), "coral"),
+          featureCard("livemap",t("landingF4T"), t("landingF4B"), "pink"))),
 
-      /* ── HOW IT WORKS ──────────────────────────────────────────────── */
       $("section",{class:"landing__section"},
         $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
         $("div",{class:"landing__steps"},
@@ -1821,17 +1881,64 @@ function landing() {
           stepCard("2", "seat",   t("landingHow2T"), t("landingHow2B")),
           stepCard("3", "qr",      t("landingHow3T"), t("landingHow3B")))),
 
-      /* ── CTA band ──────────────────────────────────────────────────── */
       $("section",{class:"landing__cta"},
         $("h2",{class:"landing__h2",text:t("landingFoot")}),
         $("div",{class:"row gap3 center"},
-          Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
-          Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
+          Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="choose"; S.authError=null; render(); }}),
+          Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }}))),
 
       $("footer",{class:"landing__foot"},
         $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}))));
 }
 
+/* ── hero slideshow: auto-advancing feature slides, same palette ────────── */
+let slideTimer = null;
+function heroSlideshow() {
+  const slides = [
+    { ic:"wallet",  tone:"violet", title:t("slide1T"), body:t("slide1B") },
+    { ic:"promos",  tone:"coral",  title:t("slide2T"), body:t("slide2B") },
+    { ic:"clock",   tone:"sky",    title:t("slide3T"), body:t("slide3B") },
+    { ic:"livemap", tone:"mint",   title:t("slide4T"), body:t("slide4B") },
+  ];
+  const box = $("div",{class:"slideshow",
+    attrs:{"aria-label":t("landingHowTitle")}});
+  const track = $("div",{class:"slideshow__track"});
+  slides.forEach((s,i)=>{
+    track.append($("div",{class:"slide slide--"+s.tone+(i===0?" slide--on":"")},
+      $("div",{class:"slide__ico"}, icon(s.ic)),
+      $("h3",{class:"slide__t",text:s.title}),
+      $("p",{class:"slide__b",text:s.body})));
+  });
+  const dots = $("div",{class:"slideshow__dots"});
+  slides.forEach((s,i)=> dots.append($("button",{
+    class:"slide-dot"+(i===0?" slide-dot--on":""),
+    attrs:{type:"button","aria-label":String(i+1)},
+    on:{click:()=>slideTo(i)}})));
+  box.append(track, dots);
+
+  // auto-advance; hover pauses. Each landing render clears the previous timer.
+  clearInterval(slideTimer);
+  S.slideIndex = 0;
+  slideTimer = setInterval(()=>{
+    if (S.slidePaused) return;
+    const boxEl = document.querySelector(".slideshow");
+    if (!boxEl) return;
+    slideTo((S.slideIndex + 1) % slides.length);
+  }, 4000);
+  box.addEventListener("mouseenter", ()=>{ S.slidePaused = true; });
+  box.addEventListener("mouseleave", ()=>{ S.slidePaused = false; });
+  return box;
+}
+
+function slideTo(i) {
+  S.slideIndex = i;
+  const box = document.querySelector(".slideshow");
+  if (!box) return;
+  box.querySelectorAll(".slide").forEach((el,k)=> el.classList.toggle("slide--on", k===i));
+  box.querySelectorAll(".slide-dot").forEach((el,k)=> el.classList.toggle("slide-dot--on", k===i));
+}
+
+/* ── feature cards ──────────────────────────────────────────────────────── */
 function featureCard(ic, title, body, tone) {
   return $("div",{class:"landing__feature reveal"},
     $("div",{class:"landing__featureico landing__featureico--"+tone}, icon(ic)),
@@ -1839,14 +1946,28 @@ function featureCard(ic, title, body, tone) {
     $("p",{class:"landing__p",text:body}));
 }
 
+/* ── how-it-works steps: number stays on the SAME side in RTL (physical
+      right), and a floating tooltip follows the cursor on hover ─────────── */
 function stepCard(n, ic, title, body) {
-  return $("div",{class:"landing__step reveal"},
+  const tip = $("div",{class:"step-tip"},
+    $("strong",{text:title}),
+    $("span",{text:body}));
+  const card = $("div",{class:"landing__step reveal"}, tip,
     $("div",{class:"landing__stepnum ltr",text:n}),
     $("div",{class:"landing__stepbody"},
       $("div",{class:"landing__featureico"}, icon(ic)),
       $("div",{class:"landing__steptext"},
-        $("h3",{class:"landing__h3",text:title}),
-        $("p",{class:"landing__p",text:body}))));
+        $("h3",{class:"landing__h3",text:title}))));
+
+  card.addEventListener("mousemove", (e)=>{
+    const r = card.getBoundingClientRect();
+    tip.style.left = Math.min(e.clientX - r.left + 18, r.width - 200) + "px";
+    tip.style.top  = Math.max(e.clientY - r.top - 14, 8) + "px";
+  });
+  card.addEventListener("mouseenter", ()=> tip.classList.add("step-tip--on"));
+  card.addEventListener("mouseleave", ()=> tip.classList.remove("step-tip--on"));
+  card.addEventListener("click", ()=> tip.classList.toggle("step-tip--on")); // touch
+  return card;
 }
 
 function langToggle() {

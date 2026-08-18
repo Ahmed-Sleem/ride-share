@@ -33,7 +33,7 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
       const doc = document.documentElement;
       const landing = document.querySelector('.landing');
       const hero = document.querySelector('.landing__hero');
-      const map = document.querySelector('.landing__heromap');
+      const map = document.querySelector('.slideshow');
       const lb = landing ? landing.getBoundingClientRect() : null;
       const hb = hero ? hero.getBoundingClientRect() : null;
       return {
@@ -52,7 +52,7 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
     ok(`${id}: landing starts at the left edge`, m.landingL >= -1, String(m.landingL));
     ok(`${id}: no horizontal overflow`, m.docScrollW <= m.vw + 1, `${m.docScrollW} > ${m.vw}`);
     ok(`${id}: hero is at least one viewport tall`, m.heroH >= m.vh - 80, `${m.heroH} vs ${m.vh}`);
-    ok(`${id}: hero map renders`, m.hasMap);
+    ok(`${id}: hero slideshow renders`, m.hasMap);
 
     // auth card centered
     await page.evaluate(() => { S.view = 'auth'; S.authMode = 'signin'; S.loginMethod = null; render(); });
@@ -80,6 +80,14 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
   ok('arabic: dir is rtl', rtl.dir === 'rtl', rtl.dir);
   ok('arabic: landing fills width', Math.abs(rtl.landingW - rtl.clientW) <= 1, `${rtl.landingW}`);
   ok('arabic: no horizontal overflow', rtl.scrollW <= rtl.clientW + 1, `${rtl.scrollW}`);
+
+  // step numbers stay on the same (physical right) side in both languages
+  const numPos = await page.evaluate(() => {
+    const c = document.querySelector('.landing__step').getBoundingClientRect();
+    const n = document.querySelector('.landing__stepnum').getBoundingClientRect();
+    return { right: Math.round(c.right - n.right) };
+  });
+  ok('arabic: step number stays on the right', numPos.right >= 0 && numPos.right < 60, `${numPos.right}px`);
 
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
