@@ -727,14 +727,17 @@ select.input{cursor:pointer}
 .landing__brand svg{width:26px;height:26px;flex:none}
 .landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .landing__body{display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
-.landing__hero{position:relative;padding:var(--s8) var(--s6) 0;
+.landing__hero{position:relative;padding:var(--s8) var(--s6) var(--s6);
+  min-height:calc(100dvh - 61px);display:flex;flex-direction:column;
+  justify-content:center;gap:var(--s6);
   background:radial-gradient(120% 90% at 50% 0%,var(--brand-soft),transparent 70%)}
 .landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
 .landing__title{font-size:var(--f-display);font-weight:var(--fw-bold);line-height:var(--lh-tight);
   letter-spacing:-.02em;max-width:16ch;margin:0}
 .landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
 .landing__heromap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);
-  box-shadow:var(--sh-2);margin-top:var(--s6)}
+  box-shadow:var(--sh-2);width:100%}
+.landing__heromap .mapbox{height:min(440px,52dvh)!important}
 .landing__section{padding:0 var(--s6)}
 .landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
 .landing__h3{font-size:var(--f-head);font-weight:var(--fw-bold);margin:var(--s2) 0 0}
@@ -755,6 +758,8 @@ select.input{cursor:pointer}
   grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
 .landing__step{position:relative;background:var(--bg-raised);border:1px solid var(--line);
   border-radius:var(--r-lg);padding:var(--s5)}
+.landing__stepbody{display:flex;flex-direction:row;align-items:flex-start;gap:var(--s4);min-width:0}
+.landing__steptext{flex:1;min-width:0}
 .landing__stepnum{position:absolute;top:var(--s4);inset-inline-end:var(--s4);
   font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
 .landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
@@ -776,8 +781,8 @@ select.input{cursor:pointer}
 }
 
 /* auth — centered card over the page background */
-.authwrap{height:100%;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;
-  padding:var(--s7) var(--s4) var(--s6);background:var(--bg-page);
+.authwrap{height:100%;overflow-y:auto;display:flex;align-items:center;justify-content:center;
+  padding:var(--s6) var(--s4);background:var(--bg-page);
   -webkit-overflow-scrolling:touch}
 .authwrap__card{position:relative;width:min(440px,100%);display:flex;flex-direction:column;
   gap:var(--s4);background:var(--bg-base);border:1px solid var(--line);
@@ -797,6 +802,40 @@ select.input{cursor:pointer}
   transform var(--fast) var(--ease)}
 .metric--link:hover{border-color:var(--accent);transform:translateY(-1px)}
 @keyframes pagein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* sign-up role choice cards (rider / driver) */
+.rolechoice{display:flex;align-items:center;gap:var(--s4);width:100%;min-width:0;
+  padding:var(--s4);border-radius:var(--r-lg);border:1px solid var(--line);
+  background:var(--bg-raised);text-align:start;transition:border-color var(--fast) var(--ease),
+  background var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.rolechoice:hover{border-color:var(--accent);transform:translateY(-1px)}
+.rolechoice[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.rolechoice__ico{width:44px;height:44px;border-radius:var(--r-md);display:grid;place-items:center;
+  flex:none;background:var(--accent-soft);color:var(--accent-text)}
+.rolechoice__ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.rolechoice .chev{color:var(--text-muted)}
+[dir="rtl"] .rolechoice .chev{transform:scaleX(-1)}
+
+/* map: hero zoom crop + real-map + locate */
+.mapbox--zoom .mapsvg{transform:scale(1.22);transform-origin:center}
+.mapbox--real{background:var(--map-land)}
+.mapbox__canvas{position:absolute;inset:0}
+.mapbox__locate{position:absolute;bottom:var(--s3);inset-inline-start:var(--s3);z-index:5;
+  display:inline-flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);
+  border-radius:var(--r-full);background:var(--bg-base);color:var(--text-primary);
+  box-shadow:var(--sh-2);font-size:var(--f-cap);font-weight:var(--fw-semi)}
+.mapbox__locate svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* accent-coloured text selection (owner request) */
+::selection{background:var(--accent);color:var(--on-accent)}
+::-moz-selection{background:var(--accent);color:var(--on-accent)}
+
+/* scrollbars are present but invisible (owner request): every scroller stays
+   scrollable, the visual bar is hidden. */
+*{scrollbar-width:none}
+*::-webkit-scrollbar{width:0;height:0;display:none}
 
 </style>
 </head>

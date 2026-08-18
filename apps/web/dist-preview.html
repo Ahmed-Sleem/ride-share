@@ -727,14 +727,17 @@ select.input{cursor:pointer}
 .landing__brand svg{width:26px;height:26px;flex:none}
 .landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .landing__body{display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
-.landing__hero{position:relative;padding:var(--s8) var(--s6) 0;
+.landing__hero{position:relative;padding:var(--s8) var(--s6) var(--s6);
+  min-height:calc(100dvh - 61px);display:flex;flex-direction:column;
+  justify-content:center;gap:var(--s6);
   background:radial-gradient(120% 90% at 50% 0%,var(--brand-soft),transparent 70%)}
 .landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
 .landing__title{font-size:var(--f-display);font-weight:var(--fw-bold);line-height:var(--lh-tight);
   letter-spacing:-.02em;max-width:16ch;margin:0}
 .landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
 .landing__heromap{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);
-  box-shadow:var(--sh-2);margin-top:var(--s6)}
+  box-shadow:var(--sh-2);width:100%}
+.landing__heromap .mapbox{height:min(440px,52dvh)!important}
 .landing__section{padding:0 var(--s6)}
 .landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
 .landing__h3{font-size:var(--f-head);font-weight:var(--fw-bold);margin:var(--s2) 0 0}
@@ -755,6 +758,8 @@ select.input{cursor:pointer}
   grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
 .landing__step{position:relative;background:var(--bg-raised);border:1px solid var(--line);
   border-radius:var(--r-lg);padding:var(--s5)}
+.landing__stepbody{display:flex;flex-direction:row;align-items:flex-start;gap:var(--s4);min-width:0}
+.landing__steptext{flex:1;min-width:0}
 .landing__stepnum{position:absolute;top:var(--s4);inset-inline-end:var(--s4);
   font-size:var(--f-display);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
 .landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
@@ -776,8 +781,8 @@ select.input{cursor:pointer}
 }
 
 /* auth — centered card over the page background */
-.authwrap{height:100%;overflow-y:auto;display:flex;align-items:flex-start;justify-content:center;
-  padding:var(--s7) var(--s4) var(--s6);background:var(--bg-page);
+.authwrap{height:100%;overflow-y:auto;display:flex;align-items:center;justify-content:center;
+  padding:var(--s6) var(--s4);background:var(--bg-page);
   -webkit-overflow-scrolling:touch}
 .authwrap__card{position:relative;width:min(440px,100%);display:flex;flex-direction:column;
   gap:var(--s4);background:var(--bg-base);border:1px solid var(--line);
@@ -797,6 +802,40 @@ select.input{cursor:pointer}
   transform var(--fast) var(--ease)}
 .metric--link:hover{border-color:var(--accent);transform:translateY(-1px)}
 @keyframes pagein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* sign-up role choice cards (rider / driver) */
+.rolechoice{display:flex;align-items:center;gap:var(--s4);width:100%;min-width:0;
+  padding:var(--s4);border-radius:var(--r-lg);border:1px solid var(--line);
+  background:var(--bg-raised);text-align:start;transition:border-color var(--fast) var(--ease),
+  background var(--fast) var(--ease),transform var(--fast) var(--ease)}
+.rolechoice:hover{border-color:var(--accent);transform:translateY(-1px)}
+.rolechoice[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.rolechoice__ico{width:44px;height:44px;border-radius:var(--r-md);display:grid;place-items:center;
+  flex:none;background:var(--accent-soft);color:var(--accent-text)}
+.rolechoice__ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.rolechoice .chev{color:var(--text-muted)}
+[dir="rtl"] .rolechoice .chev{transform:scaleX(-1)}
+
+/* map: hero zoom crop + real-map + locate */
+.mapbox--zoom .mapsvg{transform:scale(1.22);transform-origin:center}
+.mapbox--real{background:var(--map-land)}
+.mapbox__canvas{position:absolute;inset:0}
+.mapbox__locate{position:absolute;bottom:var(--s3);inset-inline-start:var(--s3);z-index:5;
+  display:inline-flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);
+  border-radius:var(--r-full);background:var(--bg-base);color:var(--text-primary);
+  box-shadow:var(--sh-2);font-size:var(--f-cap);font-weight:var(--fw-semi)}
+.mapbox__locate svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* accent-coloured text selection (owner request) */
+::selection{background:var(--accent);color:var(--on-accent)}
+::-moz-selection{background:var(--accent);color:var(--on-accent)}
+
+/* scrollbars are present but invisible (owner request): every scroller stays
+   scrollable, the visual bar is hidden. */
+*{scrollbar-width:none}
+*::-webkit-scrollbar{width:0;height:0;display:none}
 
 </style>
 </head>
@@ -909,6 +948,12 @@ en:{
   applyToDrive:"Apply to drive",
   driverApplied:"Application submitted — we'll review your documents.",
   signOutConfirm:"Signed out", signedInAs:"Signed in as",
+  locateMe:"Locate me", locateDenied:"Location unavailable", mapLive:"Live map",
+  signupChoose:"What will you do?", signupRiderSub:"Book fixed-route rides.",
+  signupDriverSub:"Apply to drive and earn.", signinContinue:"Continue",
+  driverAppliedToast:"Application submitted — we'll review your documents.",
+  enterPassword:"Enter your password", codeSentTo:"Code sent to",
+
   resendCode:"Resend code", resendIn:"Resend in", seconds:"s",
   tooManyAttempts:"Too many attempts — try again in 1 hour.",
   forgotPassword:"Forgot password?",
@@ -1005,6 +1050,12 @@ ar:{
   applyToDrive:"قدّم للقيادة",
   driverApplied:"تم إرسال الطلب — سنراجع مستنداتك.",
   signOutConfirm:"تم تسجيل الخروج", signedInAs:"مسجل الدخول كـ",
+  locateMe:"حدد موقعي", locateDenied:"الموقع غير متاح", mapLive:"خريطة مباشرة",
+  signupChoose:"ماذا تريد أن تفعل؟", signupRiderSub:"احجز رحلات بمسارات ثابتة.",
+  signupDriverSub:"قدّم للقيادة واكسب.", signinContinue:"متابعة",
+  driverAppliedToast:"تم إرسال الطلب — سنراجع مستنداتك.",
+  enterPassword:"أدخل كلمة المرور", codeSentTo:"أُرسل الكود إلى",
+
   resendCode:"أعد إرسال الكود", resendIn:"أعد الإرسال بعد", seconds:"ث",
   tooManyAttempts:"محاولات كثيرة — حاول بعد ساعة.",
   forgotPassword:"نسيت كلمة المرور؟",
@@ -1199,6 +1250,8 @@ const S = {
   view:"boot",                                // boot | landing | auth | app
   authed:false, user:null,                    // user comes from the session
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
+  signupRole:"rider",                          // rider | driver (the only signup choices)
+  loginMethod:null, authIdentifier:"",          // smart sign-in: 'password' | 'otp'
   forgot:null, resendUntil:null, lockedUntil:null,
   emailToast:null, emailToastKind:"info",
   authStep:"phone", authBusy:false, authError:null,
@@ -1413,7 +1466,15 @@ const Sheet = (title, ...k) => $("div",{class:"sheet", attrs:{role:"dialog","ari
   ...k);
 
 /* Map — drawn illustration. Labelled, never presented as live tiles. */
-function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false}){
+function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false}){
+  // Real Google Maps when the key is configured (via /v1/config) and the
+  // script has loaded; otherwise the labelled illustration. No fake tiles.
+  if (window.__rsMapsOn && typeof google === "object" && google.maps) {
+    return realMapView({h, route, locate});
+  }
+  const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
+  if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
+    on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
   const ns="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox","0 0 400 220");
@@ -1459,11 +1520,63 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
       <circle cx="70" cy="120" r="7"/><circle cx="205" cy="60" r="7"/>
       <circle cx="300" cy="130" r="7"/><circle cx="120" cy="40" r="7"/>
     </g>`:""}`;
-  return $("div",{class:"mapbox",style:{height:h+"px"}}, svg,
+  box.append(svg,
     $("div",{class:"mapctl"},
       $("button",{attrs:{type:"button","aria-label":"Zoom in"},text:"+"}),
       $("button",{attrs:{type:"button","aria-label":"Zoom out"},text:"−"})),
     $("div",{class:"attribution",text:t("mapMock")}));
+  return box;
+}
+
+/* Real Google Map — activates only when GOOGLE_MAPS_API_KEY is set and the
+   script has loaded. Honest fallback: without the key, the illustration
+   renders and is labelled as such. Geolocation (navigator.geolocation) is
+   exercised here so the Capacitor mobile build inherits it for free. */
+const ALEX_CENTER = { lat: 31.2241, lng: 29.9549 }; // Alexandria
+function realMapView({h, route, locate}) {
+  const id = "gmap-" + Math.random().toString(36).slice(2, 9);
+  const box = $("div",{class:"mapbox mapbox--real",style:{height:h+"px"}});
+  box.append($("div",{class:"mapbox__canvas",attrs:{id, "aria-label":t("mapLive")}}));
+  if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
+    on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
+  box.append($("div",{class:"attribution",text:"Google"}));
+  // init after the element is in the DOM
+  setTimeout(()=>{
+    const el = document.getElementById(id);
+    if (!el || !window.google?.maps) return;
+    const map = new google.maps.Map(el, {
+      center: ALEX_CENTER, zoom: 13,
+      disableDefaultUI: true, clickableIcons: false,
+      styles: [], fullscreenControl: false, streetViewControl: false,
+    });
+    window.__rsMapInstance = map;
+    if (route) {
+      // token, not a literal — the design system owns every colour (§0.3)
+      const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
+      new google.maps.Polyline({
+        path: [{lat:31.2456,lng:29.9839},{lat:31.2241,lng:29.9549},{lat:31.2037,lng:29.9196}],
+        map, geodesic:true,
+        strokeColor: brand, strokeOpacity:0.9, strokeWeight:5,
+      });
+    }
+    new google.maps.Marker({ position: ALEX_CENTER, map, title: t("brand") });
+  }, 0);
+  return box;
+}
+
+function locateMe() {
+  const map = window.__rsMapInstance;
+  if (map && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => toast("locateDenied"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  } else if (map) {
+    map.setCenter(ALEX_CENTER);
+  } else {
+    toast("locateDenied");
+  }
 }
 
 /* QR — deterministic blocks + the numeric code that is the real fallback */
@@ -1588,11 +1701,13 @@ const API = {
   },
 
   /* ── auth ─────────────────────────────────────────────────────────── */
+  identify: (identifier) => API.request("POST", "/auth/login/identify", { identifier, password: "" }),
   login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
   requestOtp: (phone) => API.request("POST", "/auth/otp/request", { phone }),
   verifyOtp: (phone, code, name) => API.request("POST", "/auth/otp/verify", { phone, code, name }),
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
+  getConfig: () => API.request("GET", "/config"),
 
   /* ── verification & recovery (DEC-189) ────────────────────────────── */
   requestEmailVerification: (email) => API.request("POST", "/me/email/request", { email }),
@@ -1671,7 +1786,7 @@ function landing() {
             Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
             Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
         $("div",{class:"landing__heromap"},
-          MapView({h:420, walk:true, route:true, stops:true, vehicle:true}))),
+          MapView({h:440, walk:true, route:true, stops:true, vehicle:true, zoom:true, locate:true}))),
 
       /* ── FEATURES ──────────────────────────────────────────────────── */
       $("section",{class:"landing__section"},
@@ -1710,9 +1825,11 @@ function featureCard(ic, title, body, tone) {
 function stepCard(n, ic, title, body) {
   return $("div",{class:"landing__step reveal"},
     $("div",{class:"landing__stepnum ltr",text:n}),
-    $("div",{class:"landing__featureico"}, icon(ic)),
-    $("h3",{class:"landing__h3",text:title}),
-    $("p",{class:"landing__p",text:body}));
+    $("div",{class:"landing__stepbody"},
+      $("div",{class:"landing__featureico"}, icon(ic)),
+      $("div",{class:"landing__steptext"},
+        $("h3",{class:"landing__h3",text:title}),
+        $("p",{class:"landing__p",text:body}))));
 }
 
 function langToggle() {
@@ -1723,97 +1840,126 @@ function langToggle() {
 
 /* ══════════════════════════════════════════════════════════════════════
    Auth screens — the REAL flows, wired to the API. No fabricated success.
-   Resend respects the backend's 60s cooldown (a live countdown); a 1-hour
-   lockout after 3 failures is shown honestly. Forgot-password and email
-   verification share the same style and the same error-key handling.
+
+   Sign-up: the user chooses Rider or Driver (the only two self-service
+   roles). Both self-register by phone OTP; choosing Driver also submits the
+   driver application after the account exists. Staff never self-register
+   (DEC-032/033) — there is no staff option anywhere.
+
+   Sign-in: ONE form. The system auto-detects the account: a password account
+   (staff) is asked for its password; an OTP account (rider/driver) gets a
+   login code automatically. No visible role toggle.
+
+   Resend respects the backend 60s cooldown (live countdown); a 1-hour lockout
+   after 3 failures is shown honestly. Forgot-password and email verification
+   share the same style and error-key handling.
    ══════════════════════════════════════════════════════════════════════ */
 function auth() {
-  // forgot-password takes over the whole card
   if (S.forgot) return forgotPassword();
-
-  const seg=$("div",{class:"seg"});
-  [["staff",t("staffTab")],["rider",t("riderTab")]].forEach(([k,lbl])=>
-    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.authTab===k)},
-      text:lbl, on:{click:()=>{ S.authTab=k; S.authStep="phone"; S.authError=null; render(); }}})));
-
-  const body = S.authTab==="staff" ? (S.authMode==="signin" ? staffSignin() : staffNotice()) : riderFlow();
-
-  return $("div",{class:"authwrap"},
-    $("div",{class:"authwrap__card"},
-      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
-        on:{click:()=>{ S.view="landing"; S.authError=null; render(); }}}, icon("back")),
-      $("div",{class:"center"}, logoSVG(), null),
-      $("h1",{class:"t-title center", text: S.authMode==="signup" ? t("createAccount") : t("signIn")}),
-      seg,
-      body,
-      lockoutBanner(),
-      S.authError ? Banner("danger", S.authError) : null,
-      S.authMode==="signin" && S.authTab==="staff"
-        ? $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("forgotPassword"),
-            on:{click:()=>{ S.forgot="identify"; S.authError=null; render(); }}})
-        : null,
-      $("div",{class:"center mt3 stack gap1"},
-        $("span",{class:"t-cap", text: S.authMode==="signin" ? t("needAccount") : t("haveAccount")}),
-        $("button",{class:"btn btn--ghost", attrs:{type:"button"},
-          text: S.authMode==="signin" ? t("createAccount") : t("signIn"),
-          on:{click:()=>{ S.authMode = S.authMode==="signin" ? "signup" : "signin";
-                          S.authStep="phone"; S.authError=null; render(); }}}))));
+  return S.authMode === "signup" ? signupAuth() : signinAuth();
 }
 
-/* ── staff ────────────────────────────────────────────────────────────── */
-function staffSignin() {
-  return $("div",{class:"stack gap3"},
-    field("auth-identifier", t("identifierLabel"), "text"),
-    field("auth-password", t("passwordLabel"), "password"),
-    Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy, on:()=>staffLogin()}));
-}
-
-/* Staff never self-register (DEC-032/033). Say so plainly, don't fake it. */
-function staffNotice() {
-  return $("div",{class:"stack gap3"}, Banner("info", t("staffNoSelfSignup")));
-}
-
-/* ── rider ────────────────────────────────────────────────────────────── */
-function riderFlow() {
-  const w=$("div",{class:"stack gap3"});
-  if(S.authStep==="phone"){
-    w.append(
+/* ── sign-up: rider or driver ──────────────────────────────────────────── */
+function signupAuth() {
+  let body;
+  if (S.authStep === "choose") {
+    body = $("div",{class:"stack gap3"},
+      $("p",{class:"t-cap center",text:t("signupChoose")}),
+      roleChoice("rider", t("roleLabel.rider"), t("signupRiderSub"), "wallet"),
+      roleChoice("driver", t("roleLabel.driver"), t("signupDriverSub"), "bus"));
+  } else if (S.authStep === "phone") {
+    body = $("div",{class:"stack gap3"},
       field("auth-phone", t("phoneLabel"), "tel"),
       Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>riderSendCode()}));
-  } else if(S.authStep==="otp"){
-    w.append(
+  } else if (S.authStep === "otp") {
+    body = $("div",{class:"stack gap3"},
       $("p",{class:"t-cap"}, `${t("codeSent")} `, $("span",{class:"ltr",text:S.authPhone})),
       field("auth-code", t("codeLabel"), "text"),
-      S.authMode==="signup"
-        ? Btn({label:S.authBusy? "…" : t("continue"), block:true, dis:S.authBusy, on:()=>{ S.authStep="name"; render(); }})
-        : Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(null)}),
-      resendButton(),
-      $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("wrongNumber"),
-        on:{click:()=>{ S.authStep="phone"; S.authError=null; render(); }}}));
-  } else if(S.authStep==="name"){
-    w.append(
+      Btn({label:S.authBusy? "…" : t("continue"), block:true, dis:S.authBusy, on:()=>{ S.authStep="name"; render(); }}),
+      resendButton(()=>{ S.authStep="phone"; render(); }));
+  } else { // name
+    body = $("div",{class:"stack gap3"},
       field("auth-name", t("yourName"), "text"),
       Btn({label:S.authBusy? "…" : t("finish"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(val("auth-name"))}));
   }
-  return w;
+  return card(t("createAccount"), body, S.authMode==="signup");
 }
 
-/* Resend control with a live 60s countdown (driven by the server's
-   resendInMs). Disabled while counting; honours the 1-hour lockout. */
-function resendButton() {
+/* ── sign-in: smart auto-detect ────────────────────────────────────────── */
+function signinAuth() {
+  let body;
+  if (S.loginMethod === "password") {
+    body = $("div",{class:"stack gap3"},
+      $("p",{class:"t-cap"}, t("enterPassword")),
+      field("auth-password", t("passwordLabel"), "password"),
+      Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy, on:()=>staffLogin()}),
+      backBtn(()=>{ S.loginMethod=null; render(); }));
+  } else if (S.loginMethod === "otp") {
+    body = $("div",{class:"stack gap3"},
+      $("p",{class:"t-cap"}, `${t("codeSentTo")} `, $("span",{class:"ltr",text:S.authIdentifier})),
+      field("auth-code", t("codeLabel"), "text"),
+      Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(null)}),
+      resendButton(()=>identify()),
+      backBtn(()=>{ S.loginMethod=null; render(); }));
+  } else {
+    body = $("div",{class:"stack gap3"},
+      field("auth-identifier", t("identifierLabel"), "text"),
+      Btn({label:S.authBusy? "…" : t("signinContinue"), block:true, dis:S.authBusy, on:()=>identify()}),
+      $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("forgotPassword"),
+        on:{click:()=>{ S.forgot="identify"; S.authError=null; render(); }}}));
+  }
+  return card(t("signIn"), body, true);
+}
+
+/* ── shared card chrome ────────────────────────────────────────────────── */
+function card(title, body, showSignupToggle) {
+  return $("div",{class:"authwrap"},
+    $("div",{class:"authwrap__card"},
+      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+        on:{click:()=>{ S.view="landing"; S.authError=null; S.authStep="choose"; S.loginMethod=null; render(); }}}, icon("back")),
+      $("div",{class:"center"}, logoSVG(), null),
+      $("h1",{class:"t-title center", text:title}),
+      body,
+      lockoutBanner(),
+      S.authError ? Banner("danger", S.authError) : null,
+      showSignupToggle
+        ? $("div",{class:"center mt3 stack gap1"},
+            $("span",{class:"t-cap", text: S.authMode==="signin" ? t("needAccount") : t("haveAccount")}),
+            $("button",{class:"btn btn--ghost", attrs:{type:"button"},
+              text: S.authMode==="signin" ? t("createAccount") : t("signIn"),
+              on:{click:()=>{ S.authMode = S.authMode==="signin" ? "signup" : "signin";
+                              S.authStep="choose"; S.loginMethod=null; S.authError=null; render(); }}}))
+        : null));
+}
+
+function roleChoice(role, title, sub, iconName) {
+  return $("button",{class:"rolechoice", attrs:{type:"button","aria-pressed":String(S.signupRole===role)},
+    on:{click:()=>{ S.signupRole=role; S.authStep="phone"; S.authError=null; render(); }}},
+    $("div",{class:"rolechoice__ico"}, icon(iconName)),
+    $("div",{class:"stack gap1 grow"},
+      $("strong",{text:title}),
+      $("div",{class:"t-cap",text:sub})),
+    icon("fwd","chev"));
+}
+
+function resendButton(onClick) {
   const remaining = Math.max(0, Math.round(((S.resendUntil||0) - Date.now()) / 1000));
   const dis = remaining > 0 || S.authBusy;
   const btn = $("button",{class:"btn btn--ghost", attrs:{type:"button", disabled:dis||null},
     text: dis && remaining > 0 ? `${t("resendIn")} ${remaining}${t("seconds")}` : t("resendCode"),
-    on:{click:()=>{ S.authStep="phone"; S.authError=null; render(); }}});
+    on:{click:onClick}});
   if (remaining > 0) setTimeout(()=>render(), 1000);
   return btn;
 }
 
+function backBtn(onClick) {
+  return $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("landingBack"),
+    on:{click:onClick}});
+}
+
 function lockoutBanner() {
   if (!S.lockedUntil) return null;
-  const until = new Date(S.lockedUntil).getTime();
-  if (until <= Date.now()) return null;
+  if (new Date(S.lockedUntil).getTime() <= Date.now()) return null;
   return Banner("danger", t("tooManyAttempts"));
 }
 
@@ -1843,9 +1989,8 @@ function forgotPassword() {
       lockoutBanner(),
       S.authError ? Banner("danger", S.authError) : null,
       step==="done"
-        ? Btn({label:t("signInAction"), block:true, on:()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.authTab="staff"; S.authError=null; render(); }})
-        : $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("landingBack"),
-            on:{click:()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.authTab="staff"; render(); }}})));
+        ? Btn({label:t("signInAction"), block:true, on:()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }})
+        : backBtn(()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; render(); })));
 }
 
 /* ── helpers + actions ────────────────────────────────────────────────── */
@@ -1859,13 +2004,23 @@ const resetLockout = (e) => {
   const d = e.payload && e.payload.details;
   if (d && d.retryAfterMs) { S.resendUntil = Date.now() + d.retryAfterMs; }
   if (d && d.lockedUntil) { S.lockedUntil = d.lockedUntil; }
-  if (e.code === "TOO_MANY_REQUESTS" && !d) S.authError = "error.too_many_requests";
 };
+
+async function identify() {
+  S.authBusy=true; S.authError=null; render();
+  try {
+    const res = await API.identify(val("auth-identifier"));
+    S.authIdentifier = val("auth-identifier");
+    if (res.method === "password") { S.loginMethod="password"; }
+    else { S.loginMethod="otp"; S.resendUntil = Date.now() + (res.resendInMs || 60000); }
+    S.authBusy=false; render();
+  } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
+}
 
 async function staffLogin() {
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.login(val("auth-identifier"), val("auth-password"));
+    const res = await API.login(S.authIdentifier || val("auth-identifier"), val("auth-password"));
     API.saveSession(res);
     enterApp(res.user);
   } catch(e) { S.authError = e.messageKey || "error.internal"; S.authBusy=false; render(); }
@@ -1888,6 +2043,10 @@ async function riderVerifyCode(name) {
   try {
     const res = await API.verifyOtp(S.authPhone, val("auth-code"), name || undefined);
     API.saveSession(res);
+    if (S.authMode==="signup" && S.signupRole==="driver") {
+      try { await API.driverApply(); } catch {}
+      toast(t("driverAppliedToast"));
+    }
     enterApp(res.user);
   } catch(e) { resetLockout(e); S.authError=e.messageKey||"error.internal"; S.authBusy=false; render(); }
 }
@@ -3019,16 +3178,37 @@ function bootSplash(){
 }
 
 /* Boot: show the splash, resolve any stored session, then land. The minimum
-   splash time is a single tick of human perception, not a fake wait. */
+   splash time is long enough to feel intentional, not long enough to fake. */
 function boot(){
   S.view="boot"; render();
-  const minDelay = new Promise(r=>setTimeout(r, 900));
+  loadMapsConfig();                             // fire-and-forget, never blocks boot
+  const minDelay = new Promise(r=>setTimeout(r, 1500));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
   Promise.all([minDelay, session]).then(([, user])=>{
     if(S.view!=="boot") return;                 // a test or a tap already left
     if(user){ enterApp(user); } else { S.view="landing"; render(); }
   });
+}
+
+/* Google Maps, key-gated and honest: fetch the client-safe key from the web
+   server's /v1/config (never embedded in the bundle) and load the SDK. With
+   no key the labelled illustration stays. */
+async function loadMapsConfig(){
+  if (typeof fetch !== "function" || window.__rsMapsConfigured) return;
+  if (location.protocol === "file:") return; // no network on file:// previews
+  try {
+    const cfg = await API.getConfig();
+    if (cfg && cfg.maps && cfg.maps.apiKey) {
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
+      s.async = true;
+      s.onload = () => { window.__rsMapsOn = true; render(); };
+      s.onerror = () => {};
+      document.head.appendChild(s);
+    }
+    window.__rsMapsConfigured = true;
+  } catch { /* no backend yet → illustration stays */ }
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });

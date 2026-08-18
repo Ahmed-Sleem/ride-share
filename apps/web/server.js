@@ -51,6 +51,13 @@ function proxy(req, res) {
 function handler(req, res) {
   const url = (req.url || '/').split('?')[0];
   if (url === '/healthz' || url === '/health') return json(res, 200, { ok: true, service: 'web' });
+  // Client-safe configuration: the Maps JS key is public-by-design (restrict
+  // it by HTTP referrer in the provider console). Secrets never leave here.
+  if (url === '/v1/config') {
+    return json(res, 200, {
+      maps: { provider: 'google', apiKey: process.env.GOOGLE_MAPS_API_KEY || '' },
+    });
+  }
   if (url.startsWith('/v1/')) return proxy(req, res);
   if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });

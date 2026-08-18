@@ -22,7 +22,7 @@ function landing() {
             Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="phone"; S.authError=null; render(); }}),
             Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.authError=null; render(); }}))),
         $("div",{class:"landing__heromap"},
-          MapView({h:420, walk:true, route:true, stops:true, vehicle:true}))),
+          MapView({h:440, walk:true, route:true, stops:true, vehicle:true, zoom:true, locate:true}))),
 
       /* ── FEATURES ──────────────────────────────────────────────────── */
       $("section",{class:"landing__section"},
@@ -61,9 +61,11 @@ function featureCard(ic, title, body, tone) {
 function stepCard(n, ic, title, body) {
   return $("div",{class:"landing__step reveal"},
     $("div",{class:"landing__stepnum ltr",text:n}),
-    $("div",{class:"landing__featureico"}, icon(ic)),
-    $("h3",{class:"landing__h3",text:title}),
-    $("p",{class:"landing__p",text:body}));
+    $("div",{class:"landing__stepbody"},
+      $("div",{class:"landing__featureico"}, icon(ic)),
+      $("div",{class:"landing__steptext"},
+        $("h3",{class:"landing__h3",text:title}),
+        $("p",{class:"landing__p",text:body}))));
 }
 
 function langToggle() {

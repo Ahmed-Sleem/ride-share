@@ -218,11 +218,11 @@ run_break "demo role switcher returns" src/shell/app.js \
 
 # ── M1.5: verification & recovery UI ─────────────────────────────────────
 run_break "forgot-password link removed" src/screens/auth.js \
-  's|S.authMode==="signin" \&\& S.authTab==="staff"|false \&\& S.authTab==="staff"|' \
+  's|text:t("forgotPassword")|text:t("forgotPasswordX")|' \
   "sign-in shows the forgot-password link"
 
 run_break "resend button removed" src/screens/auth.js \
-  's|resendButton(),|null,|' \
+  's|resendButton(()=>identify()),|null,|' \
   "resend button shows a countdown and is disabled"
 
 echo

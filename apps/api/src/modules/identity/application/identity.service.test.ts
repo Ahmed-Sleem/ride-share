@@ -113,7 +113,7 @@ function setup() {
 test('staff login succeeds with correct password', async () => {
   const { svc, users } = setup();
   await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  const res = await svc.staffLogin('admin@x.com', 'pw-12345678');
+  const res = await svc.login('admin@x.com', 'pw-12345678');
   assert.equal(res.user.role, 'super_admin');
   assert.ok(res.accessToken.length > 20);
 });
@@ -121,13 +121,30 @@ test('staff login succeeds with correct password', async () => {
 test('staff login rejects a wrong password with a translation key', async () => {
   const { svc, users } = setup();
   await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  await assert.rejects(() => svc.staffLogin('admin@x.com', 'wrong'), UnauthorizedException);
+  await assert.rejects(() => svc.login('admin@x.com', 'wrong'), UnauthorizedException);
 });
 
-test('a rider cannot sign in with staff password login', async () => {
+test('identify returns password method for staff, otp for riders', async () => {
   const { svc, users } = setup();
+  await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
   await users.create({ phone: '+201000000000', role: 'rider' });
-  await assert.rejects(() => svc.staffLogin('rider@x.com', 'whatever'), UnauthorizedException);
+  assert.deepEqual(await svc.identifyLogin('admin@x.com'), { method: 'password' });
+  const otp = await svc.identifyLogin('+201000000000');
+  assert.equal(otp.method, 'otp');
+  assert.ok((otp as { resendInMs: number }).resendInMs > 0);
+});
+
+test('identify for an unknown identifier is a 401 (no enumeration)', async () => {
+  const { svc } = setup();
+  await assert.rejects(() => svc.identifyLogin('ghost@x.com'), UnauthorizedException);
+});
+
+test('a rider with no password gets the OTP flow, not a password error', async () => {
+  const { svc, users, notifications } = setup();
+  await users.create({ phone: '+201000000000', role: 'rider' });
+  const r = await svc.identifyLogin('+201000000000');
+  assert.equal(r.method, 'otp');
+  assert.equal(notifications.codes.length, 1);
 });
 
 test('rider OTP: request then verify self-registers', async () => {
@@ -169,7 +186,7 @@ test('3 wrong attempts lock the code for 1 hour', async () => {
 test('refresh rotates the session', async () => {
   const { svc, users } = setup();
   await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  const first = await svc.staffLogin('admin@x.com', 'pw-12345678');
+  const first = await svc.login('admin@x.com', 'pw-12345678');
   const second = await svc.refresh(first.refreshToken);
   assert.equal(second.user.role, 'super_admin');
   await assert.rejects(() => svc.refresh(first.refreshToken), UnauthorizedException);
@@ -178,7 +195,7 @@ test('refresh rotates the session', async () => {
 test('change password revokes all sessions', async () => {
   const { svc, users, sessions } = setup();
   const u = await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('old-12345678') });
-  await svc.staffLogin('admin@x.com', 'old-12345678');
+  await svc.login('admin@x.com', 'old-12345678');
   assert.equal(sessions.countFor(u.id), 1);
   await svc.changePassword(u.id, 'old-12345678', 'new-12345678');
   assert.equal(verifyPassword('new-12345678', users.rows.get(u.id)!.password_hash!), true);
@@ -201,7 +218,7 @@ test('password reset: request never reveals existence, confirm resets + revokes'
   assert.equal(notifications.calls.length, 0);
 
   const u = await users.create({ email: 'admin@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  await svc.staffLogin('admin@x.com', 'pw-12345678');
+  await svc.login('admin@x.com', 'pw-12345678');
   await svc.requestPasswordReset('admin@x.com');
   assert.equal(notifications.calls.includes('reset-mail:admin@x.com'), true);
   const code = notifications.codes[notifications.codes.length - 1]!;
@@ -240,7 +257,7 @@ test('super_admin creates a staff account (phone + email both accepted, audited)
 test('staff login accepts phone OR email as identifier', async () => {
   const { svc, users } = setup();
   await users.create({ email: 'admin@x.com', phone: '+201111111111', role: 'super_admin', passwordHash: hashPassword('pw-12345678') });
-  const byEmail = await svc.staffLogin('admin@x.com', 'pw-12345678');
-  const byPhone = await svc.staffLogin('+201111111111', 'pw-12345678');
+  const byEmail = await svc.login('admin@x.com', 'pw-12345678');
+  const byPhone = await svc.login('+201111111111', 'pw-12345678');
   assert.equal(byEmail.user.id, byPhone.user.id);
 });

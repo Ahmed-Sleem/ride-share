@@ -22,6 +22,8 @@ const S = {
   view:"boot",                                // boot | landing | auth | app
   authed:false, user:null,                    // user comes from the session
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
+  signupRole:"rider",                          // rider | driver (the only signup choices)
+  loginMethod:null, authIdentifier:"",          // smart sign-in: 'password' | 'otp'
   forgot:null, resendUntil:null, lockedUntil:null,
   emailToast:null, emailToastKind:"info",
   authStep:"phone", authBusy:false, authError:null,
@@ -236,7 +238,15 @@ const Sheet = (title, ...k) => $("div",{class:"sheet", attrs:{role:"dialog","ari
   ...k);
 
 /* Map — drawn illustration. Labelled, never presented as live tiles. */
-function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false}){
+function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false}){
+  // Real Google Maps when the key is configured (via /v1/config) and the
+  // script has loaded; otherwise the labelled illustration. No fake tiles.
+  if (window.__rsMapsOn && typeof google === "object" && google.maps) {
+    return realMapView({h, route, locate});
+  }
+  const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
+  if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
+    on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
   const ns="http://www.w3.org/2000/svg";
   const svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox","0 0 400 220");
@@ -282,11 +292,63 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
       <circle cx="70" cy="120" r="7"/><circle cx="205" cy="60" r="7"/>
       <circle cx="300" cy="130" r="7"/><circle cx="120" cy="40" r="7"/>
     </g>`:""}`;
-  return $("div",{class:"mapbox",style:{height:h+"px"}}, svg,
+  box.append(svg,
     $("div",{class:"mapctl"},
       $("button",{attrs:{type:"button","aria-label":"Zoom in"},text:"+"}),
       $("button",{attrs:{type:"button","aria-label":"Zoom out"},text:"−"})),
     $("div",{class:"attribution",text:t("mapMock")}));
+  return box;
+}
+
+/* Real Google Map — activates only when GOOGLE_MAPS_API_KEY is set and the
+   script has loaded. Honest fallback: without the key, the illustration
+   renders and is labelled as such. Geolocation (navigator.geolocation) is
+   exercised here so the Capacitor mobile build inherits it for free. */
+const ALEX_CENTER = { lat: 31.2241, lng: 29.9549 }; // Alexandria
+function realMapView({h, route, locate}) {
+  const id = "gmap-" + Math.random().toString(36).slice(2, 9);
+  const box = $("div",{class:"mapbox mapbox--real",style:{height:h+"px"}});
+  box.append($("div",{class:"mapbox__canvas",attrs:{id, "aria-label":t("mapLive")}}));
+  if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
+    on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
+  box.append($("div",{class:"attribution",text:"Google"}));
+  // init after the element is in the DOM
+  setTimeout(()=>{
+    const el = document.getElementById(id);
+    if (!el || !window.google?.maps) return;
+    const map = new google.maps.Map(el, {
+      center: ALEX_CENTER, zoom: 13,
+      disableDefaultUI: true, clickableIcons: false,
+      styles: [], fullscreenControl: false, streetViewControl: false,
+    });
+    window.__rsMapInstance = map;
+    if (route) {
+      // token, not a literal — the design system owns every colour (§0.3)
+      const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
+      new google.maps.Polyline({
+        path: [{lat:31.2456,lng:29.9839},{lat:31.2241,lng:29.9549},{lat:31.2037,lng:29.9196}],
+        map, geodesic:true,
+        strokeColor: brand, strokeOpacity:0.9, strokeWeight:5,
+      });
+    }
+    new google.maps.Marker({ position: ALEX_CENTER, map, title: t("brand") });
+  }, 0);
+  return box;
+}
+
+function locateMe() {
+  const map = window.__rsMapInstance;
+  if (map && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => toast("locateDenied"),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  } else if (map) {
+    map.setCenter(ALEX_CENTER);
+  } else {
+    toast("locateDenied");
+  }
 }
 
 /* QR — deterministic blocks + the numeric code that is the real fallback */

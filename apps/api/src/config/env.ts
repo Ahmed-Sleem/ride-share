@@ -36,9 +36,13 @@ export const envSchema = {
   PAYMOB_INTEGRATION_ID: z.string().optional(),
 
   // ── notifications ─────────────────────────────────────────────────────
-  // SMS provider key for rider OTP. Development logs the code server-side;
+  // SMS: 'twilio' is the wired provider. Development logs the code server-side;
   // production refuses OTP issuance without a provider (honest, no fake).
   SMS_API_KEY: z.string().optional(),
+  SMS_PROVIDER: z.enum(['twilio', 'none']).default('none'),
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  SMS_FROM: z.string().optional(),
 
   // ── email (verification + password reset) ────────────────────────────
   // SMTP config; when SMTP_HOST is unset, development logs the code and

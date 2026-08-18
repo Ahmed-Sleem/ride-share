@@ -21,6 +21,10 @@ class LoginDto {
   @IsString() @MinLength(1) password!: string;
 }
 
+class IdentifyDto {
+  @IsString() @MinLength(3) identifier!: string;
+}
+
 class OtpRequestDto {
   @Matches(/^\+?[0-9]{8,15}$/, { message: 'validation.phone' }) phone!: string;
 }
@@ -72,10 +76,16 @@ type ReqWithActor = FastifyRequest & { actor?: Actor };
 export class IdentityController {
   constructor(private readonly identity: IdentityService) {}
 
+  @Post('auth/login/identify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  identify(@Body() dto: IdentifyDto) {
+    return this.identity.identifyLogin(dto.identifier);
+  }
+
   @Post('auth/login')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   login(@Body() dto: LoginDto) {
-    return this.identity.staffLogin(dto.identifier, dto.password);
+    return this.identity.login(dto.identifier, dto.password);
   }
 
   @Post('auth/otp/request')

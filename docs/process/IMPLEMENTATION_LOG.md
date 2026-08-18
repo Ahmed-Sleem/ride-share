@@ -365,3 +365,26 @@ output) — see the engineering standard §3.3 and §4.
   (unknown identifier → ok, no enumeration); reset confirm → old password 401 / new 201;
   auto-migrate log "migrations complete". `pnpm verify` + `pnpm db:verify` green.
 - LOCAL COMMIT ONLY — push pending owner confirmation.
+
+## 2026-08-18 — M1.6: smart sign-in, rider/driver signup, GUI audit fixes, maps layer
+
+- What: (1) Auto-detect sign-in: identifyLogin() returns method; passwordless accounts get a login
+  OTP sent automatically — no visible role toggle; signup = Rider|Driver only, Driver auto-applies
+  post-verify. (2) Twilio SMS provider behind the one seam (env-gated, dev-log fallback).
+  (3) Google Maps: web server /v1/config returns GOOGLE_MAPS_API_KEY; MapView renders a real map
+  (polyline, marker, geolocation "locate me") when the key is present, the labelled SVG otherwise.
+  (4) GUI audit fixes per owner: full-viewport hero, centered auth card, 1500ms splash floor, hero
+  map zoom crop, RTL step icons (horizontal step rows), hidden scrollbars, ::selection accent,
+  role-choice cards.
+- Files: identity.service.ts (identifyLogin/login), identity.controller.ts (IdentifyDto +
+  /auth/login/identify), notifications.ts (twilioSms), env.ts (+SMS_PROVIDER/TWILIO_*),
+  api.js (+identify/getConfig), server.js (/v1/config), components.js (S state, MapView real/zoom/
+  locate), shell/app.js (1500ms boot, loadMapsConfig), auth.js (rewritten), landing.js (step rows,
+  hero map), shell.html (hero/center/scrollbars/selection/step rows/rolechoice/map zoom), content.js.
+- Tests: 229 web (auth rewritten assertions), 60 api (identify/login). Break cases re-targeted.
+  Bugs found by tests/live and fixed: Element.append returns undefined (MapView returned undefined),
+  hex literal in the polyline (→ token), IdentifyDto required a password, file:// maps fetch console
+  error, login failed because a previous live reset had changed the seeded password.
+- Verified LIVE: /auth/login/identify → {method:password} (staff) and 401 for unknown; login → super_admin;
+  browser: hero 839px in a 900px viewport (fullscreen), scrollbarWidth none, auth card centered
+  (220/204), selection = coral accent, no tabs, no console errors.

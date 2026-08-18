@@ -348,3 +348,20 @@
 - Frontend: resend button with a live 60s countdown, 1-hour lockout banner, forgot-password flow,
   email verification section in rider/driver profiles. 226 web / 63 api / 14 axe / 6,904 layout /
   46 breaks green; live-proven end to end.
+
+## 2026-08-18 — M1.6: smart sign-in (staff auto-detect), rider/driver signup, GUI audit fixes
+
+- Sign-in is ONE form with auto-detection: `POST /auth/login/identify` returns the method
+  (password → staff/any password account; otp → rider/driver, code sent automatically). No visible
+  role toggle anywhere. Sign-up offers exactly Rider or Driver; Driver also submits the driver
+  application after the account exists. Staff self-signup stays impossible (DEC-032/033).
+- SMS provider wired for real: `SMS_PROVIDER=twilio` + `TWILIO_ACCOUNT_SID/AUTH_TOKEN` + `SMS_FROM`
+  send real messages; without it, development logs the code and production refuses (honest).
+- Google Maps layer: `/v1/config` exposes the client-safe key; `MapView` renders a real Google Map
+  (marker, route polyline, "locate me" via navigator.geolocation) when the key is set, the labelled
+  illustration otherwise. Geolocation is exercised here so the Capacitor build inherits it.
+- GUI audit fixes: landing hero is full viewport on desktop; auth card is centered; boot splash
+  minimum 1500ms; hero map zoomed/cropped; RTL mirrors the "how it works" icons; no visible
+  scrollbars (still scrollable); text selection uses the accent colour; sign-up role cards styled.
+- 229 web / 60 api / 14 axe / 6,904 layout / 46 breaks green; live-proven (identify/password/otp,
+  full-screen + centered + no-scrollbar measured in a real browser).

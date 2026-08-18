@@ -521,8 +521,19 @@ group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
 
   t.w.S.view="auth"; t.w.render();
   ok("auth renders a card", !!t.q(".authwrap__card"));
-  ok("staff tab is the default", t.w.S.authTab==="staff");
-  ok("auth has staff/rider tabs", t.all(".seg button").length===2, String(t.all(".seg button").length));
+  // no role tabs anywhere — sign-in auto-detects, sign-up shows rider/driver only
+  ok("no staff/rider tabs", t.all(".seg").length===0, String(t.all(".seg").length));
+
+  // sign-up presents exactly two choices: rider and driver
+  t.w.S.authMode="signup"; t.w.S.authStep="choose"; t.w.render();
+  ok("sign-up shows exactly rider and driver", t.all(".rolechoice").length===2, String(t.all(".rolechoice").length));
+  ok("sign-up has no staff choice",
+     !(t.txt().includes(t.w.T.en.roleLabel.operations) || t.txt().includes(t.w.T.en.roleLabel.support)));
+
+  // sign-in: smart auto-detect — identifier first, no password field yet
+  t.w.S.authMode="signin"; t.w.S.loginMethod=null; t.w.render();
+  ok("sign-in asks for the identifier first", !!t.q("#auth-identifier"));
+  ok("sign-in shows no password field before identify", !t.q("#auth-password"));
 
   // rail is COLLAPSED by default (owner requirement)
   ok("rail defaults to collapsed", t.w.S.rail==="collapsed", String(t.w.S.rail));
@@ -544,8 +555,8 @@ group("M1 — VERIFICATION & RECOVERY (reset, email, resend)");
 {
   const t=boot();
 
-  // the staff sign-in shows a forgot-password link, and the flow has a card
-  t.w.S.view="auth"; t.w.S.authTab="staff"; t.w.S.authMode="signin"; t.w.S.forgot=null; t.w.render();
+  // the sign-in step shows a forgot-password link
+  t.w.S.view="auth"; t.w.S.authMode="signin"; t.w.S.loginMethod=null; t.w.S.forgot=null; t.w.render();
   ok("sign-in shows the forgot-password link",
      [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.forgotPassword)));
   t.w.S.forgot="identify"; t.w.render();
@@ -573,8 +584,8 @@ group("M1 — VERIFICATION & RECOVERY (reset, email, resend)");
      (t.txt().includes(t.w.T.en.emailVerified) || t.txt().includes(t.w.T.ar.emailVerified)));
 
   // resend button is disabled during the 60s cooldown
-  t.w.S.view="auth"; t.w.S.authTab="rider"; t.w.S.authMode="signin"; t.w.S.authStep="otp";
-  t.w.S.authPhone="+201000000000"; t.w.S.resendUntil=Date.now()+50000; t.w.render();
+  t.w.S.view="auth"; t.w.S.authMode="signin"; t.w.S.loginMethod="otp";
+  t.w.S.authIdentifier="+201000000000"; t.w.S.resendUntil=Date.now()+50000; t.w.render();
   const rb=[...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.resendIn));
   ok("resend button shows a countdown and is disabled", !!rb && rb.hasAttribute("disabled"));
 }

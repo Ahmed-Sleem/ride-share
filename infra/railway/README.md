@@ -48,16 +48,19 @@ AUTO_MIGRATE=true
 - `DATABASE_URL` is a reference variable — no credentials pasted. The service
   name must match what Railway names the database service (default: `Postgres`).
 - `ADMIN_EMAIL` + `ADMIN_PASSWORD` seed the ONE bootstrap admin on first boot
-  (idempotent). Change the password from inside the app afterwards.
+  (idempotent). Change the password from inside the app afterwards. Suggested
+  for first deploy: `ADMIN_EMAIL=admin@ride.local`, `ADMIN_PASSWORD=Admin@Ride2026!`.
 - `AUTO_MIGRATE=true` runs migrations before the app starts (single-instance
   path) — the schema is created automatically, no manual step.
 - `JWT_SECRET`: the value above is pre-generated; treat it as a secret.
 - `CORS_ORIGINS` starts empty (allow all + a log warning); set it to the web
   service's public domain once it has one.
-- **Optional — email verification & password reset by email:** set `SMTP_HOST`,
+- **Email verification & password reset by email** (optional): `SMTP_HOST`,
   `SMTP_PORT` (default 587), `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM`.
-  Without SMTP, development logs the code and production refuses email sends
-  (honest, no fake). SMS OTP: set `SMS_API_KEY` when a provider key exists.
+- **SMS OTP** (optional): `SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`,
+  `TWILIO_AUTH_TOKEN`, `SMS_FROM`. Until then, development logs the code and
+  production refuses to send (honest, no fake) — the code appears in the `api`
+  service deploy logs, so you can test the whole flow without a provider.
 - Leave `PAYMOB_*` unset until M3.
 
 **`web`** (from the repo):
@@ -65,10 +68,13 @@ AUTO_MIGRATE=true
 ```
 PORT=8080
 API_INTERNAL_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3000
+GOOGLE_MAPS_API_KEY=
 ```
 
 `API_INTERNAL_URL` wires the web server's `/v1/*` proxy to the api service over
-the private network (no CORS, no key in the client).
+the private network (no CORS, no key in the client). `GOOGLE_MAPS_API_KEY`
+activates the real Google Map (the labelled illustration shows until it is set);
+restrict the key by HTTP referrer in the Google console.
 
 **`Postgres`**: no variables needed — Railway provisions credentials and
 exposes `DATABASE_URL` automatically.

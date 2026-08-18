@@ -53,12 +53,32 @@ export class Notifications implements SmsSender, Mailer {
   }
 
   async sendOtp(phone: string, code: string): Promise<void> {
+    // Twilio is the wired provider — real HTTP, gated by config.
+    if (this.env.SMS_PROVIDER === 'twilio' && this.env.TWILIO_ACCOUNT_SID && this.env.TWILIO_AUTH_TOKEN) {
+      await this.twilioSms(phone, `Your Ride Share code is ${code}. It expires in 5 minutes.`);
+      return;
+    }
     this.assertSms();
     if (this.env.NODE_ENV === 'production') {
-      // Real SMS provider goes here (Twilio/Unifonic/…) — one seam.
       throw new ServiceUnavailableException({ message_key: 'notifications.sms_not_configured' });
     }
     this.logger.warn(`[DEV-SMS] code for ${phone}: ${code}`);
+  }
+
+  private async twilioSms(to: string, body: string): Promise<void> {
+    const sid = this.env.TWILIO_ACCOUNT_SID!;
+    const token = this.env.TWILIO_AUTH_TOKEN!;
+    const from = this.env.SMS_FROM;
+    if (!from) throw new ServiceUnavailableException({ message_key: 'notifications.sms_not_configured' });
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
+    const auth = Buffer.from(`${sid}:${token}`).toString('base64');
+    const params = new URLSearchParams({ To: to, From: from, Body: body });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    if (!res.ok) throw new ServiceUnavailableException({ message_key: 'notifications.sms_failed' });
   }
 
   async sendReset(phone: string, code: string): Promise<void> {

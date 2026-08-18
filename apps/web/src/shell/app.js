@@ -311,16 +311,37 @@ function bootSplash(){
 }
 
 /* Boot: show the splash, resolve any stored session, then land. The minimum
-   splash time is a single tick of human perception, not a fake wait. */
+   splash time is long enough to feel intentional, not long enough to fake. */
 function boot(){
   S.view="boot"; render();
-  const minDelay = new Promise(r=>setTimeout(r, 900));
+  loadMapsConfig();                             // fire-and-forget, never blocks boot
+  const minDelay = new Promise(r=>setTimeout(r, 1500));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
   Promise.all([minDelay, session]).then(([, user])=>{
     if(S.view!=="boot") return;                 // a test or a tap already left
     if(user){ enterApp(user); } else { S.view="landing"; render(); }
   });
+}
+
+/* Google Maps, key-gated and honest: fetch the client-safe key from the web
+   server's /v1/config (never embedded in the bundle) and load the SDK. With
+   no key the labelled illustration stays. */
+async function loadMapsConfig(){
+  if (typeof fetch !== "function" || window.__rsMapsConfigured) return;
+  if (location.protocol === "file:") return; // no network on file:// previews
+  try {
+    const cfg = await API.getConfig();
+    if (cfg && cfg.maps && cfg.maps.apiKey) {
+      const s = document.createElement("script");
+      s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
+      s.async = true;
+      s.onload = () => { window.__rsMapsOn = true; render(); };
+      s.onerror = () => {};
+      document.head.appendChild(s);
+    }
+    window.__rsMapsConfigured = true;
+  } catch { /* no backend yet → illustration stays */ }
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });

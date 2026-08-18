@@ -50,14 +50,38 @@ export class IdentityService {
     private readonly audit: AuditService
   ) {}
 
-  /** Staff sign-in (phone OR email + password). Riders use OTP. */
-  async staffLogin(identifier: string, password: string): Promise<AuthResult> {
+  /** Smart sign-in step 1 — identify the account without revealing whether
+      staff or rider: a password account gets 'password', an OTP-only account
+      gets 'otp' AND has a code sent (cooldown applies). Unknown identifiers
+      are a 401, exactly like a wrong password — no enumeration. */
+  async identifyLogin(identifier: string): Promise<{ method: 'password' | 'otp'; resendInMs?: number; target?: string }> {
+    const user = await this.users.findByIdentifier(identifier);
+    if (!user) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
+    if (user.status !== 'active') throw new ForbiddenException({ message_key: 'auth.account_suspended' });
+    if (user.password_hash) return { method: 'password' };
+    // OTP-only account (rider / driver): send a login code now.
+    const phone = user.phone;
+    if (!phone) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
+    const existing = await this.codes.findActive('sms_login', 'sms', phone);
+    const resend = canResend(existing, new Date());
+    if (!resend.ok) {
+      if (resend.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: resend.lockedUntil });
+      throw tooMany('auth.resend_wait', { retryAfterMs: resend.retryAfterMs });
+    }
+    const code = generateCode();
+    await this.codes.upsert({
+      kind: 'sms_login', channel: 'sms', target: phone,
+      codeHash: hashCode(code), expiresAt: new Date(Date.now() + CODE_TTL_MS.sms_login),
+    });
+    await this.notifications.sendOtp(phone, code);
+    return { method: 'otp', resendInMs: RESEND_COOLDOWN_MS, target: phone };
+  }
+
+  /** Smart sign-in step 2 — password path. Staff (and any password account). */
+  async login(identifier: string, password: string): Promise<AuthResult> {
     const user = await this.users.findByIdentifier(identifier);
     if (!user || !user.password_hash || !verifyPassword(password, user.password_hash)) {
       throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
-    }
-    if (!STAFF_ROLES.includes(user.role)) {
-      throw new UnauthorizedException({ message_key: 'auth.staff_only' });
     }
     if (user.status !== 'active') {
       throw new ForbiddenException({ message_key: 'auth.account_suspended' });
