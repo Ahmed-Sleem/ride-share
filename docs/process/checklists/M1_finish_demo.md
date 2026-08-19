@@ -8,7 +8,7 @@
 
 ## A — Remove the demo content (`apps/web/src/data/content.js`)
 
-- [ ] Delete the whole `DATA` object; keep the `T` copy table (all translatable strings).
+- [~] Delete the whole `DATA` object;  (rider screens done this commit; driver/staff/shell remain) keep the `T` copy table (all translatable strings).
 - [ ] Every `DATA.` reference in `screens/` and `shell/app.js` is removed or replaced with real state / an honest empty state (grep `DATA.` → 0 hits in `src/`).
 - [ ] The build still injects only copy + components (no sample rows anywhere in the bundle).
 
@@ -19,12 +19,12 @@
 
 ## C — Rider screens (real or honest)
 
-- [ ] **Home** — greets the real `S.user` name; search/list of routes shows an honest "routes coming in M2" empty state (no fake route cards).
-- [ ] **Trips** — upcoming/past show the honest "no trips yet" empty state (real bookings don't exist until M3).
-- [ ] **Wallet** — balance is not invented; show "wallet is part of M3" empty state (no fake `48 EGP`).
-- [ ] **Safety** — keep the real, working entries (SOS/support/share are honest placeholders that already say so); no fake contact rows.
-- [ ] **Profile** — already real (`S.user` + email verification); verify no `DATA.user` remains.
-- [ ] Booking/boarding/waiting/onboard flows (`boarding`, `departures`, `review`, `booked`, `waiting`, `onboard`) — either removed from navigation or show the honest "booking lands in M3" state (§8.1 hide what the role can never use vs honest "not yet").
+- [x] **Home** — greets the real `S.user` name; honest "routes coming soon" empty state (no fake route cards).
+- [x] **Trips** — upcoming/past tabs kept; honest "no trips yet" empty state (no invented trips).
+- [x] **Wallet** — honest "coming soon" empty state (no fake balance/history).
+- [x] **Safety** — real entries kept (SOS/share/report/call support); fake vehicle + fake contacts removed.
+- [x] **Profile** — confirmed real (`S.user` + email verification); no `DATA.user`.
+- [x] Booking flow (`boarding`, `departures`, `review`, `booked`, `waiting`, `onboard`) — each shows the honest "booking lands in M3" state.
 
 ## D — Driver screens (real or honest)
 

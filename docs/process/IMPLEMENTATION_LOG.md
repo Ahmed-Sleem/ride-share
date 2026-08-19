@@ -486,3 +486,19 @@ output) — see the engineering standard §3.3 and §4.
 - Verified: 249 unit, 56 breaks (0 missed), 14 axe, 47 landing, verify:repo green. Browser audit:
   slide solid rgb(70,61,176) no gradient; animationName slidepop/stickerpop/herodrift; sticker ink
   #15181F + accent #FFFFFF; hero animationDuration 42s.
+
+## M1-finish step 1 — rider screens stop being a demo
+
+- What changed: rider home now greets the real S.user and shows an honest "routes coming soon" empty
+  state; routes/boarding/departures/review/booked/waiting/onboard all show a shared "booking lands in M3"
+  coming-soon state; trips keeps its tabs and shows the honest no-trips empty state; wallet shows "coming
+  soon" (no fake 48 EGP); safety keeps the real SOS/share/report/call-support rows and drops the fake
+  vehicle + fake contacts. Added EN/AR copy (comingSoon, routesComingBody, bookingComingBody, walletComingBody).
+- Tests: replaced the demo "BOOKING FLOW" and "PRICING RULES" groups with "RIDER SCREENS SHOW NO SAMPLE
+  CONTENT" (asserts no sample strings on every rider screen + real-user greeting); new break case
+  "rider home reverts to sample routes" observed failing; removed two obsolete break cases (boarding
+  point / seat-price) that guarded removed demo behaviour.
+- Verified: web unit 271, a11y 14, server 5 green; verify:repo green. Full browser + db suites run in CI
+  (GitHub Actions) on push.
+- Remaining: driver/staff/shell sheets still use DATA.* — next steps, then delete DATA and add the
+  bundle-wide "no const DATA" guard.
