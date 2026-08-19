@@ -1,6 +1,6 @@
 # Ride Share
 
-**Shared rides on fixed routes at a fixed price, for Alexandria.**
+**Shared rides on fixed routes at a fixed price.**
 
 ## Why
 
@@ -13,140 +13,123 @@ This is the middle: published routes, published departure times, one fare per
 route however far you ride, and a seat you booked before you left the house.
 A rider boards at a fixed stop and gets off anywhere along the line.
 
-This repository currently contains the **complete interface** and the
-specification and plan behind it. There is no backend yet — see
-[Status](#status).
+## What works today
 
-## Preview
+The live app is at **https://ride-shareweb-production.up.railway.app**.
 
-The interface is one self-contained HTML file with no external requests.
-Open it directly:
+- **Accounts** — riders self-register with email (+ password, + email OTP).
+  Temporary-mail domains are rejected; one email = one account. Staff accounts
+  are created by the env-seeded system admin only.
+- **Sign-in** — one field; the system auto-detects email+password (staff and
+  riders) vs email+code. Password reset and email verification included.
+- **Staff administration** — the system admin creates, edits and removes
+  operations/manager/support staff, and views the append-only audit log.
+- **Drivers & vehicles** — apply-to-drive and vehicle registry with an
+  operations approval queue (state machine).
+- **Landing page** — hero slideshow, how-it-works, bilingual (EN/AR, RTL),
+  light/dark themes, adaptive from 320px to 2560px.
 
-```bash
-open apps/web/dist-preview.html      # macOS
-xdg-open apps/web/dist-preview.html  # Linux
+Not yet real: the in-app **rider journey (routes, trips, wallet, duty, ops and
+manager dashboards)** still renders sample content. Removing that and wiring
+those screens to the API is the current work item — see
+[docs/process/checklists/M1_finish_demo.md](docs/process/checklists/M1_finish_demo.md)
+and [docs/planning/PROJECT_MAP.md](docs/planning/PROJECT_MAP.md).
+
+## Architecture
+
+A pnpm monorepo. The interface is a **single self-contained HTML file** with no
+framework and no runtime dependencies; the backend is a **NestJS modular
+monolith** with **PostgreSQL as the only stateful service** (no Redis, no ORM —
+SQL lives only in `**/infra/*.repository.ts`).
+
+```
+apps/web/       the interface — assembled from src/ by build.js into one file
+apps/api/       the backend — NestJS + Fastify, 16 module dirs
+apps/mobile/    Capacitor wrapper (planned, BUILD_PLAN P7)
+packages/       shared types (schema-generated) + toolchain config
+infra/          migrations, Dockerfile, docker-compose, Railway config
+scripts/        the enforcement scripts behind `pnpm verify`
+docs/           specification, decisions, build plan, project map, process rules
 ```
 
-Five roles are included — rider, driver, operations, manager, support. Use the
-role selector in the top bar to move between them. Language (English / Arabic
-with full RTL) and appearance (light / dark) are in Profile.
-
-## What is here
-
-| Capability | What you get |
-|---|---|
-| Rider journey | Browse routes, pick a boarding point, pick a departure, book, boarding code, live ride, rate |
-| Driver work | Duty, claim a published slot, run a journey, scan passengers, earnings, documents |
-| Operations | Approval queues, live fleet map, stop mapping, route and slot grid, users |
-| Manager | Coverage board, fare control with preview, promotions, analytics |
-| Support | Rider lookup, bounded actions, tickets, lost property |
-| Bilingual | English and Arabic, full right-to-left mirroring |
-| Themes | Light and dark, both designed rather than inverted |
-| Adaptive | One layout from a 320px phone to a 2560px monitor |
+Read the project map ([docs/planning/PROJECT_MAP.md](docs/planning/PROJECT_MAP.md))
+and the onboarding notes ([docs/README.md](docs/README.md)) before starting.
 
 ## Requirements
 
-- Node.js 20 or newer
-- pnpm 9 (pinned by `packageManager`; `corepack enable` picks it up)
-- Docker — only if you want to serve it as a container
+- Node.js 20+
+- pnpm 9.15.9 (pinned by `packageManager`)
+- PostgreSQL 16+ (any install; Docker is optional)
 
-The interface has no runtime dependencies; the test suite uses `jsdom` and
-`puppeteer` (installed by `pnpm install`).
-
-## Quick start
+## Quick start (local)
 
 ```bash
-git clone <url>
+git clone <repo-url>
 cd ride-share
-corepack enable && pnpm install
-pnpm --filter @ride-share/web build
+pnpm install
+cp .env.example .env        # fill in DATABASE_URL + JWT_SECRET at minimum
+pnpm migrate up             # apply infra/migrations to your database
 ```
 
-That writes `apps/web/dist-preview.html`. Open it in a browser.
-
-To run everything — build, unit and accessibility checks, real-browser layout
-checks across fifteen viewports, and the break tests that prove those checks
-can fail:
+Run the API:
 
 ```bash
-pnpm --filter @ride-share/web verify
+pnpm --filter @ride-share/api build && pnpm --filter @ride-share/api start
+# http://localhost:3000/healthz
 ```
 
-To run the full stack (api + web + postgres) as containers:
+Run the web (proxies /v1/* to the API):
+
+```bash
+API_INTERNAL_URL=http://localhost:3000 PORT=8080 \
+  node apps/web/server.js
+# http://localhost:8080
+```
+
+Or everything as containers:
 
 ```bash
 docker compose up --build
 # web: http://localhost:8080 · api: http://localhost:3000
 ```
 
-## Repository layout
+## Configuration
 
-Code and documentation are kept apart on purpose.
+Variable names only (values are environment-specific). The full list is in
+`.env.example`; a few worth knowing:
 
-```
-apps/web/       the interface — source, build script, tests
-apps/api/       the backend — NestJS modular monolith (M0 skeleton)
-apps/mobile/    Capacitor wrapper (BUILD_PLAN P7, created with a README)
-packages/       shared types, logic, API client, toolchain config
-scripts/        the enforcement scripts behind `pnpm verify`
-infra/          Dockerfile, docker-compose, Railway configuration, smoke test
-docs/           everything that is not code: specification, plan, decisions, research
-```
-
-`apps/web/src` is assembled into one file by `apps/web/build.js`. Edit the
-sources, never the generated `dist-preview.html`.
-
-```
-apps/web/src/styles/shell.html   design tokens, layout, every CSS rule
-apps/web/src/data/content.js     all text, both languages, and sample content
-apps/web/src/lib/components.js   shared components and icons
-apps/web/src/screens/            rider, driver, staff screens
-apps/web/src/shell/app.js        navigation table, routing, render
-```
-
-## Further docs
-
-Start at **[docs/README.md](docs/README.md)** — it is written for someone
-picking this up with no prior context and says what to read in what order.
-
-| Document | What it is |
-|---|---|
-| [docs/specification/MASTER_SPECIFICATION.md](docs/specification/MASTER_SPECIFICATION.md) | The product, in full. 22 chapters |
-| [docs/planning/BUILD_PLAN.md](docs/planning/BUILD_PLAN.md) | How it gets built. Phases 0–8, every point with its tests |
-| [docs/decisions/DECISIONS_REGISTER.md](docs/decisions/DECISIONS_REGISTER.md) | Every decision taken and why |
-| [docs/decisions/OPEN_ITEMS.md](docs/decisions/OPEN_ITEMS.md) | What is still open or accepted as a risk |
-| [docs/research/](docs/research/) | The sourced research behind the decisions |
+| Variable | Where | Purpose |
+|---|---|---|
+| `DATABASE_URL` | api | PostgreSQL connection |
+| `JWT_SECRET` | api | token signing (≥32 chars) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | api | the ONE seeded system admin |
+| `SMTP_HOST/PORT/SECURE/USER/PASS`, `EMAIL_FROM` | api | email codes (any SMTP; Resend works) |
+| `AUTH_OTP_BYPASS` | api | `true` = skip email-OTP for testing |
+| `EMAIL_ALLOWED_DOMAINS` | api | extra allowed email domains |
+| `API_INTERNAL_URL` | web | `http://<api private host>:3000` |
 
 ## Verification
 
-`pnpm --filter @ride-share/web verify` runs five stages:
+```bash
+pnpm verify      # repo guards + build + typecheck + lint + every test
+pnpm db:verify   # migrations up→down→up + schema drift + generated types (needs DATABASE_URL)
+```
 
-| Stage | Checks |
-|---|---|
-| Build | Assembles the single file |
-| Unit and accessibility | 198 assertions — labels, roles, focus, tokens, role boundaries, booking logic |
-| Layout | 5,803 assertions in a real browser across 15 viewports × 5 roles × 30 screens |
-| Breaks | 40 deliberate defects, each confirmed to turn the suite red |
-| Layout breaks | 7 deliberate layout defects, same |
-
-The break stages matter more than the passing counts. Every check in this
-repository has been observed failing for the correct reason; a check never
-seen failing is an assumption wearing a test's clothing.
+The test suite deliberately breaks every check once and observes it fail
+(§0.2) — a green suite means the checks actually work, not just that they run.
+The break harnesses live in `apps/web/tests/breaks.sh` and
+`apps/web/tests/layout-breaks.sh`.
 
 ## Status
 
 | Area | State |
 |---|---|
-| Interface — all screens, five roles, bilingual, adaptive | Done |
-| Specification and build plan | Done |
-| Monorepo + pinned toolchain + workspace guard | Done — M0.1 |
-| API, database, authentication | In progress — M0 foundations |
-| Booking, payments, live journeys | Not started — M3 |
-| Android APK | Not started — M7 |
-
-The interface is not connected to anything. Data shown is sample content, the
-map is a labelled illustration rather than live tiles, and no control performs
-a real transaction. Nothing in the interface claims otherwise.
+| Foundations, deploy pipeline, guard-rails | Done |
+| Identity, auth, accounts, staff, drivers/vehicles, landing | Done |
+| **Rider journey wired to the API (remove demo data)** | **In progress — M1-finish** |
+| Geography, stops, mapping | Not started — M2 |
+| Routes, slots, booking, boarding, payment | Not started — M3 |
+| Safety, commercial, subscriptions, APK, launch | Not started — M4–M8 |
 
 The product name is provisional and no trademark search has been done.
 
