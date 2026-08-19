@@ -454,3 +454,14 @@
 - Frontend maps 5xx to a clearer, retryable "service unavailable" message (EN/AR).
 - Verified: full production boot locally (admin login OK, isSystemAdmin true); broken-DB boot
   answers /healthz in 13ms (503) and other routes in 5ms (500) — no hang.
+
+## 2026-08-19 — Web proxy hardened + self-diagnosing (live 502 fix)
+
+- Root cause of the live 502: server.js had NO timeout and NO guard — a malformed
+  API_INTERNAL_URL (unresolved Railway reference) crashed the web process on every
+  /v1/* request, and an unreachable API hung it forever.
+- server.js now validates API_INTERNAL_URL once at startup (invalid → 503
+  API_NOT_CONFIGURED, never a crash), the proxy has a 10s timeout + error handlers,
+  and /healthz reports the API's reachability: { ok, service:'web', api:'up'|'down'|'unreachable'|'unconfigured' }.
+- server tests extended (health api field, /v1/config, proxy 503 without API).
+- Sandbox cleaned: sticker packs + zips removed from the workspace.

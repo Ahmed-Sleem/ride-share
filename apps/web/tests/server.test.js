@@ -13,14 +13,30 @@ function run(url) {
       writeHead(code, headers) { this._code = code; Object.assign(this._headers, headers); },
       end(data) { this._body = data; resolve({ status: this._code, body: this._body, headers: this._headers }); },
     };
-    handler({ url }, res);
+    Promise.resolve(handler({ url }, res)).catch(() => {});
   });
 }
 
-test('health endpoint reports ok', async () => {
+test('health endpoint reports ok + api status', async () => {
   const r = await run('/healthz');
   assert.equal(r.status, 200);
-  assert.equal(JSON.parse(r.body).ok, true);
+  const body = JSON.parse(r.body);
+  assert.equal(body.ok, true);
+  assert.equal(body.service, 'web');
+  assert.equal(body.api, 'unconfigured'); // no API_INTERNAL_URL in the test env
+});
+
+test('config endpoint returns client-safe maps config', async () => {
+  const r = await run('/v1/config');
+  assert.equal(r.status, 200);
+  const body = JSON.parse(r.body);
+  assert.deepEqual(body.maps, { provider: 'google', apiKey: '' });
+});
+
+test('proxy without a configured API is a clean 503 (never a crash)', async () => {
+  const r = await run('/v1/auth/login/identify');
+  assert.equal(r.status, 503);
+  assert.equal(JSON.parse(r.body).code, 'API_NOT_CONFIGURED');
 });
 
 test('root serves the built document', async () => {
