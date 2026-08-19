@@ -160,13 +160,9 @@ run_break "forecast without its source" src/data/content.js \
   's|ridersWaiting:"riders searched this slot yesterday",|ridersWaiting:"expected riders",|' \
   "the recommendation states its evidence"
 
-run_break "closed boarding point tappable" src/screens/rider.js \
-  's|      bordered:true, chev:b.ok, dis:!b.ok, selected:S.chosenBoard===b.id,|      bordered:true, chev:b.ok, selected:S.chosenBoard===b.id,|' \
-  "closed point is disabled by attribute, not just styling|closed boarding points exist to test"
-
-run_break "price ignores seat count" src/screens/rider.js \
-  's|  const unit=street?DATA.streetPickupFare:d.fare, total=unit\*S.seats;|  const unit=street?DATA.streetPickupFare:d.fare, total=unit;|' \
-  "price responds to seat count"
+run_break "rider home reverts to sample routes" src/screens/rider.js \
+  's|  w.append(Empty("routes", t("comingSoon"), t("routesComingBody")));|  w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
+  "home has no sample route strings"
 
 run_break "back button goes nowhere" src/lib/components.js \
   's|^const back = () => { S.page = S.stack.pop() \|\| DEFAULT_PAGE\[S.role\]; S.sheet=null; render(); };|const back = () => { S.sheet=null; render(); };|' \

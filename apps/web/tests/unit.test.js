@@ -324,63 +324,34 @@ group("BACK NAVIGATION ACTUALLY GOES BACK");
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   C. BOOKING FLOW END TO END
+   C. RIDER SCREENS ARE HONEST (no demo content, M1-finish)
    ───────────────────────────────────────────────────────────────── */
-group("BOOKING FLOW");
+group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
 {
   const t=boot();
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour",email:"nour@x.com"}});
+  const sample=/Corniche|Montazah|Smouha|Agami|Miami|EGP|Mahmoud|Hiace/;
+
   t.go("rider","home");
-  t.all(".routecard")[0].dispatchEvent(new t.w.Event("click"));
-  ok("route tap opens boarding", t.w.S.page==="boarding", t.w.S.page);
-  ok("a route was actually stored", !!t.w.S.chosenRoute);
-
-  const rows=t.all(".rowitem");
-  const disabled=rows.filter(r=>r.hasAttribute("disabled"));
-  ok("closed boarding points exist to test", disabled.length>0, String(disabled.length));
-  const before=t.w.S.page;
-  disabled[0].dispatchEvent(new t.w.Event("click"));
-  ok("tapping a closed boarding point does nothing", t.w.S.page===before);
-  ok("closed point is disabled by attribute, not just styling",
-     disabled[0].hasAttribute("disabled"));
-
-  const open=rows.find(r=>!r.hasAttribute("disabled") && r.tagName==="BUTTON");
-  open.dispatchEvent(new t.w.Event("click"));
-  ok("tapping an open boarding point advances", t.w.S.page==="departures", t.w.S.page);
-
-  t.all(".rowitem")[0].dispatchEvent(new t.w.Event("click"));
-  ok("picking a departure advances to review", t.w.S.page==="review", t.w.S.page);
-  ok("a departure was stored", !!t.w.S.chosenDep);
-
-  const price=()=>t.q(".pricetag").textContent;
-  const p1=price();
-  t.all(".stepper button")[1].dispatchEvent(new t.w.Event("click"));
-  ok("seat stepper increments", t.w.S.seats===2, String(t.w.S.seats));
-  ok("price responds to seat count", price()!==p1, `${p1} -> ${price()}`);
-
-  t.set({seats:1});
-  const minus=t.all(".stepper button")[0];
-  ok("minus is disabled at one seat", minus.hasAttribute("disabled"));
-  t.set({seats:4});
-  ok("plus is disabled at max seats", t.all(".stepper button")[1].hasAttribute("disabled"));
-}
-
-group("PRICING RULES");
-{
-  const t=boot();
-  t.set({role:"rider", page:"review", chosenRoute:t.w.DATA.routes[0],
-         chosenDep:t.w.DATA.departures[0], chosenBoard:"b1", seats:1});
-  const stop=t.q(".pricetag").textContent;
-  t.set({chosenBoard:"street"});
-  const street=t.q(".pricetag").textContent;
-  ok("street pickup costs more than a stop", stop!==street, `${stop} vs ${street}`);
-  const n=s=>parseInt(s.replace(/\D/g,""),10);
-  ok("street pickup is the higher figure", n(street)>n(stop));
+  ok("home has no sample route strings", !sample.test(t.q(".main").textContent));
+  ok("home greets the real user", t.q(".main").textContent.includes("Nour"));
 
   t.go("rider","routes");
-  const fares=t.all(".fare").map(e=>e.textContent);
-  ok("every route shows a fare", fares.length>=t.w.DATA.routes.length);
-  ok("fares are labelled fixed price",
-     t.all(".routecard .t-micro").length>=t.w.DATA.routes.length);
+  ok("routes shows the coming-soon state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
+
+  t.go("rider","trips");
+  ok("trips shows the honest empty state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
+
+  t.go("rider","wallet");
+  ok("wallet shows the coming-soon state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
+
+  for(const p of ["boarding","departures","review","booked","waiting","onboard"]){
+    t.go("rider",p);
+    ok(`booking step ${p} is honestly 'coming soon'`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
+  }
+
+  t.go("rider","safety");
+  ok("safety has no fake vehicle", !sample.test(t.q(".main").textContent));
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -493,7 +464,7 @@ group("RTL");
   ok("document direction flips", t.d.documentElement.dir==="rtl");
   ok("document language flips", t.d.documentElement.lang==="ar");
   ok("interface is translated", /الرئيسية|رحلاتي|المحفظة/.test(t.txt()));
-  t.go("rider","review");
+  t.go("rider","profile");   // profile shows ltr email/phone in both directions
   ok("numbers stay left-to-right inside rtl", t.all(".ltr").length>0);
   const css=SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
   const physical=(css.match(/(?:margin|padding|border)-(?:left|right):/g)||[]);
