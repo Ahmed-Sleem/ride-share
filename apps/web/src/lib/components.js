@@ -44,7 +44,7 @@ const S = {
   lockedUntil: storeGet("rs.lockedUntil") ? new Date(Number(storeGet("rs.lockedUntil"))) : null,
   emailToast:null, emailToastKind:"info",
   authStep:"email", authBusy:false, authError:null,
-  authEmail:"", authName:"",
+  authEmail:"", authName:"", otpBypass:false,
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
@@ -62,6 +62,9 @@ function enterApp(user) {
   S.page = DEFAULT_PAGE[S.role] || "home";
   S.stack = [];
   S.sheet = null; S.opsView = null;
+  // reset the auth-flow state so returning to sign-in starts clean
+  S.authBusy = false; S.authError = null; S.otpBypass = false;
+  S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
   render();
 }
 
@@ -69,6 +72,8 @@ function signOut() {
   API.clearSession();
   S.user = null; S.authed = false; S.view = "landing";
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
+  S.authBusy = false; S.authError = null; S.otpBypass = false;
+  S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
   render();
 }
 

@@ -96,21 +96,22 @@ class FakeNotifications {
 
 class FakeAudit { entries: unknown[] = []; async record(...a: unknown[]) { this.entries.push(a); } async list() { return []; } }
 
-function env(): Env {
+function env(over: Partial<Record<'AUTH_OTP_BYPASS', 'true' | 'false'>> = {}): Env {
   return {
     NODE_ENV: 'development', PORT: 3000, LOG_LEVEL: 'info', DATABASE_URL: 'postgres://localhost/x',
     JWT_SECRET: 'c'.repeat(32), CORS_ORIGINS: '', THROTTLE_TTL: 60000, THROTTLE_LIMIT: 100,
     SMTP_PORT: 587, SMTP_SECURE: 'false', AUTO_MIGRATE: 'true', EMAIL_ALLOWED_DOMAINS: '',
+    AUTH_OTP_BYPASS: over.AUTH_OTP_BYPASS ?? 'false',
   } as Env;
 }
 
-function setup() {
+function setup(over: Partial<Record<'AUTH_OTP_BYPASS', 'true' | 'false'>> = {}) {
   const users = new FakeUsers();
   const codes = new FakeCodes();
   const sessions = new FakeSessions(users);
   const notifications = new FakeNotifications();
   const audit = new FakeAudit();
-  const svc = new IdentityService(env(), users as never, codes as never, sessions as never, notifications as never, audit as never);
+  const svc = new IdentityService(env(over), users as never, codes as never, sessions as never, notifications as never, audit as never);
   return { svc, users, codes, sessions, notifications, audit };
 }
 
@@ -346,4 +347,38 @@ test('a staff role cannot be edited into super_admin', async () => {
   const ops = await svc.createStaff(actor, { email: 'ops@x.com', password: 'pw-12345678', role: 'operations' });
   await assert.rejects(() => svc.updateStaff(actor, ops.id, { role: 'super_admin' }), (e: unknown) =>
     e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.super_admin_reserved'));
+});
+
+test('OTP bypass: signup creates an account without a code (no email sent)', async () => {
+  const { svc, notifications, users } = setup({ AUTH_OTP_BYPASS: 'true' });
+  const req = await svc.riderRequestOtp('rider@gmail.com');
+  assert.equal(req.bypass, true);
+  assert.equal(notifications.calls.length, 0, 'no code is sent in bypass mode');
+  const res = await svc.signupVerifyOtp('rider@gmail.com', '', 'Nour');
+  assert.equal(res.user.role, 'rider');
+  assert.equal(res.user.email, 'rider@gmail.com');
+  assert.equal(users.rows.get(res.user.id)!.name, 'Nour');
+});
+
+test('OTP bypass: sign-in works without a code for an existing account', async () => {
+  const { svc, users } = setup({ AUTH_OTP_BYPASS: 'true' });
+  await users.create({ email: 'rider@gmail.com', role: 'rider' });
+  const id = await svc.identifyLogin('rider@gmail.com');
+  assert.equal(id.method, 'otp');
+  assert.equal((id as { bypass?: boolean }).bypass, true);
+  const res = await svc.riderVerifyOtp('rider@gmail.com', '');
+  assert.equal(res.user.email, 'rider@gmail.com');
+});
+
+test('OTP bypass still enforces the allowlist and one-email-one-account', async () => {
+  const { svc, users } = setup({ AUTH_OTP_BYPASS: 'true' });
+  await assert.rejects(() => svc.riderRequestOtp('a@playboot.com'), ForbiddenException);
+  await users.create({ email: 'rider@gmail.com', role: 'rider' });
+  await assert.rejects(() => svc.riderRequestOtp('rider@gmail.com'), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.email_taken'));
+});
+
+test('bypass OFF: a missing code is still rejected', async () => {
+  const { svc } = setup(); // default bypass=false
+  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', '', 'N'), UnauthorizedException);
 });

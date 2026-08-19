@@ -17,6 +17,10 @@ async function bootstrap(): Promise<void> {
   const env = loadEnv();
   const logger = createLogger(env.LOG_LEVEL);
 
+  if (env.AUTH_OTP_BYPASS === 'true') {
+    logger.warn('AUTH_OTP_BYPASS is ON — email OTP verification is DISABLED (testing only)');
+  }
+
   // Migrations before anything else — the schema is the only way it changes.
   if (env.AUTO_MIGRATE !== 'false') {
     try {

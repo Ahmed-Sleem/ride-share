@@ -64,7 +64,7 @@ export class IdentityService {
       staff or rider: a password account gets 'password', an OTP-only account
       gets 'otp' AND has a code emailed (cooldown applies). Unknown identifiers
       are a 401, exactly like a wrong password — no enumeration. */
-  async identifyLogin(identifier: string): Promise<{ method: 'password' | 'otp'; resendInMs?: number; target?: string }> {
+  async identifyLogin(identifier: string): Promise<{ method: 'password' | 'otp'; resendInMs?: number; target?: string; bypass?: boolean }> {
     const user = await this.users.findByIdentifier(identifier.trim());
     if (!user) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
     if (user.status !== 'active') throw new ForbiddenException({ message_key: 'auth.account_suspended' });
@@ -72,6 +72,7 @@ export class IdentityService {
     // OTP-only account (rider / driver): email a login code now.
     const email = user.email;
     if (!email) throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
+    if (this.otpBypass) return { method: 'otp', resendInMs: 0, target: email, bypass: true };
     const resendInMs = await this.issueLoginCode(email, 'auth');
     return { method: 'otp', resendInMs, target: email };
   }
@@ -96,7 +97,7 @@ export class IdentityService {
       The domain must pass the allowlist AND the email must not already belong
       to an account (one email = one account, whatever its role) — both are
       checked BEFORE anything is sent. */
-  async riderRequestOtp(email: string): Promise<{ ok: true; resendInMs: number }> {
+  async riderRequestOtp(email: string): Promise<{ ok: true; resendInMs: number; bypass?: boolean }> {
     const normalized = email.trim().toLowerCase();
     if (!isAllowedEmail(normalized, parseExtraDomains(this.env.EMAIL_ALLOWED_DOMAINS))) {
       throw new ForbiddenException({ message_key: 'auth.email_domain_not_allowed' });
@@ -104,6 +105,8 @@ export class IdentityService {
     if (await this.users.findByEmail(normalized)) {
       throw new ForbiddenException({ message_key: 'auth.email_taken' });
     }
+    // Bypass: no code is issued or sent — the client skips the code step.
+    if (this.otpBypass) return { ok: true, resendInMs: 0, bypass: true };
     const resendInMs = await this.issueLoginCode(normalized, 'signup');
     return { ok: true, resendInMs };
   }
@@ -114,7 +117,7 @@ export class IdentityService {
       never a silent sign-in. */
   async signupVerifyOtp(email: string, code: string, name?: string): Promise<AuthResult> {
     const normalized = email.trim().toLowerCase();
-    await this.consumeLoginCode(normalized, code);
+    if (!this.otpBypass) await this.consumeLoginCode(normalized, code);
     if (await this.users.findByEmail(normalized)) {
       throw new ForbiddenException({ message_key: 'auth.email_taken' });
     }
@@ -139,7 +142,7 @@ export class IdentityService {
       sent the code) — sign-up is a separate, stricter endpoint. */
   async riderVerifyOtp(email: string, code: string): Promise<AuthResult> {
     const normalized = email.trim().toLowerCase();
-    await this.consumeLoginCode(normalized, code);
+    if (!this.otpBypass) await this.consumeLoginCode(normalized, code);
     const user = await this.users.findByEmail(normalized);
     if (!user || user.password_hash) {
       throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
@@ -350,6 +353,12 @@ export class IdentityService {
   }
 
   // ── internals ───────────────────────────────────────────────────────────
+  /** Dev/testing bypass: when AUTH_OTP_BYPASS=true, no code is issued or
+      required. The allowlist and one-email-one-account rules still apply. */
+  private get otpBypass(): boolean {
+    return this.env.AUTH_OTP_BYPASS === 'true';
+  }
+
   /** Verify a login code and consume it, enforcing the DEC-189 rules exactly
       once: 3 failed attempts → 1-hour lockout (audited); expired/consumed/
       not-found codes are honest errors. Shared by sign-up and sign-in. */

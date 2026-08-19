@@ -31,12 +31,14 @@ class OtpRequestDto {
 
 class OtpVerifyDto {
   @IsEmail({}, { message: 'validation.email' }) email!: string;
-  @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
+  // optional: when AUTH_OTP_BYPASS=true no code is required (the service
+  // ignores it); when bypass is off an empty/absent code fails verification.
+  @IsOptional() @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code?: string;
 }
 
 class SignupVerifyDto {
   @IsEmail({}, { message: 'validation.email' }) email!: string;
-  @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
+  @IsOptional() @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code?: string;
   @IsOptional() @IsString() @MinLength(1) name?: string;
 }
 
@@ -107,13 +109,13 @@ export class IdentityController {
   @Post('auth/otp/verify')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   verifyOtp(@Body() dto: OtpVerifyDto) {
-    return this.identity.riderVerifyOtp(dto.email, dto.code);
+    return this.identity.riderVerifyOtp(dto.email, dto.code ?? '');
   }
 
   @Post('auth/signup/verify')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   signupVerify(@Body() dto: SignupVerifyDto) {
-    return this.identity.signupVerifyOtp(dto.email, dto.code, dto.name);
+    return this.identity.signupVerifyOtp(dto.email, dto.code ?? '', dto.name);
   }
 
   @Post('auth/refresh')

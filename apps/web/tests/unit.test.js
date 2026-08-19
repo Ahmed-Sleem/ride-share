@@ -728,6 +728,45 @@ group("M1.9d — NOTIFICATIONS COPY COLLISION + STAFF PROFILE");
   }
 })();
 
+group("M1.9e — OTP BYPASS SKIPS THE CODE STEP");
+const m19e = (async () => {
+  const t=boot();
+  const session = { user:{id:"u1",role:"rider",name:"Nour",email:"rider@gmail.com",emailVerified:false}, accessToken:"a", refreshToken:"r" };
+
+  // sign-up: a bypass response skips the OTP boxes and goes to the name step
+  t.w.fetch = async (url, opts) => {
+    const body = opts && opts.body ? JSON.parse(opts.body) : {};
+    if (url.endsWith("/auth/otp/request")) return { ok:true, json: async()=>({ ok:true, resendInMs:0, bypass:true }) };
+    if (url.endsWith("/auth/signup/verify")) return { ok:true, json: async()=>session };
+    return { ok:false, status:404, json: async()=>({ message_key:"error.internal" }) };
+  };
+  t.w.S.view="auth"; t.w.S.authMode="signup"; t.w.S.authStep="choose"; t.w.render();
+  t.q(".rolechoice").click();                       // choose Rider → email step
+  t.q("#auth-email").value = "rider@gmail.com";
+  [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.sendCode)).click();
+  await new Promise((r)=>setTimeout(r, 20));
+  ok("signup skips the code step when bypass is on", t.w.S.authStep==="name" && !t.q(".otp__box"), String(t.w.S.authStep));
+
+  // finish sign-up with a name → enters the app
+  t.q("#auth-name").value = "Nour";
+  [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.createAccount)).click();
+  await new Promise((r)=>setTimeout(r, 20));
+  ok("bypass signup enters the app", t.w.S.view==="app" && t.w.S.role==="rider", String(t.w.S.view));
+
+  // sign-in: a bypass identify signs straight in (no OTP boxes)
+  t.w.S.view="auth"; t.w.S.authed=false; t.w.S.authMode="signin"; t.w.S.loginMethod=null; t.w.render();
+  t.w.fetch = async (url, opts) => {
+    const body = opts && opts.body ? JSON.parse(opts.body) : {};
+    if (url.endsWith("/auth/login/identify")) return { ok:true, json: async()=>({ method:"otp", bypass:true, resendInMs:0, target:"rider@gmail.com" }) };
+    if (url.endsWith("/auth/otp/verify")) return { ok:true, json: async()=>session };
+    return { ok:false, status:404, json: async()=>({ message_key:"error.internal" }) };
+  };
+  t.q("#auth-identifier").value = "rider@gmail.com";
+  [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.signinContinue)).click();
+  await new Promise((r)=>setTimeout(r, 20));
+  ok("bypass sign-in enters the app without a code", t.w.S.view==="app", String(t.w.S.view));
+})();
+
 group("BUILD INTEGRITY");
 {
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),
@@ -740,7 +779,7 @@ group("BUILD INTEGRITY");
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));
 }
 
-Promise.resolve(m19c).then(() => {
+Promise.all([m19c, m19e]).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);
 });

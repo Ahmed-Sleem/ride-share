@@ -30,6 +30,13 @@ export const envSchema = {
   ADMIN_EMAIL: z.string().email().optional(),
   ADMIN_PASSWORD: z.string().min(12).optional(),
 
+  // ── dev / testing bypass ──────────────────────────────────────────────
+  // 'true' DISABLES email-OTP verification: sign-up and sign-in proceed
+  // without a code (the email allowlist and one-email-one-account rules still
+  // apply). For testing before an email provider is wired; enabling it logs a
+  // loud warning on boot. Production should keep 'false'.
+  AUTH_OTP_BYPASS: z.enum(['true', 'false']).default('false'),
+
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),
   PAYMOB_HMAC_SECRET: z.string().optional(),

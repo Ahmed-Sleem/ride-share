@@ -43,6 +43,11 @@ function signupAuth() {
       () => riderSendCode(),
       () => { S.authStep="email"; S.authError=null; render(); },
       { nameField:true, btnLabel:t("createAccount") });
+  } else if (S.authStep === "name") {
+    // OTP bypass: the code step is skipped, only the name is collected.
+    body = $("div",{class:"stack gap3"},
+      field("auth-name", t("yourName"), "text", "name"),
+      Btn({label:S.authBusy? "…" : t("createAccount"), block:true, dis:S.authBusy, on:()=>signupVerifyCode()}));
   }
   return card(t("createAccount"), body, S.authMode==="signup");
 }
@@ -219,16 +224,21 @@ const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s||"").trim());
 async function identify() {
   const id = val("auth-identifier");
   if(!id){ S.authError=t("validation.email"); render(); return; }
-  S.authBusy=true; S.authError=null; render();
+  S.authBusy=true; S.authError=null; S.otpBypass=false; render();
   try {
     const res = await API.identify(id);
     S.authIdentifier = id;
-    if (res.method === "password") { S.loginMethod="password"; }
-    else {
-      S.authEmail = id;
-      S.loginMethod="otp";
-      setResendUntil(res.resendInMs || 60000);
+    if (res.method === "password") { S.loginMethod="password"; S.authBusy=false; render(); return; }
+    S.authEmail = id;
+    S.loginMethod="otp";
+    if (res.bypass) {
+      // OTP bypass: no code step — sign straight in.
+      S.otpBypass = true;
+      S.authBusy = false;
+      await signinVerifyCode();
+      return;
     }
+    setResendUntil(res.resendInMs || 60000);
     S.authBusy=false; render();
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
@@ -254,15 +264,23 @@ async function riderSendCode() {
   setLockedUntil(null); render();
   try {
     const res = await API.requestOtp(email);
-    S.authEmail=email; S.authStep="otp"; S.authBusy=false;
+    S.authEmail=email; S.authBusy=false;
+    if (res.bypass) {
+      // OTP bypass: skip the code step, go straight to the name step.
+      S.otpBypass = true;
+      S.authStep = "name";
+      render();
+      return;
+    }
+    S.authStep="otp";
     setResendUntil(res.resendInMs || 60000);
     render();
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function signupVerifyCode() {
-  const code = otpValue();
-  if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
+  const code = S.otpBypass ? "" : otpValue();
+  if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   const name = val("auth-name") || undefined;   // read BEFORE render()
   S.authBusy=true; S.authError=null; render();
   try {
@@ -283,8 +301,8 @@ async function signupVerifyCode() {
 }
 
 async function signinVerifyCode() {
-  const code = otpValue();
-  if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
+  const code = S.otpBypass ? "" : otpValue();
+  if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
     const res = await API.verifyOtp(S.authEmail, code);

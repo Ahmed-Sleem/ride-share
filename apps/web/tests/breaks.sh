@@ -292,6 +292,10 @@ run_break "staff profile shows rider wallet" src/shell/app.js \
   's|{k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}|{k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}|' \
   "staff profile has no wallet entry|staff profile has no subscriptions entry"
 
+run_break "client ignores the OTP bypass flag" src/screens/auth.js \
+  's|    if (res.bypass) {|    if (false) {|' \
+  "signup skips the code step when bypass is on"
+
 run_break "super_admin offered at staff creation" src/screens/admin.js \
   's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
   "staff create offers no super_admin option"

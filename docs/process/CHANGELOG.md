@@ -510,3 +510,13 @@
 - SMTP failures now log the provider's own rejection (code + smtp response) so the deploy logs
   name the exact Mailo-side reason.
 - 271 unit / 83 API / 14 axe / 47 landing / repo checks green.
+
+## 2026-08-19 — AUTH_OTP_BYPASS env flag (test without an email provider)
+
+- New env var AUTH_OTP_BYPASS (default false). When 'true': no code is issued or required —
+  sign-up (allowlist + one-email-one-account still enforced) and sign-in proceed without OTP.
+  The client skips the 6-box step (sign-up goes straight to the name step; sign-in enters
+  directly). A loud warning is logged on boot. Keep 'false' in production.
+- Also fixed: a successful sign-in left authBusy=true, so returning to the sign-in screen
+  showed a stuck "…" button — enterApp()/signOut() now reset the auth-flow state.
+- 87 API tests (4 new bypass tests) / 274 web unit (3 new) green; repo checks green.
