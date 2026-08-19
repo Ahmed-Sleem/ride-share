@@ -530,3 +530,11 @@
   where "" is valid — no other occurrence of this class of bug.
 - Regression: "bypass signup omits the code field entirely" (observed failing when reverted to "").
 - 275 web unit / 87 API tests / repo checks green.
+
+## 2026-08-19 — Riders set a password at sign-up
+
+- Fixed "create account" with no password: the sign-up flow now collects a password (min 8 chars,
+  show/hide eye) on the name step, and the backend stores it scrypt-hashed. A rider account now
+  signs in with email + password (identify routes it to the password method).
+- SignupVerifyDto requires `password`; signupVerifyOtp hashes it; EN/AR copy added.
+- 88 API (new test: password hash set + password sign-in works) / 275 web unit green.

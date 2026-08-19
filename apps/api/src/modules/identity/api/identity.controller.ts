@@ -40,6 +40,8 @@ class SignupVerifyDto {
   @IsEmail({}, { message: 'validation.email' }) email!: string;
   @IsOptional() @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code?: string;
   @IsOptional() @IsString() @MinLength(1) name?: string;
+  // A rider sets a password at sign-up (owner request) — required.
+  @IsString() @MinLength(8, { message: 'validation.password' }) password!: string;
 }
 
 class UpdateStaffDto {
@@ -115,7 +117,7 @@ export class IdentityController {
   @Post('auth/signup/verify')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   signupVerify(@Body() dto: SignupVerifyDto) {
-    return this.identity.signupVerifyOtp(dto.email, dto.code ?? '', dto.name);
+    return this.identity.signupVerifyOtp(dto.email, dto.code ?? '', dto.name, dto.password);
   }
 
   @Post('auth/refresh')

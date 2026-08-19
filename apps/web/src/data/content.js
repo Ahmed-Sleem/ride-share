@@ -79,7 +79,7 @@ en:{
   /* auth */
   signIn:"Sign in", createAccount:"Create account",
   staffTab:"Staff", riderTab:"Rider", staffNoSelfSignup:"Staff accounts are created by an administrator — there is no staff self-signup.",
-  identifierLabel:"Email", passwordLabel:"Password",
+  identifierLabel:"Email", passwordLabel:"Password", passwordHint:"At least 8 characters.",
   signInAction:"Sign in", sendCode:"Send code", verifyCode:"Verify",
   codeLabel:"6-digit code", codeSent:"We sent a code to",
   haveAccount:"Already have an account?", needAccount:"New here?",
@@ -123,7 +123,7 @@ en:{
          network:"Can't reach the server. Check your connection and try again.",
          email_not_configured:"Email sending isn't configured yet.",
          email_send_failed:"We couldn't send the email right now. Please try again in a moment."},
-  validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number."},
+  validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number.", password:"Password must be at least 8 characters."},
   auth:{
     invalid_credentials:"Email or password isn't right.",
     account_suspended:"This account is suspended.",
@@ -220,7 +220,7 @@ ar:{
   /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
   staffTab:"الموظفون", riderTab:"الراكب", staffNoSelfSignup:"حسابات الموظفين يُنشئها مدير — لا يوجد تسجيل ذاتي للموظفين.",
-  identifierLabel:"البريد الإلكتروني", passwordLabel:"كلمة المرور",
+  identifierLabel:"البريد الإلكتروني", passwordLabel:"كلمة المرور", passwordHint:"٨ أحرف على الأقل.",
   signInAction:"دخول", sendCode:"أرسل الكود", verifyCode:"تحقق",
   codeLabel:"كود من ٦ أرقام", codeSent:"أرسلنا كودًا إلى",
   haveAccount:"لديك حساب بالفعل؟", needAccount:"جديد هنا؟",
@@ -262,7 +262,7 @@ ar:{
          network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا.",
          email_not_configured:"إرسال البريد غير مُهيأ بعد.",
          email_send_failed:"تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل."},
-  validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح."},
+  validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح.", password:"كلمة المرور يجب أن تكون ٨ أحرف على الأقل."},
   auth:{
     invalid_credentials:"البريد أو كلمة المرور غير صحيحة.",
     account_suspended:"هذا الحساب موقوف.",

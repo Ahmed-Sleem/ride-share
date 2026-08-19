@@ -750,6 +750,7 @@ const m19e = (async () => {
 
   // finish sign-up with a name → enters the app
   t.q("#auth-name").value = "Nour";
+  t.q("#auth-password").value = "pw-12345678";
   [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.createAccount)).click();
   await new Promise((r)=>setTimeout(r, 20));
   ok("bypass signup enters the app", t.w.S.view==="app" && t.w.S.role==="rider", String(t.w.S.view));

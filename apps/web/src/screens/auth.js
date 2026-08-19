@@ -44,9 +44,11 @@ function signupAuth() {
       () => { S.authStep="email"; S.authError=null; render(); },
       { nameField:true, btnLabel:t("createAccount") });
   } else if (S.authStep === "name") {
-    // OTP bypass: the code step is skipped, only the name is collected.
+    // OTP bypass: the code step is skipped — name + password are collected.
     body = $("div",{class:"stack gap3"},
       field("auth-name", t("yourName"), "text", "name"),
+      field("auth-password", t("passwordLabel"), "password", "new-password"),
+      $("p",{class:"t-cap",text:t("passwordHint")}),
       Btn({label:S.authBusy? "…" : t("createAccount"), block:true, dis:S.authBusy, on:()=>signupVerifyCode()}));
   }
   return card(t("createAccount"), body, S.authMode==="signup");
@@ -88,6 +90,8 @@ function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
       $("span",{class:"ltr",text:S.authEmail})),
     OtpInput({ onComplete: onVerify }),
     opts.nameField ? field("auth-name", t("yourName"), "text", "name") : null,
+    opts.nameField ? field("auth-password", t("passwordLabel"), "password", "new-password") : null,
+    opts.nameField ? $("p",{class:"t-cap",text:t("passwordHint")}) : null,
     S.attemptsLeft != null
       ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
     Btn({label:S.authBusy? "…" : (opts.btnLabel || t("verifyCode")), block:true, dis:S.authBusy, on:onVerify}),
@@ -285,10 +289,12 @@ async function signupVerifyCode() {
   const code = S.otpBypass ? undefined : otpValue();
   if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   const name = val("auth-name") || undefined;   // read BEFORE render()
+  const password = val("auth-password");        // read BEFORE render()
+  if (password.length < 8) { S.authError = t("validation.password"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
     // one email = one account: a taken email (any role) is refused server-side
-    const res = await API.signupVerify(S.authEmail, code, name);
+    const res = await API.signupVerify(S.authEmail, code, name, password);
     API.saveSession(res);
     if (S.signupRole==="driver") {
       try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }

@@ -112,10 +112,11 @@ export class IdentityService {
   }
 
   /** Rider/driver sign-up step 2: verify the code and CREATE the account.
-      One email = one account: if the email is already taken (as a rider,
-      driver, or staff) the sign-up is refused — never a silent second account,
-      never a silent sign-in. */
-  async signupVerifyOtp(email: string, code: string, name?: string): Promise<AuthResult> {
+      The rider sets a password at sign-up (owner request) — it is hashed with
+      scrypt like every other password in the system. One email = one account:
+      a taken email is refused — never a silent second account, never a silent
+      sign-in. */
+  async signupVerifyOtp(email: string, code: string, name: string | undefined, password: string): Promise<AuthResult> {
     const normalized = email.trim().toLowerCase();
     if (!this.otpBypass) await this.consumeLoginCode(normalized, code);
     if (await this.users.findByEmail(normalized)) {
@@ -123,7 +124,7 @@ export class IdentityService {
     }
     let user: UserRow;
     try {
-      user = await this.users.create({ email: normalized, name, role: 'rider' });
+      user = await this.users.create({ email: normalized, name, role: 'rider', passwordHash: hashPassword(password) });
     } catch (e) {
       // concurrent sign-up with the same email: the UNIQUE constraint fires
       // instead of a 500 — map it to the same honest error.

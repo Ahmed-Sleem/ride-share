@@ -152,7 +152,7 @@ test('rider OTP: request then signup-verify self-registers by email (audited)', 
   assert.equal(req.ok, true);
   assert.equal(req.resendInMs, 60000);
   assert.equal(notifications.codes.length, 1);
-  const res = await svc.signupVerifyOtp(email, notifications.codes[0]!);
+  const res = await svc.signupVerifyOtp(email, notifications.codes[0]!, undefined, 'pw-12345678');
   assert.equal(res.user.role, 'rider');
   assert.equal(res.user.email, email);
   const actions = audit.entries.map((e) => (e as [unknown, string])[1]);
@@ -170,7 +170,7 @@ test('sign-up is refused when the email already exists (one email = one account)
   // (2) at verify — a raced code still cannot create a second account
   const existing = await svc.identifyLogin('rider@gmail.com'); // sends the code for the existing account
   assert.equal(existing.method, 'otp');
-  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', notifications.codes[0]!, 'X'), (e: unknown) =>
+  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', notifications.codes[0]!, 'X', 'pw-12345678'), (e: unknown) =>
     e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.email_taken'));
 });
 
@@ -354,10 +354,23 @@ test('OTP bypass: signup creates an account without a code (no email sent)', asy
   const req = await svc.riderRequestOtp('rider@gmail.com');
   assert.equal(req.bypass, true);
   assert.equal(notifications.calls.length, 0, 'no code is sent in bypass mode');
-  const res = await svc.signupVerifyOtp('rider@gmail.com', '', 'Nour');
+  const res = await svc.signupVerifyOtp('rider@gmail.com', '', 'Nour', 'pw-12345678');
   assert.equal(res.user.role, 'rider');
   assert.equal(res.user.email, 'rider@gmail.com');
   assert.equal(users.rows.get(res.user.id)!.name, 'Nour');
+});
+
+test('signup sets a scrypt password hash — the rider can sign in with a password', async () => {
+  const { svc, users } = setup({ AUTH_OTP_BYPASS: 'true' });
+  await svc.riderRequestOtp('rider@gmail.com');
+  const res = await svc.signupVerifyOtp('rider@gmail.com', '', 'Nour', 'pw-12345678');
+  const row = users.rows.get(res.user.id)!;
+  assert.ok(row.password_hash && row.password_hash.startsWith('scrypt$'), 'password is hashed (scrypt)');
+  // identify now routes this account to the PASSWORD method (not OTP)
+  const id = await svc.identifyLogin('rider@gmail.com');
+  assert.equal(id.method, 'password');
+  const login = await svc.login('rider@gmail.com', 'pw-12345678');
+  assert.equal(login.user.id, res.user.id);
 });
 
 test('OTP bypass: sign-in works without a code for an existing account', async () => {
@@ -380,5 +393,5 @@ test('OTP bypass still enforces the allowlist and one-email-one-account', async 
 
 test('bypass OFF: a missing code is still rejected', async () => {
   const { svc } = setup(); // default bypass=false
-  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', '', 'N'), UnauthorizedException);
+  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', '', 'N', 'pw-12345678'), UnauthorizedException);
 });

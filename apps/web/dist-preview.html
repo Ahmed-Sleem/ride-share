@@ -1074,7 +1074,7 @@ en:{
   /* auth */
   signIn:"Sign in", createAccount:"Create account",
   staffTab:"Staff", riderTab:"Rider", staffNoSelfSignup:"Staff accounts are created by an administrator — there is no staff self-signup.",
-  identifierLabel:"Email", passwordLabel:"Password",
+  identifierLabel:"Email", passwordLabel:"Password", passwordHint:"At least 8 characters.",
   signInAction:"Sign in", sendCode:"Send code", verifyCode:"Verify",
   codeLabel:"6-digit code", codeSent:"We sent a code to",
   haveAccount:"Already have an account?", needAccount:"New here?",
@@ -1118,7 +1118,7 @@ en:{
          network:"Can't reach the server. Check your connection and try again.",
          email_not_configured:"Email sending isn't configured yet.",
          email_send_failed:"We couldn't send the email right now. Please try again in a moment."},
-  validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number."},
+  validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number.", password:"Password must be at least 8 characters."},
   auth:{
     invalid_credentials:"Email or password isn't right.",
     account_suspended:"This account is suspended.",
@@ -1215,7 +1215,7 @@ ar:{
   /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
   staffTab:"الموظفون", riderTab:"الراكب", staffNoSelfSignup:"حسابات الموظفين يُنشئها مدير — لا يوجد تسجيل ذاتي للموظفين.",
-  identifierLabel:"البريد الإلكتروني", passwordLabel:"كلمة المرور",
+  identifierLabel:"البريد الإلكتروني", passwordLabel:"كلمة المرور", passwordHint:"٨ أحرف على الأقل.",
   signInAction:"دخول", sendCode:"أرسل الكود", verifyCode:"تحقق",
   codeLabel:"كود من ٦ أرقام", codeSent:"أرسلنا كودًا إلى",
   haveAccount:"لديك حساب بالفعل؟", needAccount:"جديد هنا؟",
@@ -1257,7 +1257,7 @@ ar:{
          network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا.",
          email_not_configured:"إرسال البريد غير مُهيأ بعد.",
          email_send_failed:"تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل."},
-  validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح."},
+  validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح.", password:"كلمة المرور يجب أن تكون ٨ أحرف على الأقل."},
   auth:{
     invalid_credentials:"البريد أو كلمة المرور غير صحيحة.",
     account_suspended:"هذا الحساب موقوف.",
@@ -1995,7 +1995,7 @@ const API = {
   login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
   requestOtp: (email) => API.request("POST", "/auth/otp/request", { email }),
   verifyOtp: (email, code) => API.request("POST", "/auth/otp/verify", { email, code }),
-  signupVerify: (email, code, name) => API.request("POST", "/auth/signup/verify", { email, code, name }),
+  signupVerify: (email, code, name, password) => API.request("POST", "/auth/signup/verify", { email, code, name, password }),
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
   getConfig: () => API.request("GET", "/config"),
@@ -2250,9 +2250,11 @@ function signupAuth() {
       () => { S.authStep="email"; S.authError=null; render(); },
       { nameField:true, btnLabel:t("createAccount") });
   } else if (S.authStep === "name") {
-    // OTP bypass: the code step is skipped, only the name is collected.
+    // OTP bypass: the code step is skipped — name + password are collected.
     body = $("div",{class:"stack gap3"},
       field("auth-name", t("yourName"), "text", "name"),
+      field("auth-password", t("passwordLabel"), "password", "new-password"),
+      $("p",{class:"t-cap",text:t("passwordHint")}),
       Btn({label:S.authBusy? "…" : t("createAccount"), block:true, dis:S.authBusy, on:()=>signupVerifyCode()}));
   }
   return card(t("createAccount"), body, S.authMode==="signup");
@@ -2294,6 +2296,8 @@ function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
       $("span",{class:"ltr",text:S.authEmail})),
     OtpInput({ onComplete: onVerify }),
     opts.nameField ? field("auth-name", t("yourName"), "text", "name") : null,
+    opts.nameField ? field("auth-password", t("passwordLabel"), "password", "new-password") : null,
+    opts.nameField ? $("p",{class:"t-cap",text:t("passwordHint")}) : null,
     S.attemptsLeft != null
       ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
     Btn({label:S.authBusy? "…" : (opts.btnLabel || t("verifyCode")), block:true, dis:S.authBusy, on:onVerify}),
@@ -2491,10 +2495,12 @@ async function signupVerifyCode() {
   const code = S.otpBypass ? undefined : otpValue();
   if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   const name = val("auth-name") || undefined;   // read BEFORE render()
+  const password = val("auth-password");        // read BEFORE render()
+  if (password.length < 8) { S.authError = t("validation.password"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
     // one email = one account: a taken email (any role) is refused server-side
-    const res = await API.signupVerify(S.authEmail, code, name);
+    const res = await API.signupVerify(S.authEmail, code, name, password);
     API.saveSession(res);
     if (S.signupRole==="driver") {
       try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }
