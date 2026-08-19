@@ -26,13 +26,19 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
   imports: [
     ConfigModule,
     // Rate limiting keeps its state in PostgreSQL (DEC-186, G-062): limits
-    // survive restarts and are shared across instances.
+    // survive restarts and are shared across instances. Health checks are
+    // exempt: they must answer fast (with their own 2s DB timeout) so the
+    // platform's restart logic keeps working even when the DB is down.
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [PG_POOL],
       useFactory: (pool: Pool) => ({
         storage: new PostgresThrottlerStorage(new ThrottleRepository(pool)),
         throttlers: [{ name: 'default', ttl: env.THROTTLE_TTL, limit: env.THROTTLE_LIMIT }],
+        skipIf: (context) => {
+          const url = (context.switchToHttp().getRequest() as { url?: string })?.url ?? '';
+          return url === '/health' || url === '/healthz';
+        },
       }),
     }),
     HealthModule,

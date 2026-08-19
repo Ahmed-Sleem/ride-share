@@ -443,3 +443,14 @@
 - The env-seeded admin is the one main admin (`is_system_admin`): it can create/edit/remove staff; it is never editable/removable, and no second super_admin can be created or set (enforced in the single authority resolver).
 - Staff lifecycle in the admin UI: system-admin row is marked and locked; other staff get Edit + Remove (soft delete — sessions revoked, history kept).
 - 83 API tests / 253 unit / 58 breaks / 14 axe / 47 landing green; pnpm verify + db:verify green.
+
+## 2026-08-19 — Resilience: API fails fast instead of hanging (M1.9b)
+
+- Root cause of live "Something went wrong": the api service was down (web proxy 502) — the
+  throttle store's DB pool had NO connection timeout, so an unreachable database wedged every
+  request (including /healthz) into "application failed to respond" instead of a clean 503.
+- pg pool now fails fast (connectionTimeoutMillis 5s, idleTimeoutMillis 30s); health endpoints
+  are exempt from throttling so the platform's restart logic always gets an honest answer.
+- Frontend maps 5xx to a clearer, retryable "service unavailable" message (EN/AR).
+- Verified: full production boot locally (admin login OK, isSystemAdmin true); broken-DB boot
+  answers /healthz in 13ms (503) and other routes in 5ms (500) — no hang.

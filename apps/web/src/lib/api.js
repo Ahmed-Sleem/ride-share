@@ -43,9 +43,12 @@ const API = {
     let payload = null;
     try { payload = await res.json(); } catch { /* non-JSON */ }
     if (!res.ok) {
+      // 502/503/504 from the proxy means the API is unreachable — a clearer,
+      // retryable message beats "something went wrong" for the user.
+      const fallback = res.status >= 500 ? "error.unavailable" : "error.internal";
       const err = new ApiError(
         (payload && payload.code) || String(res.status),
-        (payload && payload.message_key) || "error.internal",
+        (payload && payload.message_key) || fallback,
         payload
       );
       // one refresh attempt on expired access, then retry exactly once

@@ -1099,7 +1099,9 @@ en:{
   roleLabel:{rider:"Rider",driver:"Driver",operations:"Operations Admin",manager:"Manager",support:"Support Agent",super_admin:"Super Admin"},
   /* API error keys (message_key) → friendly copy. errText() falls back to
      error.internal when a key is unknown. */
-  error:{internal:"Something went wrong. Please try again."},
+  error:{internal:"Something went wrong. Please try again.",
+         unavailable:"The service is busy or offline right now. Please try again in a moment.",
+         network:"Can't reach the server. Check your connection and try again."},
   notifications:{email_not_configured:"Email sending isn't configured yet."},
   validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number."},
   auth:{
@@ -1234,7 +1236,9 @@ ar:{
   adminSystemAdmin:"المدير الرئيسي", adminEdit:"تعديل", adminRemove:"إزالة",
   adminEditTitle:"تعديل موظف", adminRemoveConfirm:"إزالة حساب هذا الموظف؟ سيفقد الوصول فورًا.",
   roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
-  error:{internal:"حدث خطأ ما. حاول مرة أخرى."},
+  error:{internal:"حدث خطأ ما. حاول مرة أخرى.",
+         unavailable:"الخدمة مشغولة أو غير متاحة الآن. حاول مرة أخرى بعد قليل.",
+         network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا."},
   notifications:{email_not_configured:"إرسال البريد غير مُهيأ بعد."},
   validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح."},
   auth:{
@@ -1928,9 +1932,12 @@ const API = {
     let payload = null;
     try { payload = await res.json(); } catch { /* non-JSON */ }
     if (!res.ok) {
+      // 502/503/504 from the proxy means the API is unreachable — a clearer,
+      // retryable message beats "something went wrong" for the user.
+      const fallback = res.status >= 500 ? "error.unavailable" : "error.internal";
       const err = new ApiError(
         (payload && payload.code) || String(res.status),
-        (payload && payload.message_key) || "error.internal",
+        (payload && payload.message_key) || fallback,
         payload
       );
       // one refresh attempt on expired access, then retry exactly once

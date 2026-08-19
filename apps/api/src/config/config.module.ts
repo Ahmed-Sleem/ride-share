@@ -16,7 +16,16 @@ export const PG_POOL = Symbol('PG_POOL');
     { provide: CONFIG, useFactory: () => loadEnv() },
     {
       provide: PG_POOL,
-      useFactory: (env: Env) => new Pool({ connectionString: env.DATABASE_URL, max: 10 }),
+      // connectionTimeoutMillis makes an unreachable database FAIL FAST (a
+      // 500/503) instead of hanging every request forever — the throttle
+      // store and every repository share this pool, so a DB outage can never
+      // wedge the whole process into "application failed to respond".
+      useFactory: (env: Env) => new Pool({
+        connectionString: env.DATABASE_URL,
+        max: 10,
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 30000,
+      }),
       inject: [CONFIG],
     },
     {
