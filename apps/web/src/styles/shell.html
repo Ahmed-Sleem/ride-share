@@ -515,6 +515,15 @@ button.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)
    ══════════════════════════════════════════════════════════════════════════ */
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field label{font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary)}
+/* password fields: input + show/hide eye, one box */
+.inputwrap{position:relative;min-width:0}
+.inputwrap .input{padding-inline-end:var(--s8)}
+.field__eye{position:absolute;inset-inline-end:var(--s1);top:50%;translate:0 -50%;
+  width:var(--tap-sm);height:var(--tap-sm);border-radius:var(--r-full);
+  display:grid;place-items:center;color:var(--text-muted);flex:none}
+.field__eye:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.field__eye svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .input{min-height:var(--tap);width:100%;border:1px solid var(--line-strong);
   border-radius:var(--r-md);padding-inline:var(--s4);background:var(--bg-base);
   outline:0;font-size:var(--f-input);transition:border-color var(--fast) var(--ease),

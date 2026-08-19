@@ -360,6 +360,6 @@ Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
-                        setResendUntil, setLockedUntil });
+                        setResendUntil, setLockedUntil, cooldownButton });
 
 boot();

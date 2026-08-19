@@ -93,6 +93,7 @@ en:{
   driverAppliedToast:"Application submitted — we'll review your documents.",
   enterPassword:"Enter your password", codeSentTo:"Code sent to",
   changeEmail:"Change email", attemptsLeft:"attempts left",
+  showPassword:"Show password", hidePassword:"Hide password",
 
   resendCode:"Resend code", resendIn:"Resend in", seconds:"s",
   tooManyAttempts:"Too many attempts — try again in 1 hour.",
@@ -233,6 +234,7 @@ ar:{
   driverAppliedToast:"تم إرسال الطلب — سنراجع مستنداتك.",
   enterPassword:"أدخل كلمة المرور", codeSentTo:"أُرسل الكود إلى",
   changeEmail:"تغيير البريد", attemptsLeft:"محاولات متبقية",
+  showPassword:"إظهار كلمة المرور", hidePassword:"إخفاء كلمة المرور",
 
   resendCode:"أعد إرسال الكود", resendIn:"أعد الإرسال بعد", seconds:"ث",
   tooManyAttempts:"محاولات كثيرة — حاول بعد ساعة.",

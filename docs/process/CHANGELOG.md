@@ -486,3 +486,15 @@
 - Slider cards back to BOLD 700 shades (white text, AA) with white line-work doodles whose accents
   are the same-hue 300 steps (violet/coral/sky/mint) — illustrations pop and stay in the card's family.
 - Proven: unreachable SMTP → email_send_failed in 34ms; 253 unit / 58 breaks / repo checks green.
+
+## 2026-08-19 — Auth form fixes: password read, eye toggle, live countdown
+
+- Fixed the live "Please check your entries" bug: sign-in (and signup/reset) read their inputs
+  AFTER render(), which wiped the DOM — the password was sent empty and the DTO rejected it.
+  All handlers now read values BEFORE re-rendering.
+- Password fields now have a show/hide eye (field__eye), with aria-label + aria-pressed states.
+- Resend cooldown ticks IN PLACE (no full re-render) so the OTP boxes the user is typing into are
+  no longer wiped every second; the "Send code" / "Continue" buttons are cooldown-aware too, so
+  the countdown is always visible where a code was just sent.
+- Resend from the OTP step now falls back to S.authEmail (no email field on that step).
+- 258 unit (5 new regression tests) / 14 axe / 47 landing / repo checks green.

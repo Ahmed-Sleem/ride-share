@@ -272,6 +272,18 @@ run_break "signup name field dropped from the code step" src/screens/auth.js \
   's|      { nameField:true, btnLabel:t("createAccount") });|      { });|' \
   "sign-up collects the name on the code step"
 
+run_break "password eye removed" src/screens/auth.js \
+  's|class:"field__eye"|class:"field__eyeX"|' \
+  "password field has a show/hide eye"
+
+run_break "login reads the password after re-render" src/screens/auth.js \
+  's|  const password = val("auth-password");|  const password = "";|' \
+  "sign-in sends the typed password"
+
+run_break "cooldown re-renders the whole screen" src/screens/auth.js \
+  's|      setTimeout(tick, 1000);|      setTimeout(()=>render(), 1000);|' \
+  "OTP input survives the ticking countdown (no full re-render)"
+
 run_break "super_admin offered at staff creation" src/screens/admin.js \
   's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
   "staff create offers no super_admin option"

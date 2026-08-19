@@ -34,7 +34,8 @@ function signupAuth() {
     body = $("div",{class:"stack gap3"},
       field("auth-email", t("emailLabel"), "email", "email"),
       $("p",{class:"t-cap",text:t("emailHelp")}),
-      Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>riderSendCode()}));
+      cooldownButton(Btn({label:S.authBusy? "…" : t("sendCode"), block:true, dis:S.authBusy, on:()=>riderSendCode()}),
+                     S.authBusy? "…" : t("sendCode")));
   } else if (S.authStep === "otp") {
     body = otpStep(
       `${t("codeSent")} `,
@@ -52,7 +53,7 @@ function signinAuth() {
   if (S.loginMethod === "password") {
     body = $("div",{class:"stack gap3"},
       $("p",{class:"t-cap"}, t("enterPassword")),
-      field("auth-password", t("passwordLabel"), "password"),
+      field("auth-password", t("passwordLabel"), "password", "current-password"),
       Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy, on:()=>staffLogin()}),
       backBtn(()=>{ S.loginMethod=null; render(); }));
   } else if (S.loginMethod === "otp") {
@@ -64,7 +65,8 @@ function signinAuth() {
   } else {
     body = $("div",{class:"stack gap3"},
       field("auth-identifier", t("identifierLabel"), "email", "email"),
-      Btn({label:S.authBusy? "…" : t("signinContinue"), block:true, dis:S.authBusy, on:()=>identify()}),
+      cooldownButton(Btn({label:S.authBusy? "…" : t("signinContinue"), block:true, dis:S.authBusy, on:()=>identify()}),
+                     S.authBusy? "…" : t("signinContinue")),
       $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("forgotPassword"),
         on:{click:()=>{ S.forgot="identify"; S.authError=null; render(); }}}));
   }
@@ -120,12 +122,27 @@ function roleChoice(role, title, sub, iconName) {
 }
 
 function resendButton(onClick) {
-  const remaining = Math.max(0, Math.round(((S.resendUntil||0) - Date.now()) / 1000));
-  const dis = remaining > 0 || S.authBusy;
-  const btn = $("button",{class:"btn btn--ghost", attrs:{type:"button", disabled:dis||null},
-    text: dis && remaining > 0 ? `${t("resendIn")} ${remaining}${t("seconds")}` : t("resendCode"),
-    on:{click:onClick}});
-  if (remaining > 0) setTimeout(()=>render(), 1000);
+  return cooldownButton($("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:t("resendCode"),
+    on:{click:onClick}}), t("resendCode"));
+}
+
+/* Live countdown that updates the button IN PLACE — never re-render(), because
+   a full render wipes the OTP boxes the user is typing into (and, on the email
+   step, the email they just typed). The cooldown deadline is S.resendUntil
+   (persisted, so it survives a refresh). */
+function cooldownButton(btn, idleLabel) {
+  const tick = () => {
+    const remaining = Math.max(0, Math.round(((S.resendUntil||0) - Date.now()) / 1000));
+    if (remaining > 0) {
+      btn.textContent = `${t("resendIn")} ${remaining}${t("seconds")}`;
+      btn.disabled = true;
+      setTimeout(tick, 1000);
+    } else {
+      btn.textContent = idleLabel;
+      btn.disabled = false;
+    }
+  };
+  tick();
   return btn;
 }
 
@@ -151,7 +168,7 @@ function forgotPassword() {
   } else if(step==="code"){
     w.append($("p",{class:"t-cap",text:t("resetCodeSent")}),
       field("reset-code", t("codeLabel"), "text"),
-      field("reset-password", t("newPassword"), "password"),
+      field("reset-password", t("newPassword"), "password", "new-password"),
       Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:()=>resetConfirm()}));
   } else if(step==="done"){
     w.append(Banner("ok", t("resetDone")));
@@ -172,9 +189,24 @@ function forgotPassword() {
 
 /* ── helpers + actions ────────────────────────────────────────────────── */
 function field(id, label, type, autocomplete, value) {
+  const input = $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label, value: value ?? null}});
+  // password fields get a show/hide eye (a standard, expected control)
+  if (type === "password") {
+    const eye = $("button",{class:"field__eye", attrs:{type:"button", "aria-label":t("showPassword"), "aria-pressed":"false"},
+      on:{click:()=>{
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        eye.setAttribute("aria-label", show ? t("hidePassword") : t("showPassword"));
+        eye.setAttribute("aria-pressed", show ? "true" : "false");
+        eye.replaceChildren(icon(show ? "eyeoff" : "eye"));
+      }}}, icon("eye"));
+    return $("div",{class:"field"},
+      $("label",{attrs:{for:id}, text:label}),
+      $("div",{class:"inputwrap"}, input, eye));
+  }
   return $("div",{class:"field"},
     $("label",{attrs:{for:id}, text:label}),
-    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label, value: value ?? null}}));
+    input);
 }
 const val = (id) => (document.getElementById(id)||{}).value || "";
 const resetLockout = (e) => {
@@ -202,16 +234,21 @@ async function identify() {
 }
 
 async function staffLogin() {
+  // read BEFORE render(): render() wipes and rebuilds the DOM, so reading the
+  // field afterwards always yields "" (the live "Please check your entries" bug)
+  const identifier = S.authIdentifier || val("auth-identifier");
+  const password = val("auth-password");
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.login(S.authIdentifier || val("auth-identifier"), val("auth-password"));
+    const res = await API.login(identifier, password);
     API.saveSession(res);
     enterApp(res.user);
   } catch(e) { S.authError = errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function riderSendCode() {
-  const email = val("auth-email").trim().toLowerCase();
+  // fall back to S.authEmail so "Resend" works from the OTP step (no email field there)
+  const email = (val("auth-email") || S.authEmail).trim().toLowerCase();
   if(!isEmail(email)){ S.authError=t("validation.email"); render(); return; }
   S.authBusy=true; S.authError=null; S.attemptsLeft=null; S.lockedUntil=null;
   setLockedUntil(null); render();
@@ -226,10 +263,11 @@ async function riderSendCode() {
 async function signupVerifyCode() {
   const code = otpValue();
   if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
+  const name = val("auth-name") || undefined;   // read BEFORE render()
   S.authBusy=true; S.authError=null; render();
   try {
     // one email = one account: a taken email (any role) is refused server-side
-    const res = await API.signupVerify(S.authEmail, code, val("auth-name") || undefined);
+    const res = await API.signupVerify(S.authEmail, code, name);
     API.saveSession(res);
     if (S.signupRole==="driver") {
       try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }
@@ -261,17 +299,21 @@ async function signinVerifyCode() {
 }
 
 async function resetRequest() {
+  const identifier = val("reset-identifier");   // read BEFORE render()
   S.authBusy=true; S.authError=null; render();
   try {
-    await API.requestPasswordReset(val("reset-identifier"));
+    await API.requestPasswordReset(identifier);
     S.forgot="code"; S.authBusy=false; render();
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
 async function resetConfirm() {
+  const identifier = val("reset-identifier");   // read BEFORE render()
+  const code = val("reset-code");
+  const password = val("reset-password");
   S.authBusy=true; S.authError=null; render();
   try {
-    await API.confirmPasswordReset(val("reset-identifier"), val("reset-code"), val("reset-password"));
+    await API.confirmPasswordReset(identifier, code, password);
     S.forgot="done"; S.authBusy=false; render();
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }

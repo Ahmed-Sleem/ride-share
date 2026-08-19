@@ -662,6 +662,43 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   ok("system admin is marked and protected (no edit/remove)", /isSystemAdmin/.test(SRC) && /adminSystemAdmin/.test(SRC));
 }
 
+group("M1.9c — LOGIN READS INPUT, PASSWORD EYE, LIVE COOLDOWN");
+const m19c = (async () => {
+  const t=boot();
+
+  // password fields offer a show/hide eye (standard control)
+  t.w.S.view="auth"; t.w.S.authMode="signin"; t.w.S.loginMethod="password"; t.w.render();
+  ok("password field has a show/hide eye", !!t.q(".field__eye"));
+
+  // the sign-in must read the typed password BEFORE re-rendering (the live bug:
+  // render() wiped the field, the password was sent empty → "check your entries")
+  t.w.S.authIdentifier="admin@ride.local";
+  t.w.render();
+  const pw = t.q("#auth-password");
+  pw.value = "Admin@Ride2026!";
+  let captured = null;
+  t.w.fetch = async (_url, opts) => {
+    captured = opts && opts.body ? JSON.parse(opts.body) : null;
+    return { ok:true, json: async()=>({ user:{id:"u1",role:"super_admin",name:"Admin",email:"admin@ride.local",emailVerified:false,isSystemAdmin:true}, accessToken:"a", refreshToken:"r" }) };
+  };
+  const signinBtn = [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.signInAction));
+  signinBtn.click();
+  await new Promise((r)=>setTimeout(r, 20));
+  ok("sign-in sends the typed password", !!captured && captured.password === "Admin@Ride2026!",
+     captured ? JSON.stringify(captured) : "no request");
+
+  // the resend cooldown ticks IN PLACE — a full render would wipe the OTP boxes
+  t.w.S.view="auth"; t.w.S.authMode="signup"; t.w.S.authStep="otp"; t.w.S.authEmail="a@x.com";
+  t.w.S.resendUntil = Date.now() + 3000;
+  t.w.render();
+  const box = t.q(".otp__box"); box.value = "7";
+  const rb = [...t.all(".btn")].find((b)=>/Resend in|أعد الإرسال بعد/.test(b.textContent));
+  ok("resend button shows a live countdown and is disabled", !!rb && rb.disabled);
+  await new Promise((r)=>setTimeout(r, 1100));
+  ok("OTP input survives the ticking countdown (no full re-render)", t.q(".otp__box").value === "7");
+  ok("countdown keeps ticking in place", !!rb && /Resend in|أعد الإرسال بعد/.test(rb.textContent));
+})();
+
 group("BUILD INTEGRITY");
 {
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),
@@ -674,5 +711,7 @@ group("BUILD INTEGRITY");
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));
 }
 
-console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
-process.exit(fail?1:0);
+Promise.resolve(m19c).then(() => {
+  console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
+  process.exit(fail?1:0);
+});
