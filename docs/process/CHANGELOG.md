@@ -465,3 +465,14 @@
   and /healthz reports the API's reachability: { ok, service:'web', api:'up'|'down'|'unreachable'|'unconfigured' }.
 - server tests extended (health api field, /v1/config, proxy 503 without API).
 - Sandbox cleaned: sticker packs + zips removed from the workspace.
+
+## 2026-08-19 — Pastel slider cards (illustrations pop)
+
+- Slider cards are now ONE flat pastel tint each (brand-soft / coral / sky / mint bg) with
+  on-colour dark text, a dark-ink doodle + pop-colour accent, and brand/line dots — the
+  illustrations pop on the pastel instead of sitting on saturated dark shades.
+- Removed the now-unused 700 shade primitives.
+- Diagnosis for the live 502: the web service's API_INTERNAL_URL must be a CROSS-service
+  reference (http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3000), not the self-reference
+  ${{RAILWAY_PRIVATE_DOMAIN}} (which points the web at itself).
+- 253 unit / 58 breaks / 14 axe / 47 landing / repo checks green.

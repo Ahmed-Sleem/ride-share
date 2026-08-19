@@ -44,8 +44,6 @@
   --sky-400:#6CB4FF; --sky-500:#3D9AF7; --sky-600:#2A7FD6; --sky-900:#0E2B4F;
   --pink-50:#FDEFF6; --pink-100:#FBD9E9; --pink-300:#F6A9D0;
   --pink-400:#F184BB; --pink-500:#E85F9F; --pink-600:#C73F7F; --pink-900:#4E1532;
-  /* 700 steps for the vivid slider cards — dark enough for white text (AA) */
-  --coral-700:#C43E22; --mint-700:#0F7A4E; --sky-700:#1E63A8;
   --ink-0:#FFFFFF; --ink-25:#FAFBFC; --ink-50:#F5F7F9; --ink-100:#EEF0F4;
   --ink-150:#E4E8ED; --ink-200:#DFE4EA; --ink-300:#C4CCD6; --ink-400:#98A2B0;
   --ink-500:#6B7684; --ink-600:#5B6472; --ink-700:#3D4550; --ink-800:#232A33;
@@ -848,10 +846,10 @@ select.input{cursor:pointer}
   transition:opacity var(--med) var(--ease),transform var(--med) var(--ease);
   pointer-events:none}
 .slide--on{opacity:1;transform:none;pointer-events:auto;animation:slidepop var(--slow) var(--bounce)}
-/* each slide is ONE saturated pop colour — no gradient — with white text and
-   a dark-ink doodle (black lines + white accents). The 700 shades keep the
-   white text at AA contrast. */
-.slide{color:var(--on-solid)}
+/* each slide is ONE pastel pop colour — flat, no gradient. The doodle is dark
+   ink + the pop accent and the text is on-colour, so everything pops on the
+   pastel instead of fighting it. */
+.slide{color:var(--text-primary)}
 /* modern youth pop: the card springs in with an overshoot, the doodle does a
    playful bounce-rotate, the copy rises. All killed under reduced motion. */
 .slide--on .slide__sticker{animation:stickerpop .7s var(--bounce) both}
@@ -860,24 +858,26 @@ select.input{cursor:pointer}
 @keyframes slidepop{0%{transform:scale(.82) translateY(12px)}55%{transform:scale(1.06)}100%{transform:scale(1) translateY(0)}}
 @keyframes stickerpop{0%{transform:scale(.5) rotate(-10deg);opacity:0}55%{transform:scale(1.16) rotate(4deg)}82%{transform:scale(.95)}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.slide--violet{background:var(--violet-700)}
-.slide--coral{background:var(--coral-700)}
-.slide--sky{background:var(--sky-700)}
-.slide--mint{background:var(--mint-700)}
+.slide--violet{background:var(--brand-soft)}
+.slide--coral{background:var(--pop-coral-bg)}
+.slide--sky{background:var(--pop-sky-bg)}
+.slide--mint{background:var(--pop-mint-bg)}
+.slide--violet .slide__sticker{--sticker-accent:var(--brand)}
+.slide--coral .slide__sticker{--sticker-accent:var(--pop-coral)}
+.slide--sky .slide__sticker{--sticker-accent:var(--pop-sky)}
+.slide--mint .slide__sticker{--sticker-accent:var(--pop-mint)}
 .slide__sticker{width:150px;height:150px;
-  --sticker-ink:var(--ink-900);
-  --sticker-accent:var(--on-solid);
-  filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--ink-900) 26%,transparent))}
+  --sticker-ink:var(--text-primary);
+  filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--ink-900) 14%,transparent))}
 .slide__sticker svg{width:100%;height:100%;display:block}
 .slide__t{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0}
-.slide__b{font-size:var(--f-lg);color:var(--on-solid);opacity:.92;max-width:34ch;margin:0;line-height:var(--lh-body)}
+.slide__b{font-size:var(--f-lg);color:var(--text-secondary);max-width:34ch;margin:0;line-height:var(--lh-body)}
 .slideshow__dots{position:absolute;bottom:var(--s4);inset-inline:0;display:flex;
   justify-content:center;gap:var(--s2);z-index:5}
-.slide-dot{width:10px;height:10px;border-radius:var(--r-full);
-  background:color-mix(in srgb,var(--on-solid) 45%,transparent);
+.slide-dot{width:10px;height:10px;border-radius:var(--r-full);background:var(--line-strong);
   border:0;padding:0;cursor:pointer;transition:background var(--fast) var(--ease),
   transform var(--fast) var(--ease)}
-.slide-dot--on{background:var(--on-solid);transform:scale(1.3);animation:dotpulse 2.6s var(--ease) infinite}
+.slide-dot--on{background:var(--brand);transform:scale(1.3);animation:dotpulse 2.6s var(--ease) infinite}
 @keyframes dotpulse{0%,100%{transform:scale(1.3)}50%{transform:scale(1.7)}}
 
 /* reveal-on-scroll — scroll-driven, transform/opacity only, reduced-motion
