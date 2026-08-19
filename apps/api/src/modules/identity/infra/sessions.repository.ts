@@ -42,7 +42,8 @@ export class SessionsRepository {
               u.role AS u_role, u.password_hash AS u_password_hash,
               u.status AS u_status, u.created_at AS u_created_at
        FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.refresh_token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`,
+       WHERE s.refresh_token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()
+         AND u.deleted_at IS NULL`,
       [tokenHash]
     );
     const r = rows[0];
@@ -57,6 +58,8 @@ export class SessionsRepository {
         role: r.u_role,
         password_hash: r.u_password_hash,
         status: r.u_status,
+        is_system_admin: false,
+        deleted_at: null,
         created_at: r.u_created_at,
       },
     };

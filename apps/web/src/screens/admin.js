@@ -33,7 +33,7 @@ function adminStaff() {
     $("div",{class:"field"},
       $("label",{text:t("adminRole")}),
       $("select",{class:"input", id:"staff-role"},
-        ["operations","manager","support","super_admin"].map(r=>
+        ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
     Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
   w.append($("div",{id:"staff-list"}), null);
@@ -72,12 +72,67 @@ async function loadStaffInto(el) {
     const staff = await API.listStaff();
     if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
     el.append($("h2",{class:"t-head",text:t("adminStaff")}));
-    staff.forEach(s=> el.append(Row({
-      icon: s.role==="super_admin" ? "safety" : "profile",
-      title: s.name || s.phone || s.email,
-      sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
-      right: Chip({label:s.status}), bordered:true })));
-  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+    staff.forEach(s=> el.append(staffRow(s)));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+/* One staff row. The system admin (the env-seeded main admin) is marked and
+   has no edit/remove controls — it is immutable by design (DEC-196). Every
+   other staff account can be edited or removed by the main admin. */
+function staffRow(s) {
+  const isMain = s.isSystemAdmin === true;
+  return Row({
+    icon: isMain ? "safety" : "profile",
+    title: s.name || s.phone || s.email,
+    sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
+    right: isMain
+      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}), Chip({label:s.status}))
+      : $("div",{class:"row gap2"},
+          Chip({label:s.status}),
+          IconBtn({name:"pricing", label:t("adminEdit"), on:()=>{ S.staffEditing=s; S.staffEditName=s.name||""; S.staffEditRole=s.role; openSheet("staffEdit"); }}),
+          IconBtn({name:"close", label:t("adminRemove"), on:()=>{ S.staffEditing=s; openSheet("staffRemove"); }})),
+    bordered:true });
+}
+
+/* ── staff edit / remove (sheets) ─────────────────────────────────────── */
+function staffEdit() {
+  const s = S.staffEditing || {};
+  return Sheet(t("adminEditTitle"),
+    field("staff-edit-name", t("adminName"), "text", "name", S.staffEditName || s.name || ""),
+    $("div",{class:"field"},
+      $("label",{text:t("adminRole")}),
+      $("select",{class:"input", id:"staff-edit-role"},
+        ["operations","manager","support"].map(r=>
+          $("option",{attrs:{value:r, selected: s.role===r ? "" : null}, text:t("roleLabel."+r)})))),
+    Btn({label:t("save"), block:true, on:()=>saveStaffEdit()}));
+}
+
+function staffRemove() {
+  return Sheet(t("adminRemove"),
+    Banner("warn", t("adminRemoveConfirm")),
+    Btn({label:t("adminRemove"), kind:"danger", block:true, on:()=>confirmStaffRemove()}));
+}
+
+async function saveStaffEdit() {
+  const s = S.staffEditing;
+  if(!s) return;
+  try {
+    await API.updateStaff(s.id, { name: val("staff-edit-name") || undefined, role: val("staff-edit-role") || undefined });
+    closeSheet();
+    toast(t("save"));
+    loadStaffInto(document.getElementById("staff-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
+}
+
+async function confirmStaffRemove() {
+  const s = S.staffEditing;
+  if(!s) return;
+  try {
+    await API.deleteStaff(s.id);
+    closeSheet();
+    toast(t("adminRemove"));
+    loadStaffInto(document.getElementById("staff-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 async function loadAuditInto(el) {

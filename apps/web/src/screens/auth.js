@@ -38,13 +38,10 @@ function signupAuth() {
   } else if (S.authStep === "otp") {
     body = otpStep(
       `${t("codeSent")} `,
-      () => riderVerifyCode(null),
+      () => signupVerifyCode(),
       () => riderSendCode(),
-      () => { S.authStep="email"; S.authError=null; render(); });
-  } else { // name
-    body = $("div",{class:"stack gap3"},
-      field("auth-name", t("yourName"), "text"),
-      Btn({label:S.authBusy? "…" : t("finish"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(val("auth-name"))}));
+      () => { S.authStep="email"; S.authError=null; render(); },
+      { nameField:true, btnLabel:t("createAccount") });
   }
   return card(t("createAccount"), body, S.authMode==="signup");
 }
@@ -61,7 +58,7 @@ function signinAuth() {
   } else if (S.loginMethod === "otp") {
     body = otpStep(
       `${t("codeSentTo")} `,
-      () => riderVerifyCode(null),
+      () => signinVerifyCode(),
       () => identify(),
       () => { S.loginMethod=null; render(); });
   } else {
@@ -75,15 +72,18 @@ function signinAuth() {
 }
 
 /* Shared OTP step: the sent-to line, the six boxes, the attempts hint, the
-   verify button, the resend countdown, and a way back to the email field. */
-function otpStep(sentPrefix, onVerify, onResend, onBack) {
+   verify button, the resend countdown, and a way back to the email field.
+   Sign-up also collects the rider's name on this step. */
+function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
+  opts = opts || {};
   return $("div",{class:"stack gap3"},
     $("p",{class:"t-cap center"}, sentPrefix,
       $("span",{class:"ltr",text:S.authEmail})),
     OtpInput({ onComplete: onVerify }),
+    opts.nameField ? field("auth-name", t("yourName"), "text", "name") : null,
     S.attemptsLeft != null
       ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
-    Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:onVerify}),
+    Btn({label:S.authBusy? "…" : (opts.btnLabel || t("verifyCode")), block:true, dis:S.authBusy, on:onVerify}),
     resendButton(onResend),
     backBtn(onBack));
 }
@@ -171,10 +171,10 @@ function forgotPassword() {
 }
 
 /* ── helpers + actions ────────────────────────────────────────────────── */
-function field(id, label, type, autocomplete) {
+function field(id, label, type, autocomplete, value) {
   return $("div",{class:"field"},
     $("label",{attrs:{for:id}, text:label}),
-    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label}}));
+    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label, value: value ?? null}}));
 }
 const val = (id) => (document.getElementById(id)||{}).value || "";
 const resetLockout = (e) => {
@@ -223,17 +223,34 @@ async function riderSendCode() {
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
-async function riderVerifyCode(name) {
+async function signupVerifyCode() {
   const code = otpValue();
   if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.verifyOtp(S.authEmail, code, name || undefined);
+    // one email = one account: a taken email (any role) is refused server-side
+    const res = await API.signupVerify(S.authEmail, code, val("auth-name") || undefined);
     API.saveSession(res);
-    if (S.authMode==="signup" && S.signupRole==="driver") {
+    if (S.signupRole==="driver") {
       try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }
       toast(t("driverAppliedToast"));
     }
+    enterApp(res.user);
+  } catch(e) {
+    resetLockout(e);
+    const d = e.payload && e.payload.details;
+    if (d && d.remainingAttempts != null) S.attemptsLeft = d.remainingAttempts;
+    S.authError=errText(e.messageKey); S.authBusy=false; render();
+  }
+}
+
+async function signinVerifyCode() {
+  const code = otpValue();
+  if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
+  S.authBusy=true; S.authError=null; render();
+  try {
+    const res = await API.verifyOtp(S.authEmail, code);
+    API.saveSession(res);
     enterApp(res.user);
   } catch(e) {
     resetLockout(e);

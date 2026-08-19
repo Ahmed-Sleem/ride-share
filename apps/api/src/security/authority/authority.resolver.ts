@@ -96,3 +96,13 @@ export function assertCan(role: Role | undefined | null, capability: Capability)
     throw new ForbiddenException({ message_key: 'auth.forbidden', details: { capability } });
   }
 }
+
+/** The system-admin role is RESERVED (DEC-196): the env-seeded account is the
+    only super_admin, so granting or setting that role is never allowed — not
+    even by the super_admin itself. This lives here because it is a role
+    decision, and the resolver is the one place role decisions are made. */
+export function assertGrantableStaffRole(role: Role): void {
+  if (role === Role.SUPER_ADMIN) {
+    throw new ForbiddenException({ message_key: 'auth.super_admin_reserved' });
+  }
+}

@@ -436,3 +436,10 @@
 - Hero background glows drift very slowly (42s alternate) — reduced-motion guarded.
 - Mailo SMTP values documented for ride.share.signup@mailo.com.
 - 249 unit / 56 breaks / 14 axe / 47 landing green; repo checks green.
+
+## 2026-08-19 — Account rules + the protected main admin (M1.9)
+
+- One email = one account: sign-up (`/auth/signup/verify`) refuses an already-used email (any role) before and after the code; sign-in (`/auth/otp/verify`) requires an existing account. Friendly "already have an account — sign in instead" error in EN/AR.
+- The env-seeded admin is the one main admin (`is_system_admin`): it can create/edit/remove staff; it is never editable/removable, and no second super_admin can be created or set (enforced in the single authority resolver).
+- Staff lifecycle in the admin UI: system-admin row is marked and locked; other staff get Edit + Remove (soft delete — sessions revoked, history kept).
+- 83 API tests / 253 unit / 58 breaks / 14 axe / 47 landing green; pnpm verify + db:verify green.

@@ -57,6 +57,8 @@ status text DEFAULT 'active'::text NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 email_verified_at timestamp with time zone,
+is_system_admin boolean DEFAULT false NOT NULL,
+deleted_at timestamp with time zone,
 CONSTRAINT users_role_check CHECK ((role = ANY (ARRAY['rider'::text, 'driver'::text, 'operations'::text, 'manager'::text, 'support'::text, 'super_admin'::text]))),
 CONSTRAINT users_status_check CHECK ((status = ANY (ARRAY['active'::text, 'suspended'::text, 'pending_verification'::text])))
 );

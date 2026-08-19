@@ -268,6 +268,14 @@ run_break "hero drift animation removed" src/styles/shell.html \
   's|  animation:herodrift 42s ease-in-out infinite alternate}|  /* drift removed */}|' \
   "hero glow drifts very slowly"
 
+run_break "signup name field dropped from the code step" src/screens/auth.js \
+  's|      { nameField:true, btnLabel:t("createAccount") });|      { });|' \
+  "sign-up collects the name on the code step"
+
+run_break "super_admin offered at staff creation" src/screens/admin.js \
+  's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
+  "staff create offers no super_admin option"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

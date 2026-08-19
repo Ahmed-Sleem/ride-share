@@ -51,6 +51,8 @@ export type DbSchema = {
     created_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
     updated_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
     email_verified_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
+    is_system_admin: {"type":"boolean","nullable":false,"pg":"bool"},
+    deleted_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
   };
   vehicles: {
     id: {"type":"string","nullable":false,"pg":"uuid"},

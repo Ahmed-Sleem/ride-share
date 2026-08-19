@@ -26,8 +26,12 @@ export class AdminSeeder implements OnApplicationBootstrap {
       return;
     }
     const existing = await this.users.findByEmail(email);
-    if (existing) return;
-    await this.users.create({ email, role: 'super_admin', passwordHash: hashPassword(password) });
+    if (existing) {
+      // Backfill: an admin seeded before 0010 must still be THE system admin.
+      if (!existing.is_system_admin) await this.users.markSystemAdmin(existing.id);
+      return;
+    }
+    await this.users.create({ email, role: 'super_admin', passwordHash: hashPassword(password), isSystemAdmin: true });
     this.logger.warn(`seeded bootstrap admin: ${email}`);
   }
 }

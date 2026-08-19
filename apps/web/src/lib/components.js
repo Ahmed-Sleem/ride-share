@@ -48,7 +48,8 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, stack:[]
+  opsView:null, stack:[],
+  staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
 /* enter the signed-in app with the session user; role comes from auth, never

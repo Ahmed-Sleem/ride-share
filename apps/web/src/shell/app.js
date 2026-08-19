@@ -70,6 +70,9 @@ const SHEETS = {
     Btn({label:t("cashCollected"), kind:"secondary", block:true, driver:true,
          on:()=>{closeSheet(); toast(t("cashCollected"));}})),
 
+  staffEdit: () => staffEdit(),
+  staffRemove: () => staffRemove(),
+
   fare: () => Sheet("Edit fare",
     Banner("info","Price is locked for anyone who already booked."),
     $("div",{class:"field"}, $("label",{text:"Stop fare"}),

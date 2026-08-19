@@ -1094,6 +1094,8 @@ en:{
   adminPassword:"Temporary password", adminCreate:"Create",
   adminStaffEmpty:"No staff accounts yet.", adminAuditEmpty:"No audit entries yet.",
   adminDriverQueue:"Driver applications", adminVehicleQueue:"Vehicles",
+  adminSystemAdmin:"Main admin", adminEdit:"Edit", adminRemove:"Remove",
+  adminEditTitle:"Edit staff", adminRemoveConfirm:"Remove this staff account? They lose access immediately.",
   roleLabel:{rider:"Rider",driver:"Driver",operations:"Operations Admin",manager:"Manager",support:"Support Agent",super_admin:"Super Admin"},
   /* API error keys (message_key) → friendly copy. errText() falls back to
      error.internal when a key is unknown. */
@@ -1104,10 +1106,14 @@ en:{
     invalid_credentials:"Email or password isn't right.",
     account_suspended:"This account is suspended.",
     email_domain_not_allowed:"This email provider isn't supported. Please use Gmail, Yahoo, Outlook, or your school or university email.",
-    email_taken:"That email is already in use.",
+    email_taken:"You already have an account with this email — sign in instead. To drive, apply from your profile.",
     phone_taken:"That phone number is already in use.",
-    identifier_required:"An email or phone number is required.",
+    super_admin_reserved:"Only the main admin can be super admin.",
+    main_admin_protected:"The main admin account can't be edited or removed.",
+    staff_not_found:"Staff account not found.",
     staff_roles_only:"Only staff roles can be created here.",
+    forbidden:"You don't have permission to do that.",
+    identifier_required:"An email or phone number is required.",
     otp_mismatch:"That code isn't right.",
     otp_expired:"That code has expired — send a new one.",
     otp_not_found:"Send a code first, then enter it.",
@@ -1225,6 +1231,8 @@ ar:{
   adminPassword:"كلمة مرور مؤقتة", adminCreate:"إنشاء",
   adminStaffEmpty:"لا توجد حسابات موظفين بعد.", adminAuditEmpty:"لا توجد سجلات تدقيق بعد.",
   adminDriverQueue:"طلبات السائقين", adminVehicleQueue:"المركبات",
+  adminSystemAdmin:"المدير الرئيسي", adminEdit:"تعديل", adminRemove:"إزالة",
+  adminEditTitle:"تعديل موظف", adminRemoveConfirm:"إزالة حساب هذا الموظف؟ سيفقد الوصول فورًا.",
   roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
   error:{internal:"حدث خطأ ما. حاول مرة أخرى."},
   notifications:{email_not_configured:"إرسال البريد غير مُهيأ بعد."},
@@ -1233,8 +1241,12 @@ ar:{
     invalid_credentials:"البريد أو كلمة المرور غير صحيحة.",
     account_suspended:"هذا الحساب موقوف.",
     email_domain_not_allowed:"مزوّد البريد هذا غير مدعوم. استخدم Gmail أو Yahoo أو Outlook أو بريد جامعتك.",
-    email_taken:"هذا البريد مستخدم بالفعل.",
+    email_taken:"لديك حساب بهذا البريد بالفعل — سجّل الدخول بدلًا من ذلك. وللقيادة قدّم من حسابك.",
     phone_taken:"هذا الرقم مستخدم بالفعل.",
+    super_admin_reserved:"المدير الرئيسي فقط يمكنه أن يكون مديرًا عامًا.",
+    main_admin_protected:"حساب المدير الرئيسي لا يمكن تعديله أو حذفه.",
+    staff_not_found:"حساب الموظف غير موجود.",
+    forbidden:"ليست لديك صلاحية للقيام بذلك.",
     identifier_required:"البريد أو رقم الهاتف مطلوب.",
     staff_roles_only:"يمكن إنشاء أدوار الموظفين هنا فقط.",
     otp_mismatch:"الكود غير صحيح.",
@@ -1448,7 +1460,8 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, stack:[]
+  opsView:null, stack:[],
+  staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
 /* enter the signed-in app with the session user; role comes from auth, never
@@ -1950,7 +1963,8 @@ const API = {
   identify: (identifier) => API.request("POST", "/auth/login/identify", { identifier }),
   login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
   requestOtp: (email) => API.request("POST", "/auth/otp/request", { email }),
-  verifyOtp: (email, code, name) => API.request("POST", "/auth/otp/verify", { email, code, name }),
+  verifyOtp: (email, code) => API.request("POST", "/auth/otp/verify", { email, code }),
+  signupVerify: (email, code, name) => API.request("POST", "/auth/signup/verify", { email, code, name }),
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
   getConfig: () => API.request("GET", "/config"),
@@ -1965,6 +1979,8 @@ const API = {
   /* ── staff administration (super_admin) ───────────────────────────── */
   listStaff: () => API.request("GET", "/admin/staff"),
   createStaff: (payload) => API.request("POST", "/admin/staff", payload),
+  updateStaff: (id, payload) => API.request("PATCH", `/admin/staff/${id}`, payload),
+  deleteStaff: (id) => API.request("DELETE", `/admin/staff/${id}`),
   listAudit: () => API.request("GET", "/admin/audit"),
 
   /* ── drivers & vehicles ───────────────────────────────────────────── */
@@ -2197,13 +2213,10 @@ function signupAuth() {
   } else if (S.authStep === "otp") {
     body = otpStep(
       `${t("codeSent")} `,
-      () => riderVerifyCode(null),
+      () => signupVerifyCode(),
       () => riderSendCode(),
-      () => { S.authStep="email"; S.authError=null; render(); });
-  } else { // name
-    body = $("div",{class:"stack gap3"},
-      field("auth-name", t("yourName"), "text"),
-      Btn({label:S.authBusy? "…" : t("finish"), block:true, dis:S.authBusy, on:()=>riderVerifyCode(val("auth-name"))}));
+      () => { S.authStep="email"; S.authError=null; render(); },
+      { nameField:true, btnLabel:t("createAccount") });
   }
   return card(t("createAccount"), body, S.authMode==="signup");
 }
@@ -2220,7 +2233,7 @@ function signinAuth() {
   } else if (S.loginMethod === "otp") {
     body = otpStep(
       `${t("codeSentTo")} `,
-      () => riderVerifyCode(null),
+      () => signinVerifyCode(),
       () => identify(),
       () => { S.loginMethod=null; render(); });
   } else {
@@ -2234,15 +2247,18 @@ function signinAuth() {
 }
 
 /* Shared OTP step: the sent-to line, the six boxes, the attempts hint, the
-   verify button, the resend countdown, and a way back to the email field. */
-function otpStep(sentPrefix, onVerify, onResend, onBack) {
+   verify button, the resend countdown, and a way back to the email field.
+   Sign-up also collects the rider's name on this step. */
+function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
+  opts = opts || {};
   return $("div",{class:"stack gap3"},
     $("p",{class:"t-cap center"}, sentPrefix,
       $("span",{class:"ltr",text:S.authEmail})),
     OtpInput({ onComplete: onVerify }),
+    opts.nameField ? field("auth-name", t("yourName"), "text", "name") : null,
     S.attemptsLeft != null
       ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
-    Btn({label:S.authBusy? "…" : t("verifyCode"), block:true, dis:S.authBusy, on:onVerify}),
+    Btn({label:S.authBusy? "…" : (opts.btnLabel || t("verifyCode")), block:true, dis:S.authBusy, on:onVerify}),
     resendButton(onResend),
     backBtn(onBack));
 }
@@ -2330,10 +2346,10 @@ function forgotPassword() {
 }
 
 /* ── helpers + actions ────────────────────────────────────────────────── */
-function field(id, label, type, autocomplete) {
+function field(id, label, type, autocomplete, value) {
   return $("div",{class:"field"},
     $("label",{attrs:{for:id}, text:label}),
-    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label}}));
+    $("input",{class:"input ltr", attrs:{id, type, autocomplete: autocomplete || "off", "aria-label":label, value: value ?? null}}));
 }
 const val = (id) => (document.getElementById(id)||{}).value || "";
 const resetLockout = (e) => {
@@ -2382,17 +2398,34 @@ async function riderSendCode() {
   } catch(e) { resetLockout(e); S.authError=errText(e.messageKey); S.authBusy=false; render(); }
 }
 
-async function riderVerifyCode(name) {
+async function signupVerifyCode() {
   const code = otpValue();
   if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {
-    const res = await API.verifyOtp(S.authEmail, code, name || undefined);
+    // one email = one account: a taken email (any role) is refused server-side
+    const res = await API.signupVerify(S.authEmail, code, val("auth-name") || undefined);
     API.saveSession(res);
-    if (S.authMode==="signup" && S.signupRole==="driver") {
+    if (S.signupRole==="driver") {
       try { await API.driverApply(); } catch { /* application state shows honestly in the app */ }
       toast(t("driverAppliedToast"));
     }
+    enterApp(res.user);
+  } catch(e) {
+    resetLockout(e);
+    const d = e.payload && e.payload.details;
+    if (d && d.remainingAttempts != null) S.attemptsLeft = d.remainingAttempts;
+    S.authError=errText(e.messageKey); S.authBusy=false; render();
+  }
+}
+
+async function signinVerifyCode() {
+  const code = otpValue();
+  if(code.length !== 6){ S.authError=t("validation.code"); render(); return; }
+  S.authBusy=true; S.authError=null; render();
+  try {
+    const res = await API.verifyOtp(S.authEmail, code);
+    API.saveSession(res);
     enterApp(res.user);
   } catch(e) {
     resetLockout(e);
@@ -2454,7 +2487,7 @@ function adminStaff() {
     $("div",{class:"field"},
       $("label",{text:t("adminRole")}),
       $("select",{class:"input", id:"staff-role"},
-        ["operations","manager","support","super_admin"].map(r=>
+        ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
     Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
   w.append($("div",{id:"staff-list"}), null);
@@ -2493,12 +2526,67 @@ async function loadStaffInto(el) {
     const staff = await API.listStaff();
     if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
     el.append($("h2",{class:"t-head",text:t("adminStaff")}));
-    staff.forEach(s=> el.append(Row({
-      icon: s.role==="super_admin" ? "safety" : "profile",
-      title: s.name || s.phone || s.email,
-      sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
-      right: Chip({label:s.status}), bordered:true })));
-  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+    staff.forEach(s=> el.append(staffRow(s)));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+/* One staff row. The system admin (the env-seeded main admin) is marked and
+   has no edit/remove controls — it is immutable by design (DEC-196). Every
+   other staff account can be edited or removed by the main admin. */
+function staffRow(s) {
+  const isMain = s.isSystemAdmin === true;
+  return Row({
+    icon: isMain ? "safety" : "profile",
+    title: s.name || s.phone || s.email,
+    sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
+    right: isMain
+      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}), Chip({label:s.status}))
+      : $("div",{class:"row gap2"},
+          Chip({label:s.status}),
+          IconBtn({name:"pricing", label:t("adminEdit"), on:()=>{ S.staffEditing=s; S.staffEditName=s.name||""; S.staffEditRole=s.role; openSheet("staffEdit"); }}),
+          IconBtn({name:"close", label:t("adminRemove"), on:()=>{ S.staffEditing=s; openSheet("staffRemove"); }})),
+    bordered:true });
+}
+
+/* ── staff edit / remove (sheets) ─────────────────────────────────────── */
+function staffEdit() {
+  const s = S.staffEditing || {};
+  return Sheet(t("adminEditTitle"),
+    field("staff-edit-name", t("adminName"), "text", "name", S.staffEditName || s.name || ""),
+    $("div",{class:"field"},
+      $("label",{text:t("adminRole")}),
+      $("select",{class:"input", id:"staff-edit-role"},
+        ["operations","manager","support"].map(r=>
+          $("option",{attrs:{value:r, selected: s.role===r ? "" : null}, text:t("roleLabel."+r)})))),
+    Btn({label:t("save"), block:true, on:()=>saveStaffEdit()}));
+}
+
+function staffRemove() {
+  return Sheet(t("adminRemove"),
+    Banner("warn", t("adminRemoveConfirm")),
+    Btn({label:t("adminRemove"), kind:"danger", block:true, on:()=>confirmStaffRemove()}));
+}
+
+async function saveStaffEdit() {
+  const s = S.staffEditing;
+  if(!s) return;
+  try {
+    await API.updateStaff(s.id, { name: val("staff-edit-name") || undefined, role: val("staff-edit-role") || undefined });
+    closeSheet();
+    toast(t("save"));
+    loadStaffInto(document.getElementById("staff-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
+}
+
+async function confirmStaffRemove() {
+  const s = S.staffEditing;
+  if(!s) return;
+  try {
+    await API.deleteStaff(s.id);
+    closeSheet();
+    toast(t("adminRemove"));
+    loadStaffInto(document.getElementById("staff-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 async function loadAuditInto(el) {
@@ -3287,6 +3375,9 @@ const SHEETS = {
       $("input",{class:"input ltr",attrs:{placeholder:"4 8 2 9 1 7",inputmode:"numeric"}})),
     Btn({label:t("cashCollected"), kind:"secondary", block:true, driver:true,
          on:()=>{closeSheet(); toast(t("cashCollected"));}})),
+
+  staffEdit: () => staffEdit(),
+  staffRemove: () => staffRemove(),
 
   fare: () => Sheet("Edit fare",
     Banner("info","Price is locked for anyone who already booked."),

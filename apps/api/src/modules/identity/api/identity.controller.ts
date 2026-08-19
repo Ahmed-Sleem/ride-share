@@ -6,7 +6,7 @@
    OTP and reset are brute-force magnets).
    ══════════════════════════════════════════════════════════════════════ */
 import {
-  Body, Controller, Get, Post, Req, UseGuards,
+  Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { IsEmail, IsIn, IsOptional, IsString, Matches, MinLength } from 'class-validator';
@@ -32,7 +32,17 @@ class OtpRequestDto {
 class OtpVerifyDto {
   @IsEmail({}, { message: 'validation.email' }) email!: string;
   @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
+}
+
+class SignupVerifyDto {
+  @IsEmail({}, { message: 'validation.email' }) email!: string;
+  @Matches(/^[0-9]{6}$/, { message: 'validation.code' }) code!: string;
   @IsOptional() @IsString() @MinLength(1) name?: string;
+}
+
+class UpdateStaffDto {
+  @IsOptional() @IsString() @MinLength(1) name?: string;
+  @IsOptional() @IsIn([...STAFF_ROLES]) role?: UserRole;
 }
 
 class RefreshDto {
@@ -97,7 +107,13 @@ export class IdentityController {
   @Post('auth/otp/verify')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   verifyOtp(@Body() dto: OtpVerifyDto) {
-    return this.identity.riderVerifyOtp(dto.email, dto.code, dto.name);
+    return this.identity.riderVerifyOtp(dto.email, dto.code);
+  }
+
+  @Post('auth/signup/verify')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  signupVerify(@Body() dto: SignupVerifyDto) {
+    return this.identity.signupVerifyOtp(dto.email, dto.code, dto.name);
   }
 
   @Post('auth/refresh')
@@ -162,5 +178,17 @@ export class IdentityController {
   @UseGuards(IdentityGuard)
   listStaff(@Req() req: ReqWithActor) {
     return this.identity.listStaff(req.actor!);
+  }
+
+  @Patch('admin/staff/:id')
+  @UseGuards(IdentityGuard)
+  updateStaff(@Req() req: ReqWithActor, @Param('id') id: string, @Body() dto: UpdateStaffDto) {
+    return this.identity.updateStaff(req.actor!, id, { name: dto.name, role: dto.role });
+  }
+
+  @Delete('admin/staff/:id')
+  @UseGuards(IdentityGuard)
+  deleteStaff(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.identity.deleteStaff(req.actor!, id);
   }
 }

@@ -650,7 +650,15 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   ok("sign-up asks for email (not phone)", !!t.q("#auth-email") && t.q("#auth-email").type==="email");
   t.w.S.authStep="otp"; t.w.render();
   ok("OTP step renders six code boxes", t.all(".otp__box").length===6, String(t.all(".otp__box").length));
+  ok("sign-up collects the name on the code step", !!t.q("#auth-name"));
   ok("phone copy is gone from the auth flow", !/phoneLabel/.test(SRC) && !/by SMS/.test(SRC));
+
+  // one email = one account: sign-up has its own (stricter) endpoint
+  ok("sign-up verifies through a dedicated endpoint", /signupVerify/.test(SRC) && /\/auth\/signup\/verify/.test(SRC));
+
+  // the main admin is the only super_admin; staff rows are immutable for it
+  ok("staff create offers no super_admin option", /\["operations","manager","support"\]/.test(SRC));
+  ok("system admin is marked and protected (no edit/remove)", /isSystemAdmin/.test(SRC) && /adminSystemAdmin/.test(SRC));
 }
 
 group("BUILD INTEGRITY");

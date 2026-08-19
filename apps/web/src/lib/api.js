@@ -78,7 +78,8 @@ const API = {
   identify: (identifier) => API.request("POST", "/auth/login/identify", { identifier }),
   login: (identifier, password) => API.request("POST", "/auth/login", { identifier, password }),
   requestOtp: (email) => API.request("POST", "/auth/otp/request", { email }),
-  verifyOtp: (email, code, name) => API.request("POST", "/auth/otp/verify", { email, code, name }),
+  verifyOtp: (email, code) => API.request("POST", "/auth/otp/verify", { email, code }),
+  signupVerify: (email, code, name) => API.request("POST", "/auth/signup/verify", { email, code, name }),
   me: () => API.request("GET", "/me"),
   changePassword: (current, next) => API.request("POST", "/me/password", { current, next }),
   getConfig: () => API.request("GET", "/config"),
@@ -93,6 +94,8 @@ const API = {
   /* ── staff administration (super_admin) ───────────────────────────── */
   listStaff: () => API.request("GET", "/admin/staff"),
   createStaff: (payload) => API.request("POST", "/admin/staff", payload),
+  updateStaff: (id, payload) => API.request("PATCH", `/admin/staff/${id}`, payload),
+  deleteStaff: (id) => API.request("DELETE", `/admin/staff/${id}`),
   listAudit: () => API.request("GET", "/admin/audit"),
 
   /* ── drivers & vehicles ───────────────────────────────────────────── */

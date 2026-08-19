@@ -15,16 +15,17 @@ import type { Env } from '../../../config/env.js';
 class FakeUsers {
   rows = new Map<string, UserRow>();
   seq = 0;
-  async findByEmail(email: string) { return [...this.rows.values()].find((u) => u.email === email) ?? null; }
-  async findByIdentifier(id: string) { return [...this.rows.values()].find((u) => u.email === id || u.phone === id) ?? null; }
-  async findByPhone(phone: string) { return [...this.rows.values()].find((u) => u.phone === phone) ?? null; }
-  async findById(id: string) { return this.rows.get(id) ?? null; }
-  async create(input: { email?: string | null; phone?: string | null; name?: string; role: string; passwordHash?: string | null }) {
+  async findByEmail(email: string) { return [...this.rows.values()].find((u) => u.email === email && !u.deleted_at) ?? null; }
+  async findByIdentifier(id: string) { return [...this.rows.values()].find((u) => (u.email === id || u.phone === id) && !u.deleted_at) ?? null; }
+  async findByPhone(phone: string) { return [...this.rows.values()].find((u) => u.phone === phone && !u.deleted_at) ?? null; }
+  async findById(id: string) { const u = this.rows.get(id); return u && !u.deleted_at ? u : null; }
+  async create(input: { email?: string | null; phone?: string | null; name?: string; role: string; passwordHash?: string | null; isSystemAdmin?: boolean }) {
     const id = `u${++this.seq}`;
     const row: UserRow = {
       id, email: input.email ?? null, phone: input.phone ?? null, name: input.name ?? '',
       role: input.role as UserRow['role'], password_hash: input.passwordHash ?? null,
-      status: 'active', email_verified_at: null, created_at: new Date(),
+      status: 'active', email_verified_at: null,
+      is_system_admin: input.isSystemAdmin ?? false, deleted_at: null, created_at: new Date(),
     };
     this.rows.set(id, row);
     return row;
@@ -32,8 +33,11 @@ class FakeUsers {
   async setPassword(id: string, h: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, password_hash: h }); }
   async setEmail(id: string, email: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, email, email_verified_at: null }); }
   async markEmailVerified(id: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, email_verified_at: new Date() }); }
-  async list() { return [...this.rows.values()]; }
-  async countByRole(role: string) { return [...this.rows.values()].filter((u) => u.role === role).length; }
+  async markSystemAdmin(id: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, is_system_admin: true }); }
+  async softDelete(id: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, deleted_at: new Date() }); }
+  async updateStaff(id: string, name: string, role: string) { const u = this.rows.get(id); if (u) this.rows.set(id, { ...u, name, role: role as UserRow['role'] }); }
+  async list() { return [...this.rows.values()].filter((u) => !u.deleted_at); }
+  async countByRole(role: string) { return [...this.rows.values()].filter((u) => u.role === role && !u.deleted_at).length; }
 }
 
 class FakeCodes {
@@ -140,19 +144,38 @@ test('identify for an unknown identifier is a 401 (no enumeration)', async () =>
   await assert.rejects(() => svc.identifyLogin('ghost@gmail.com'), UnauthorizedException);
 });
 
-test('rider OTP: request then verify self-registers by email (audited)', async () => {
+test('rider OTP: request then signup-verify self-registers by email (audited)', async () => {
   const { svc, notifications, audit } = setup();
   const email = 'ahmed@ejust.edu.eg';
   const req = await svc.riderRequestOtp(email);
   assert.equal(req.ok, true);
   assert.equal(req.resendInMs, 60000);
   assert.equal(notifications.codes.length, 1);
-  const res = await svc.riderVerifyOtp(email, notifications.codes[0]!);
+  const res = await svc.signupVerifyOtp(email, notifications.codes[0]!);
   assert.equal(res.user.role, 'rider');
   assert.equal(res.user.email, email);
   const actions = audit.entries.map((e) => (e as [unknown, string])[1]);
   assert.ok(actions.includes('auth.otp_request'), 'otp request audited');
   assert.ok(actions.includes('auth.signup'), 'signup audited');
+});
+
+test('sign-up is refused when the email already exists (one email = one account)', async () => {
+  const { svc, users, notifications } = setup();
+  await users.create({ email: 'rider@gmail.com', role: 'rider' });
+  // (1) at code request — before anything is sent
+  await assert.rejects(() => svc.riderRequestOtp('rider@gmail.com'), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.email_taken'));
+  assert.equal(notifications.calls.length, 0, 'no code sent to a taken email');
+  // (2) at verify — a raced code still cannot create a second account
+  const existing = await svc.identifyLogin('rider@gmail.com'); // sends the code for the existing account
+  assert.equal(existing.method, 'otp');
+  await assert.rejects(() => svc.signupVerifyOtp('rider@gmail.com', notifications.codes[0]!, 'X'), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.email_taken'));
+});
+
+test('sign-in verify refuses a non-existent account (sign-up is separate)', async () => {
+  const { svc } = setup();
+  await assert.rejects(() => svc.riderVerifyOtp('ghost@gmail.com', '123456'), UnauthorizedException);
 });
 
 test('temporary-mail domains are refused before any email is sent', async () => {
@@ -281,4 +304,46 @@ test('staff login accepts phone OR email as identifier', async () => {
   const byEmail = await svc.login('admin@x.com', 'pw-12345678');
   const byPhone = await svc.login('+201111111111', 'pw-12345678');
   assert.equal(byEmail.user.id, byPhone.user.id);
+});
+
+test('no second super_admin can be created (DEC-196 — one main admin)', async () => {
+  const { svc, users } = setup();
+  await users.create({ email: 'boss@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678'), isSystemAdmin: true });
+  await assert.rejects(
+    () => svc.createStaff({ id: 'a1', role: 'super_admin' }, { email: 'x@x.com', password: 'pw-12345678', role: 'super_admin' }),
+    (e: unknown) => e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.super_admin_reserved')
+  );
+});
+
+test('the system admin is immutable — cannot be edited or deleted by anyone', async () => {
+  const { svc, users } = setup();
+  const main = await users.create({ email: 'root@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678'), isSystemAdmin: true });
+  const actor = { id: main.id, role: 'super_admin' as const };
+  await assert.rejects(() => svc.updateStaff(actor, main.id, { name: 'Hacker' }), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.main_admin_protected'));
+  await assert.rejects(() => svc.deleteStaff(actor, main.id), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.main_admin_protected'));
+});
+
+test('the system admin edits and deletes other staff accounts', async () => {
+  const { svc, users } = setup();
+  const main = await users.create({ email: 'root@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678'), isSystemAdmin: true });
+  const actor = { id: main.id, role: 'super_admin' as const };
+  const ops = await svc.createStaff(actor, { email: 'ops@x.com', password: 'pw-12345678', role: 'operations' });
+  const updated = await svc.updateStaff(actor, ops.id, { name: 'Ops Lead', role: 'manager' });
+  assert.equal(updated.name, 'Ops Lead');
+  assert.equal(updated.role, 'manager');
+  await svc.deleteStaff(actor, ops.id);
+  // soft-deleted staff can no longer be looked up (deleted_at hidden)
+  assert.equal(users.rows.get(ops.id)!.deleted_at !== null, true);
+  assert.equal(await users.findById(ops.id), null);
+});
+
+test('a staff role cannot be edited into super_admin', async () => {
+  const { svc, users } = setup();
+  const main = await users.create({ email: 'root@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678'), isSystemAdmin: true });
+  const actor = { id: main.id, role: 'super_admin' as const };
+  const ops = await svc.createStaff(actor, { email: 'ops@x.com', password: 'pw-12345678', role: 'operations' });
+  await assert.rejects(() => svc.updateStaff(actor, ops.id, { role: 'super_admin' }), (e: unknown) =>
+    e instanceof ForbiddenException && JSON.stringify((e as HttpException).getResponse()).includes('auth.super_admin_reserved'));
 });

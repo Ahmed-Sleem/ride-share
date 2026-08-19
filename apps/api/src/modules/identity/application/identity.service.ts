@@ -31,7 +31,7 @@ import { VerificationsRepository } from '../infra/verifications.repository.js';
 import { SessionsRepository } from '../infra/sessions.repository.js';
 import { Notifications } from '../infra/notifications.js';
 import { AuditService } from '../../audit/contracts/public.js';
-import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
+import { assertCan, assertGrantableStaffRole, Capability, Role } from '../../../security/authority/authority.resolver.js';
 
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -43,6 +43,11 @@ export interface AuthResult {
 
 const tooMany = (messageKey: string, details?: unknown) =>
   new HttpException({ message_key: messageKey, details }, HttpStatus.TOO_MANY_REQUESTS);
+
+/** PostgreSQL UNIQUE-violation (code 23505) — used to map a concurrent
+    duplicate sign-up to the same honest error as a checked one. */
+const isUniqueViolation = (e: unknown): boolean =>
+  typeof e === 'object' && e !== null && (e as { code?: string }).code === '23505';
 
 @Injectable()
 export class IdentityService {
@@ -88,48 +93,62 @@ export class IdentityService {
   }
 
   /** Rider/driver sign-up step 1: request a one-time code by email.
-      The domain must pass the allowlist BEFORE anything is sent. */
+      The domain must pass the allowlist AND the email must not already belong
+      to an account (one email = one account, whatever its role) — both are
+      checked BEFORE anything is sent. */
   async riderRequestOtp(email: string): Promise<{ ok: true; resendInMs: number }> {
     const normalized = email.trim().toLowerCase();
     if (!isAllowedEmail(normalized, parseExtraDomains(this.env.EMAIL_ALLOWED_DOMAINS))) {
       throw new ForbiddenException({ message_key: 'auth.email_domain_not_allowed' });
     }
+    if (await this.users.findByEmail(normalized)) {
+      throw new ForbiddenException({ message_key: 'auth.email_taken' });
+    }
     const resendInMs = await this.issueLoginCode(normalized, 'signup');
     return { ok: true, resendInMs };
   }
 
-  /** Rider/driver sign-up step 2: verify the code; creates the rider on first
-      use (self-register). The account is keyed by email. */
-  async riderVerifyOtp(email: string, code: string, name?: string): Promise<AuthResult> {
+  /** Rider/driver sign-up step 2: verify the code and CREATE the account.
+      One email = one account: if the email is already taken (as a rider,
+      driver, or staff) the sign-up is refused — never a silent second account,
+      never a silent sign-in. */
+  async signupVerifyOtp(email: string, code: string, name?: string): Promise<AuthResult> {
     const normalized = email.trim().toLowerCase();
-    const record = await this.codes.findActive('email_login', 'email', normalized);
-    const result = evaluateCode(record, code, new Date());
-    if (!result.ok) {
-      if (result.reason === 'mismatch' && record) {
-        await this.codes.incrementAttempts(record.id);
-        const attempts = record.attempts + 1;
-        if (attempts >= 3) {
-          await this.audit.record(null, 'auth.code_locked', {
-            targetType: 'email', targetId: normalized, after: { purpose: 'email_login' },
-          });
-          throw tooMany('auth.code_locked', { lockedUntil: new Date(Date.now() + LOCKOUT_MS) });
-        }
-        throw new UnauthorizedException({
-          message_key: 'auth.otp_mismatch', details: { remainingAttempts: 3 - attempts },
-        });
-      }
-      if (result.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: result.lockedUntil });
-      throw new UnauthorizedException({ message_key: `auth.otp_${result.reason}` });
+    await this.consumeLoginCode(normalized, code);
+    if (await this.users.findByEmail(normalized)) {
+      throw new ForbiddenException({ message_key: 'auth.email_taken' });
     }
+    let user: UserRow;
+    try {
+      user = await this.users.create({ email: normalized, name, role: 'rider' });
+    } catch (e) {
+      // concurrent sign-up with the same email: the UNIQUE constraint fires
+      // instead of a 500 — map it to the same honest error.
+      if (isUniqueViolation(e)) throw new ForbiddenException({ message_key: 'auth.email_taken' });
+      throw e;
+    }
+    const tokens = await this.issueTokens(user);
+    await this.audit.record({ id: user.id, role: user.role }, 'auth.signup', {
+      targetType: 'user', targetId: user.id, after: { method: 'email_otp', email: normalized },
+    });
+    return tokens;
+  }
 
-    await this.codes.markConsumed(record!.id);
-    const existing = await this.users.findByEmail(normalized);
-    const user = existing ?? (await this.users.create({ email: normalized, name, role: 'rider' }));
+  /** Sign-in step 2 for OTP accounts (riders and drivers): verify the emailed
+      login code and issue tokens. The account must already exist (identify
+      sent the code) — sign-up is a separate, stricter endpoint. */
+  async riderVerifyOtp(email: string, code: string): Promise<AuthResult> {
+    const normalized = email.trim().toLowerCase();
+    await this.consumeLoginCode(normalized, code);
+    const user = await this.users.findByEmail(normalized);
+    if (!user || user.password_hash) {
+      throw new UnauthorizedException({ message_key: 'auth.invalid_credentials' });
+    }
     if (user.status !== 'active') {
       throw new ForbiddenException({ message_key: 'auth.account_suspended' });
     }
     const tokens = await this.issueTokens(user);
-    await this.audit.record({ id: user.id, role: user.role }, existing ? 'auth.login' : 'auth.signup', {
+    await this.audit.record({ id: user.id, role: user.role }, 'auth.login', {
       targetType: 'user', targetId: user.id, after: { method: 'email_otp' },
     });
     return tokens;
@@ -240,7 +259,9 @@ export class IdentityService {
     });
   }
 
-  /** Super-admin creates a staff account (never self-service — DEC-032/033). */
+  /** Super-admin creates a staff account (never self-service — DEC-032/033).
+      Only the env-seeded system admin may manage staff, and NO second
+      super_admin can be created (DEC-196: one main admin). */
   async createStaff(
     actor: Actor,
     input: { phone?: string | null; email?: string | null; name?: string; password: string; role: UserRole }
@@ -249,6 +270,8 @@ export class IdentityService {
     if (!STAFF_ROLES.includes(input.role)) {
       throw new ForbiddenException({ message_key: 'auth.staff_roles_only' });
     }
+    // One main admin (DEC-196): the super_admin role can never be granted.
+    assertGrantableStaffRole(input.role as unknown as Role);
     if (!input.phone && !input.email) {
       throw new ForbiddenException({ message_key: 'auth.identifier_required' });
     }
@@ -271,6 +294,55 @@ export class IdentityService {
     return toPublicUser(created);
   }
 
+  /** Edit a staff account (name + role). The system admin is immutable — it
+      cannot be edited by anyone, including itself; its password is the only
+      thing it may change (via /me/password). Roles may never become
+      super_admin. */
+  async updateStaff(
+    actor: Actor,
+    id: string,
+    input: { name?: string; role?: UserRole }
+  ): Promise<PublicUser> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STAFF);
+    const target = await this.users.findById(id);
+    if (!target || !STAFF_ROLES.includes(target.role)) {
+      throw new ForbiddenException({ message_key: 'auth.staff_not_found' });
+    }
+    if (target.is_system_admin) {
+      throw new ForbiddenException({ message_key: 'auth.main_admin_protected' });
+    }
+    const role = input.role ?? target.role;
+    // super_admin can never be set (DEC-196) — decided in the resolver.
+    assertGrantableStaffRole(role as unknown as Role);
+    await this.users.updateStaff(id, input.name ?? target.name, role);
+    const updated = await this.users.findById(id);
+    await this.audit.record(actor, 'staff.update', {
+      targetType: 'user', targetId: id,
+      before: { name: target.name, role: target.role },
+      after: { name: updated!.name, role: updated!.role },
+    });
+    return toPublicUser(updated!);
+  }
+
+  /** Delete a staff account (soft delete). The system admin cannot be deleted
+      by anyone — it is the one account the platform cannot lose. */
+  async deleteStaff(actor: Actor, id: string): Promise<{ ok: true }> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STAFF);
+    const target = await this.users.findById(id);
+    if (!target || !STAFF_ROLES.includes(target.role)) {
+      throw new ForbiddenException({ message_key: 'auth.staff_not_found' });
+    }
+    if (target.is_system_admin) {
+      throw new ForbiddenException({ message_key: 'auth.main_admin_protected' });
+    }
+    await this.users.softDelete(id);
+    await this.sessions.revokeAllForUser(id);
+    await this.audit.record(actor, 'staff.delete', {
+      targetType: 'user', targetId: id, after: { email: target.email, role: target.role },
+    });
+    return { ok: true };
+  }
+
   async listStaff(actor: Actor): Promise<PublicUser[]> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STAFF);
     const all = await this.users.list();
@@ -278,6 +350,32 @@ export class IdentityService {
   }
 
   // ── internals ───────────────────────────────────────────────────────────
+  /** Verify a login code and consume it, enforcing the DEC-189 rules exactly
+      once: 3 failed attempts → 1-hour lockout (audited); expired/consumed/
+      not-found codes are honest errors. Shared by sign-up and sign-in. */
+  private async consumeLoginCode(email: string, code: string): Promise<void> {
+    const record = await this.codes.findActive('email_login', 'email', email);
+    const result = evaluateCode(record, code, new Date());
+    if (!result.ok) {
+      if (result.reason === 'mismatch' && record) {
+        await this.codes.incrementAttempts(record.id);
+        const attempts = record.attempts + 1;
+        if (attempts >= 3) {
+          await this.audit.record(null, 'auth.code_locked', {
+            targetType: 'email', targetId: email, after: { purpose: 'email_login' },
+          });
+          throw tooMany('auth.code_locked', { lockedUntil: new Date(Date.now() + LOCKOUT_MS) });
+        }
+        throw new UnauthorizedException({
+          message_key: 'auth.otp_mismatch', details: { remainingAttempts: 3 - attempts },
+        });
+      }
+      if (result.reason === 'locked') throw tooMany('auth.code_locked', { lockedUntil: result.lockedUntil });
+      throw new UnauthorizedException({ message_key: `auth.otp_${result.reason}` });
+    }
+    await this.codes.markConsumed(record!.id);
+  }
+
   /** Issue (and log) a login code for `email`, enforcing the >= 60s cooldown
       and the 1-hour lockout. Shared by smart sign-in and self sign-up so the
       rule exists exactly once (§0.3 / §8.2). */
