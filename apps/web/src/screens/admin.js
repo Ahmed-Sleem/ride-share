@@ -21,6 +21,28 @@ function adminStat(ic, label, on) {
     $("div",{class:"row gap2"}, icon(ic), $("div",{class:"metric__l",text:label})));
 }
 
+/* Staff profile — account + appearance settings only. Wallet, subscriptions
+   and safety-centre are RIDER features; staff never see them (§8.1 hide what
+   the role can never use). Shared by operations / manager / support / super_admin. */
+function staffProfile() {
+  const u = S.user || {};
+  const initials = (u.name || "?").slice(0,1).toUpperCase();
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"row gap3"},
+    $("div",{class:"avatar avatar--lg",text:initials}),
+    $("div",{class:"stack grow gap1"},
+      $("strong",{class:"t-head",text:u.name || "—"}),
+      $("div",{class:"t-cap ltr",text:u.email || u.phone || "—"}))));
+  w.append(emailSection());
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"globe", title:t("language"), right:langSeg()}),
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
+    Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
+  w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
+    on:()=>signOut()}));
+  return w;
+}
+
 function adminStaff() {
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));

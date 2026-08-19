@@ -100,7 +100,7 @@ export class Notifications implements Mailer {
 
   private assertMail(): void {
     if (this.env.NODE_ENV === 'production' && (!this.smtp || !this.env.EMAIL_FROM)) {
-      throw new ServiceUnavailableException({ message_key: 'notifications.email_not_configured' });
+      throw new ServiceUnavailableException({ message_key: 'error.email_not_configured' });
     }
   }
 
@@ -114,9 +114,12 @@ export class Notifications implements Mailer {
       await this.smtp.sendMail({ from: this.env.EMAIL_FROM, to: email, subject, text, html });
     } catch (err) {
       // an SMTP failure is a clear, retryable condition — never a 500 "something
-      // went wrong" and never a hung request
-      this.logger.error({ msg: 'email send failed', err: (err as Error).message });
-      throw new ServiceUnavailableException({ message_key: 'notifications.email_send_failed' });
+      // went wrong" and never a hung request. The SMTP server's own rejection
+      // (e.g. "554 5.7.1 blocked", "535 auth failed") is logged so the deploy
+      // logs name the exact provider-side reason.
+      const e = err as { code?: string; message?: string; response?: string };
+      this.logger.error({ msg: 'email send failed', code: e.code, smtp: e.response, err: e.message });
+      throw new ServiceUnavailableException({ message_key: 'error.email_send_failed' });
     }
   }
 

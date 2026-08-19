@@ -1115,9 +1115,9 @@ en:{
      error.internal when a key is unknown. */
   error:{internal:"Something went wrong. Please try again.",
          unavailable:"The service is busy or offline right now. Please try again in a moment.",
-         network:"Can't reach the server. Check your connection and try again."},
-  notifications:{email_not_configured:"Email sending isn't configured yet.",
-                 email_send_failed:"We couldn't send the email right now. Please try again in a moment."},
+         network:"Can't reach the server. Check your connection and try again.",
+         email_not_configured:"Email sending isn't configured yet.",
+         email_send_failed:"We couldn't send the email right now. Please try again in a moment."},
   validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number."},
   auth:{
     invalid_credentials:"Email or password isn't right.",
@@ -1254,9 +1254,9 @@ ar:{
   roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
   error:{internal:"حدث خطأ ما. حاول مرة أخرى.",
          unavailable:"الخدمة مشغولة أو غير متاحة الآن. حاول مرة أخرى بعد قليل.",
-         network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا."},
-  notifications:{email_not_configured:"إرسال البريد غير مُهيأ بعد.",
-                 email_send_failed:"تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل."},
+         network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا.",
+         email_not_configured:"إرسال البريد غير مُهيأ بعد.",
+         email_send_failed:"تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل."},
   validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح."},
   auth:{
     invalid_credentials:"البريد أو كلمة المرور غير صحيحة.",
@@ -2543,6 +2543,28 @@ function adminStat(ic, label, on) {
     $("div",{class:"row gap2"}, icon(ic), $("div",{class:"metric__l",text:label})));
 }
 
+/* Staff profile — account + appearance settings only. Wallet, subscriptions
+   and safety-centre are RIDER features; staff never see them (§8.1 hide what
+   the role can never use). Shared by operations / manager / support / super_admin. */
+function staffProfile() {
+  const u = S.user || {};
+  const initials = (u.name || "?").slice(0,1).toUpperCase();
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"row gap3"},
+    $("div",{class:"avatar avatar--lg",text:initials}),
+    $("div",{class:"stack grow gap1"},
+      $("strong",{class:"t-head",text:u.name || "—"}),
+      $("div",{class:"t-cap ltr",text:u.email || u.phone || "—"}))));
+  w.append(emailSection());
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"globe", title:t("language"), right:langSeg()}),
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
+    Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
+  w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
+    on:()=>signOut()}));
+  return w;
+}
+
 function adminStaff() {
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
@@ -3490,19 +3512,22 @@ const PAGES = {
     {k:"livemap", ic:"livemap", fn:opsLiveMap, dock:true, wide:true},
     {k:"stops",   ic:"stops",   fn:opsStops,   dock:true, wide:true},
     {k:"routes",  ic:"routes",  fn:opsRoutes,  dock:true, wide:true},
-    {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true}
+    {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true},
+    {k:"profile", ic:"profile", fn:staffProfile, dock:true, foot:true}
   ],
   manager:[
     {k:"board",     ic:"board",     fn:managerBoard,     dock:true, wide:true},
     {k:"coverage",  ic:"coverage",  fn:managerCoverage,  dock:true, wide:true},
     {k:"pricing",   ic:"pricing",   fn:managerPricing,   dock:true, wide:true},
     {k:"promos",    ic:"promos",    fn:managerPromos,    dock:true, wide:true},
-    {k:"analytics", ic:"analytics", fn:managerAnalytics, dock:true, wide:true}
+    {k:"analytics", ic:"analytics", fn:managerAnalytics, dock:true, wide:true},
+    {k:"profile",   ic:"profile",   fn:staffProfile,     dock:true, foot:true}
   ],
   support:[
     {k:"lookup",  ic:"lookup",  fn:supportLookup,  dock:true, wide:true},
     {k:"tickets", ic:"tickets", fn:supportTickets, dock:true, wide:true},
-    {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true}
+    {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true},
+    {k:"profile", ic:"profile", fn:staffProfile,   dock:true, foot:true}
   ],
   super_admin:[
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
@@ -3510,7 +3535,7 @@ const PAGES = {
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
-    {k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}
+    {k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}
   ]
 };
 const DEFAULT_PAGE = Object.fromEntries(

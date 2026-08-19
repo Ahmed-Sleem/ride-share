@@ -699,6 +699,35 @@ const m19c = (async () => {
   ok("countdown keeps ticking in place", !!rb && /Resend in|أعد الإرسال بعد/.test(rb.textContent));
 })();
 
+group("M1.9d — NOTIFICATIONS COPY COLLISION + STAFF PROFILE");
+(() => {
+  const t=boot();
+
+  // the error namespace must not clobber the display string "Notifications"
+  ok("notifications label is a plain string (no [object Object])",
+     typeof t.w.T.en.notifications === "string" && t.w.T.en.notifications.length > 1,
+     String(t.w.T.en.notifications));
+  ok("email error keys live under error.*",
+     typeof t.w.T.en.error.email_send_failed === "string" &&
+     typeof t.w.T.en.error.email_not_configured === "string");
+
+  // the super_admin profile must not show rider-only wallet / subscriptions / safety
+  t.w.S.view="app"; t.w.S.authed=true; t.w.S.role="super_admin";
+  t.w.S.user={id:"u1",role:"super_admin",name:"Admin",email:"admin@ride.local"};
+  t.w.S.page="profile"; t.w.S.stack=[]; t.w.S.sheet=null; t.w.render();
+  const txt = t.q(".main").textContent;
+  ok("staff profile has no wallet entry", !/wallet/i.test(txt), "");
+  ok("staff profile has no subscriptions entry", !txt.includes(t.w.T.en.subs), "");
+  ok("staff profile has no safety centre entry", !txt.includes(t.w.T.en.safetyCentre), "");
+  ok("staff profile still shows appearance settings", txt.includes(t.w.T.en.theme), "");
+
+  // every staff role's nav includes a profile page (the header chip must work)
+  for (const role of ["ops","manager","support","super_admin"]) {
+    const pages = t.w.PAGES[role] || [];
+    ok(`${role} nav has a profile page`, pages.some((p)=>p.k==="profile"), "");
+  }
+})();
+
 group("BUILD INTEGRITY");
 {
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),

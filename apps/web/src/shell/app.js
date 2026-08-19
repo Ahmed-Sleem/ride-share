@@ -116,19 +116,22 @@ const PAGES = {
     {k:"livemap", ic:"livemap", fn:opsLiveMap, dock:true, wide:true},
     {k:"stops",   ic:"stops",   fn:opsStops,   dock:true, wide:true},
     {k:"routes",  ic:"routes",  fn:opsRoutes,  dock:true, wide:true},
-    {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true}
+    {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true},
+    {k:"profile", ic:"profile", fn:staffProfile, dock:true, foot:true}
   ],
   manager:[
     {k:"board",     ic:"board",     fn:managerBoard,     dock:true, wide:true},
     {k:"coverage",  ic:"coverage",  fn:managerCoverage,  dock:true, wide:true},
     {k:"pricing",   ic:"pricing",   fn:managerPricing,   dock:true, wide:true},
     {k:"promos",    ic:"promos",    fn:managerPromos,    dock:true, wide:true},
-    {k:"analytics", ic:"analytics", fn:managerAnalytics, dock:true, wide:true}
+    {k:"analytics", ic:"analytics", fn:managerAnalytics, dock:true, wide:true},
+    {k:"profile",   ic:"profile",   fn:staffProfile,     dock:true, foot:true}
   ],
   support:[
     {k:"lookup",  ic:"lookup",  fn:supportLookup,  dock:true, wide:true},
     {k:"tickets", ic:"tickets", fn:supportTickets, dock:true, wide:true},
-    {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true}
+    {k:"lost",    ic:"lost",    fn:supportLost,    dock:true, wide:true},
+    {k:"profile", ic:"profile", fn:staffProfile,   dock:true, foot:true}
   ],
   super_admin:[
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
@@ -136,7 +139,7 @@ const PAGES = {
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
-    {k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}
+    {k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}
   ]
 };
 const DEFAULT_PAGE = Object.fromEntries(

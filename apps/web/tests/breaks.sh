@@ -284,6 +284,14 @@ run_break "cooldown re-renders the whole screen" src/screens/auth.js \
   's|      setTimeout(tick, 1000);|      setTimeout(()=>render(), 1000);|' \
   "OTP input survives the ticking countdown (no full re-render)"
 
+run_break "notifications label clobbered by an object" src/data/content.js \
+  's|notifications:"Notifications"|notifications:{email_send_failed:"x"}|' \
+  "notifications label is a plain string (no [object Object])"
+
+run_break "staff profile shows rider wallet" src/shell/app.js \
+  's|{k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}|{k:"profile",    ic:"profile",  fn:riderProfile,  dock:true, foot:true}|' \
+  "staff profile has no wallet entry|staff profile has no subscriptions entry"
+
 run_break "super_admin offered at staff creation" src/screens/admin.js \
   's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
   "staff create offers no super_admin option"

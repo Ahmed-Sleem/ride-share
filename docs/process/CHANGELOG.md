@@ -498,3 +498,15 @@
   the countdown is always visible where a code was just sent.
 - Resend from the OTP step now falls back to S.authEmail (no email field on that step).
 - 258 unit (5 new regression tests) / 14 axe / 47 landing / repo checks green.
+
+## 2026-08-19 — [object Object] fix + staff profile + SMTP diagnostics
+
+- Fixed the settings "[object Object]": the notifications error-key object clobbered the
+  "Notifications" display string, so t("notifications") returned an object. Email error keys now
+  live under error.* (backend + copy), leaving notifications a plain string.
+- Staff profile: operations/manager/support/super_admin now get their OWN profile (account,
+  email verification, language/theme/notifications, sign out) — wallet, subscriptions and safety
+  centre (rider-only) are gone, and every staff role's nav now includes a profile page.
+- SMTP failures now log the provider's own rejection (code + smtp response) so the deploy logs
+  name the exact Mailo-side reason.
+- 271 unit / 83 API / 14 axe / 47 landing / repo checks green.
