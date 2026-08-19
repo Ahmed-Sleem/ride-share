@@ -279,7 +279,10 @@ async function riderSendCode() {
 }
 
 async function signupVerifyCode() {
-  const code = S.otpBypass ? "" : otpValue();
+  // undefined (not "") in bypass mode: JSON.stringify drops the key, so the
+  // DTO's @IsOptional code passes — an empty string would fail the 6-digit
+  // regex and return "Please check your entries".
+  const code = S.otpBypass ? undefined : otpValue();
   if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   const name = val("auth-name") || undefined;   // read BEFORE render()
   S.authBusy=true; S.authError=null; render();
@@ -301,7 +304,7 @@ async function signupVerifyCode() {
 }
 
 async function signinVerifyCode() {
-  const code = S.otpBypass ? "" : otpValue();
+  const code = S.otpBypass ? undefined : otpValue();
   if(!S.otpBypass && code.length !== 6){ S.authError=t("validation.code"); render(); return; }
   S.authBusy=true; S.authError=null; render();
   try {

@@ -520,3 +520,13 @@
 - Also fixed: a successful sign-in left authBusy=true, so returning to the sign-in screen
   showed a stuck "…" button — enterApp()/signOut() now reset the auth-flow state.
 - 87 API tests (4 new bypass tests) / 274 web unit (3 new) green; repo checks green.
+
+## 2026-08-19 — Fix "check your entries" on the bypass name step
+
+- Root cause: in OTP-bypass mode the client sent code:"" — class-validator's @IsOptional only
+  skips null/undefined, so the empty string failed the 6-digit regex → validation.failed. The
+  client now sends `undefined` (JSON.stringify drops the key) so the optional code passes.
+- Audited every other @IsOptional DTO field: all are sent as undefined (dropped) or are strings
+  where "" is valid — no other occurrence of this class of bug.
+- Regression: "bypass signup omits the code field entirely" (observed failing when reverted to "").
+- 275 web unit / 87 API tests / repo checks green.

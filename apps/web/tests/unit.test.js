@@ -734,10 +734,11 @@ const m19e = (async () => {
   const session = { user:{id:"u1",role:"rider",name:"Nour",email:"rider@gmail.com",emailVerified:false}, accessToken:"a", refreshToken:"r" };
 
   // sign-up: a bypass response skips the OTP boxes and goes to the name step
+  let sentSignup = null;
   t.w.fetch = async (url, opts) => {
     const body = opts && opts.body ? JSON.parse(opts.body) : {};
     if (url.endsWith("/auth/otp/request")) return { ok:true, json: async()=>({ ok:true, resendInMs:0, bypass:true }) };
-    if (url.endsWith("/auth/signup/verify")) return { ok:true, json: async()=>session };
+    if (url.endsWith("/auth/signup/verify")) { sentSignup = body; return { ok:true, json: async()=>session }; }
     return { ok:false, status:404, json: async()=>({ message_key:"error.internal" }) };
   };
   t.w.S.view="auth"; t.w.S.authMode="signup"; t.w.S.authStep="choose"; t.w.render();
@@ -752,6 +753,8 @@ const m19e = (async () => {
   [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.createAccount)).click();
   await new Promise((r)=>setTimeout(r, 20));
   ok("bypass signup enters the app", t.w.S.view==="app" && t.w.S.role==="rider", String(t.w.S.view));
+  ok("bypass signup omits the code field entirely (no empty-string 400)",
+     !!sentSignup && !("code" in sentSignup), sentSignup ? JSON.stringify(sentSignup) : "no request");
 
   // sign-in: a bypass identify signs straight in (no OTP boxes)
   t.w.S.view="auth"; t.w.S.authed=false; t.w.S.authMode="signin"; t.w.S.loginMethod=null; t.w.render();

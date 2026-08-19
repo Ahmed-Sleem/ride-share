@@ -296,6 +296,10 @@ run_break "client ignores the OTP bypass flag" src/screens/auth.js \
   's|    if (res.bypass) {|    if (false) {|' \
   "signup skips the code step when bypass is on"
 
+run_break "bypass sends an empty code string" src/screens/auth.js \
+  's|const code = S.otpBypass ? undefined : otpValue();|const code = S.otpBypass ? "" : otpValue();|' \
+  "bypass signup omits the code field entirely (no empty-string 400)"
+
 run_break "super_admin offered at staff creation" src/screens/admin.js \
   's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
   "staff create offers no super_admin option"
