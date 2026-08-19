@@ -241,8 +241,8 @@ run_break "streamline credit loses its link" src/screens/landing.js \
   "Streamline credit is a link"
 
 run_break "slider card returns a gradient" src/styles/shell.html \
-  's|.slide--violet{background:var(--brand-soft)}|.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
-  "slider cards are flat pastel (violet card has no gradient)"
+  's|.slide--violet{background:var(--violet-700)}|.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
+  "slider cards are bold (violet card has no gradient)"
 
 run_break "feature hover loses the bounce" src/styles/shell.html \
   's|transform var(--slow) var(--bounce),border-color|transform var(--slow) var(--ease),border-color|' \
@@ -256,9 +256,9 @@ run_break "otp boxes collapse to five" src/lib/components.js \
   's|for (let i = 0; i < 6; i++)|for (let i = 0; i < 5; i++)|' \
   "OTP step renders six code boxes"
 
-run_break "slider doodle reverts to white ink" src/styles/shell.html \
-  's|  --sticker-ink:var(--text-primary);|  --sticker-ink:var(--on-solid);|' \
-  "slider doodle is dark ink with a pop accent on pastel"
+run_break "slider doodle loses its white ink" src/styles/shell.html \
+  's|  --sticker-ink:var(--on-solid);|  --sticker-ink:var(--ink-900);|' \
+  "slider doodle is white line-work with a same-hue light accent"
 
 run_break "slide pop animation removed" src/styles/shell.html \
   's|@keyframes slidepop{0%{transform:scale(.82) translateY(12px)}55%{transform:scale(1.06)}100%{transform:scale(1) translateY(0)}}||' \

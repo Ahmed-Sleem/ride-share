@@ -476,3 +476,13 @@
   reference (http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3000), not the self-reference
   ${{RAILWAY_PRIVATE_DOMAIN}} (which points the web at itself).
 - 253 unit / 58 breaks / 14 axe / 47 landing / repo checks green.
+
+## 2026-08-19 — Bold slider cards + SMTP fails fast (live email fix)
+
+- SMTP: SMTP_SECURE now defaults to 'auto' (implicit TLS on 465/2465, STARTTLS elsewhere) and the
+  transport has 6s connect/greet + 8s socket timeouts — a slow/unreachable SMTP can no longer hang
+  the OTP request (the live "service is busy" was the web proxy's 10s cap firing on a hanging Mailo
+  connect). Send failures now throw notifications.email_send_failed (clear, retryable) instead of 500.
+- Slider cards back to BOLD 700 shades (white text, AA) with white line-work doodles whose accents
+  are the same-hue 300 steps (violet/coral/sky/mint) — illustrations pop and stay in the card's family.
+- Proven: unreachable SMTP → email_send_failed in 34ms; 253 unit / 58 breaks / repo checks green.

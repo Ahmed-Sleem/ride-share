@@ -120,7 +120,8 @@ en:{
   error:{internal:"Something went wrong. Please try again.",
          unavailable:"The service is busy or offline right now. Please try again in a moment.",
          network:"Can't reach the server. Check your connection and try again."},
-  notifications:{email_not_configured:"Email sending isn't configured yet."},
+  notifications:{email_not_configured:"Email sending isn't configured yet.",
+                 email_send_failed:"We couldn't send the email right now. Please try again in a moment."},
   validation:{email:"Enter a valid email address.", code:"Enter the 6-digit code.", failed:"Please check your entries.", phone:"Enter a valid phone number."},
   auth:{
     invalid_credentials:"Email or password isn't right.",
@@ -257,7 +258,8 @@ ar:{
   error:{internal:"حدث خطأ ما. حاول مرة أخرى.",
          unavailable:"الخدمة مشغولة أو غير متاحة الآن. حاول مرة أخرى بعد قليل.",
          network:"تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مجددًا."},
-  notifications:{email_not_configured:"إرسال البريد غير مُهيأ بعد."},
+  notifications:{email_not_configured:"إرسال البريد غير مُهيأ بعد.",
+                 email_send_failed:"تعذّر إرسال البريد الآن. حاول مرة أخرى بعد قليل."},
   validation:{email:"أدخل بريدًا إلكترونيًا صحيحًا.", code:"أدخل الكود المكوّن من ٦ أرقام.", failed:"تحقق من المدخلات.", phone:"أدخل رقم هاتف صحيح."},
   auth:{
     invalid_credentials:"البريد أو كلمة المرور غير صحيحة.",

@@ -622,18 +622,19 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      !!cr && cr.parentElement === t.q(".landing__foot") &&
      t.q(".landing__foot").children.length >= 2);
 
-  // slider cards: ONE flat pastel pop colour each, no gradient
-  ok("slider cards are flat pastel (violet card has no gradient)",
-     /\.slide--violet\{background:var\(--brand-soft\)\}/.test(CSS) &&
+  // slider cards: ONE bold pop colour each (700 steps), flat, no gradient
+  ok("slider cards are bold (violet card has no gradient)",
+     /\.slide--violet\{background:var\(--violet-700\)\}/.test(CSS) &&
      !/\.slide--violet\{background:linear-gradient/.test(CSS));
-  ok("all four slider cards use pastel tints",
-     /\.slide--coral\{background:var\(--pop-coral-bg\)\}/.test(CSS) &&
-     /\.slide--sky\{background:var\(--pop-sky-bg\)\}/.test(CSS) &&
-     /\.slide--mint\{background:var\(--pop-mint-bg\)\}/.test(CSS));
-  ok("slider text is on-colour (readable on pastel)", /\.slide\{[^}]*color:var\(--text-primary\)/.test(CSS));
-  ok("slider doodle is dark ink with a pop accent on pastel",
-     /\.slide__sticker\{[^}]*--sticker-ink:var\(--text-primary\)/.test(CSS) &&
-     /\.slide--violet \.slide__sticker\{--sticker-accent:var\(--brand\)\}/.test(CSS));
+  ok("all four slider cards use the bold 700 shades",
+     /\.slide--coral\{background:var\(--coral-700\)\}/.test(CSS) &&
+     /\.slide--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
+     /\.slide--mint\{background:var\(--mint-700\)\}/.test(CSS));
+  ok("slider text is white on the bold card", /\.slide\{[^}]*color:var\(--on-solid\)/.test(CSS));
+  ok("slider doodle is white line-work with a same-hue light accent",
+     /\.slide__sticker\{[^}]*--sticker-ink:var\(--on-solid\)/.test(CSS) &&
+     /\.slide--violet \.slide__sticker\{--sticker-accent:var\(--violet-300\)\}/.test(CSS) &&
+     /\.slide--coral \.slide__sticker\{--sticker-accent:var\(--coral-300\)\}/.test(CSS));
   ok("slides pop in with a springy overshoot", /@keyframes slidepop/.test(CSS) && /@keyframes stickerpop/.test(CSS));
   ok("hero glow drifts very slowly", /\.landing__hero\{[^}]*animation:herodrift/.test(CSS) && /@keyframes herodrift/.test(CSS));
 

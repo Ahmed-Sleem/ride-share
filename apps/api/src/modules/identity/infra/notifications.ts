@@ -81,8 +81,19 @@ export class Notifications implements Mailer {
       ? createTransport({
           host: env.SMTP_HOST,
           port: env.SMTP_PORT,
-          secure: env.SMTP_SECURE === 'true',
+          // 'auto': implicit TLS on the SMTPS ports, STARTTLS elsewhere — a
+          // misconfigured secure flag can otherwise hang the connection for the
+          // full request window (and look like "service offline" to the user).
+          secure: env.SMTP_SECURE === 'true'
+            ? true
+            : env.SMTP_SECURE === 'false'
+              ? false
+              : (env.SMTP_PORT === 465 || env.SMTP_PORT === 2465),
           auth: env.SMTP_USER && env.SMTP_PASS ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+          // fail fast: a hanging SMTP must never hang the HTTP request
+          connectionTimeout: 6000,
+          greetingTimeout: 6000,
+          socketTimeout: 8000,
         })
       : null;
   }
@@ -99,7 +110,14 @@ export class Notifications implements Mailer {
       this.logger.warn(`[DEV-MAIL] ${subject} → ${email}: ${text}`);
       return;
     }
-    await this.smtp.sendMail({ from: this.env.EMAIL_FROM, to: email, subject, text, html });
+    try {
+      await this.smtp.sendMail({ from: this.env.EMAIL_FROM, to: email, subject, text, html });
+    } catch (err) {
+      // an SMTP failure is a clear, retryable condition — never a 500 "something
+      // went wrong" and never a hung request
+      this.logger.error({ msg: 'email send failed', err: (err as Error).message });
+      throw new ServiceUnavailableException({ message_key: 'notifications.email_send_failed' });
+    }
   }
 
   async sendLoginCode(email: string, code: string): Promise<void> {

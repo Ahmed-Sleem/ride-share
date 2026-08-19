@@ -44,7 +44,7 @@ export const envSchema = {
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_SECURE: z.enum(['true', 'false', 'auto']).default('auto'),
   EMAIL_FROM: z.string().optional(),
 
   // ── email sign-up policy ──────────────────────────────────────────────
