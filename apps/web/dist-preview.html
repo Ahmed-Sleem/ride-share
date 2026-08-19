@@ -1048,6 +1048,10 @@ en:{
   documents:"Documents", expires:"Expires", payouts:"Payouts", nextPayout:"Next payout",
   vehicle:"Vehicle", myDepartures:"My departures", noClaims:"No claimed departures",
   noClaimsBody:"Claim a slot to start earning.", queued:"queued", lastSync:"last synced",
+  dutyComingBody:"Your shift board appears here once routes are published and you claim a departure.",
+  workComingBody:"Slots to claim appear here once routes are published.",
+  journeyComingBody:"Your live journey — boarding, manifest and arrivals — appears here once you have a claimed departure.",
+  earningsComingBody:"Earnings and payouts appear once you run journeys.",
   offlineBanner:"Offline — actions are saved and sent when you reconnect",
   /* staff */
   waiting:"Waiting", oldest:"Oldest", open:"Open", approve:"Approve", reject:"Reject",
@@ -1055,6 +1059,15 @@ en:{
   notifyRiders:"Notify riders", dismiss:"Dismiss", save:"Save changes", cancel:"Cancel",
   mapMock:"Illustrative map",
   na:"Not available at your role.",
+  opsNoApplications:"No driver applications yet — they appear here when a driver applies.",
+  opsNoVehicles:"No vehicles yet — approved drivers add them from their profile.",
+  opsStopsComing:"Stop mapping and the verification queue arrive with geography (M2).",
+  opsRoutesComing:"Routes and the slot grid arrive with the route model (M3).",
+  opsUsersComing:"User management arrives with the journey model (M3).",
+  managerComing:"Coverage, pricing, promotions and analytics arrive with commercial control (M5).",
+  supportComing:"Rider lookup, tickets and lost property arrive with safety & support (M4).",
+  safetyComingBody:"Live SOS, emergency contacts and ride sharing arrive with safety & support (M4).",
+  reportComingBody:"In-app reporting arrives with safety & support (M4).",
   /* landing */
   landingHero:"Fixed routes. One price. Your seat, booked.",
   landingHeroSub:"A shared ride you can plan around — published stops, published times, a flat fare per route, and a seat you booked before you left home. Built for any city, one corridor at a time.",
@@ -1194,12 +1207,25 @@ ar:{
   documents:"المستندات", expires:"تنتهي", payouts:"التحويلات", nextPayout:"التحويل القادم",
   vehicle:"المركبة", myDepartures:"مواعيدي", noClaims:"لا توجد مواعيد محجوزة",
   noClaimsBody:"احجز موعدًا لتبدأ العمل.", queued:"في الانتظار", lastSync:"آخر مزامنة",
+  dutyComingBody:"ستظهر لوحة دوامك هنا فور نشر المسارات وحجزك لموعد قيام.",
+  workComingBody:"المواعيد المتاحة للحجز تظهر هنا فور نشر المسارات.",
+  journeyComingBody:"رحلتك المباشرة — الركوب والقائمة والوصول — تظهر هنا عند حصولك على موعد.",
+  earningsComingBody:"الأرباح والتحويلات تظهر هنا بعد تشغيل رحلات.",
   offlineBanner:"غير متصل — سنحفظ ما تفعله ونرسله عند عودة الاتصال",
   waiting:"في الانتظار", oldest:"الأقدم", open:"فتح", approve:"قبول", reject:"رفض",
   needsFix:"يحتاج تصحيح", reason:"السبب", launchSale:"أطلق عرضًا",
   notifyRiders:"أبلغ الركاب", dismiss:"تجاهل", save:"حفظ التغييرات", cancel:"إلغاء",
   mapMock:"خريطة توضيحية",
   na:"غير متاح لدورك.",
+  opsNoApplications:"لا توجد طلبات سائقين بعد — تظهر هنا عند تقدّم سائق.",
+  opsNoVehicles:"لا توجد مركبات بعد — يضيفها السائقون المعتمدون من حساباتهم.",
+  opsStopsComing:"رسم المحطات وطابور التحقق يأتيان مع الجغرافيا (M2).",
+  opsRoutesComing:"المسارات وشبكة المواعيد تأتيان مع نموذج المسار (M3).",
+  opsUsersComing:"إدارة المستخدمين تأتي مع نموذج الرحلة (M3).",
+  managerComing:"التغطية والتسعير والعروض والتحليلات تأتي مع التحكم التجاري (M5).",
+  supportComing:"بحث الركاب والتذاكر والمفقودات تأتي مع الأمان والدعم (M4).",
+  safetyComingBody:"الاستغاثة المباشرة وجهات الطوارئ ومشاركة الرحلة تأتي مع الأمان والدعم (M4).",
+  reportComingBody:"الإبلاغ داخل التطبيق يأتي مع الأمان والدعم (M4).",
   /* landing */
   landingHero:"مسارات ثابتة. سعر واحد. مقعدك محجوز.",
   landingHeroSub:"ركوبة مشتركة تقدر تخطط عليها — محطات منشورة، مواعيد منشورة، أجرة ثابتة لكل مسار، ومقعد حجزته قبل ما تخرج من البيت. مصممة لأي مدينة، مسار بعد مسار.",
@@ -1291,152 +1317,6 @@ ar:{
 }
 };
 
-/* ══════════════════════════════════════════════════════════════════════
-   2. CONTENT — sample content for every screen.
-   ══════════════════════════════════════════════════════════════════════ */
-const DATA = {
-  user:{ name:"Nour", initials:"N", phone:"+20 100 000 0000", balance:48 },
-  routes:[
-    {id:"r1", en:"Corniche Line — Montazah → Manshiya", ar:"خط الكورنيش — المنتزه ← المنشية",
-     every:"Every 12 min", everyAr:"كل ١٢ دقيقة", window:"06:00 – 22:00", fare:15, stops:11},
-    {id:"r2", en:"Smouha → Downtown", ar:"سموحة ← وسط البلد",
-     every:"Every 15 min", everyAr:"كل ١٥ دقيقة", window:"06:30 – 21:00", fare:12, stops:8},
-    {id:"r3", en:"Agami → Sidi Gaber", ar:"العجمي ← سيدي جابر",
-     every:"Every 20 min", everyAr:"كل ٢٠ دقيقة", window:"05:30 – 20:00", fare:18, stops:14},
-    {id:"r4", en:"Miami → Sporting", ar:"ميامي ← سبورتنج",
-     every:"Every 18 min", everyAr:"كل ١٨ دقيقة", window:"06:00 – 20:30", fare:14, stops:9}
-  ],
-  streetPickupFare:20,
-  boardingPoints:[
-    {id:"b1", en:"Montazah Gate 2", ar:"بوابة المنتزه ٢", walk:4, ok:true, rec:true},
-    {id:"b2", en:"Mandara Bridge", ar:"كوبري المندرة", walk:7, ok:true},
-    {id:"b3", en:"Sidi Bishr Tram", ar:"ترام سيدي بشر", walk:11, ok:true},
-    {id:"b4", en:"Asafra Market", ar:"سوق العصافرة", walk:9, ok:false, why:"Closed for road works"}
-  ],
-  departures:[
-    {id:"d1", time:"07:15", arrive:"07:52", fare:15, seatsLeft:6, rec:true},
-    {id:"d2", time:"07:27", arrive:"08:04", fare:15, seatsLeft:11},
-    {id:"d3", time:"07:39", arrive:"08:16", fare:15, seatsLeft:14},
-    {id:"d4", time:"07:51", arrive:"08:28", fare:15, seatsLeft:14}
-  ],
-  ticket:{ route:"Corniche Line", boarding:"Montazah Gate 2", time:"07:15",
-           code:"482917", seats:1, fare:15 },
-  vehicle:{ plate:"ALX 4821", model:"Toyota Hiace", colour:"#1B62D6", colourName:"Blue",
-            driver:"Mahmoud A.", eta:6, rating:4.8 },
-  routeStops:[
-    {en:"Montazah Gate 2", ar:"بوابة المنتزه ٢", state:"done"},
-    {en:"Mandara Bridge", ar:"كوبري المندرة", state:"done"},
-    {en:"Sidi Bishr", ar:"سيدي بشر", state:"now"},
-    {en:"Miami", ar:"ميامي", state:"next"},
-    {en:"Sporting", ar:"سبورتنج", state:"next"},
-    {en:"Manshiya", ar:"المنشية", state:"next"}
-  ],
-  tripsUpcoming:[
-    {route:"Corniche Line", when:"Today 07:15", fare:15, state:"confirmed"}
-  ],
-  tripsPast:[
-    {route:"Smouha → Downtown", when:"Yesterday 18:20", fare:12, state:"completed"},
-    {route:"Corniche Line", when:"Sun 07:15", fare:15, state:"completed"},
-    {route:"Agami → Sidi Gaber", when:"Sat 09:40", fare:18, state:"cancelled"}
-  ],
-  walletHistory:[
-    {label:"Corniche Line", when:"Yesterday", amount:-12},
-    {label:"Top up — card", when:"Yesterday", amount:+100},
-    {label:"Smouha → Downtown", when:"Mon", amount:-12},
-    {label:"Refund — cancelled ride", when:"Sat", amount:+18}
-  ],
-  subs:[
-    {en:"Corniche Line — 20 rides", ar:"خط الكورنيش — ٢٠ رحلة", price:255, save:45, per:"month"},
-    {en:"Corniche Line — 40 rides", ar:"خط الكورنيش — ٤٠ رحلة", price:480, save:120, per:"month"}
-  ],
-  driverToday:{ journeys:3, earned:412, cash:180, nextPayout:"Thursday" },
-  slots:[
-    {time:"06:45", state:"taken", demand:0},
-    {time:"07:15", state:"open", demand:12, bonus:0},
-    {time:"07:45", state:"claimed", demand:0},
-    {time:"08:15", state:"open", demand:4},
-    {time:"08:45", state:"open", demand:0},
-    {time:"09:15", state:"taken", demand:0}
-  ],
-  claims:[
-    {route:"Corniche Line", time:"07:45", date:"Today", seats:14, booked:9, committed:true},
-    {route:"Corniche Line", time:"16:30", date:"Today", seats:14, booked:3, committed:false}
-  ],
-  manifest:[
-    {initials:"N", name:"Nour", seats:1, scanned:true,  alighting:false, stop:"Montazah Gate 2"},
-    {initials:"H", name:"Hana", seats:2, scanned:true,  alighting:false, stop:"Mandara Bridge"},
-    {initials:"K", name:"Karim",seats:1, scanned:false, alighting:false, stop:"Sidi Bishr"},
-    {initials:"S", name:"Sara", seats:1, scanned:true,  alighting:true,  stop:"Sidi Bishr"}
-  ],
-  driverDocs:[
-    {name:"Driving licence", expires:"14 Mar 2027", state:"ok"},
-    {name:"Vehicle licence", expires:"2 Oct 2026", state:"soon"},
-    {name:"Criminal record", expires:"19 Jan 2027", state:"ok"}
-  ],
-  opsQueue:[
-    {label:"Driver applications", count:12, oldest:"2 h", severity:"none", key:"drivers"},
-    {label:"Vehicle approvals", count:5, oldest:"40 min", severity:"none", key:"vehicles"},
-    {label:"Safety incidents", count:2, oldest:"11 min", severity:"danger", key:"incidents"},
-    {label:"Disputes", count:7, oldest:"1 d", severity:"warn", key:"disputes"},
-    {label:"Stop verification", count:23, oldest:"3 d", severity:"none", key:"stops"}
-  ],
-  applicant:{ name:"Mahmoud Abdelrahman", phone:"+20 100 000 0000", submitted:"2 h ago",
-              docs:["Licence front","Licence back","National ID","Vehicle registration"] },
-  opsStops:[
-    {name:"Montazah Gate 2", route:"Corniche Line", state:"verified", by:"Field, 3 d ago"},
-    {name:"Mandara Bridge", route:"Corniche Line", state:"verified", by:"Field, 3 d ago"},
-    {name:"Asafra Market", route:"Corniche Line", state:"pending", by:"Desk, today"},
-    {name:"Victoria Tram", route:"Miami → Sporting", state:"rejected", by:"Field, 1 d ago"}
-  ],
-  opsVehicles:[
-    {plate:"ALX 4821", route:"Corniche Line", driver:"Mahmoud A.", state:"on-journey", slip:"+2 min"},
-    {plate:"ALX 1190", route:"Smouha → Downtown", driver:"Tarek S.", state:"on-journey", slip:"+9 min"},
-    {plate:"ALX 7734", route:"Agami → Sidi Gaber", driver:"Omar K.", state:"idle", slip:"—"}
-  ],
-  metrics:[
-    {v:"1,284", l:"Rides today"}, {v:"87%", l:"Seats filled"},
-    {v:"4.7", l:"Average rating"}, {v:"2", l:"Open incidents"}
-  ],
-  coverage:[
-    {slot:"07:15", route:"Corniche Line", need:4, claimed:2, state:"short"},
-    {slot:"07:45", route:"Corniche Line", need:4, claimed:4, state:"ok"},
-    {slot:"08:15", route:"Smouha → Downtown", need:3, claimed:1, state:"short"},
-    {slot:"08:45", route:"Miami → Sporting", need:2, claimed:2, state:"ok"}
-  ],
-  alerts:[
-    {zone:"Montazah — 07:00 to 08:00", kind:"warn",
-     body:"2 of 4 slots claimed. 38 riders searched this window yesterday."},
-    {zone:"Smouha — 08:00 to 09:00", kind:"warn",
-     body:"1 of 3 slots claimed. Consider a claim bonus."},
-    {zone:"Agami — all day", kind:"ok", body:"Fully covered."}
-  ],
-  fares:[
-    {route:"Corniche Line", stop:15, street:20, updated:"12 d ago"},
-    {route:"Smouha → Downtown", stop:12, street:17, updated:"12 d ago"},
-    {route:"Agami → Sidi Gaber", stop:18, street:23, updated:"5 d ago"},
-    {route:"Miami → Sporting", stop:14, street:19, updated:"5 d ago"}
-  ],
-  promos:[
-    {name:"Montazah morning fill", type:"Flash sale", window:"07:00–08:00", state:"running", uses:41},
-    {name:"First ride free", type:"Acquisition", window:"Always", state:"running", uses:308},
-    {name:"Ramadan evenings", type:"Flash sale", window:"19:00–21:00", state:"scheduled", uses:0}
-  ],
-  analytics:[
-    {l:"Rides", v:"1,284", d:"+8% vs last week"},
-    {l:"Seats filled", v:"87%", d:"+3 pts"},
-    {l:"Cancellations", v:"4.1%", d:"−0.6 pts"},
-    {l:"Schedule adherence", v:"92%", d:"−1 pt"}
-  ],
-  tickets:[
-    {ref:"T-4821", subject:"Charged twice", who:"Nour", age:"12 min", state:"open"},
-    {ref:"T-4818", subject:"Driver did not stop", who:"Hana", age:"1 h", state:"open"},
-    {ref:"T-4809", subject:"Left a bag on board", who:"Karim", age:"3 h", state:"waiting"}
-  ],
-  lost:[
-    {item:"Black backpack", route:"Corniche Line", when:"Yesterday 18:20", state:"with driver"},
-    {item:"Phone — blue case", route:"Smouha → Downtown", when:"Mon 09:10", state:"claimed"}
-  ]
-};
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1489,7 +1369,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, stack:[],
+  opsView:null, opsTarget:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
@@ -2815,7 +2695,6 @@ function riderProfile(){                                      // R-80
     Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
   w.append($("div",{class:"rowgroup"},
     Row({icon:"card",  title:t("wallet"), chev:true, on:()=>go("wallet")}),
-    Row({icon:"trips", title:t("subs"), chev:true, on:()=>openSheet("subs")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));
@@ -2904,154 +2783,54 @@ function switchEl(on){
 
 /* ══════════════════════════════════════════════════════════════════════
    8. DRIVER SCREENS — bigger targets, glanceable
+   Driving depends on routes, slots and journeys (M3). Until then every
+   driver screen shows the real account and an honest "arrives with routes"
+   empty state — no invented shifts, earnings or manifests.
    ══════════════════════════════════════════════════════════════════════ */
 function driverDuty(){                                        // D-10
-  const d=DATA.driverToday;
+  const u = S.user || {};
   const w=$("div",{class:"main"});
-  if(S.offline) w.append(Banner("offline", `${t("offlineBanner")} · 3 ${t("queued")}`));
-  w.append($("div",{class:"row gap2"},
-    Chip({label:DATA.vehicle.plate, kind:"info"}),
-    $("div",{class:"grow"}),
-    Chip({label:S.onDuty?t("online"):t("offline"), kind:S.onDuty?"ok":"", dot:true})));
-
-  w.append(Btn({ label:S.onDuty?t("goOffline"):t("goOnline"),
-    kind:S.onDuty?"secondary":"primary", block:true, driver:true,
-    on:()=>{ S.onDuty=!S.onDuty; toast(S.onDuty?t("online"):t("offline")); }}));
-
-  w.append($("div",{class:"grid grid--tight"},
-    Metric({v:String(d.journeys), l:t("today")}),
-    Metric({v:money(d.earned), l:t("earnings")}),
-    Metric({v:money(d.cash), l:t("cashToSettle")})));
-
-  w.append(Section(t("myDepartures"), ...(DATA.claims.length
-    ? DATA.claims.map(c=> Row({
-        icon:"clock",
-        title:$("div",{class:"row gap2"},
-          $("strong",{class:"ltr",text:c.time}),
-          c.committed?Chip({label:"committed",kind:"ok"}):Chip({label:"provisional",kind:"warn"})),
-        sub:`${c.route} · ${c.date} · ${c.booked}/${c.seats} ${t("seats")}`,
-        bordered:true, chev:true, on:()=>go("journey")}))
-    : [Empty("clock", t("noClaims"), t("noClaimsBody"),
-        Btn({label:t("nav.work"), on:()=>go("work")}))])));
-
-  if(d.cash>0) w.append(Banner("warn", `${t("cashToSettle")}: ${money(d.cash)}`));
+  w.append(Card("card--brand",
+    $("div",{class:"t-micro",text:t("greeting")}),
+    $("div",{class:"t-lg",text:u.name || "—"}),
+    $("div",{class:"t-cap",text:t("roleLabel.driver")})));
+  w.append(Empty("clock", t("noClaims"), t("dutyComingBody")));
   return w;
 }
 
 function driverWork(){                                        // D-11
   const w=$("div",{class:"main"});
-  DATA.routes.slice(0,2).forEach(r=>{
-    const card=Card("",
-      $("div",{class:"row gap3"},
-        $("div",{class:"stack grow gap1"},
-          $("strong",{text:L(r)}),
-          $("div",{class:"t-cap",text:`${r.window} · ${t("fixedPrice")}`})),
-        $("div",{class:"fare",text:money(r.fare)})));
-
-    const grid=$("div",{class:"row wrap gap2"});
-    DATA.slots.forEach(s=>{
-      const taken=s.state==="taken", mine=s.state==="claimed";
-      grid.append(Chip({
-        label: s.time + (s.demand ? ` · ${s.demand}` : ""),
-        kind: mine ? "brand" : taken ? "" : "info",
-        dis: taken || mine,
-        pressed: mine,
-        on: (taken||mine) ? ()=>{} : ()=>openSheet("claim")}));
-    });
-    card.append(grid);
-
-    /* Recommendation carries its evidence. A number with no source is not shown. */
-    const hot=DATA.slots.find(s=>s.demand>0 && s.state==="open");
-    if(hot) card.append($("div",{class:"alert"},
-      $("div",{class:"row gap2"},
-        $("strong",{class:"ltr",text:hot.time}),
-        $("div",{class:"grow"}),
-        hot.bonus?Chip({label:"+"+money(hot.bonus),kind:"ok"}):null),
-      $("div",{class:"t-cap",text:`${hot.demand} ${t("ridersWaiting")}`}),
-      Btn({label:t("claimSlot"), driver:true, on:()=>openSheet("claim")})));
-    w.append(card);
-  });
+  w.append(Empty("work", t("nav.work"), t("workComingBody")));
   return w;
 }
 
 function driverJourney(){                                     // D-20
   const w=$("div",{class:"main"});
-  if(S.offline) w.append(Banner("offline",
-    `${t("offlineBanner")} · 3 ${t("queued")} · ${t("lastSync")} 07:42`));
-  w.append(Card("card--raised card--tight",
-    $("div",{class:"row gap2"},
-      $("div",{class:"t-micro grow",text:t("nextStop")}),
-      Chip({label:t("onTime"),kind:"ok"})),
-    $("div",{class:"t-title",text:L(DATA.routeStops[2])}),
-    $("div",{class:"t-cap",text:"400 m · 2 min"})));
-  w.append(MapView({h:160}));
-
-  w.append($("div",{class:"t-micro"},t("boarding")));
-  DATA.manifest.filter(m=>!m.alighting).forEach(m=>
-    w.append($("div",{class:"manifest"},
-      $("div",{class:"avatar",text:m.initials}),
-      $("div",{class:"stack grow gap1"},
-        $("strong",{text:m.name}),
-        $("div",{class:"t-cap",text:`${m.stop} · ${m.seats} ${t("seats")}`})),
-      Chip({label:m.scanned?t("scanned"):t("notScanned"), kind:m.scanned?"ok":"warn"}))));
-
-  const off=DATA.manifest.filter(m=>m.alighting);
-  if(off.length){
-    w.append($("div",{class:"t-micro"},t("alighting")));
-    off.forEach(m=> w.append($("div",{class:"manifest"},
-      $("div",{class:"avatar",text:m.initials}),
-      $("div",{class:"stack grow gap1"},
-        $("strong",{text:m.name}),
-        $("div",{class:"t-cap",text:m.stop})),
-      Chip({label:t("alighting"),kind:"info"}))));
-  }
-
-  w.append($("div",{class:"row gap3"},
-    Btn({label:t("scan"), driver:true, block:true, icon:"qr", on:()=>openSheet("scan")}),
-    Btn({label:t("arrived"), kind:"secondary", driver:true, block:true,
-         on:()=>toast(t("arrived"))})));
-  w.append($("div",{class:"row gap3"},
-    Btn({label:t("reportIssue"), kind:"ghost", block:true, on:()=>openSheet("report")}),
-    Btn({label:t("endJourney"), kind:"ghost", block:true, on:()=>toast(t("endJourney"))})));
+  w.append(Empty("journey", t("nav.journey"), t("journeyComingBody")));
   return w;
 }
 
 function driverEarnings(){                                    // D-30
-  const d=DATA.driverToday;
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid grid--tight"},
-    Metric({v:money(d.earned), l:t("today")}),
-    Metric({v:money(1840), l:"This week"}),
-    Metric({v:money(d.cash), l:t("cashToSettle")}),
-    Metric({v:d.nextPayout, l:t("nextPayout")})));
-  w.append(Panel($("div",{class:"t-micro",text:t("payouts")}),
-    KV("Gross", money(1840)),
-    KV("Commission (20%)", "− "+money(368)),
-    KV(t("cashToSettle"), "− "+money(d.cash)),
-    Divider(),
-    KV("Net", money(1292))));
-  w.append(Section(t("documents"),
-    ...DATA.driverDocs.map(doc=> Row({
-      icon:"doc", title:doc.name, sub:`${t("expires")} ${doc.expires}`, bordered:true,
-      right:Chip({label:doc.state==="soon"?t("expires"):"OK",
-                  kind:doc.state==="soon"?"warn":"ok"})}))));
+  w.append(Empty("earnings", t("nav.earnings"), t("earningsComingBody")));
   return w;
 }
 
 function driverProfile(){                                     // D-40
+  const u = S.user || {};
+  const initials = (u.name || "?").slice(0,1).toUpperCase();
   const w=$("div",{class:"main"});
   w.append($("div",{class:"row gap3"},
-    $("div",{class:"avatar avatar--lg"}, icon("profile")),
+    $("div",{class:"avatar avatar--lg",text:initials}),
     $("div",{class:"stack grow gap1"},
-      $("strong",{class:"t-head",text:DATA.vehicle.driver}),
-      $("div",{class:"t-cap",text:`★ ${DATA.vehicle.rating} · ${DATA.vehicle.plate}`}))));
+      $("strong",{class:"t-head",text:u.name || "—"}),
+      $("div",{class:"row gap2"},
+        $("div",{class:"t-cap ltr",text:u.email || u.phone || "—"}),
+        Chip({label:t("roleLabel.driver"), kind:"accent"})))));
   w.append(emailSection());
-  w.append(Card("card--tight", $("div",{class:"t-micro",text:t("vehicle")}), VehicleId(DATA.vehicle)));
   w.append($("div",{class:"rowgroup"},
     Row({icon:"globe", title:t("language"), right:langSeg()}),
-    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
-    Row({icon:"doc",   title:t("documents"), chev:true, on:()=>go("earnings")}),
-    Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>openSheet("sos")})));
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}))); 
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));
   return w;
@@ -3059,243 +2838,186 @@ function driverProfile(){                                     // D-40
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   9. OPERATIONS
+   9. OPERATIONS · 10. MANAGER · 11. SUPPORT
+   The operations queue is REAL: driver applications and vehicles load from
+   the API and approve/reject call the real endpoints. Everything that depends
+   on geography/routes/journeys (M2/M3), commercial control (M5) or support
+   tooling (M4) shows an honest "arrives in …" empty state — no fake rows.
    ══════════════════════════════════════════════════════════════════════ */
 function opsQueue(){                                          // O-10
   if(S.opsView==="review") return opsReview();
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid grid--tight"},
-    Metric({v:"49", l:t("waiting")}),
-    Metric({v:"2",  l:"Incidents"}),
-    Metric({v:"11 min", l:t("oldest")})));
-  DATA.opsQueue.forEach(q=> w.append(Row({
-    icon:"queue",
-    title:$("div",{class:"row gap2"},
-      q.severity!=="none"
-        ? $("span",{class:"dot",style:{color:q.severity==="danger"?"var(--danger)":"var(--warn)"}})
-        : null,
-      $("strong",{text:q.label})),
-    sub:`${t("oldest")}: ${q.oldest}`,
-    right:Chip({label:String(q.count), kind:q.severity==="danger"?"danger":"info"}),
-    bordered:true, chev:true,
-    on:()=>{ S.opsView="review"; render(); }})));
+  w.append($("h2",{class:"t-head",text:t("adminDriverQueue")}));
+  w.append($("div",{id:"app-list"}), null);
+  w.append($("h2",{class:"t-head",text:t("adminVehicleQueue")}));
+  w.append($("div",{id:"veh-list"}), null);
+  loadApplicationsInto(document.getElementById("app-list"));
+  loadVehiclesInto(document.getElementById("veh-list"));
   return w;
 }
 
 function opsReview(){                                         // O-12
-  const a=DATA.applicant;
+  const a = S.opsTarget || {};
   const w=$("div",{class:"main"});
   w.append($("div",{class:"row gap2"},
-    $("h1",{class:"t-head grow",text:a.name}),
-    Chip({label:a.submitted, kind:"warn"})));
-  const docs=$("div",{class:"row wrap gap3"});
-  a.docs.forEach(d=> docs.append($("div",{class:"card card--tight",style:{width:"152px"}},
-    $("div",{class:"skeleton",style:{height:"92px"}}),
-    $("div",{class:"t-cap",text:d}))));
-  w.append(Card("", $("div",{class:"t-micro",text:t("documents")}), docs));
-  w.append(Card("card--tight", KV("Phone", a.phone), KV("Duplicate check","No match")));
+    $("h1",{class:"t-head grow",text:a.name || "—"}),
+    Chip({label:a.status || "", kind:"warn"})));
+  w.append(Card("card--tight",
+    KV("Phone", a.phone || "—"),
+    KV("Submitted", (a.submitted_at || "").toString().slice(0,16).replace("T"," "))));
   w.append($("div",{class:"field"},
     $("label",{text:t("reason")}),
-    $("textarea",{class:"input",attrs:{placeholder:t("reason")}})));
+    $("textarea",{class:"input", attrs:{id:"review-reason", placeholder:t("reason")}})));
   w.append($("div",{class:"row wrap gap3"},
-    Btn({label:t("approve"), on:()=>{S.opsView=null; toast(t("approve"));}}),
-    Btn({label:t("needsFix"), kind:"secondary", on:()=>{S.opsView=null; toast(t("needsFix"));}}),
-    Btn({label:t("reject"), kind:"danger", on:()=>{S.opsView=null; toast(t("reject"));}})));
+    Btn({label:t("approve"), dis:S.authBusy, on:()=>reviewApplication("approve")}),
+    Btn({label:t("reject"), kind:"danger", dis:S.authBusy, on:()=>reviewApplication("reject")})));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
   return w;
+}
+
+async function loadApplicationsInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const apps = await API.listDriverApplications();
+    if(!apps.length){ el.append(Empty("users", t("adminDriverQueue"), t("opsNoApplications"))); return; }
+    apps.forEach(a=> el.append(Row({
+      icon:"profile",
+      title: a.name || a.phone || "—",
+      sub: `${t("roleLabel.rider")} · ${a.phone || ""}`,
+      right: Chip({label:a.status, kind:"warn"}),
+      bordered:true, chev:true,
+      on:()=>{ S.opsTarget=a; S.opsView="review"; render(); }})));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function loadVehiclesInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const vehicles = await API.listVehicles();
+    if(!vehicles.length){ el.append(Empty("bus", t("adminVehicleQueue"), t("opsNoVehicles"))); return; }
+    vehicles.forEach(v=> el.append(Row({
+      icon:"bus",
+      title: $("span",{class:"ltr",text:v.plate}),
+      sub: `${v.model || ""} · ${v.owner_name || ""}`,
+      right: $("div",{class:"row gap2"},
+        Chip({label:v.status, kind:v.status==="approved"?"ok":v.status==="rejected"?"danger":"warn"}),
+        (v.status==="submitted")
+          ? Btn({label:t("approve"), kind:"ghost", on:()=>reviewVehicle(v.id,"approve")})
+          : null),
+      bordered:true })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function reviewApplication(decision) {
+  const a = S.opsTarget;
+  if(!a) return;
+  S.authBusy = true; render();
+  try {
+    await API.reviewDriverApplication(a.id, decision, val("review-reason") || null);
+    S.opsView=null; S.opsTarget=null;
+    S.authBusy=false;
+    toast(decision==="approve" ? t("approve") : t("reject"));
+    render();
+  } catch(e) { S.authBusy=false; toast(errText(e.messageKey)); render(); }
+}
+
+async function reviewVehicle(id, decision) {
+  try {
+    await API.reviewVehicle(id, decision);
+    toast(decision==="approve" ? t("approve") : t("reject"));
+    loadVehiclesInto(document.getElementById("veh-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 function opsLiveMap(){                                        // O-17
   const w=$("div",{class:"main"});
-  w.append(MapView({h:260, fleet:true, vehicle:false}));
-  w.append(Table([t("vehicle"),"Route","Driver","Schedule"],
-    DATA.opsVehicles.map(v=> $("tr",{},
-      $("td",{},$("strong",{class:"ltr",text:v.plate})),
-      $("td",{text:v.route}),
-      $("td",{text:v.driver}),
-      $("td",{},Chip({label:v.slip,
-        kind:v.slip.startsWith("+9")?"warn":v.state==="idle"?"":"ok"}))))));
+  w.append(MapView({h:240, fleet:true, vehicle:false}));
+  w.append($("div",{id:"veh-table"}), null);
+  loadVehicleTableInto(document.getElementById("veh-table"));
   return w;
+}
+
+async function loadVehicleTableInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const vehicles = await API.listVehicles();
+    if(!vehicles.length){ el.append(Empty("bus", t("adminVehicleQueue"), t("opsNoVehicles"))); return; }
+    el.append(Table(["Plate","Model","Owner","Status"],
+      vehicles.map(v=> $("tr",{},
+        $("td",{},$("strong",{class:"ltr",text:v.plate})),
+        $("td",{text:v.model || "—"}),
+        $("td",{text:v.owner_name || "—"}),
+        $("td",{},Chip({label:v.status,
+          kind:v.status==="approved"?"ok":v.status==="rejected"?"danger":"warn"}))))));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 function opsStops(){                                          // O-18 / O-20
   const w=$("div",{class:"main"});
-  w.append(MapView({h:180, vehicle:false}));
-  w.append(Table(["Stop","Route","State","Source"],
-    DATA.opsStops.map(s=> $("tr",{},
-      $("td",{},$("strong",{text:s.name})),
-      $("td",{text:s.route}),
-      $("td",{},Chip({label:s.state,
-        kind:s.state==="verified"?"ok":s.state==="rejected"?"danger":"warn"})),
-      $("td",{},$("span",{class:"t-cap",text:s.by}))))));
+  w.append(Empty("stops", t("nav.stops"), t("opsStopsComing")));
   return w;
 }
 
 function opsRoutes(){                                         // O-23
   const w=$("div",{class:"main"});
-  w.append(Banner("info","Slots published here are what drivers can claim."));
-  DATA.routes.forEach(r=>{
-    const card=Card("",
-      $("div",{class:"row gap3"},
-        $("div",{class:"stack grow gap1"},
-          $("strong",{text:L(r)}),
-          $("div",{class:"t-cap",text:`${r.stops} stops · ${r.window}`})),
-        Chip({label:money(r.fare), kind:"info"})));
-    const grid=$("div",{class:"row wrap gap2"});
-    DATA.slots.forEach(s=> grid.append(Chip({
-      label:s.time, kind:s.state==="open"?"warn":"ok"})));
-    card.append(grid);
-    card.append($("div",{class:"row gap2"},
-      Btn({label:"Edit slots", kind:"secondary", on:()=>toast("Edit slots")}),
-      Btn({label:"Publish", kind:"ghost", on:()=>toast("Published")})));
-    w.append(card);
-  });
+  w.append(Empty("routes", t("nav.routes"), t("opsRoutesComing")));
   return w;
 }
 
 function opsUsers(){                                          // O-22
   const w=$("div",{class:"main"});
-  w.append(Table(["Name","Role","State",""],
-    [["Nour","Rider","active"],["Mahmoud A.","Driver","active"],
-     ["Tarek S.","Driver","suspended"],["Yara M.","Support agent","active"]]
-    .map(([n,r,st])=> $("tr",{},
-      $("td",{},$("strong",{text:n})),
-      $("td",{text:r}),
-      $("td",{},Chip({label:st, kind:st==="active"?"ok":"danger"})),
-      $("td",{},Btn({label:t("open"), kind:"ghost", on:()=>toast(n)}))))));
+  w.append(Empty("users", t("nav.users"), t("opsUsersComing")));
   return w;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   10. MANAGER
+   10. MANAGER — commercial control lands in M5
    ══════════════════════════════════════════════════════════════════════ */
 function managerBoard(){                                      // G-10
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid grid--tight"}, ...DATA.metrics.map(Metric)));
-  w.append(MapView({h:200, fleet:true, vehicle:false}));
-  w.append(Section("Alerts", ...DATA.alerts.map(a=>
-    $("div",{class:`alert${a.kind==="ok"?" alert--ok":""}`},
-      $("div",{class:"row gap2"},
-        $("strong",{class:"grow",text:a.zone}),
-        Chip({label:a.kind==="ok"?"clear":"action", kind:a.kind==="ok"?"ok":"warn"})),
-      $("div",{class:"t-cap",text:a.body}),
-      a.kind!=="ok" ? $("div",{class:"row wrap gap2"},
-        Btn({label:t("launchSale"), on:()=>toast(t("launchSale"))}),
-        Btn({label:t("notifyRiders"), kind:"secondary", on:()=>toast(t("notifyRiders"))}),
-        Btn({label:t("dismiss"), kind:"ghost", on:()=>toast(t("dismiss"))})) : null))));
+  w.append(Empty("board", t("nav.board"), t("managerComing")));
   return w;
 }
-
 function managerCoverage(){                                   // G-11
   const w=$("div",{class:"main"});
-  w.append(Banner("warn","2 windows are short of drivers."));
-  w.append(Table(["Slot","Route","Need","Claimed",""],
-    DATA.coverage.map(c=> $("tr",{},
-      $("td",{},$("strong",{class:"ltr",text:c.slot})),
-      $("td",{text:c.route}),
-      $("td",{},$("span",{class:"ltr",text:String(c.need)})),
-      $("td",{},$("span",{class:"ltr",text:String(c.claimed)})),
-      $("td",{}, c.state==="short"
-        ? Btn({label:"Add bonus", kind:"ghost", on:()=>toast("Bonus added")})
-        : Chip({label:"covered", kind:"ok"}))))));
+  w.append(Empty("coverage", t("nav.coverage"), t("managerComing")));
   return w;
 }
-
 function managerPricing(){                                    // G-13
   const w=$("div",{class:"main"});
-  w.append(Banner("info","Changes are previewed against recent journeys before publishing."));
-  w.append(Table(["Route","Stop fare","Street fare","Updated",""],
-    DATA.fares.map(f=> $("tr",{},
-      $("td",{},$("strong",{text:f.route})),
-      $("td",{},$("span",{class:"ltr",text:money(f.stop)})),
-      $("td",{},$("span",{class:"ltr",text:money(f.street)})),
-      $("td",{},$("span",{class:"t-cap",text:f.updated})),
-      $("td",{},Btn({label:"Edit", kind:"ghost", on:()=>openSheet("fare")}))))));
+  w.append(Empty("pricing", t("nav.pricing"), t("managerComing")));
   return w;
 }
-
 function managerPromos(){                                     // G-15
   const w=$("div",{class:"main"});
-  w.append(Btn({label:"New promotion", icon:"plus", on:()=>toast("New promotion")}));
-  w.append(Table(["Name","Type","Window","State","Uses"],
-    DATA.promos.map(p=> $("tr",{},
-      $("td",{},$("strong",{text:p.name})),
-      $("td",{text:p.type}),
-      $("td",{},$("span",{class:"ltr",text:p.window})),
-      $("td",{},Chip({label:p.state, kind:p.state==="running"?"ok":"warn"})),
-      $("td",{},$("span",{class:"ltr",text:String(p.uses)}))))));
+  w.append(Empty("promos", t("nav.promos"), t("managerComing")));
   return w;
 }
-
 function managerAnalytics(){                                  // G-18
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid grid--tight"},
-    ...DATA.analytics.map(a=> $("div",{class:"metric"},
-      $("div",{class:"metric__v ltr",text:a.v}),
-      $("div",{class:"metric__l",text:a.l}),
-      $("div",{class:"t-cap",text:a.d})))));
-  w.append(Card("", $("div",{class:"t-micro",text:"Rides per day"}), sparkline()));
+  w.append(Empty("analytics", t("nav.analytics"), t("managerComing")));
   return w;
-}
-function sparkline(){
-  const ns="http://www.w3.org/2000/svg";
-  const svg=document.createElementNS(ns,"svg");
-  svg.setAttribute("viewBox","0 0 300 90");
-  svg.setAttribute("role","img");
-  svg.setAttribute("aria-label","Rides per day, last 7 days, trending up");
-  svg.setAttribute("style","width:100%;height:90px");
-  const pts=[38,44,41,52,58,55,68];
-  const d=pts.map((v,i)=>`${i===0?"M":"L"}${i*48+6},${88-v}`).join(" ");
-  svg.innerHTML=`<path d="${d}" fill="none" stroke="var(--brand)" stroke-width="2.5"
-      stroke-linecap="round" stroke-linejoin="round"/>
-    ${pts.map((v,i)=>`<circle cx="${i*48+6}" cy="${88-v}" r="3" fill="var(--brand)"/>`).join("")}`;
-  return svg;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   11. SUPPORT
+   11. SUPPORT — support tooling lands in M4
    ══════════════════════════════════════════════════════════════════════ */
 function supportLookup(){                                     // S-11
   const w=$("div",{class:"main"});
-  w.append(Card("",
-    $("div",{class:"row gap3"},
-      $("div",{class:"avatar",text:"N"}),
-      $("div",{class:"stack grow gap1"},
-        $("strong",{text:"Nour"}),
-        $("div",{class:"t-cap ltr",text:DATA.user.phone})),
-      Chip({label:"Active ride", kind:"ok"})),
-    Divider(),
-    KV("Route", DATA.ticket.route),
-    KV("Boarding", DATA.ticket.boarding),
-    KV("Departure", DATA.ticket.time),
-    KV("Fare", money(DATA.ticket.fare)),
-    Divider(),
-    $("div",{class:"row wrap gap2"},
-      Btn({label:"Contact rider", kind:"secondary", on:()=>toast("Calling")}),
-      Btn({label:"Cancel ride", kind:"secondary", on:()=>toast("Cancelled")}),
-      Btn({label:"Refund (max 1 fare)", kind:"secondary", on:()=>toast("Refunded")}),
-      Btn({label:"Escalate", kind:"ghost", on:()=>toast("Escalated")}))));
-  /* Identity documents are not rendered at all for this role — not shown disabled. */
+  w.append(Empty("lookup", t("nav.lookup"), t("supportComing")));
   return w;
 }
-
 function supportTickets(){                                    // S-12
   const w=$("div",{class:"main"});
-  w.append(Table(["Ref","Subject","Rider","Age","State"],
-    DATA.tickets.map(k=> $("tr",{},
-      $("td",{},$("strong",{class:"ltr",text:k.ref})),
-      $("td",{text:k.subject}),
-      $("td",{text:k.who}),
-      $("td",{},$("span",{class:"t-cap",text:k.age})),
-      $("td",{},Chip({label:k.state, kind:k.state==="open"?"warn":""}))))));
+  w.append(Empty("tickets", t("nav.tickets"), t("supportComing")));
   return w;
 }
-
 function supportLost(){                                       // S-14
   const w=$("div",{class:"main"});
-  w.append(Btn({label:"Log an item", icon:"plus", on:()=>toast("Logged")}));
-  DATA.lost.forEach(l=> w.append(Row({
-    icon:"lost", title:l.item, sub:`${l.route} · ${l.when}`, bordered:true,
-    right:Chip({label:l.state, kind:l.state==="claimed"?"ok":"warn"})})));
+  w.append(Empty("lost", t("nav.lost"), t("supportComing")));
   return w;
 }
 
@@ -3304,86 +3026,16 @@ function supportLost(){                                       // S-14
    12. SHEETS
    ══════════════════════════════════════════════════════════════════════ */
 const SHEETS = {
-  qr: () => Sheet(t("boardingCode"),
-    $("div",{class:"t-cap",text:`${DATA.ticket.route} · ${DATA.ticket.boarding} · ${DATA.ticket.time}`}),
-    QRPanel({code:DATA.ticket.code}),
-    $("div",{class:"t-cap",text:`${t("seats")}: ${DATA.ticket.seats} · ${money(DATA.ticket.fare)}`})),
-
+  /* Safety & support actions arrive in M4 — honest placeholders, no fake calls. */
   sos: () => Sheet(t("sos"),
     Banner("danger", t("sos")),
-    $("div",{class:"t-cap",text:"Choose what you need. Operations sees this immediately."}),
-    Btn({label:"Call emergency services", kind:"danger", block:true, icon:"phone",
-         on:()=>{closeSheet(); toast("Calling");}}),
-    Btn({label:t("callSupport"), kind:"secondary", block:true, icon:"phone",
-         on:()=>{closeSheet(); toast(t("callSupport"));}}),
-    Btn({label:t("shareTrip"), kind:"secondary", block:true, icon:"share",
-         on:()=>{closeSheet(); toast(t("shareTrip"));}})),
+    $("div",{class:"t-cap",text:t("safetyComingBody")})),
 
   report: () => Sheet(t("reportProblem"),
-    ...["Driver behaviour","Vehicle condition","Route or timing","Payment","Something else"]
-      .map(r=> Row({title:r, chev:true, on:()=>{closeSheet(); toast(t("submit"));}}))),
-
-  contacts: () => Sheet(t("emergency"),
-    Row({icon:"profile", title:"Hana", sub:"+20 100 000 0001", bordered:true}),
-    Row({icon:"profile", title:"Karim", sub:"+20 100 000 0002", bordered:true}),
-    Btn({label:"Add contact", icon:"plus", block:true, on:()=>{closeSheet(); toast("Added");}})),
-
-  topup: () => Sheet(t("addMoney"),
-    $("div",{class:"row wrap gap2"},
-      ...[["mint",50],["lime",100],["sky",200],["pink",500]].map(([k,v])=>
-        Chip({label:money(v), kind:k, on:()=>{}}))),
-    $("div",{class:"field"},
-      $("label",{text:t("addMoney")}),
-      $("input",{class:"input ltr",attrs:{type:"number",placeholder:"100"}})),
-    Row({icon:"card", title:"Card ending 4821", chev:true, bordered:true}),
-    Btn({label:t("continue"), block:true, on:()=>{closeSheet(); toast(t("addMoney"));}})),
-
-  subs: () => Sheet(t("subs"),
-    $("div",{class:"t-cap",text:t("subsBody")}),
-    ...DATA.subs.map(s=> Row({
-      icon:"trips", title:L(s), sub:`${t("save")||"Save"} ${money(s.save)} / ${s.per}`,
-      right:$("div",{class:"fare",text:money(s.price)}), bordered:true, chev:true,
-      on:()=>{closeSheet(); toast(t("buySub"));}}))),
-
-  trip: () => Sheet(t("trips"),
-    Card("card--tight",
-      KV("Route", DATA.ticket.route),
-      KV("Boarding", DATA.ticket.boarding),
-      KV("Departure", DATA.ticket.time),
-      KV("Fare", money(DATA.ticket.fare))),
-    Btn({label:t("showQr"), icon:"qr", block:true, on:()=>openSheet("qr")}),
-    Btn({label:t("reportProblem"), kind:"secondary", block:true, on:()=>openSheet("report")})),
-
-  claim: () => Sheet(t("claimSlot"),
-    $("div",{class:"stack center gap3"},
-      $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
-      $("h2",{class:"t-head",text:t("claimed")}),
-      $("div",{class:"t-cap",text:"07:15 · "+L(DATA.routes[0])})),
-    Btn({label:"OK", block:true, driver:true, on:()=>{closeSheet(); toast(t("claimed"));}})),
-
-  scan: () => Sheet(t("scan"),
-    $("div",{class:"mapbox",style:{height:"200px",display:"grid",placeItems:"center",
-      background:"var(--bg-inset)"}},
-      $("div",{class:"stack center gap3"}, icon("qr"),
-        $("div",{class:"t-cap",text:"Camera viewfinder"}))),
-    $("div",{class:"field"},
-      $("label",{text:t("boardingCode")}),
-      $("input",{class:"input ltr",attrs:{placeholder:"4 8 2 9 1 7",inputmode:"numeric"}})),
-    Btn({label:t("cashCollected"), kind:"secondary", block:true, driver:true,
-         on:()=>{closeSheet(); toast(t("cashCollected"));}})),
+    $("div",{class:"t-cap",text:t("reportComingBody")})),
 
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
-
-  fare: () => Sheet("Edit fare",
-    Banner("info","Price is locked for anyone who already booked."),
-    $("div",{class:"field"}, $("label",{text:"Stop fare"}),
-      $("input",{class:"input ltr",attrs:{type:"number",value:"15"}})),
-    $("div",{class:"field"}, $("label",{text:"Street fare"}),
-      $("input",{class:"input ltr",attrs:{type:"number",value:"20"}})),
-    $("div",{class:"field"}, $("label",{text:t("reason")}),
-      $("textarea",{class:"input",attrs:{placeholder:t("reason")}})),
-    Btn({label:t("save"), block:true, on:()=>{closeSheet(); toast(t("save"));}}))
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -3661,7 +3313,7 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
-Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
+Object.assign(window, { S, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,

@@ -538,3 +538,14 @@
   signs in with email + password (identify routes it to the password method).
 - SignupVerifyDto requires `password`; signupVerifyOtp hashes it; EN/AR copy added.
 - 88 API (new test: password hash set + password sign-in works) / 275 web unit green.
+
+## 2026-08-19 — M1-finish: demo data removed, screens honest, ops queue wired (M1.9f)
+
+- Driver screens: honest empty states (no fake shifts/earnings/claims); profile shows the real user.
+- Ops queue is now REAL: driver applications + vehicles load from the API; approve/reject call the
+  real endpoints; live map lists real vehicles.
+- Manager/support/stops/routes/users screens show honest "arrives in M2–M5" empty states.
+- Deleted the whole DATA object and the demo sheets (qr, topup, subs, trip, claim, scan, fare,
+  contacts); sos/report are honest M4 placeholders.
+- New bundle-wide guard: "no sample content in the bundle" + break case (observed failing).
+- 272 unit / 14 a11y / 5 server / repo checks green. Bundle 319→308 KB.

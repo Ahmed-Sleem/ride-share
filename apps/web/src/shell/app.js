@@ -2,86 +2,16 @@
    12. SHEETS
    ══════════════════════════════════════════════════════════════════════ */
 const SHEETS = {
-  qr: () => Sheet(t("boardingCode"),
-    $("div",{class:"t-cap",text:`${DATA.ticket.route} · ${DATA.ticket.boarding} · ${DATA.ticket.time}`}),
-    QRPanel({code:DATA.ticket.code}),
-    $("div",{class:"t-cap",text:`${t("seats")}: ${DATA.ticket.seats} · ${money(DATA.ticket.fare)}`})),
-
+  /* Safety & support actions arrive in M4 — honest placeholders, no fake calls. */
   sos: () => Sheet(t("sos"),
     Banner("danger", t("sos")),
-    $("div",{class:"t-cap",text:"Choose what you need. Operations sees this immediately."}),
-    Btn({label:"Call emergency services", kind:"danger", block:true, icon:"phone",
-         on:()=>{closeSheet(); toast("Calling");}}),
-    Btn({label:t("callSupport"), kind:"secondary", block:true, icon:"phone",
-         on:()=>{closeSheet(); toast(t("callSupport"));}}),
-    Btn({label:t("shareTrip"), kind:"secondary", block:true, icon:"share",
-         on:()=>{closeSheet(); toast(t("shareTrip"));}})),
+    $("div",{class:"t-cap",text:t("safetyComingBody")})),
 
   report: () => Sheet(t("reportProblem"),
-    ...["Driver behaviour","Vehicle condition","Route or timing","Payment","Something else"]
-      .map(r=> Row({title:r, chev:true, on:()=>{closeSheet(); toast(t("submit"));}}))),
-
-  contacts: () => Sheet(t("emergency"),
-    Row({icon:"profile", title:"Hana", sub:"+20 100 000 0001", bordered:true}),
-    Row({icon:"profile", title:"Karim", sub:"+20 100 000 0002", bordered:true}),
-    Btn({label:"Add contact", icon:"plus", block:true, on:()=>{closeSheet(); toast("Added");}})),
-
-  topup: () => Sheet(t("addMoney"),
-    $("div",{class:"row wrap gap2"},
-      ...[["mint",50],["lime",100],["sky",200],["pink",500]].map(([k,v])=>
-        Chip({label:money(v), kind:k, on:()=>{}}))),
-    $("div",{class:"field"},
-      $("label",{text:t("addMoney")}),
-      $("input",{class:"input ltr",attrs:{type:"number",placeholder:"100"}})),
-    Row({icon:"card", title:"Card ending 4821", chev:true, bordered:true}),
-    Btn({label:t("continue"), block:true, on:()=>{closeSheet(); toast(t("addMoney"));}})),
-
-  subs: () => Sheet(t("subs"),
-    $("div",{class:"t-cap",text:t("subsBody")}),
-    ...DATA.subs.map(s=> Row({
-      icon:"trips", title:L(s), sub:`${t("save")||"Save"} ${money(s.save)} / ${s.per}`,
-      right:$("div",{class:"fare",text:money(s.price)}), bordered:true, chev:true,
-      on:()=>{closeSheet(); toast(t("buySub"));}}))),
-
-  trip: () => Sheet(t("trips"),
-    Card("card--tight",
-      KV("Route", DATA.ticket.route),
-      KV("Boarding", DATA.ticket.boarding),
-      KV("Departure", DATA.ticket.time),
-      KV("Fare", money(DATA.ticket.fare))),
-    Btn({label:t("showQr"), icon:"qr", block:true, on:()=>openSheet("qr")}),
-    Btn({label:t("reportProblem"), kind:"secondary", block:true, on:()=>openSheet("report")})),
-
-  claim: () => Sheet(t("claimSlot"),
-    $("div",{class:"stack center gap3"},
-      $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
-      $("h2",{class:"t-head",text:t("claimed")}),
-      $("div",{class:"t-cap",text:"07:15 · "+L(DATA.routes[0])})),
-    Btn({label:"OK", block:true, driver:true, on:()=>{closeSheet(); toast(t("claimed"));}})),
-
-  scan: () => Sheet(t("scan"),
-    $("div",{class:"mapbox",style:{height:"200px",display:"grid",placeItems:"center",
-      background:"var(--bg-inset)"}},
-      $("div",{class:"stack center gap3"}, icon("qr"),
-        $("div",{class:"t-cap",text:"Camera viewfinder"}))),
-    $("div",{class:"field"},
-      $("label",{text:t("boardingCode")}),
-      $("input",{class:"input ltr",attrs:{placeholder:"4 8 2 9 1 7",inputmode:"numeric"}})),
-    Btn({label:t("cashCollected"), kind:"secondary", block:true, driver:true,
-         on:()=>{closeSheet(); toast(t("cashCollected"));}})),
+    $("div",{class:"t-cap",text:t("reportComingBody")})),
 
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
-
-  fare: () => Sheet("Edit fare",
-    Banner("info","Price is locked for anyone who already booked."),
-    $("div",{class:"field"}, $("label",{text:"Stop fare"}),
-      $("input",{class:"input ltr",attrs:{type:"number",value:"15"}})),
-    $("div",{class:"field"}, $("label",{text:"Street fare"}),
-      $("input",{class:"input ltr",attrs:{type:"number",value:"20"}})),
-    $("div",{class:"field"}, $("label",{text:t("reason")}),
-      $("textarea",{class:"input",attrs:{placeholder:t("reason")}})),
-    Btn({label:t("save"), block:true, on:()=>{closeSheet(); toast(t("save"));}}))
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -359,7 +289,7 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeS
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
-Object.assign(window, { S, DATA, T, PAGES, DEFAULT_PAGE, render, go, back,
+Object.assign(window, { S, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,

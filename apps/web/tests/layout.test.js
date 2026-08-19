@@ -226,8 +226,9 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
   // long content must not break the shell
   await page.setViewport({width:375,height:812});
   const long=await page.evaluate(()=>{
-    DATA.routes[0].en="A".repeat(160); DATA.user.name="B".repeat(80);
-    S.view="app"; S.authed=true; S.role="rider"; S.page="home"; render();
+    S.view="app"; S.authed=true; S.role="rider";
+    S.user={id:"u1",role:"rider",name:"A".repeat(80),email:"a@x.com"};
+    S.page="home"; render();
     const de=document.documentElement;
     return {over:de.scrollWidth-de.clientWidth, vover:de.scrollHeight-de.clientHeight};
   });

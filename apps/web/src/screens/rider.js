@@ -79,7 +79,6 @@ function riderProfile(){                                      // R-80
     Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
   w.append($("div",{class:"rowgroup"},
     Row({icon:"card",  title:t("wallet"), chev:true, on:()=>go("wallet")}),
-    Row({icon:"trips", title:t("subs"), chev:true, on:()=>openSheet("subs")}),
     Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));

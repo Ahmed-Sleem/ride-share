@@ -502,3 +502,23 @@ output) — see the engineering standard §3.3 and §4.
   (GitHub Actions) on push.
 - Remaining: driver/staff/shell sheets still use DATA.* — next steps, then delete DATA and add the
   bundle-wide "no const DATA" guard.
+
+## M1-finish steps 2–4 — driver + staff screens, demo data deleted
+
+- Driver screens: duty greets the real driver and shows an honest "no claimed departures — arrives
+  with routes" empty state; work/journey/earnings show "arrives with routes/journeys" empty states;
+  profile shows the real user + driver role chip + email verification (fake vehicle/rating removed).
+- Staff screens: ops queue is REAL — driver applications (GET /ops/driver-applications) and vehicles
+  (GET /ops/vehicles) load from the API with empty states; selecting an application opens a real
+  review (approve/reject → POST /ops/driver-applications/:id/review); vehicles approve inline
+  (POST /ops/vehicles/:id/review); live map lists real vehicles. Stops/routes/users (M2/M3) and all
+  manager (M5) and support (M4) screens show honest "arrives in …" empty states.
+- Sheets: the demo sheets (qr, topup, subs, trip, claim, scan, fare, contacts) are deleted; sos and
+  report are honest "arrives in M4" placeholders; staffEdit/staffRemove stay real.
+- The DATA object is deleted from content.js; every DATA. reference removed (0 hits); the window
+  export no longer exposes DATA; layout.test.js long-text case now uses S.user instead of DATA.
+- Tests: replaced the demo booking/pricing + driver-rules + support-refund groups with honest-state
+  checks; added the bundle-wide "no sample content" guard; new/changed break cases observed failing
+  (support fake refund, driver fake earnings, sample content returns).
+- Verified: web unit 272, a11y 14, server 5, verify:repo green. Bundle 319→308 KB. Full browser +
+  db suites run in CI (GitHub Actions) on push.

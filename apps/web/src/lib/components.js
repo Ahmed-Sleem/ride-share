@@ -48,7 +48,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, stack:[],
+  opsView:null, opsTarget:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 

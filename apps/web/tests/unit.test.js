@@ -365,12 +365,12 @@ group("ROLE BOUNDARIES");
   ok("support cannot see identity documents",
      !txt.includes("national id") && !txt.includes("licence front"),
      "support screen leaked document names");
-  ok("what support CAN do is present", txt.includes("refund"));
+  ok("support shows an honest coming-soon state (no fake refund)",
+     t.q(".empty") && !txt.includes("refund"));
 
   t.go("ops","queue");
-  ok("operations does see the document queue", t.txt().toLowerCase().includes("driver applications"));
-  t.w.S.opsView="review"; t.w.render();
-  ok("operations review shows documents", t.txt().includes("National ID"));
+  ok("operations sees the driver-applications queue (heading present)",
+     t.txt().toLowerCase().includes("driver applications"));
 
   // Nothing anywhere may be rendered disabled purely because of role.
   let roleDisabled=0;
@@ -384,27 +384,22 @@ group("ROLE BOUNDARIES");
   ok("no control is shown disabled because of role", roleDisabled===0, String(roleDisabled));
 }
 
-group("DRIVER RULES");
+group("DRIVER SCREENS ARE HONEST (no demo shifts/earnings)");
 {
   const t=boot();
-  t.go("driver","duty");
-  const big=t.all(".btn--driver");
-  ok("driver primary actions use the large target class", big.length>0, String(big.length));
+  t.set({role:"driver", user:{id:"u1",role:"driver",name:"Mahmoud",email:"m@x.com"}});
+  const sample=/Corniche|Montazah|Smouha|EGP|Hiace|Mahmoud A|searched this slot/;
   const css=SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
   ok("large target is 56px", /\.btn--driver\{[^}]*min-height:var\(--tap-driver\)/.test(css));
   ok("--tap-driver is 56px", /--tap-driver:\s*56px/.test(css));
 
-  t.go("driver","work");
-  const chips=t.all("button.chip");
-  ok("slots are offered", chips.length>0, String(chips.length));
-  const taken=chips.filter(c=>c.hasAttribute("disabled"));
-  ok("taken slots exist to test", taken.length>0);
-  ok("taken slots cannot be claimed", taken.every(c=>c.hasAttribute("disabled")));
-
-  // A forecast with no stated source is a decorative claim. Refuse it.
-  const alert=t.q(".alert");
-  ok("the recommendation states its evidence", !!alert &&
-     /searched this slot yesterday/i.test(alert.textContent), alert&&alert.textContent);
+  for(const p of ["duty","work","journey","earnings"]){
+    t.go("driver",p);
+    ok(`driver ${p} is honest (no sample content)`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
+  }
+  t.go("driver","profile");
+  ok("driver profile shows the real user", t.q(".main").textContent.includes("Mahmoud"));
+  ok("driver profile has no fake vehicle", !sample.test(t.q(".main").textContent));
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -744,6 +739,9 @@ const m19e = (async () => {
 
 group("BUILD INTEGRITY");
 {
+  ok("no sample content in the bundle (demo data is gone)",
+     !/Corniche|Montazah|Smouha|Agami|Miami|Hiace|driverToday|walletHistory|const DATA/.test(SRC),
+     "a sample string leaked into the bundle");
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),
      "external references would break offline / preview");
   ok("no prototype harness remains",

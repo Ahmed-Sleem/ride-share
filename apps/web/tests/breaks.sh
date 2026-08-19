@@ -144,21 +144,21 @@ run_break "icon button loses its label" src/lib/components.js \
   's|attrs:{type:"button","aria-label":label}, on:{click:on\|\|(()=>{})}}, icon(name));|attrs:{type:"button"}, on:{click:on\|\|(()=>{})}}, icon(name));|' \
   "every icon-only button is labelled"
 
-run_break "support sees identity documents" src/screens/staff.js \
-  's|      Btn({label:"Escalate", kind:"ghost", on:()=>toast("Escalated")}))));|      Btn({label:"Escalate", kind:"ghost", on:()=>toast("Escalated")})), KV("Document","National ID")));|' \
-  "support cannot see identity documents"
+run_break "support regains a fake refund action" src/screens/staff.js \
+  's|  w.append(Empty("lookup", t("nav.lookup"), t("supportComing")));|  w.append(Btn({label:"Refund (max 1 fare)", on:()=>toast("Refunded")}));|' \
+  "support shows an honest coming-soon state (no fake refund)"
 
 run_break "map loses its illustrative label" src/lib/components.js \
   's|    \$("div",{class:"attribution",text:t("mapMock")}));|    null);|' \
   "every drawn map is labelled illustrative"
 
-run_break "taken slot becomes claimable" src/screens/driver.js \
-  's|        dis: taken \|\| mine,|        dis: false,|' \
-  "taken slots cannot be claimed|taken slots exist to test"
+run_break "driver duty reverts to fake earnings" src/screens/driver.js \
+  's|  w.append(Empty("clock", t("noClaims"), t("dutyComingBody")));|  w.append($("div",{class:"metric",text:"412 EGP"}));|' \
+  "driver duty is honest (no sample content)"
 
-run_break "forecast without its source" src/data/content.js \
-  's|ridersWaiting:"riders searched this slot yesterday",|ridersWaiting:"expected riders",|' \
-  "the recommendation states its evidence"
+run_break "sample content returns to the bundle" src/data/content.js \
+  's|const T = {|const T = {\n  sample:"Corniche Line",|' \
+  "no sample content in the bundle (demo data is gone)"
 
 run_break "rider home reverts to sample routes" src/screens/rider.js \
   's|  w.append(Empty("routes", t("comingSoon"), t("routesComingBody")));|  w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \

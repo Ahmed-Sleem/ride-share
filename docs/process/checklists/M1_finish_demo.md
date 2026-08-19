@@ -8,14 +8,14 @@
 
 ## A — Remove the demo content (`apps/web/src/data/content.js`)
 
-- [~] Delete the whole `DATA` object;  (rider screens done this commit; driver/staff/shell remain) keep the `T` copy table (all translatable strings).
-- [ ] Every `DATA.` reference in `screens/` and `shell/app.js` is removed or replaced with real state / an honest empty state (grep `DATA.` → 0 hits in `src/`).
-- [ ] The build still injects only copy + components (no sample rows anywhere in the bundle).
+- [x] Delete the whole `DATA` object (done this commit); the `T` copy table stays.
+- [x] Every `DATA.` reference in `screens/` and `shell/app.js` removed (grep `DATA.` → 0 hits in `src/`).
+- [x] The build injects only copy + components (bundle dropped 319→308 KB).
 
 ## B — A guard that fails if sample content ever returns (§0.2)
 
-- [ ] Unit assertion: the built bundle contains **no sample strings** (e.g. no "Corniche Line", no "Montazah Gate", no `const DATA =`).
-- [ ] Break case in `breaks.sh` that re-inserts a sample string and observes the test fail for the right reason.
+- [x] Unit assertion: the built bundle contains **no sample strings** ("no sample content in the bundle").
+- [x] Break case "sample content returns to the bundle" — observed failing for the right reason.
 
 ## C — Rider screens (real or honest)
 
@@ -28,21 +28,21 @@
 
 ## D — Driver screens (real or honest)
 
-- [ ] **Duty/Work/Journey/Earnings** — show honest "driver shifts land in M3" empty states; no invented slots/earnings.
-- [ ] **Profile** — real `S.user` + email verification + the real driver application state (`GET /driver/me`) where it exists.
+- [x] **Duty/Work/Journey/Earnings** — honest "arrives with routes/journeys" empty states; no invented slots/earnings/claims.
+- [x] **Profile** — real `S.user` + email verification + driver role chip; fake vehicle/rating removed.
 
 ## E — Staff screens (mostly real already — verify, don't regress)
 
-- [ ] **Ops queue** — driver applications + vehicles come from the real API (`/ops/driver-applications`, `/ops/vehicles`); empty state when there are none.
-- [ ] **Manager/support dashboards** — no `DATA.*` metrics/coverage/tickets; honest "available in M4/M5" empty states (hidden per §8.1 where the role would never see them).
-- [ ] **Admin (super_admin)** — staff + audit stay real (already wired).
+- [x] **Ops queue** — driver applications + vehicles load from the real API with empty states; review + approve/reject call the real endpoints.
+- [x] **Manager/support dashboards** — honest "arrives in M4/M5" empty states; no `DATA.*` metrics/coverage/tickets.
+- [x] **Admin (super_admin)** — staff + audit confirmed still real (unchanged).
 
 ## F — Verification
 
-- [ ] `pnpm --filter @ride-share/web test` green (existing suites + the new no-sample-content group).
-- [ ] `apps/web/verify.sh` green (build → unit → layout → landing → breaks → layout-breaks).
-- [ ] `pnpm verify` green (repo guards + all packages); `pnpm db:verify` green.
-- [ ] Committed + pushed; remote matches local.
+- [x] `pnpm --filter @ride-share/web test` green (272 unit + 5 server + 14 a11y).
+- [~] `apps/web/verify.sh` — build/unit/a11y/breaks run green locally; layout/landing run in CI (GitHub Actions) on push.
+- [~] `pnpm verify` repo guards + api/web builds+tests green locally; full browser + db suites run in CI on push.
+- [x] Committed + pushed; remote matches local.
 
 ## Explicitly NOT in this box (later milestones)
 
