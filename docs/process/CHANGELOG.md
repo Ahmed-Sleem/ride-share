@@ -567,3 +567,12 @@
   is set; /v1/config reports the provider.
 - Fixed: $() now honours `id`, and list loaders pass element refs (admin/ops lists actually attach).
 - 114 API / 279 unit / 14 a11y / 5 server / repo checks green.
+
+## 2026-08-19 — M2 P2.3 + P2.4: field capture + verification queue
+
+- Field capture: accuracy gate, required 4-question checklist, EXIF-stripped photo storage,
+  idempotency by capture id, offline queue that flushes on reconnect.
+- Verification queue in ops Stops: pending list → review view (checklist, photo, reject reason);
+  two-person rule enforced server-side and in the UI (own capture hides approve).
+- Retire endpoint (verified→retired, audited); public near stays verified-only.
+- 125 API / 284 unit / 14 a11y / 5 server / repo checks green; 5 new break checks observed failing.

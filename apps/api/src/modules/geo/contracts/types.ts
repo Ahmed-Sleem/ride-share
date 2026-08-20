@@ -17,6 +17,17 @@ export interface StopRow {
   reachable_ok: boolean | null;
   walking_to_next_m: number | null;
   override_reason: string | null;
+  capture_id: string | null;
+  gps_accuracy_m: number | null;
+  created_at: Date;
+}
+
+export interface StopPhotoRow {
+  id: string;
+  stop_id: string;
+  storage_key: string;
+  mime_type: string;
+  taken_at: Date | null;
   created_at: Date;
 }
 

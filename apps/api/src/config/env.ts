@@ -43,6 +43,12 @@ export const envSchema = {
   STOP_MIN_SPACING_M: z.coerce.number().int().min(10).max(1000).default(100),
   // Maximum walking gap between consecutive stops on a corridor (P2.5).
   STOP_MAX_GAP_M: z.coerce.number().int().min(100).max(5000).default(1000),
+  // Field capture (P2.3): a GPS fix worse than this is refused, not warned.
+  STOP_MAX_FIX_ACCURACY_M: z.coerce.number().int().min(5).max(200).default(20),
+  // Field photos: local directory (mount a Railway volume here in production)
+  // and the maximum accepted photo size in bytes.
+  PHOTO_STORAGE_DIR: z.string().default('./data/photos'),
+  PHOTO_MAX_BYTES: z.coerce.number().int().min(100_000).max(50_000_000).default(8_000_000),
 
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),

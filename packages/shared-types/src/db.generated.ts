@@ -40,6 +40,7 @@ export type DbSchema = {
     storage_key: {"type":"string","nullable":false,"pg":"text"},
     taken_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
     created_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
+    mime_type: {"type":"string","nullable":false,"pg":"text"},
   };
   stop_verifications: {
     id: {"type":"string","nullable":false,"pg":"uuid"},
@@ -69,6 +70,8 @@ export type DbSchema = {
     override_reason: {"type":"string","nullable":true,"pg":"text"},
     created_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
     updated_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
+    capture_id: {"type":"string","nullable":true,"pg":"text"},
+    gps_accuracy_m: {"type":"number","nullable":true,"pg":"float8"},
   };
   throttle_records: {
     key: {"type":"string","nullable":false,"pg":"text"},

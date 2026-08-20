@@ -751,6 +751,22 @@ group("M2 — STOP MAPPING TOOL (ops only)");
   ok("stops tool has bilingual name fields", !!t.q("#stop-name-en") && !!t.q("#stop-name-ar"));
   ok("stops tool has a CSV import", !!t.q("#stop-csv"));
   ok("stops tool lists stops (real loader present)", !!t.q("#stops-list"));
+  ok("stops tool shows the pending verification queue", !!t.q("#pending-list"));
+
+  // P2.4 review: select a pending stop → the review view renders checklist + reason
+  t.w.S.opsView = "stopReview";
+  t.w.S.opsTarget = { id:"s1", code:"ALX-COR-001", lat:31.2, lng:29.9, status:"pending",
+    source:"field", created_by:"someone-else", stand_ok:true, lit_ok:true, legal_stop_ok:true, reachable_ok:true, gps_accuracy_m:8 };
+  t.w.render();
+  ok("review view shows the reject reason field", !!t.q("#review-reason"));
+  ok("review view offers approve (not your own capture)", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.approveStop)));
+  ok("review view renders the field checklist", t.q(".main").textContent.includes(t.w.T.en.standOk));
+
+  // two-person rule: your OWN capture hides the approve action (§8.1 absent, not disabled)
+  t.w.S.opsTarget.created_by = "u1";
+  t.w.render();
+  const hasApprove = [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.approveStop));
+  ok("own capture hides the approve action", !hasApprove);
 })();
 
 group("BUILD INTEGRITY");

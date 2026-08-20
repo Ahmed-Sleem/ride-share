@@ -168,6 +168,10 @@ run_break "stops tool loses its CSV import" src/screens/staff.js \
   's|    $("textarea",{class:"input", attrs:{id:"stop-csv"|    $("textarea",{class:"input", attrs:{id:"stop-csvX"|' \
   "stops tool has a CSV import"
 
+run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js \
+  's|    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|    Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|' \
+  "own capture hides the approve action"
+
 run_break "rider home reverts to sample routes" src/screens/rider.js \
   's|  w.append(Empty("routes", t("comingSoon"), t("routesComingBody")));|  w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
   "home has no sample route strings"

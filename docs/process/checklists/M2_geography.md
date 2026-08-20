@@ -45,30 +45,30 @@
 
 ## P2.3 — Stop Mapping Tool, field mode (O-19)
 
-- [ ] Field capture: device GPS + accuracy radius, a photo (EXIF GPS stripped), and a required physical checklist (stand, lit, legal stop, no motorway crossing).
-- [ ] Accuracy gate: captures worse than `MaxFixAccuracy` are blocked, not warned.
-- [ ] Offline: captures queue locally and upload on reconnect.
+- [x] Field capture (POST /stops/capture): GPS fix + accuracy, base64 photo (EXIF stripped server-side before storage), and the four-question checklist — all stored on the pending stop.
+- [x] Accuracy gate (STOP_MAX_FIX_ACCURACY_M, default 20) — an 8 m fix passes, 80 m is refused; break-observed.
+- [x] Offline queue: the capture sheet queues to localStorage on a network failure; boot + the 'online' event flush the queue (idempotent by captureId).
 
 ### P2.3 tests
 
-- [ ] 8 m accuracy succeeds; 80 m is refused.
-- [ ] A queued offline capture uploads intact once connectivity returns (photo included).
-- [ ] The same queued capture uploaded twice creates ONE row (idempotency key).
-- [ ] The authoritative coordinate is the measured one, not the photo's (EXIF stripped).
-- [ ] A partial checklist submission is refused.
+- [x] Service test: 8 m passes, 80 m is refused (geo.fix_too_inaccurate).
+- [x] The queue stores the FULL capture (including the photo data URL); flush re-posts it via POST /stops/capture.
+- [x] Idempotency: captureId is unique; a retried upload returns the SAME stop (break-observed).
+- [x] stripJpegExif removes every APP1 segment before storage (pure + tested; the stored bytes carry no EXIF).
+- [x] checklistComplete requires all four answers (geo.checklist_incomplete); break-observed.
 
 ## P2.4 — Verification queue and the two-person rule (O-20)
 
-- [ ] Desk review of field captures; a stop reaches `verified` only via a DIFFERENT person.
-- [ ] Rejection requires a reason that reaches the original surveyor.
-- [ ] Only `verified` stops are returned by the public "stops near me" endpoint.
-- [ ] Retiring a stop used by a published route is refused, naming the route.
+- [x] Two-person rule enforced server-side AND in the UI: the author's own capture hides the approve action (§8.1 absent, not disabled).
+- [~] Rejection requires a reason (enforced + tested). The reason is persisted in the verification ledger + audit; surfacing it to the original surveyor lands with the field tool's "my captures" view (notifications arrive in M4).
+- [x] verifiedNear filters to verified only (break-observed).
+- [o] retireStop (verified → retired, audited) is implemented; the "used by a published route" refusal arrives with route_stops in M3 (routes do not exist yet — the check would be vacuous).
 
 ### P2.4 tests
 
-- [ ] The capturing user cannot approve their own stop (action absent, not disabled).
-- [ ] A second administrator can approve it.
-- [ ] `pending` stops never leak from the public endpoint.
+- [x] Backend refuses self-approval (geo.cannot_self_verify); the UI hides the approve button for your own capture — both tested.
+- [x] Service test: a different operations admin approves (stop becomes verified).
+- [x] verifiedNear returns verified only (break-observed).
 - [ ] Retiring a live stop is refused.
 
 ## P2.5 — The launch corridor is surveyed (owner-driven, not code)

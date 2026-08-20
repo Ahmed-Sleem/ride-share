@@ -1070,6 +1070,17 @@ en:{
   overrideReason:"Override reason", placedStop:"Stop added", importedStops:"stops imported",
   submitStop:"Submit", stopSubmitted:"Stop submitted for verification",
   stopStatus:{draft:"Draft",pending:"Pending",verified:"Verified",rejected:"Rejected",retired:"Retired"},
+  pendingReview:"Pending review", noPendingStops:"No stops awaiting review.",
+  reviewStop:"Review stop", checklist:"Field checklist", photo:"Photo",
+  standOk:"Somewhere to stand", litOk:"Well lit", legalOk:"Vehicle can legally stop", reachableOk:"Reachable without crossing a motorway",
+  accuracyLabel:"GPS accuracy", approveStop:"Approve", rejectStop:"Reject",
+  rejectReason:"Rejection reason", cannotSelfVerify:"You can't verify a stop you captured yourself.",
+  fieldCapture:"Field capture", captureStop:"Capture stop", useMyLocation:"Use my location",
+  locationDenied:"Location unavailable — enter coordinates manually.",
+  checklistHint:"Answer all four questions at the kerb.", photoHint:"Photo facing the boarding position (optional).",
+  queuedOffline:"Saved offline — it will upload when you're back online.",
+  captureSaved:"Capture saved and sent for verification.",
+  capturedBy:"Captured by",
   opsRoutesComing:"Routes and the slot grid arrive with the route model (M3).",
   opsUsersComing:"User management arrives with the journey model (M3).",
   managerComing:"Coverage, pricing, promotions and analytics arrive with commercial control (M5).",
@@ -1236,6 +1247,17 @@ ar:{
   overrideReason:"سبب التجاوز", placedStop:"تمت إضافة المحطة", importedStops:"محطة مستوردة",
   submitStop:"إرسال", stopSubmitted:"أُرسلت المحطة للتحقق",
   stopStatus:{draft:"مسودة",pending:"قيد الانتظار",verified:"موثّقة",rejected:"مرفوضة",retired:"متقاعدة"},
+  pendingReview:"قيد المراجعة", noPendingStops:"لا توجد محطات بانتظار المراجعة.",
+  reviewStop:"مراجعة المحطة", checklist:"القائمة الميدانية", photo:"الصورة",
+  standOk:"يوجد مكان للوقوف", litOk:"إضاءة جيدة", legalOk:"يمكن للمركبة التوقف قانونيًا", reachableOk:"يمكن الوصول دون عبور طريق سريع",
+  accuracyLabel:"دقة GPS", approveStop:"اعتماد", rejectStop:"رفض",
+  rejectReason:"سبب الرفض", cannotSelfVerify:"لا يمكنك اعتماد محطة التقطتها بنفسك.",
+  fieldCapture:"التقاط ميداني", captureStop:"التقاط المحطة", useMyLocation:"استخدم موقعي",
+  locationDenied:"الموقع غير متاح — أدخل الإحداثيات يدويًا.",
+  checklistHint:"أجب عن الأسئلة الأربعة عند الرصيف.", photoHint:"صورة باتجاه نقطة الركوب (اختياري).",
+  queuedOffline:"حُفظ دون اتصال — سيُرفع عند عودة الاتصال.",
+  captureSaved:"حُفظ الالتقاط وأُرسل للتحقق.",
+  capturedBy:"التقطها",
   opsRoutesComing:"المسارات وشبكة المواعيد تأتيان مع نموذج المسار (M3).",
   opsUsersComing:"إدارة المستخدمين تأتي مع نموذج الرحلة (M3).",
   managerComing:"التغطية والتسعير والعروض والتحليلات تأتي مع التحكم التجاري (M5).",
@@ -1951,9 +1973,28 @@ const API = {
   /* ── geography (M2) ────────────────────────────────────────────────── */
   createStop: (payload) => API.request("POST", "/stops", payload),
   importStops: (csv) => API.request("POST", "/stops/import", { csv }),
-  listStops: () => API.request("GET", "/stops"),
+  listStops: (status) => API.request("GET", status ? `/stops?status=${status}` : "/stops"),
+  captureStop: (payload) => API.request("POST", "/stops/capture", payload),
   submitStop: (id) => API.request("POST", `/stops/${id}/submit`),
   reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
+  retireStop: (id) => API.request("POST", `/stops/${id}/retire`),
+
+  /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
+  stopPhoto: async (id) => {
+    if (typeof fetch !== "function") return null;
+    const token = API.access();
+    const res = await fetch(`${API.base}/stops/${id}/photo`, {
+      headers: token ? { authorization: "Bearer " + token } : {},
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  },
 };
 
 class ApiError extends Error {
@@ -3004,7 +3045,16 @@ async function loadVehicleTableInto(el) {
 }
 
 function opsStops(){                                          // O-18 / O-20
+  if (S.opsView === "stopReview") return stopReviewView();
   const w=$("div",{class:"main"});
+  /* P2.4 — the verification queue (two-person rule) sits at the top. */
+  w.append($("div",{class:"row gap2"},
+    $("h2",{class:"t-head grow",text:t("pendingReview")}),
+    Btn({label:t("fieldCapture"), kind:"secondary", on:()=>openSheet("fieldCapture")})));
+  const pending = $("div",{id:"pending-list"});
+  w.append(pending);
+  loadPendingInto(pending);
+
   /* Add a stop: exact coordinates + bilingual names. The map below doubles as
      a coordinate picker when the (free, no-key) OSM map has loaded; the form
      always works. */
@@ -3041,6 +3091,189 @@ function opsStops(){                                          // O-18 / O-20
   w.append(list);
   loadStopsInto(list);
   return w;
+}
+
+/* ── P2.4 verification queue + review ─────────────────────────────────── */
+async function loadPendingInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const stops = await API.listStops("pending");
+    if (!stops.length) { el.append(Empty("stops", t("pendingReview"), t("noPendingStops"))); return; }
+    stops.forEach((s) => el.append(Row({
+      icon: s.source === "field" ? "walk" : "stops",
+      title: $("span",{class:"ltr",text:s.code}),
+      sub: `${s.source === "field" ? t("sourceField") : t("sourceDesk")} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
+      right: Btn({label:t("reviewStop"), kind:"ghost", on:()=>{ S.opsTarget=s; S.opsView="stopReview"; render(); }}),
+      bordered:true, chev:true,
+      on:()=>{ S.opsTarget=s; S.opsView="stopReview"; render(); } })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function stopReviewView() {
+  const s = S.opsTarget || {};
+  const mine = s.created_by === (S.user && S.user.id);
+  const w = $("div",{class:"main"});
+  w.append($("div",{class:"row gap2"},
+    $("h1",{class:"t-head grow ltr",text:s.code || "—"}),
+    Chip({label:t("stopStatus."+(s.status||"pending")), kind:"warn"})));
+  w.append($("div",{class:"t-cap",text:`${t("latLabel")}: ${Number(s.lat||0).toFixed(6)} · ${t("lngLabel")}: ${Number(s.lng||0).toFixed(6)}`}));
+  if (s.gps_accuracy_m != null)
+    w.append($("div",{class:"t-cap",text:`${t("accuracyLabel")}: ${s.gps_accuracy_m} m`}));
+
+  if (s.source === "field") {
+    w.append(Card("card--tight",
+      $("div",{class:"t-micro",text:t("checklist")}),
+      checkRow("stand_ok", t("standOk")),
+      checkRow("lit_ok", t("litOk")),
+      checkRow("legal_stop_ok", t("legalOk")),
+      checkRow("reachable_ok", t("reachableOk"))));
+    const photo = $("div",{id:"stop-photo"});
+    w.append(Card("card--tight", $("div",{class:"t-micro",text:t("photo")}), photo));
+    loadStopPhotoInto(photo, s.id);
+  }
+
+  if (mine) w.append(Banner("info", t("cannotSelfVerify")));
+  w.append($("div",{class:"field"},
+    $("label",{text:t("rejectReason")}),
+    $("textarea",{class:"input", attrs:{id:"review-reason", "aria-label":t("rejectReason")}})));
+  w.append($("div",{class:"row wrap gap3"},
+    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),
+    Btn({label:t("rejectStop"), kind:"danger", on:()=>reviewStopAction(s.id, "rejected")})));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+  return w;
+}
+
+function checkRow(flag, label) {
+  const s = S.opsTarget || {};
+  const ok = s[flag] === true;
+  return Row({ icon: ok ? "check" : "close", title: label,
+    right: Chip({label: ok ? t("approve") : "✗", kind: ok ? "ok" : "danger"}), bordered:true });
+}
+
+async function loadStopPhotoInto(el, id) {
+  if (!el) return;
+  const url = await API.stopPhoto(id);
+  if (!url) { el.append($("div",{class:"t-cap",text:t("photo")+" —"})); return; }
+  el.append($("img",{attrs:{src:url, alt:t("photo")}, style:{width:"100%",borderRadius:"var(--r-sm)",display:"block"}}));
+}
+
+async function reviewStopAction(id, decision) {
+  S.stopBusy = true; render();
+  try {
+    await API.reviewStop(id, decision, val("review-reason") || null);
+    S.stopBusy = false; S.opsView = null; S.opsTarget = null;
+    toast(decision === "approved" ? t("approve") : t("reject"));
+    render();
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+/* ── P2.3 field capture (sheet) + offline queue ───────────────────────── */
+function fieldCaptureSheet() {
+  return Sheet(t("fieldCapture"),
+    $("p",{class:"t-cap",text:t("checklistHint")}),
+    $("div",{class:"row gap2"},
+      Btn({label:t("useMyLocation"), kind:"secondary", on:()=>useMyLocation()}),
+      $("span",{class:"t-cap grow", id:"field-acc", text:"—"})),
+    $("div",{class:"grid grid--tight"},
+      field("field-lat", t("latLabel"), "text", "off"),
+      field("field-lng", t("lngLabel"), "text", "off")),
+    field("field-photo", t("photo"), "file", "off"),
+    $("p",{class:"t-cap",text:t("photoHint")}),
+    fieldCheck("field-stand", t("standOk")),
+    fieldCheck("field-lit", t("litOk")),
+    fieldCheck("field-legal", t("legalOk")),
+    fieldCheck("field-reachable", t("reachableOk")),
+    Btn({label:t("captureStop"), block:true, driver:true, dis:S.stopBusy, on:()=>captureStopAction()}));
+}
+
+function fieldCheck(id, label) {
+  const cb = $("input",{attrs:{type:"checkbox", id}});
+  return $("label",{class:"rowitem rowitem--bordered"},
+    cb,
+    $("span",{class:"grow",text:label}));
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { toast(t("locationDenied")); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const la = document.getElementById("field-lat"), lo = document.getElementById("field-lng"), acc = document.getElementById("field-acc");
+      if (la) la.value = pos.coords.latitude.toFixed(6);
+      if (lo) lo.value = pos.coords.longitude.toFixed(6);
+      if (acc) acc.textContent = `${t("accuracyLabel")}: ${Math.round(pos.coords.accuracy)} m`;
+    },
+    () => toast(t("locationDenied")),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function readPhotoFile(inputId, cb) {
+  const input = document.getElementById(inputId);
+  const file = input && input.files && input.files[0];
+  if (!file) { cb(null); return; }
+  const r = new FileReader();
+  r.onload = () => cb(String(r.result));
+  r.onerror = () => cb(null);
+  r.readAsDataURL(file);
+}
+
+async function captureStopAction() {
+  const lat = Number(val("field-lat")), lng = Number(val("field-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  readPhotoFile("field-photo", async (photoDataUrl) => {
+    const accEl = document.getElementById("field-acc");
+    const accText = (accEl && accEl.textContent) || "";
+    const accMatch = /(\d+(?:\.\d+)?)/.exec(accText);
+    if (!accMatch) { S.stopBusy = false; toast(t("locationDenied")); render(); return; } // a field capture needs a real fix
+    const payload = {
+      captureId: "cap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10),
+      lat, lng,
+      gpsAccuracyM: accMatch ? Number(accMatch[1]) : 0,
+      checklist: {
+        stand: document.getElementById("field-stand").checked,
+        lit: document.getElementById("field-lit").checked,
+        legal: document.getElementById("field-legal").checked,
+        reachable: document.getElementById("field-reachable").checked,
+      },
+      photoDataUrl: photoDataUrl || undefined,
+    };
+    S.stopBusy = true; render();
+    try {
+      await API.captureStop(payload);
+      S.stopBusy = false; closeSheet();
+      toast(t("captureSaved"));
+      render();
+      loadPendingInto(document.getElementById("pending-list"));
+    } catch(e) {
+      S.stopBusy = false;
+      if (e.code === "NETWORK") {
+        // offline: queue locally, upload on reconnect (idempotent by captureId)
+        queueFieldCapture(payload);
+        closeSheet(); toast(t("queuedOffline")); render();
+      } else {
+        toast(errText(e.messageKey)); render();
+      }
+    }
+  });
+}
+
+function queueFieldCapture(payload) {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem("rs.fieldQueue") || "[]"); } catch {}
+  q.push(payload);
+  try { localStorage.setItem("rs.fieldQueue", JSON.stringify(q)); } catch {}
+}
+
+async function flushFieldQueue() {
+  if (typeof fetch !== "function" || !navigator.onLine) return;
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem("rs.fieldQueue") || "[]"); } catch {}
+  if (!q.length) return;
+  for (const payload of q) {
+    try { await API.captureStop(payload); } catch { /* stay queued */ continue; }
+  }
+  try { localStorage.removeItem("rs.fieldQueue"); } catch {}
 }
 
 async function createStopAction() {
@@ -3182,6 +3415,7 @@ const SHEETS = {
 
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
+  fieldCapture: () => fieldCaptureSheet(),
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -3426,6 +3660,7 @@ function bootSplash(){
 function boot(){
   S.view="boot"; render();
   loadMapsConfig();                             // fire-and-forget, never blocks boot
+  flushFieldQueue();                            // field captures saved offline upload now
   const minDelay = new Promise(r=>setTimeout(r, 1500));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
@@ -3469,6 +3704,7 @@ async function loadMapsConfig(){
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
+window.addEventListener("online", ()=>{ flushFieldQueue(); }); // offline captures go up on reconnect
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
@@ -3476,7 +3712,8 @@ Object.assign(window, { S, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
-                        setResendUntil, setLockedUntil, cooldownButton });
+                        setResendUntil, setLockedUntil, cooldownButton,
+                        flushFieldQueue });
 
 boot();
 

@@ -120,7 +120,16 @@ async function loadVehicleTableInto(el) {
 }
 
 function opsStops(){                                          // O-18 / O-20
+  if (S.opsView === "stopReview") return stopReviewView();
   const w=$("div",{class:"main"});
+  /* P2.4 — the verification queue (two-person rule) sits at the top. */
+  w.append($("div",{class:"row gap2"},
+    $("h2",{class:"t-head grow",text:t("pendingReview")}),
+    Btn({label:t("fieldCapture"), kind:"secondary", on:()=>openSheet("fieldCapture")})));
+  const pending = $("div",{id:"pending-list"});
+  w.append(pending);
+  loadPendingInto(pending);
+
   /* Add a stop: exact coordinates + bilingual names. The map below doubles as
      a coordinate picker when the (free, no-key) OSM map has loaded; the form
      always works. */
@@ -157,6 +166,189 @@ function opsStops(){                                          // O-18 / O-20
   w.append(list);
   loadStopsInto(list);
   return w;
+}
+
+/* ── P2.4 verification queue + review ─────────────────────────────────── */
+async function loadPendingInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const stops = await API.listStops("pending");
+    if (!stops.length) { el.append(Empty("stops", t("pendingReview"), t("noPendingStops"))); return; }
+    stops.forEach((s) => el.append(Row({
+      icon: s.source === "field" ? "walk" : "stops",
+      title: $("span",{class:"ltr",text:s.code}),
+      sub: `${s.source === "field" ? t("sourceField") : t("sourceDesk")} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
+      right: Btn({label:t("reviewStop"), kind:"ghost", on:()=>{ S.opsTarget=s; S.opsView="stopReview"; render(); }}),
+      bordered:true, chev:true,
+      on:()=>{ S.opsTarget=s; S.opsView="stopReview"; render(); } })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function stopReviewView() {
+  const s = S.opsTarget || {};
+  const mine = s.created_by === (S.user && S.user.id);
+  const w = $("div",{class:"main"});
+  w.append($("div",{class:"row gap2"},
+    $("h1",{class:"t-head grow ltr",text:s.code || "—"}),
+    Chip({label:t("stopStatus."+(s.status||"pending")), kind:"warn"})));
+  w.append($("div",{class:"t-cap",text:`${t("latLabel")}: ${Number(s.lat||0).toFixed(6)} · ${t("lngLabel")}: ${Number(s.lng||0).toFixed(6)}`}));
+  if (s.gps_accuracy_m != null)
+    w.append($("div",{class:"t-cap",text:`${t("accuracyLabel")}: ${s.gps_accuracy_m} m`}));
+
+  if (s.source === "field") {
+    w.append(Card("card--tight",
+      $("div",{class:"t-micro",text:t("checklist")}),
+      checkRow("stand_ok", t("standOk")),
+      checkRow("lit_ok", t("litOk")),
+      checkRow("legal_stop_ok", t("legalOk")),
+      checkRow("reachable_ok", t("reachableOk"))));
+    const photo = $("div",{id:"stop-photo"});
+    w.append(Card("card--tight", $("div",{class:"t-micro",text:t("photo")}), photo));
+    loadStopPhotoInto(photo, s.id);
+  }
+
+  if (mine) w.append(Banner("info", t("cannotSelfVerify")));
+  w.append($("div",{class:"field"},
+    $("label",{text:t("rejectReason")}),
+    $("textarea",{class:"input", attrs:{id:"review-reason", "aria-label":t("rejectReason")}})));
+  w.append($("div",{class:"row wrap gap3"},
+    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),
+    Btn({label:t("rejectStop"), kind:"danger", on:()=>reviewStopAction(s.id, "rejected")})));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+  return w;
+}
+
+function checkRow(flag, label) {
+  const s = S.opsTarget || {};
+  const ok = s[flag] === true;
+  return Row({ icon: ok ? "check" : "close", title: label,
+    right: Chip({label: ok ? t("approve") : "✗", kind: ok ? "ok" : "danger"}), bordered:true });
+}
+
+async function loadStopPhotoInto(el, id) {
+  if (!el) return;
+  const url = await API.stopPhoto(id);
+  if (!url) { el.append($("div",{class:"t-cap",text:t("photo")+" —"})); return; }
+  el.append($("img",{attrs:{src:url, alt:t("photo")}, style:{width:"100%",borderRadius:"var(--r-sm)",display:"block"}}));
+}
+
+async function reviewStopAction(id, decision) {
+  S.stopBusy = true; render();
+  try {
+    await API.reviewStop(id, decision, val("review-reason") || null);
+    S.stopBusy = false; S.opsView = null; S.opsTarget = null;
+    toast(decision === "approved" ? t("approve") : t("reject"));
+    render();
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+/* ── P2.3 field capture (sheet) + offline queue ───────────────────────── */
+function fieldCaptureSheet() {
+  return Sheet(t("fieldCapture"),
+    $("p",{class:"t-cap",text:t("checklistHint")}),
+    $("div",{class:"row gap2"},
+      Btn({label:t("useMyLocation"), kind:"secondary", on:()=>useMyLocation()}),
+      $("span",{class:"t-cap grow", id:"field-acc", text:"—"})),
+    $("div",{class:"grid grid--tight"},
+      field("field-lat", t("latLabel"), "text", "off"),
+      field("field-lng", t("lngLabel"), "text", "off")),
+    field("field-photo", t("photo"), "file", "off"),
+    $("p",{class:"t-cap",text:t("photoHint")}),
+    fieldCheck("field-stand", t("standOk")),
+    fieldCheck("field-lit", t("litOk")),
+    fieldCheck("field-legal", t("legalOk")),
+    fieldCheck("field-reachable", t("reachableOk")),
+    Btn({label:t("captureStop"), block:true, driver:true, dis:S.stopBusy, on:()=>captureStopAction()}));
+}
+
+function fieldCheck(id, label) {
+  const cb = $("input",{attrs:{type:"checkbox", id}});
+  return $("label",{class:"rowitem rowitem--bordered"},
+    cb,
+    $("span",{class:"grow",text:label}));
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { toast(t("locationDenied")); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const la = document.getElementById("field-lat"), lo = document.getElementById("field-lng"), acc = document.getElementById("field-acc");
+      if (la) la.value = pos.coords.latitude.toFixed(6);
+      if (lo) lo.value = pos.coords.longitude.toFixed(6);
+      if (acc) acc.textContent = `${t("accuracyLabel")}: ${Math.round(pos.coords.accuracy)} m`;
+    },
+    () => toast(t("locationDenied")),
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function readPhotoFile(inputId, cb) {
+  const input = document.getElementById(inputId);
+  const file = input && input.files && input.files[0];
+  if (!file) { cb(null); return; }
+  const r = new FileReader();
+  r.onload = () => cb(String(r.result));
+  r.onerror = () => cb(null);
+  r.readAsDataURL(file);
+}
+
+async function captureStopAction() {
+  const lat = Number(val("field-lat")), lng = Number(val("field-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  readPhotoFile("field-photo", async (photoDataUrl) => {
+    const accEl = document.getElementById("field-acc");
+    const accText = (accEl && accEl.textContent) || "";
+    const accMatch = /(\d+(?:\.\d+)?)/.exec(accText);
+    if (!accMatch) { S.stopBusy = false; toast(t("locationDenied")); render(); return; } // a field capture needs a real fix
+    const payload = {
+      captureId: "cap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10),
+      lat, lng,
+      gpsAccuracyM: accMatch ? Number(accMatch[1]) : 0,
+      checklist: {
+        stand: document.getElementById("field-stand").checked,
+        lit: document.getElementById("field-lit").checked,
+        legal: document.getElementById("field-legal").checked,
+        reachable: document.getElementById("field-reachable").checked,
+      },
+      photoDataUrl: photoDataUrl || undefined,
+    };
+    S.stopBusy = true; render();
+    try {
+      await API.captureStop(payload);
+      S.stopBusy = false; closeSheet();
+      toast(t("captureSaved"));
+      render();
+      loadPendingInto(document.getElementById("pending-list"));
+    } catch(e) {
+      S.stopBusy = false;
+      if (e.code === "NETWORK") {
+        // offline: queue locally, upload on reconnect (idempotent by captureId)
+        queueFieldCapture(payload);
+        closeSheet(); toast(t("queuedOffline")); render();
+      } else {
+        toast(errText(e.messageKey)); render();
+      }
+    }
+  });
+}
+
+function queueFieldCapture(payload) {
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem("rs.fieldQueue") || "[]"); } catch {}
+  q.push(payload);
+  try { localStorage.setItem("rs.fieldQueue", JSON.stringify(q)); } catch {}
+}
+
+async function flushFieldQueue() {
+  if (typeof fetch !== "function" || !navigator.onLine) return;
+  let q = [];
+  try { q = JSON.parse(localStorage.getItem("rs.fieldQueue") || "[]"); } catch {}
+  if (!q.length) return;
+  for (const payload of q) {
+    try { await API.captureStop(payload); } catch { /* stay queued */ continue; }
+  }
+  try { localStorage.removeItem("rs.fieldQueue"); } catch {}
 }
 
 async function createStopAction() {

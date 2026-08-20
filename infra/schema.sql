@@ -52,7 +52,8 @@ id uuid DEFAULT gen_random_uuid() NOT NULL,
 stop_id uuid NOT NULL,
 storage_key text NOT NULL,
 taken_at timestamp with time zone,
-created_at timestamp with time zone DEFAULT now() NOT NULL
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+mime_type text DEFAULT 'image/jpeg'::text NOT NULL
 );
 CREATE TABLE public.stop_verifications (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -83,6 +84,8 @@ walking_to_next_m double precision,
 override_reason text,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
+capture_id text,
+gps_accuracy_m double precision,
 CONSTRAINT stops_lat_bounds CHECK (((lat >= ('-90'::integer)::double precision) AND (lat <= (90)::double precision))),
 CONSTRAINT stops_lng_bounds CHECK (((lng >= ('-180'::integer)::double precision) AND (lng <= (180)::double precision))),
 CONSTRAINT stops_source_check CHECK ((source = ANY (ARRAY['desk'::text, 'field'::text]))),
@@ -152,6 +155,8 @@ ALTER TABLE ONLY public.stop_photos
 ADD CONSTRAINT stop_photos_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.stop_verifications
 ADD CONSTRAINT stop_verifications_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.stops
+ADD CONSTRAINT stops_capture_id_key UNIQUE (capture_id);
 ALTER TABLE ONLY public.stops
 ADD CONSTRAINT stops_code_key UNIQUE (code);
 ALTER TABLE ONLY public.stops

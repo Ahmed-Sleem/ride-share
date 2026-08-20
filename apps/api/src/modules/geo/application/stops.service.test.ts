@@ -11,6 +11,7 @@ import type { StopRow } from '../contracts/types.js';
 class FakeStops {
   rows = new Map<string, StopRow>();
   verifications: unknown[] = [];
+  photos: Record<string, { storage_key: string; mime_type: string }> = {};
   seq = 0;
   async create(i: any) {
     const id = `s${++this.seq}`;
@@ -18,12 +19,28 @@ class FakeStops {
       id, code: i.code, name_en: i.nameEn, name_ar: i.nameAr, lat: i.lat, lng: i.lng,
       status: 'draft', source: i.source, created_by: i.createdBy,
       stand_ok: null, lit_ok: null, legal_stop_ok: null, reachable_ok: null,
-      walking_to_next_m: null, override_reason: i.overrideReason ?? null, created_at: new Date(),
+      walking_to_next_m: null, override_reason: i.overrideReason ?? null,
+      capture_id: null, gps_accuracy_m: null, created_at: new Date(),
     };
     this.rows.set(id, row);
     return row;
   }
   async createMany(inputs: any[]) { const out = []; for (const i of inputs) out.push(await this.create(i)); return out; }
+  async findByCaptureId(cid: string) { return [...this.rows.values()].find((r) => r.capture_id === cid) ?? null; }
+  async createFieldCapture(i: any) {
+    const id = `s${++this.seq}`;
+    const row = { id, code: i.code, name_en: i.nameEn ?? '', name_ar: i.nameAr ?? '', lat: i.lat, lng: i.lng,
+      status: 'pending' as const, source: 'field' as const, created_by: i.createdBy,
+      stand_ok: i.checklist.stand, lit_ok: i.checklist.lit, legal_stop_ok: i.checklist.legal, reachable_ok: i.checklist.reachable,
+      walking_to_next_m: null, override_reason: null, capture_id: i.captureId, gps_accuracy_m: i.gpsAccuracyM, created_at: new Date() };
+    this.rows.set(id, row); return row;
+  }
+  async addPhoto(stopId: string, storageKey: string, mimeType: string) {
+    this.photos = this.photos || {};
+    this.photos[stopId] = { storage_key: storageKey, mime_type: mimeType };
+    return { id: `p${Object.keys(this.photos).length}`, stop_id: stopId, storage_key: storageKey, mime_type: mimeType, taken_at: null, created_at: new Date() };
+  }
+  async photoForStop(stopId: string) { return (this.photos && this.photos[stopId]) || null; }
   async findById(id: string) { return this.rows.get(id) ?? null; }
   async candidatesInBox() { return [...this.rows.values()]; }
   async verifiedInBox() { return [...this.rows.values()].filter((s) => s.status === 'verified'); }
@@ -38,6 +55,7 @@ const env = () => ({
   JWT_SECRET: 'c'.repeat(32), CORS_ORIGINS: '', THROTTLE_TTL: 60000, THROTTLE_LIMIT: 100,
   SMTP_PORT: 587, SMTP_SECURE: 'auto', AUTO_MIGRATE: 'true', EMAIL_ALLOWED_DOMAINS: '',
   AUTH_OTP_BYPASS: 'false', STOP_MIN_SPACING_M: 100, STOP_MAX_GAP_M: 1000,
+  STOP_MAX_FIX_ACCURACY_M: 20, PHOTO_STORAGE_DIR: '/tmp/rs-photos-test', PHOTO_MAX_BYTES: 8_000_000,
 }) as unknown as Env;
 
 function setup() {
@@ -154,4 +172,68 @@ test('submit moves a draft to pending; a verified stop cannot be resubmitted', a
   assert.ok(pending.some((x) => x.id === s.id), 'draft → pending');
   await svc.reviewStop(ops2, s.id, 'approved');
   await assert.rejects(() => svc.submitStop(ops, s.id), ConflictException);
+});
+
+test('field capture: an inaccurate fix is refused, an accurate one becomes pending', async () => {
+  const { svc, stops } = setup();
+  const bad = { captureId: 'cap-00000001', lat: 31.2, lng: 29.9, gpsAccuracyM: 80,
+    checklist: { stand: true, lit: true, legal: true, reachable: true } };
+  await assert.rejects(
+    () => svc.captureStop(ops, bad),
+    (e: unknown) => e instanceof ConflictException && JSON.stringify((e as any).getResponse()).includes('geo.fix_too_inaccurate')
+  );
+  const good = { ...bad, captureId: 'cap-00000002', gpsAccuracyM: 8 };
+  const s = await svc.captureStop(ops, good);
+  assert.equal(s.status, 'pending');
+  assert.equal(s.source, 'field');
+  assert.equal(s.gps_accuracy_m, 8);
+  assert.equal(stops.rows.get(s.id)!.stand_ok, true);
+});
+
+test('field capture: a partial checklist is refused', async () => {
+  const { svc } = setup();
+  await assert.rejects(
+    () => svc.captureStop(ops, { captureId: 'cap-00000003', lat: 31.2, lng: 29.9, gpsAccuracyM: 8,
+      checklist: { stand: true, lit: true, legal: true, reachable: false } }),
+    (e: unknown) => e instanceof BadRequestException && JSON.stringify((e as any).getResponse()).includes('geo.checklist_incomplete')
+  );
+});
+
+test('field capture is idempotent: the same capture id returns the SAME stop', async () => {
+  const { svc, stops } = setup();
+  const input = { captureId: 'cap-00000004', lat: 31.2, lng: 29.9, gpsAccuracyM: 8,
+    checklist: { stand: true, lit: true, legal: true, reachable: true } };
+  const first = await svc.captureStop(ops, input);
+  const second = await svc.captureStop(ops, input);
+  assert.equal(second.id, first.id);
+  assert.equal([...stops.rows.values()].length, 1, 'no duplicate stop row');
+});
+
+test('field capture stores the photo with its EXIF stripped', async () => {
+  const { svc, stops } = setup();
+  const soi = Buffer.from([0xff, 0xd8]);
+  const app1data = Buffer.from('Exif\0\0GPS 31.2', 'binary');
+  const len = (n: number) => { const b = Buffer.alloc(2); b.writeUInt16BE(n, 0); return b; };
+  const app1 = Buffer.concat([Buffer.from([0xff, 0xe1]), len(app1data.length), app1data]);
+  const eoi = Buffer.from([0xff, 0xd9]);
+  const jpeg = Buffer.concat([soi, app1, eoi]);
+  const photoDataUrl = 'data:image/jpeg;base64,' + jpeg.toString('base64');
+
+  const s = await svc.captureStop(ops, { captureId: 'cap-00000005', lat: 31.2, lng: 29.9,
+    gpsAccuracyM: 8, checklist: { stand: true, lit: true, legal: true, reachable: true }, photoDataUrl });
+  const photo = await svc.photoForStop(ops, s.id);
+  assert.ok(photo, 'photo retrievable');
+  assert.ok(!photo!.bytes.includes(Buffer.from('Exif', 'binary')), 'EXIF stripped before storage');
+  assert.equal(stops.rows.get(s.id)!.status, 'pending');
+});
+
+test('retire: a verified stop retires; a draft cannot', async () => {
+  const { svc } = setup();
+  const s = await svc.createStop(ops, { lat: 31.2, lng: 29.9, source: 'desk' });
+  await assert.rejects(() => svc.retireStop(ops, s.id), ConflictException); // draft
+  await svc.submitStop(ops, s.id);
+  await svc.reviewStop(ops2, s.id, 'approved');
+  await svc.retireStop(ops, s.id);
+  const listed = await svc.list(ops, ['retired']);
+  assert.ok(listed.some((x) => x.id === s.id), 'now retired');
 });

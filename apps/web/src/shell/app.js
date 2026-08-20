@@ -12,6 +12,7 @@ const SHEETS = {
 
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
+  fieldCapture: () => fieldCaptureSheet(),
 };
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -256,6 +257,7 @@ function bootSplash(){
 function boot(){
   S.view="boot"; render();
   loadMapsConfig();                             // fire-and-forget, never blocks boot
+  flushFieldQueue();                            // field captures saved offline upload now
   const minDelay = new Promise(r=>setTimeout(r, 1500));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
@@ -299,6 +301,7 @@ async function loadMapsConfig(){
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
+window.addEventListener("online", ()=>{ flushFieldQueue(); }); // offline captures go up on reconnect
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
@@ -306,6 +309,7 @@ Object.assign(window, { S, T, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
-                        setResendUntil, setLockedUntil, cooldownButton });
+                        setResendUntil, setLockedUntil, cooldownButton,
+                        flushFieldQueue });
 
 boot();

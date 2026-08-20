@@ -4,24 +4,44 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CONFIG, type Env } from '../../../config/env.js';
 import { StopsRepository } from '../infra/stops.repository.js';
+import { LocalPhotoStorage, type PhotoStorage } from '../infra/photo-storage.js';
 import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import { isWithinBounds, nextStopCode, spacingCheck, stopCode, type StopStatus } from '../domain/stop.js';
 import { parseStopsCsv } from '../domain/csv.js';
 import { distanceMeters } from '../domain/geo-math.js';
+import { stripJpegExif } from '../domain/exif.js';
+import { accuracyGate, checklistComplete, type FieldChecklist } from '../domain/field-capture.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import type { StopRow } from '../contracts/types.js';
 
 const STOP_CITY = 'ALX';
 const STOP_ZONE = 'COR'; // the launch corridor — a real zone per corridor comes with P2.5
 
+/** Decode a data-URL photo (data:image/jpeg;base64,…). Returns null when there
+    is no photo; throws when the photo is oversized or not an accepted image. */
+function decodePhoto(dataUrl: string | undefined, maxBytes: number): { bytes: Buffer; mimeType: string } | null {
+  if (!dataUrl) return null;
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl.trim());
+  if (!m) throw new BadRequestException({ message_key: 'geo.photo_invalid' });
+  const bytes = Buffer.from(m[2]!, 'base64');
+  if (bytes.length > maxBytes) {
+    throw new BadRequestException({ message_key: 'geo.photo_too_large', details: { bytes: bytes.length } });
+  }
+  return { bytes, mimeType: m[1]! };
+}
+
 @Injectable()
 export class StopsService {
+  private readonly photos: PhotoStorage;
+
   constructor(
     @Inject(CONFIG) private readonly env: Env,
     private readonly stops: StopsRepository,
     private readonly audit: AuditService
-  ) {}
+  ) {
+    this.photos = new LocalPhotoStorage(env.PHOTO_STORAGE_DIR);
+  }
 
   /** Create a candidate stop (desk or field). Only operations/manager/super
       admin may create stops; a second stop within MinStopSpacing requires an
@@ -76,6 +96,82 @@ export class StopsService {
   async list(actor: Actor, statuses?: StopStatus[]): Promise<StopRow[]> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
     return this.stops.listByStatus(statuses ?? ['draft', 'pending', 'verified', 'rejected', 'retired']);
+  }
+
+  /** Field capture (P2.3): the surveyor stands at the kerb, records a GPS fix
+      with its accuracy, answers the four-point physical checklist, and takes a
+      photo. The fix worse than STOP_MAX_FIX_ACCURACY_M is refused; a partial
+      checklist is refused; the photo is stripped of EXIF before storage; the
+      capture is idempotent by the client's capture id (offline retries safe). */
+  async captureStop(actor: Actor, input: {
+    captureId: string; lat: number; lng: number; gpsAccuracyM: number;
+    checklist: FieldChecklist; photoDataUrl?: string; device?: string;
+  }): Promise<StopRow> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
+    if (!isWithinBounds(input.lat, input.lng)) {
+      throw new ConflictException({ message_key: 'geo.coordinates_out_of_bounds' });
+    }
+    const gate = accuracyGate(input.gpsAccuracyM, this.env.STOP_MAX_FIX_ACCURACY_M);
+    if (!gate.ok) {
+      throw new ConflictException({ message_key: 'geo.fix_too_inaccurate', details: { accuracyM: input.gpsAccuracyM } });
+    }
+    if (!checklistComplete(input.checklist)) {
+      throw new BadRequestException({ message_key: 'geo.checklist_incomplete' });
+    }
+    // idempotency first — a retried offline upload returns the SAME stop
+    const existing = await this.stops.findByCaptureId(input.captureId);
+    if (existing) return existing;
+
+    const photo = decodePhoto(input.photoDataUrl, this.env.PHOTO_MAX_BYTES);
+    const codes = (await this.stops.listByStatus(['draft', 'pending', 'verified', 'rejected', 'retired']))
+      .map((s) => s.code).sort();
+    const code = nextStopCode(STOP_CITY, STOP_ZONE, codes.at(-1) ?? null);
+    const created = await this.stops.createFieldCapture({
+      code,
+      captureId: input.captureId,
+      lat: input.lat,
+      lng: input.lng,
+      gpsAccuracyM: input.gpsAccuracyM,
+      createdBy: actor.id,
+      checklist: input.checklist,
+      nameEn: '',
+      nameAr: '',
+    });
+    if (photo) {
+      // EXIF stripped BEFORE storage — the measured fix is the truth, never the photo's
+      const storageKey = await this.photos.put(stripJpegExif(photo.bytes), photo.mimeType);
+      await this.stops.addPhoto(created.id, storageKey, photo.mimeType);
+    }
+    await this.audit.record(actor, 'stop.capture', {
+      targetType: 'stop', targetId: created.id,
+      after: { code: created.code, gpsAccuracyM: input.gpsAccuracyM, device: input.device ?? null },
+    });
+    return created;
+  }
+
+  /** Serve a stop's photo bytes (desk review view, P2.4). */
+  async photoForStop(actor: Actor, id: string): Promise<{ bytes: Buffer; mimeType: string } | null> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
+    const photo = await this.stops.photoForStop(id);
+    if (!photo) return null;
+    const bytes = await this.photos.get(photo.storage_key);
+    if (!bytes) return null;
+    return { bytes, mimeType: photo.mime_type };
+  }
+
+  /** Retire a verified stop (CH04 §4.1.2 — never hard-deleted). Retiring a
+      stop used by a published route is refused — but routes land in M3, so the
+      live-route check arrives with route_stops (tracked in the M2 checklist). */
+  async retireStop(actor: Actor, id: string): Promise<{ ok: true }> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
+    const stop = await this.stops.findById(id);
+    if (!stop) throw new NotFoundException({ message_key: 'geo.stop_not_found' });
+    if (stop.status !== 'verified') {
+      throw new ConflictException({ message_key: 'geo.stop_not_verified', details: { status: stop.status } });
+    }
+    await this.stops.setStatus(id, 'retired');
+    await this.audit.record(actor, 'stop.retire', { targetType: 'stop', targetId: id });
+    return { ok: true };
   }
 
   /** Bulk import from CSV (P2.2): all-or-nothing. One malformed row or one

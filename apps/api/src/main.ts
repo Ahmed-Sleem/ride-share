@@ -35,7 +35,9 @@ async function bootstrap(): Promise<void> {
     AppModule,
     // trustProxy: true → req.ip is the real client behind Railway's proxy.
     // Access logs are handled by the one structured logger, not Fastify's.
-    new FastifyAdapter({ logger: false, trustProxy: true }),
+    // bodyLimit: field-capture photos arrive as base64 in JSON; 10 MB covers a
+    // phone JPEG with headroom (the service still enforces PHOTO_MAX_BYTES).
+    new FastifyAdapter({ logger: false, trustProxy: true, bodyLimit: 10_485_760 }),
     { logger: false }
   );
   app.useLogger(new PinoLoggerService(logger));

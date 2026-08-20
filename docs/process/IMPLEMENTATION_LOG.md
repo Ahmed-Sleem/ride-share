@@ -558,3 +558,24 @@ output) — see the engineering standard §3.3 and §4.
 - Tests: 114 API (9 new geo service + 5 csv) with break checks observed failing (csv all-or-nothing,
   csv bounds); 279 web unit (new "STOP MAPPING TOOL" group + 2 break entries observed failing);
   a11y 14, server 5 green; verify:repo green.
+
+## M2 — P2.3 field capture + P2.4 verification queue
+
+- Backend: migration 0012 (stops.capture_id UNIQUE + gps_accuracy_m; stop_photos.mime_type);
+  domain/exif.ts (stripJpegExif — pure JPEG APP1 stripper) + domain/field-capture.ts (accuracy gate,
+  checklistComplete); infra/photo-storage.ts (PhotoStorage interface + LocalPhotoStorage, dir from
+  env); service captureStop (accuracy gate → checklist → idempotency by captureId → EXIF strip →
+  store photo), photoForStop, retireStop (verified→retired); controller POST /stops/capture,
+  GET /stops/:id/photo, POST /stops/:id/retire, GET /stops?status=; main.ts bodyLimit 10 MB;
+  env STOP_MAX_FIX_ACCURACY_M / PHOTO_STORAGE_DIR / PHOTO_MAX_BYTES.
+- Frontend: ops Stops screen gains the P2.4 pending-verification queue + review view (checklist,
+  photo via authenticated data-URL fetch, reject-reason field, approve hidden for your own capture);
+  a field-capture sheet (geolocation + accuracy, 4 checklist switches, optional photo, offline queue
+  to localStorage with flush on boot + 'online'); API.stopPhoto + captureStop.
+- Tests: 125 API (exif 3, field-capture domain 2, service capture/retire/photo 5 — 5 new break checks
+  observed failing: accuracy gate, checklist, idempotency, exif strip, retire-draft); 284 web unit
+  (pending queue + review + own-capture-approve-hidden, break-observed); a11y 14, server 5;
+  verify:repo green; db:verify migrations up→down→up + schema drift clean.
+- Deferred honestly: (1) showing the rejection reason to the original surveyor lands with the field
+  tool's "my captures" view + M4 notifications; (2) refusing to retire a stop used by a published
+  route lands in M3 with route_stops. Both marked [~]/[o] in the M2 checklist.

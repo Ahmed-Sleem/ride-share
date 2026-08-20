@@ -6,7 +6,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../../../config/config.module.js';
 import { boundingBox } from '../domain/geo-math.js';
-import type { StopRow, StopVerificationRow } from '../contracts/types.js';
+import type { StopPhotoRow, StopRow, StopVerificationRow } from '../contracts/types.js';
 import type { StopSource, StopStatus } from '../domain/stop.js';
 
 interface CreateStopInput {
@@ -30,7 +30,7 @@ export class StopsRepository {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, code, name_en, name_ar, lat, lng, status, source, created_by,
                  stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-                 override_reason, created_at`,
+                 override_reason, capture_id, gps_accuracy_m, created_at`,
       [input.code, input.nameEn, input.nameAr, input.lat, input.lng,
        input.source, input.createdBy, input.overrideReason ?? null]
     );
@@ -41,7 +41,7 @@ export class StopsRepository {
     const { rows } = await this.pool.query<StopRow>(
       `SELECT id, code, name_en, name_ar, lat, lng, status, source, created_by,
               stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-              override_reason, created_at
+              override_reason, capture_id, gps_accuracy_m, created_at
        FROM stops WHERE id = $1`, [id]);
     return rows[0] ?? null;
   }
@@ -55,7 +55,7 @@ export class StopsRepository {
     const { rows } = await this.pool.query<StopRow>(
       `SELECT id, code, name_en, name_ar, lat, lng, status, source, created_by,
               stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-              override_reason, created_at
+              override_reason, capture_id, gps_accuracy_m, created_at
        FROM stops
        WHERE lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4`,
       [b.minLat, b.maxLat, b.minLng, b.maxLng]
@@ -67,7 +67,7 @@ export class StopsRepository {
     const { rows } = await this.pool.query<StopRow>(
       `SELECT id, code, name_en, name_ar, lat, lng, status, source, created_by,
               stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-              override_reason, created_at
+              override_reason, capture_id, gps_accuracy_m, created_at
        FROM stops WHERE status = ANY($1::text[]) ORDER BY created_at ASC`,
       [statuses]
     );
@@ -91,7 +91,7 @@ export class StopsRepository {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
            RETURNING id, code, name_en, name_ar, lat, lng, status, source, created_by,
                      stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-                     override_reason, created_at`,
+                     override_reason, capture_id, gps_accuracy_m, created_at`,
           [input.code, input.nameEn, input.nameAr, input.lat, input.lng,
            input.source, input.createdBy, input.overrideReason ?? null]
         );
@@ -113,7 +113,7 @@ export class StopsRepository {
     const { rows } = await this.pool.query<StopRow>(
       `SELECT id, code, name_en, name_ar, lat, lng, status, source, created_by,
               stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
-              override_reason, created_at
+              override_reason, capture_id, gps_accuracy_m, created_at
        FROM stops
        WHERE status = 'verified'
          AND lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4`,
@@ -134,5 +134,59 @@ export class StopsRepository {
        input.device ?? null, input.gpsAccuracyM ?? null]
     );
     return rows[0]!;
+  }
+
+  /** Idempotency: a field capture is keyed by the client's capture id, so an
+      offline queue that retries on reconnect never creates two stops. */
+  async findByCaptureId(captureId: string): Promise<StopRow | null> {
+    const { rows } = await this.pool.query<StopRow>(
+      `SELECT id, code, name_en, name_ar, lat, lng, status, source, created_by,
+              stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
+              override_reason, capture_id, gps_accuracy_m, created_at
+       FROM stops WHERE capture_id = $1`,
+      [captureId]
+    );
+    return rows[0] ?? null;
+  }
+
+  /** Create a field capture as a stop already in `pending` (it is awaiting desk
+      verification, P2.4), carrying the checklist answers and GPS accuracy. */
+  async createFieldCapture(input: {
+    code: string; captureId: string; lat: number; lng: number;
+    gpsAccuracyM: number; createdBy: string;
+    checklist: { stand: boolean; lit: boolean; legal: boolean; reachable: boolean };
+    nameEn: string; nameAr: string;
+  }): Promise<StopRow> {
+    const { rows } = await this.pool.query<StopRow>(
+      `INSERT INTO stops (code, capture_id, name_en, name_ar, lat, lng, status, source,
+                          created_by, stand_ok, lit_ok, legal_stop_ok, reachable_ok, gps_accuracy_m)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', 'field', $7, $8, $9, $10, $11, $12)
+       RETURNING id, code, name_en, name_ar, lat, lng, status, source, created_by,
+                 stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
+                 override_reason, capture_id, gps_accuracy_m, created_at`,
+      [input.code, input.captureId, input.nameEn, input.nameAr, input.lat, input.lng,
+       input.createdBy, input.checklist.stand, input.checklist.lit,
+       input.checklist.legal, input.checklist.reachable, input.gpsAccuracyM]
+    );
+    return rows[0]!;
+  }
+
+  async addPhoto(stopId: string, storageKey: string, mimeType: string): Promise<StopPhotoRow> {
+    const { rows } = await this.pool.query<StopPhotoRow>(
+      `INSERT INTO stop_photos (stop_id, storage_key, mime_type)
+       VALUES ($1, $2, $3)
+       RETURNING id, stop_id, storage_key, mime_type, taken_at, created_at`,
+      [stopId, storageKey, mimeType]
+    );
+    return rows[0]!;
+  }
+
+  async photoForStop(stopId: string): Promise<StopPhotoRow | null> {
+    const { rows } = await this.pool.query<StopPhotoRow>(
+      `SELECT id, stop_id, storage_key, mime_type, taken_at, created_at
+       FROM stop_photos WHERE stop_id = $1 ORDER BY created_at ASC LIMIT 1`,
+      [stopId]
+    );
+    return rows[0] ?? null;
   }
 }

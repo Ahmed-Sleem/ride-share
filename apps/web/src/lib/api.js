@@ -114,9 +114,28 @@ const API = {
   /* ── geography (M2) ────────────────────────────────────────────────── */
   createStop: (payload) => API.request("POST", "/stops", payload),
   importStops: (csv) => API.request("POST", "/stops/import", { csv }),
-  listStops: () => API.request("GET", "/stops"),
+  listStops: (status) => API.request("GET", status ? `/stops?status=${status}` : "/stops"),
+  captureStop: (payload) => API.request("POST", "/stops/capture", payload),
   submitStop: (id) => API.request("POST", `/stops/${id}/submit`),
   reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
+  retireStop: (id) => API.request("POST", `/stops/${id}/retire`),
+
+  /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
+  stopPhoto: async (id) => {
+    if (typeof fetch !== "function") return null;
+    const token = API.access();
+    const res = await fetch(`${API.base}/stops/${id}/photo`, {
+      headers: token ? { authorization: "Bearer " + token } : {},
+    });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  },
 };
 
 class ApiError extends Error {
