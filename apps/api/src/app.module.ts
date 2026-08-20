@@ -16,6 +16,7 @@ import { ThrottleRepository } from './common/throttle/infra/throttle.repository.
 import { HealthModule } from './health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { DriversModule } from './modules/drivers/drivers.module.js';
+import { GeoModule } from './modules/geo/geo.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { SecurityModule } from './security/security.module.js';
 import type { Pool } from 'pg';
@@ -44,6 +45,7 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
     HealthModule,
     IdentityModule,
     DriversModule,
+    GeoModule,
     AuditModule,
     SecurityModule,
   ],

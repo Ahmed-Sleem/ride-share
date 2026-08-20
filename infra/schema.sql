@@ -1,3 +1,10 @@
+CREATE FUNCTION public.stop_verifications_append_only() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+RAISE EXCEPTION 'stop_verifications is append-only';
+END;
+$$;
 CREATE TABLE public.audit_log (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 actor_id uuid,
@@ -39,6 +46,47 @@ refresh_token_hash text NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 expires_at timestamp with time zone NOT NULL,
 revoked_at timestamp with time zone
+);
+CREATE TABLE public.stop_photos (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+stop_id uuid NOT NULL,
+storage_key text NOT NULL,
+taken_at timestamp with time zone,
+created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE public.stop_verifications (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+stop_id uuid NOT NULL,
+verifier_id uuid NOT NULL,
+decision text NOT NULL,
+reason text,
+device text,
+gps_accuracy_m double precision,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT stop_verifications_decision_check CHECK ((decision = ANY (ARRAY['approved'::text, 'rejected'::text])))
+);
+CREATE TABLE public.stops (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+code text NOT NULL,
+name_en text DEFAULT ''::text NOT NULL,
+name_ar text DEFAULT ''::text NOT NULL,
+lat double precision NOT NULL,
+lng double precision NOT NULL,
+status text DEFAULT 'draft'::text NOT NULL,
+source text DEFAULT 'desk'::text NOT NULL,
+created_by uuid,
+stand_ok boolean,
+lit_ok boolean,
+legal_stop_ok boolean,
+reachable_ok boolean,
+walking_to_next_m double precision,
+override_reason text,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT stops_lat_bounds CHECK (((lat >= ('-90'::integer)::double precision) AND (lat <= (90)::double precision))),
+CONSTRAINT stops_lng_bounds CHECK (((lng >= ('-180'::integer)::double precision) AND (lng <= (180)::double precision))),
+CONSTRAINT stops_source_check CHECK ((source = ANY (ARRAY['desk'::text, 'field'::text]))),
+CONSTRAINT stops_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'pending'::text, 'verified'::text, 'rejected'::text, 'retired'::text])))
 );
 CREATE TABLE public.throttle_records (
 key text NOT NULL,
@@ -100,6 +148,14 @@ ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.sessions
 ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.stop_photos
+ADD CONSTRAINT stop_photos_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.stop_verifications
+ADD CONSTRAINT stop_verifications_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.stops
+ADD CONSTRAINT stops_code_key UNIQUE (code);
+ALTER TABLE ONLY public.stops
+ADD CONSTRAINT stops_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.throttle_records
 ADD CONSTRAINT throttle_records_pkey PRIMARY KEY (key);
 ALTER TABLE ONLY public.users
@@ -116,13 +172,26 @@ ALTER TABLE ONLY public.verification_codes
 ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
+CREATE INDEX stop_photos_stop_idx ON public.stop_photos USING btree (stop_id);
+CREATE INDEX stop_verifications_stop_idx ON public.stop_verifications USING btree (stop_id);
+CREATE INDEX stops_lat_lng_idx ON public.stops USING btree (lat, lng);
+CREATE INDEX stops_status_idx ON public.stops USING btree (status) WHERE (status = 'verified'::text);
 CREATE INDEX throttle_records_expires_idx ON public.throttle_records USING btree (expires_at);
 CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
+CREATE TRIGGER stop_verifications_no_update BEFORE DELETE OR UPDATE ON public.stop_verifications FOR EACH ROW EXECUTE FUNCTION public.stop_verifications_append_only();
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.sessions
 ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.stop_photos
+ADD CONSTRAINT stop_photos_stop_id_fkey FOREIGN KEY (stop_id) REFERENCES public.stops(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.stop_verifications
+ADD CONSTRAINT stop_verifications_stop_id_fkey FOREIGN KEY (stop_id) REFERENCES public.stops(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.stop_verifications
+ADD CONSTRAINT stop_verifications_verifier_id_fkey FOREIGN KEY (verifier_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.stops
+ADD CONSTRAINT stops_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.vehicles
 ADD CONSTRAINT vehicles_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.users(id) ON DELETE CASCADE;

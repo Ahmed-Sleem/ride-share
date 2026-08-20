@@ -522,3 +522,22 @@ output) — see the engineering standard §3.3 and §4.
   (support fake refund, driver fake earnings, sample content returns).
 - Verified: web unit 272, a11y 14, server 5, verify:repo green. Bundle 319→308 KB. Full browser +
   db suites run in CI (GitHub Actions) on push.
+
+## M2 — P2.1 stop entity + distance module (DEC-197 numeric lat/lng)
+
+- Decisions: DEC-197 (numeric lat/lng, one shared distance module, no PostGIS — G-061 closed) and
+  DEC-198 (OpenStreetMap-based provider, free/no login, behind the MapProvider interface).
+- Migration 0011: stops (code unique, name_en/ar, lat/lng double precision + bounds CHECKs, status
+  draft|pending|verified|rejected|retired, source desk|field, created_by, checklist cols,
+  walking_to_next_m, override_reason), stop_photos, stop_verifications (append-only via trigger).
+  Indexes: stops_lat_lng_idx (lat,lng) + stops_status_idx (verified).
+- New geo module: domain/geo-math.ts (haversine + boundingBox), domain/stop.ts (bounds, stopCode,
+  spacingCheck), infra/stops.repository.ts (SQL only here), application/stops.service.ts (create +
+  duplicate guard + verifiedNear + two-person review), api/stops.controller.ts (POST /stops,
+  GET /stops, GET /stops/near [public verified-only], POST /stops/:id/review), geo.module.ts.
+- Config: STOP_MIN_SPACING_M (default 100), STOP_MAX_GAP_M (default 1000) — documented in .env.example.
+- Tests: 105 API tests green (geo-math 5, stop domain 5, service 9). Break checks observed failing:
+  coordinate bounds, minimum spacing, two-person self-approval, verified-only public near.
+- Verified: pnpm db:verify migrations up→down→up + schema drift clean; verify:repo green.
+- Remaining in M2: P2.2 desk tool UI, P2.3 field mode, P2.4 queue UI (the service rules for P2.4 are
+  already enforced), P2.5 corridor survey (owner fieldwork).

@@ -8,24 +8,24 @@
 
 ## 0 — Decisions (owner-only, before any code)
 
-- [ ] **G-061 resolved** (PostGIS vs numeric lat/lng + OSRM/geocoder) — recorded in `DECISIONS_REGISTER.md` as DEC-19x.
-- [ ] Map provider confirmed for the `MapProvider` interface (DEC-174 = commercial; Google key is owner-owned — the tool degrades honestly without it).
+- [x] **G-061 resolved** — DEC-197: numeric lat/lng + one shared distance module (no PostGIS).
+- [x] Map provider confirmed — DEC-198: OpenStreetMap-based (free, no login), behind the `MapProvider` interface, provider selected by env.
 
 ## P2.1 — Spatial data model and the stop entity
 
-- [ ] Migration `0011_stops.sql`: `stop` (name_en/ar, lat/lng or geography, status draft|pending|verified|rejected|retired, source desk|field, created_by, public code), `stop_photo`, `stop_verification` (append-only row: who, when, device, photo, GPS accuracy).
-- [ ] Spatial index for "stops near me" (GiST if PostGIS; a b-tree lat/lng or H3 approach otherwise).
-- [ ] Domain rules: coordinate bounds (lat −90..90, lng −180..180), `MinStopSpacing`, `MaxStopGap`, stop code generation.
-- [ ] Regenerate `packages/shared-types/src/db.generated.ts` + `infra/schema.sql`.
-- [ ] Migration runs up → down → up cleanly; `pnpm db:verify` green.
+- [x] Migration `0011_stops.sql`: `stops` (name_en/ar, lat/lng, status, source, created_by, code, checklist cols), `stop_photos`, `stop_verifications` (append-only via trigger).
+- [x] `stops_lat_lng_idx` b-tree on (lat,lng) + `stops_status_idx` on verified (DEC-197 model); the near query narrows by bounding box first.
+- [x] `domain/geo-math.ts` (haversine + bounding box) and `domain/stop.ts` (bounds, stable code, spacing) — pure + tested.
+- [x] Regenerated (10 tables; schema.sql includes the append-only trigger).
+- [x] Migration up→down→up clean; schema drift green (db-types check green post-commit).
 
 ### P2.1 tests (each observed failing first, §0.2)
 
-- [ ] Two stops 300 m apart: a 500 m radius returns both, 200 m returns one.
-- [ ] The radius query uses the index (EXPLAIN shows index/appropriate scan, not a full table scan).
-- [ ] A stop with longitude 200 is rejected.
-- [ ] `stop_verification` is append-only (UPDATE refused).
-- [ ] Generated types match the schema (drift check).
+- [~] Covered by the domain haversine + verifiedNear unit tests (exact distance filtering); the bounding-box + radius behaviour is exercised through `verifiedNear`.
+- [~] Bounding-box query is written to use the (lat,lng) index; an EXPLAIN assertion lands with the P2.2 integration suite (needs a seeded DB in CI).
+- [x] Bounds test observed failing when the guard was removed.
+- [~] Enforced by a BEFORE UPDATE/DELETE trigger in the migration; a DB-level test lands with the P2.2 integration suite.
+- [x] `pnpm db:verify` type-drift check green (post-commit).
 
 ## P2.2 — Stop Mapping Tool, desk mode (O-18)
 

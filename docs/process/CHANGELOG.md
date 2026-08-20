@@ -549,3 +549,11 @@
   contacts); sos/report are honest M4 placeholders.
 - New bundle-wide guard: "no sample content in the bundle" + break case (observed failing).
 - 272 unit / 14 a11y / 5 server / repo checks green. Bundle 319→308 KB.
+
+## 2026-08-19 — M2 P2.1: stop entity + distance module (numeric lat/lng)
+
+- DEC-197: numeric lat/lng (no PostGIS) — G-061 closed; DEC-198: OSM map provider (free, no login).
+- stops / stop_photos / stop_verifications (append-only trigger) + lat/lng & verified indexes.
+- geo module: haversine + bounding box, stop codes, spacing guard, bounds, two-person verify,
+  public verified-only "stops near me" endpoint.
+- 105 API tests green; every new check observed failing; db:verify + repo checks green.

@@ -37,6 +37,13 @@ export const envSchema = {
   // loud warning on boot. Production should keep 'false'.
   AUTH_OTP_BYPASS: z.enum(['true', 'false']).default('false'),
 
+  // ── geography (M2, DEC-197 numeric lat/lng) ─────────────────────────
+  // Minimum spacing between stops in metres — a new stop closer than this to
+  // an existing one requires an explicit override + reason (P2.2).
+  STOP_MIN_SPACING_M: z.coerce.number().int().min(10).max(1000).default(100),
+  // Maximum walking gap between consecutive stops on a corridor (P2.5).
+  STOP_MAX_GAP_M: z.coerce.number().int().min(100).max(5000).default(1000),
+
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),
   PAYMOB_HMAC_SECRET: z.string().optional(),
