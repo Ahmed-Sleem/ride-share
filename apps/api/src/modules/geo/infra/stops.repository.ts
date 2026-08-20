@@ -78,6 +78,35 @@ export class StopsRepository {
     await this.pool.query('UPDATE stops SET status = $1, updated_at = now() WHERE id = $2', [status, id]);
   }
 
+  /** Bulk insert in ONE transaction — all-or-nothing (P2.2 CSV import). A
+      partial corridor is worse than no corridor. */
+  async createMany(inputs: CreateStopInput[]): Promise<StopRow[]> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const out: StopRow[] = [];
+      for (const input of inputs) {
+        const { rows } = await client.query<StopRow>(
+          `INSERT INTO stops (code, name_en, name_ar, lat, lng, source, created_by, override_reason)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING id, code, name_en, name_ar, lat, lng, status, source, created_by,
+                     stand_ok, lit_ok, legal_stop_ok, reachable_ok, walking_to_next_m,
+                     override_reason, created_at`,
+          [input.code, input.nameEn, input.nameAr, input.lat, input.lng,
+           input.source, input.createdBy, input.overrideReason ?? null]
+        );
+        out.push(rows[0]!);
+      }
+      await client.query('COMMIT');
+      return out;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
   /** The public "stops near me" is verified stops ONLY (P2.4). */
   async verifiedInBox(lat: number, lng: number, radiusM: number): Promise<StopRow[]> {
     const b = boundingBox(lat, lng, radiusM);

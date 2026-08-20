@@ -48,7 +48,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, opsTarget:null, stack:[],
+  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
@@ -102,6 +102,7 @@ const money = n => {
 const $ = (tag, opts={}, ...kids) => {
   const n = document.createElement(tag);
   if (opts.class) n.className = opts.class;
+  if (opts.id != null) n.id = opts.id;   // convenience: id is a plain property
   if (opts.text != null) n.textContent = opts.text;
   if (opts.attrs) for (const [k,v] of Object.entries(opts.attrs)){
     if (v === true) n.setAttribute(k,"");
@@ -320,11 +321,12 @@ function OtpInput({ onComplete }) {
 }
 
 /* Map — drawn illustration. Labelled, never presented as live tiles. */
-function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false}){
-  // Real Google Maps when the key is configured (via /v1/config) and the
-  // script has loaded; otherwise the labelled illustration. No fake tiles.
-  if (window.__rsMapsOn && typeof google === "object" && google.maps) {
-    return realMapView({h, route, locate});
+function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false, onPick=null}){
+  // Real map (Google when a key is configured, or OpenStreetMap via Leaflet —
+  // DEC-198) once its SDK has loaded; otherwise the labelled illustration.
+  // No fake tiles.
+  if (window.__rsMapsOn && (window.google?.maps || window.L)) {
+    return realMapView({h, route, locate, onPick});
   }
   const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
@@ -382,28 +384,43 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
   return box;
 }
 
-/* Real Google Map — activates only when GOOGLE_MAPS_API_KEY is set and the
-   script has loaded. Honest fallback: without the key, the illustration
-   renders and is labelled as such. Geolocation (navigator.geolocation) is
-   exercised here so the Capacitor mobile build inherits it for free. */
+/* Real map — Google when GOOGLE_MAPS_API_KEY is set, otherwise OpenStreetMap
+   via Leaflet (DEC-198, free + no key). Honest fallback: with no SDK loaded
+   the illustration renders and is labelled as such. `onPick` (lat,lng) turns
+   the map into a coordinate picker for the desk mapping tool. */
 const ALEX_CENTER = { lat: 31.2241, lng: 29.9549 }; // Alexandria
-function realMapView({h, route, locate}) {
+function realMapView({h, route, locate, onPick}) {
   const id = "gmap-" + Math.random().toString(36).slice(2, 9);
   const box = $("div",{class:"mapbox mapbox--real",style:{height:h+"px"}});
   box.append($("div",{class:"mapbox__canvas",attrs:{id, "aria-label":t("mapLive")}}));
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
     on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
-  box.append($("div",{class:"attribution",text:"Google"}));
+  box.append($("div",{class:"attribution",text: window.L ? "OpenStreetMap" : "Google"}));
   // init after the element is in the DOM
   setTimeout(()=>{
     const el = document.getElementById(id);
-    if (!el || !window.google?.maps) return;
+    if (!el) return;
+
+    if (window.L) {                       // OpenStreetMap via Leaflet
+      const map = L.map(el, { zoomControl: false, attributionControl: true });
+      map.setView([ALEX_CENTER.lat, ALEX_CENTER.lng], 13);
+      L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      window.__rsMapInstance = map;
+      if (onPick) map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
+      return;
+    }
+
+    if (!window.google?.maps) return;
     const map = new google.maps.Map(el, {
       center: ALEX_CENTER, zoom: 13,
       disableDefaultUI: true, clickableIcons: false,
       styles: [], fullscreenControl: false, streetViewControl: false,
     });
     window.__rsMapInstance = map;
+    if (onPick) map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
     if (route) {
       // token, not a literal — the design system owns every colour (§0.3)
       const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
@@ -420,16 +437,19 @@ function realMapView({h, route, locate}) {
 
 function locateMe() {
   const map = window.__rsMapInstance;
-  if (map && navigator.geolocation) {
+  if (!map) { toast("locateDenied"); return; }
+  const go = (lat, lng) => {
+    if (map.setView) map.setView([lat, lng], map.getZoom && map.getZoom() > 3 ? map.getZoom() : 13);
+    else map.setCenter({ lat, lng });
+  };
+  if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (pos) => map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => toast("locateDenied"),
+      (pos) => go(pos.coords.latitude, pos.coords.longitude),
+      () => go(ALEX_CENTER.lat, ALEX_CENTER.lng),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
-  } else if (map) {
-    map.setCenter(ALEX_CENTER);
   } else {
-    toast("locateDenied");
+    go(ALEX_CENTER.lat, ALEX_CENTER.lng);
   }
 }
 

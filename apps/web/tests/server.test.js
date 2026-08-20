@@ -30,7 +30,8 @@ test('config endpoint returns client-safe maps config', async () => {
   const r = await run('/v1/config');
   assert.equal(r.status, 200);
   const body = JSON.parse(r.body);
-  assert.deepEqual(body.maps, { provider: 'google', apiKey: '' });
+  assert.equal(body.maps.provider, 'osm');   // DEC-198: OSM is the default, no key
+  assert.equal(body.maps.apiKey, '');
 });
 
 test('proxy without a configured API is a clean 503 (never a crash)', async () => {

@@ -1,12 +1,13 @@
 /* Stops service — application layer. Business rules (bounds, spacing, the
    two-person rule) live in domain/ and here; persistence in infra/. Authority
    is checked against the single resolver (§8.2). */
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CONFIG, type Env } from '../../../config/env.js';
 import { StopsRepository } from '../infra/stops.repository.js';
 import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
-import { isWithinBounds, nextStopCode, spacingCheck, type StopStatus } from '../domain/stop.js';
+import { isWithinBounds, nextStopCode, spacingCheck, stopCode, type StopStatus } from '../domain/stop.js';
+import { parseStopsCsv } from '../domain/csv.js';
 import { distanceMeters } from '../domain/geo-math.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import type { StopRow } from '../contracts/types.js';
@@ -75,6 +76,53 @@ export class StopsService {
   async list(actor: Actor, statuses?: StopStatus[]): Promise<StopRow[]> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
     return this.stops.listByStatus(statuses ?? ['draft', 'pending', 'verified', 'rejected', 'retired']);
+  }
+
+  /** Bulk import from CSV (P2.2): all-or-nothing. One malformed row or one
+      out-of-bounds coordinate aborts the WHOLE import with the 1-based row
+      number — a partial corridor is worse than no corridor. */
+  async importStops(actor: Actor, csv: string): Promise<{ imported: number }> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
+    const parsed = parseStopsCsv(csv);
+    if (!parsed.ok) {
+      throw new BadRequestException({ message_key: 'geo.csv_invalid', details: { row: parsed.row, reason: parsed.error } });
+    }
+    parsed.rows.forEach((r, i) => {
+      if (!isWithinBounds(r.lat, r.lng)) {
+        throw new BadRequestException({
+          message_key: 'geo.coordinates_out_of_bounds', details: { row: i + 1 },
+        });
+      }
+    });
+    // stable codes continue from the highest existing code
+    const codes = (await this.stops.listByStatus(['draft', 'pending', 'verified', 'rejected', 'retired']))
+      .map((s) => s.code).sort();
+    let seq = Number(codes.at(-1)?.slice(-3) ?? 0) || 0;
+    const created = await this.stops.createMany(
+      parsed.rows.map((r) => ({
+        code: stopCode(STOP_CITY, STOP_ZONE, ++seq),
+        nameEn: r.nameEn, nameAr: r.nameAr, lat: r.lat, lng: r.lng,
+        source: 'desk', createdBy: actor.id,
+      }))
+    );
+    await this.audit.record(actor, 'stop.import', {
+      targetType: 'stop', after: { count: created.length },
+    });
+    return { imported: created.length };
+  }
+
+  /** Draft → pending (P2.2 "submit to pending"). Only the author may submit,
+      and only from draft. */
+  async submitStop(actor: Actor, id: string): Promise<{ ok: true }> {
+    assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
+    const stop = await this.stops.findById(id);
+    if (!stop) throw new NotFoundException({ message_key: 'geo.stop_not_found' });
+    if (stop.status !== 'draft') {
+      throw new ConflictException({ message_key: 'geo.stop_not_draft', details: { status: stop.status } });
+    }
+    await this.stops.setStatus(id, 'pending');
+    await this.audit.record(actor, 'stop.submit', { targetType: 'stop', targetId: id });
+    return { ok: true };
   }
 
   /** Desk review → verified/rejected. Two-person rule (P2.4): the author of

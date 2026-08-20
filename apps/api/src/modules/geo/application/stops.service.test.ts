@@ -3,7 +3,7 @@
    two-person verification rule. Each has been observed failing (§0.2). */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { StopsService } from './stops.service.js';
 import type { Env } from '../../../config/env.js';
 import type { StopRow } from '../contracts/types.js';
@@ -23,6 +23,7 @@ class FakeStops {
     this.rows.set(id, row);
     return row;
   }
+  async createMany(inputs: any[]) { const out = []; for (const i of inputs) out.push(await this.create(i)); return out; }
   async findById(id: string) { return this.rows.get(id) ?? null; }
   async candidatesInBox() { return [...this.rows.values()]; }
   async verifiedInBox() { return [...this.rows.values()].filter((s) => s.status === 'verified'); }
@@ -116,4 +117,41 @@ test('a different administrator can verify it; rejection requires a reason', asy
 test('reviewing a missing stop is a not-found', async () => {
   const { svc } = setup();
   await assert.rejects(() => svc.reviewStop(ops2, 'missing', 'approved'), NotFoundException);
+});
+
+test('CSV import creates every stop; a malformed row aborts with zero created', async () => {
+  const { svc, stops } = setup();
+  const good = '31.201,29.901,A\n31.202,29.902,B\n31.203,29.903,C';
+  const res = await svc.importStops(ops, good);
+  assert.equal(res.imported, 3);
+  assert.equal([...stops.rows.values()].length, 3);
+  // all-or-nothing: a bad row aborts BEFORE any insert
+  await assert.rejects(
+    () => svc.importStops(ops, '31.3,29.9,Ok\nbad,Bad\n'),
+    (e: unknown) => e instanceof BadRequestException && JSON.stringify((e as any).getResponse()).includes('geo.csv_invalid')
+  );
+  assert.equal([...stops.rows.values()].length, 3, 'no partial import');
+});
+
+test('CSV import refuses an out-of-bounds coordinate', async () => {
+  const { svc } = setup();
+  await assert.rejects(
+    () => svc.importStops(ops, '191,29.9,Bad latitude'),
+    (e: unknown) => e instanceof BadRequestException && JSON.stringify((e as any).getResponse()).includes('geo.coordinates_out_of_bounds')
+  );
+});
+
+test('a rider cannot import stops (§8.2 authority)', async () => {
+  const { svc } = setup();
+  await assert.rejects(() => svc.importStops(rider, '31.2,29.9,X'), ForbiddenException);
+});
+
+test('submit moves a draft to pending; a verified stop cannot be resubmitted', async () => {
+  const { svc } = setup();
+  const s = await svc.createStop(ops, { lat: 31.2, lng: 29.9, source: 'desk' });
+  await svc.submitStop(ops, s.id);
+  const pending = await svc.list(ops, ['pending']);
+  assert.ok(pending.some((x) => x.id === s.id), 'draft → pending');
+  await svc.reviewStop(ops2, s.id, 'approved');
+  await assert.rejects(() => svc.submitStop(ops, s.id), ConflictException);
 });

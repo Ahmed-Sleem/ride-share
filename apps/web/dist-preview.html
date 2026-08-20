@@ -1061,7 +1061,15 @@ en:{
   na:"Not available at your role.",
   opsNoApplications:"No driver applications yet — they appear here when a driver applies.",
   opsNoVehicles:"No vehicles yet — approved drivers add them from their profile.",
+  opsNoStops:"No stops yet — add one with coordinates or import a CSV.",
   opsStopsComing:"Stop mapping and the verification queue arrive with geography (M2).",
+  addStop:"Add stop", latLabel:"Latitude", lngLabel:"Longitude",
+  stopNameEn:"Name (English)", stopNameAr:"Name (Arabic)", sourceDesk:"Desk",
+  sourceField:"Field", importCsv:"Import CSV", csvHint:"lat,lng,name_en,name_ar — one stop per line",
+  stopsList:"Stops", stopTooClose:"Too close to another stop — add a reason to override.",
+  overrideReason:"Override reason", placedStop:"Stop added", importedStops:"stops imported",
+  submitStop:"Submit", stopSubmitted:"Stop submitted for verification",
+  stopStatus:{draft:"Draft",pending:"Pending",verified:"Verified",rejected:"Rejected",retired:"Retired"},
   opsRoutesComing:"Routes and the slot grid arrive with the route model (M3).",
   opsUsersComing:"User management arrives with the journey model (M3).",
   managerComing:"Coverage, pricing, promotions and analytics arrive with commercial control (M5).",
@@ -1219,7 +1227,15 @@ ar:{
   na:"غير متاح لدورك.",
   opsNoApplications:"لا توجد طلبات سائقين بعد — تظهر هنا عند تقدّم سائق.",
   opsNoVehicles:"لا توجد مركبات بعد — يضيفها السائقون المعتمدون من حساباتهم.",
+  opsNoStops:"لا توجد محطات بعد — أضف واحدة بالإحداثيات أو استورد CSV.",
   opsStopsComing:"رسم المحطات وطابور التحقق يأتيان مع الجغرافيا (M2).",
+  addStop:"إضافة محطة", latLabel:"خط العرض", lngLabel:"خط الطول",
+  stopNameEn:"الاسم (إنجليزي)", stopNameAr:"الاسم (عربي)", sourceDesk:"مكتبي",
+  sourceField:"ميداني", importCsv:"استيراد CSV", csvHint:"lat,lng,name_en,name_ar — محطة في كل سطر",
+  stopsList:"المحطات", stopTooClose:"قريبة جدًا من محطة أخرى — أضف سببًا للتجاوز.",
+  overrideReason:"سبب التجاوز", placedStop:"تمت إضافة المحطة", importedStops:"محطة مستوردة",
+  submitStop:"إرسال", stopSubmitted:"أُرسلت المحطة للتحقق",
+  stopStatus:{draft:"مسودة",pending:"قيد الانتظار",verified:"موثّقة",rejected:"مرفوضة",retired:"متقاعدة"},
   opsRoutesComing:"المسارات وشبكة المواعيد تأتيان مع نموذج المسار (M3).",
   opsUsersComing:"إدارة المستخدمين تأتي مع نموذج الرحلة (M3).",
   managerComing:"التغطية والتسعير والعروض والتحليلات تأتي مع التحكم التجاري (M5).",
@@ -1369,7 +1385,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
-  opsView:null, opsTarget:null, stack:[],
+  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
@@ -1423,6 +1439,7 @@ const money = n => {
 const $ = (tag, opts={}, ...kids) => {
   const n = document.createElement(tag);
   if (opts.class) n.className = opts.class;
+  if (opts.id != null) n.id = opts.id;   // convenience: id is a plain property
   if (opts.text != null) n.textContent = opts.text;
   if (opts.attrs) for (const [k,v] of Object.entries(opts.attrs)){
     if (v === true) n.setAttribute(k,"");
@@ -1641,11 +1658,12 @@ function OtpInput({ onComplete }) {
 }
 
 /* Map — drawn illustration. Labelled, never presented as live tiles. */
-function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false}){
-  // Real Google Maps when the key is configured (via /v1/config) and the
-  // script has loaded; otherwise the labelled illustration. No fake tiles.
-  if (window.__rsMapsOn && typeof google === "object" && google.maps) {
-    return realMapView({h, route, locate});
+function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet=false, zoom=false, locate=false, onPick=null}){
+  // Real map (Google when a key is configured, or OpenStreetMap via Leaflet —
+  // DEC-198) once its SDK has loaded; otherwise the labelled illustration.
+  // No fake tiles.
+  if (window.__rsMapsOn && (window.google?.maps || window.L)) {
+    return realMapView({h, route, locate, onPick});
   }
   const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
@@ -1703,28 +1721,43 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
   return box;
 }
 
-/* Real Google Map — activates only when GOOGLE_MAPS_API_KEY is set and the
-   script has loaded. Honest fallback: without the key, the illustration
-   renders and is labelled as such. Geolocation (navigator.geolocation) is
-   exercised here so the Capacitor mobile build inherits it for free. */
+/* Real map — Google when GOOGLE_MAPS_API_KEY is set, otherwise OpenStreetMap
+   via Leaflet (DEC-198, free + no key). Honest fallback: with no SDK loaded
+   the illustration renders and is labelled as such. `onPick` (lat,lng) turns
+   the map into a coordinate picker for the desk mapping tool. */
 const ALEX_CENTER = { lat: 31.2241, lng: 29.9549 }; // Alexandria
-function realMapView({h, route, locate}) {
+function realMapView({h, route, locate, onPick}) {
   const id = "gmap-" + Math.random().toString(36).slice(2, 9);
   const box = $("div",{class:"mapbox mapbox--real",style:{height:h+"px"}});
   box.append($("div",{class:"mapbox__canvas",attrs:{id, "aria-label":t("mapLive")}}));
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
     on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
-  box.append($("div",{class:"attribution",text:"Google"}));
+  box.append($("div",{class:"attribution",text: window.L ? "OpenStreetMap" : "Google"}));
   // init after the element is in the DOM
   setTimeout(()=>{
     const el = document.getElementById(id);
-    if (!el || !window.google?.maps) return;
+    if (!el) return;
+
+    if (window.L) {                       // OpenStreetMap via Leaflet
+      const map = L.map(el, { zoomControl: false, attributionControl: true });
+      map.setView([ALEX_CENTER.lat, ALEX_CENTER.lng], 13);
+      L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      window.__rsMapInstance = map;
+      if (onPick) map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
+      return;
+    }
+
+    if (!window.google?.maps) return;
     const map = new google.maps.Map(el, {
       center: ALEX_CENTER, zoom: 13,
       disableDefaultUI: true, clickableIcons: false,
       styles: [], fullscreenControl: false, streetViewControl: false,
     });
     window.__rsMapInstance = map;
+    if (onPick) map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
     if (route) {
       // token, not a literal — the design system owns every colour (§0.3)
       const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
@@ -1741,16 +1774,19 @@ function realMapView({h, route, locate}) {
 
 function locateMe() {
   const map = window.__rsMapInstance;
-  if (map && navigator.geolocation) {
+  if (!map) { toast("locateDenied"); return; }
+  const go = (lat, lng) => {
+    if (map.setView) map.setView([lat, lng], map.getZoom && map.getZoom() > 3 ? map.getZoom() : 13);
+    else map.setCenter({ lat, lng });
+  };
+  if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (pos) => map.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => toast("locateDenied"),
+      (pos) => go(pos.coords.latitude, pos.coords.longitude),
+      () => go(ALEX_CENTER.lat, ALEX_CENTER.lng),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
-  } else if (map) {
-    map.setCenter(ALEX_CENTER);
   } else {
-    toast("locateDenied");
+    go(ALEX_CENTER.lat, ALEX_CENTER.lng);
   }
 }
 
@@ -1911,6 +1947,13 @@ const API = {
     API.request("POST", `/ops/driver-applications/${id}/review`, { decision, reason }),
   listVehicles: () => API.request("GET", "/ops/vehicles"),
   reviewVehicle: (id, decision) => API.request("POST", `/ops/vehicles/${id}/review`, { decision }),
+
+  /* ── geography (M2) ────────────────────────────────────────────────── */
+  createStop: (payload) => API.request("POST", "/stops", payload),
+  importStops: (csv) => API.request("POST", "/stops/import", { csv }),
+  listStops: () => API.request("GET", "/stops"),
+  submitStop: (id) => API.request("POST", `/stops/${id}/submit`),
+  reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
 };
 
 class ApiError extends Error {
@@ -2500,16 +2543,18 @@ function adminStaff() {
         ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
     Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
-  w.append($("div",{id:"staff-list"}), null);
-  loadStaffInto(document.getElementById("staff-list"));
+  const list = $("div",{id:"staff-list"});
+  w.append(list);
+  loadStaffInto(list);
   return w;
 }
 
 function adminAudit() {
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminAudit")}));
-  w.append($("div",{id:"audit-list"}), null);
-  loadAuditInto(document.getElementById("audit-list"));
+  const list = $("div",{id:"audit-list"});
+  w.append(list);
+  loadAuditInto(list);
   return w;
 }
 
@@ -2848,11 +2893,13 @@ function opsQueue(){                                          // O-10
   if(S.opsView==="review") return opsReview();
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminDriverQueue")}));
-  w.append($("div",{id:"app-list"}), null);
+  const appList = $("div",{id:"app-list"});
+  w.append(appList);
   w.append($("h2",{class:"t-head",text:t("adminVehicleQueue")}));
-  w.append($("div",{id:"veh-list"}), null);
-  loadApplicationsInto(document.getElementById("app-list"));
-  loadVehiclesInto(document.getElementById("veh-list"));
+  const vehList = $("div",{id:"veh-list"});
+  w.append(vehList);
+  loadApplicationsInto(appList);
+  loadVehiclesInto(vehList);
   return w;
 }
 
@@ -2934,8 +2981,9 @@ async function reviewVehicle(id, decision) {
 function opsLiveMap(){                                        // O-17
   const w=$("div",{class:"main"});
   w.append(MapView({h:240, fleet:true, vehicle:false}));
-  w.append($("div",{id:"veh-table"}), null);
-  loadVehicleTableInto(document.getElementById("veh-table"));
+  const tbl = $("div",{id:"veh-table"});
+  w.append(tbl);
+  loadVehicleTableInto(tbl);
   return w;
 }
 
@@ -2957,8 +3005,106 @@ async function loadVehicleTableInto(el) {
 
 function opsStops(){                                          // O-18 / O-20
   const w=$("div",{class:"main"});
-  w.append(Empty("stops", t("nav.stops"), t("opsStopsComing")));
+  /* Add a stop: exact coordinates + bilingual names. The map below doubles as
+     a coordinate picker when the (free, no-key) OSM map has loaded; the form
+     always works. */
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("addStop")}),
+    $("div",{class:"grid grid--tight"},
+      field("stop-lat", t("latLabel"), "text", "off"),
+      field("stop-lng", t("lngLabel"), "text", "off"),
+      field("stop-name-en", t("stopNameEn"), "text", "off"),
+      field("stop-name-ar", t("stopNameAr"), "text", "off")),
+    S.stopTooClose
+      ? $("div",{class:"stack gap2"},
+          Banner("warn", t("stopTooClose")),
+          field("stop-override", t("overrideReason"), "text", "off"))
+      : null,
+    Btn({label:t("addStop"), block:true, dis:S.stopBusy, on:()=>createStopAction()})));
+
+  w.append(MapView({h:190, vehicle:false, route:false, stops:false,
+    onPick:(lat,lng)=>{
+      const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+      if(la) la.value = lat.toFixed(6);
+      if(lo) lo.value = lng.toFixed(6);
+      toast(t("placedStop"));
+    }}));
+
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("importCsv")}),
+    $("p",{class:"t-cap",text:t("csvHint")}),
+    $("textarea",{class:"input", attrs:{id:"stop-csv", "aria-label":t("importCsv")}}),
+    Btn({label:t("importCsv"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>importCsvAction()})));
+
+  w.append($("h2",{class:"t-head",text:t("stopsList")}));
+  const list = $("div",{id:"stops-list"});
+  w.append(list);
+  loadStopsInto(list);
   return w;
+}
+
+async function createStopAction() {
+  const lat = Number(val("stop-lat")), lng = Number(val("stop-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  const payload = {
+    lat, lng, source: "desk",
+    nameEn: val("stop-name-en") || undefined,
+    nameAr: val("stop-name-ar") || undefined,
+  };
+  if (S.stopTooClose) payload.overrideReason = val("stop-override") || undefined;
+  S.stopBusy = true; render();
+  try {
+    await API.createStop(payload);
+    S.stopTooClose = null; S.stopBusy = false;
+    toast(t("placedStop"));
+    render();
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) {
+    S.stopBusy = false;
+    if (e.messageKey === "geo.stop_too_close") {
+      S.stopTooClose = (e.payload && e.payload.details) || {};
+      render();
+    } else { toast(errText(e.messageKey)); render(); }
+  }
+}
+
+async function importCsvAction() {
+  const csv = val("stop-csv");
+  if (!csv.trim()) { toast(t("validation.failed")); return; }
+  S.stopBusy = true; render();
+  try {
+    const res = await API.importStops(csv);
+    S.stopBusy = false;
+    toast(`${res.imported} ${t("importedStops")}`);
+    render();
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function loadStopsInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const stops = await API.listStops();
+    if (!stops.length) { el.append(Empty("stops", t("stopsList"), t("opsNoStops"))); return; }
+    stops.forEach(s=> el.append(Row({
+      icon: "stops",
+      title: $("span",{class:"ltr",text:s.code}),
+      sub: `${s.name_en || s.name_ar || "—"} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
+      right: $("div",{class:"row gap2"},
+        Chip({label:t("stopStatus."+s.status),
+          kind: s.status==="verified" ? "ok" : s.status==="rejected" ? "danger" : s.status==="pending" ? "warn" : ""}),
+        s.status==="draft" ? Btn({label:t("submitStop"), kind:"ghost", on:()=>submitStopAction(s.id)}) : null),
+      bordered:true })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function submitStopAction(id) {
+  try {
+    await API.submitStop(id);
+    toast(t("stopSubmitted"));
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 function opsRoutes(){                                         // O-23
@@ -3297,9 +3443,22 @@ async function loadMapsConfig(){
   if (location.protocol === "file:") return; // no network on file:// previews
   try {
     const cfg = await API.getConfig();
-    if (cfg && cfg.maps && cfg.maps.apiKey) {
+    const provider = (cfg && cfg.maps && cfg.maps.provider) || "osm"; // DEC-198: OSM default
+    if (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) {
       const s = document.createElement("script");
       s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
+      s.async = true;
+      s.onload = () => { window.__rsMapsOn = true; render(); };
+      s.onerror = () => {};
+      document.head.appendChild(s);
+    } else if (provider !== "google") {
+      // OpenStreetMap via Leaflet — free, no key, no login (DEC-198).
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(css);
+      const s = document.createElement("script");
+      s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
       s.async = true;
       s.onload = () => { window.__rsMapsOn = true; render(); };
       s.onerror = () => {};

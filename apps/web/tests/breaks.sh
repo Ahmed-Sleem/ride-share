@@ -160,6 +160,14 @@ run_break "sample content returns to the bundle" src/data/content.js \
   's|const T = {|const T = {\n  sample:"Corniche Line",|' \
   "no sample content in the bundle (demo data is gone)"
 
+run_break "stops tool loses its coordinate form" src/screens/staff.js \
+  's|      field("stop-lat", t("latLabel"), "text", "off"),|      field("stop-latX", t("latLabel"), "text", "off"),|' \
+  "stops tool has a coordinate form"
+
+run_break "stops tool loses its CSV import" src/screens/staff.js \
+  's|    $("textarea",{class:"input", attrs:{id:"stop-csv"|    $("textarea",{class:"input", attrs:{id:"stop-csvX"|' \
+  "stops tool has a CSV import"
+
 run_break "rider home reverts to sample routes" src/screens/rider.js \
   's|  w.append(Empty("routes", t("comingSoon"), t("routesComingBody")));|  w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
   "home has no sample route strings"

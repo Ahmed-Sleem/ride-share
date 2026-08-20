@@ -557,3 +557,13 @@
 - geo module: haversine + bounding box, stop codes, spacing guard, bounds, two-person verify,
   public verified-only "stops near me" endpoint.
 - 105 API tests green; every new check observed failing; db:verify + repo checks green.
+
+## 2026-08-19 — M2 P2.2: desk mapping tool (stops UI, CSV import, OSM map)
+
+- Stops: POST /stops/import (all-or-nothing CSV) and POST /stops/:id/submit (draft→pending).
+- Ops "Stops" screen is a real tool: coordinate + bilingual name form, duplicate-guard override,
+  OSM click-to-place map, CSV import, stops list with status chips + submit.
+- MapProvider: OSM/Leaflet (free, no key) is the default; Google behind the same surface when a key
+  is set; /v1/config reports the provider.
+- Fixed: $() now honours `id`, and list loaders pass element refs (admin/ops lists actually attach).
+- 114 API / 279 unit / 14 a11y / 5 server / repo checks green.

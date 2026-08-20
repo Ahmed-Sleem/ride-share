@@ -9,11 +9,13 @@ function opsQueue(){                                          // O-10
   if(S.opsView==="review") return opsReview();
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminDriverQueue")}));
-  w.append($("div",{id:"app-list"}), null);
+  const appList = $("div",{id:"app-list"});
+  w.append(appList);
   w.append($("h2",{class:"t-head",text:t("adminVehicleQueue")}));
-  w.append($("div",{id:"veh-list"}), null);
-  loadApplicationsInto(document.getElementById("app-list"));
-  loadVehiclesInto(document.getElementById("veh-list"));
+  const vehList = $("div",{id:"veh-list"});
+  w.append(vehList);
+  loadApplicationsInto(appList);
+  loadVehiclesInto(vehList);
   return w;
 }
 
@@ -95,8 +97,9 @@ async function reviewVehicle(id, decision) {
 function opsLiveMap(){                                        // O-17
   const w=$("div",{class:"main"});
   w.append(MapView({h:240, fleet:true, vehicle:false}));
-  w.append($("div",{id:"veh-table"}), null);
-  loadVehicleTableInto(document.getElementById("veh-table"));
+  const tbl = $("div",{id:"veh-table"});
+  w.append(tbl);
+  loadVehicleTableInto(tbl);
   return w;
 }
 
@@ -118,8 +121,106 @@ async function loadVehicleTableInto(el) {
 
 function opsStops(){                                          // O-18 / O-20
   const w=$("div",{class:"main"});
-  w.append(Empty("stops", t("nav.stops"), t("opsStopsComing")));
+  /* Add a stop: exact coordinates + bilingual names. The map below doubles as
+     a coordinate picker when the (free, no-key) OSM map has loaded; the form
+     always works. */
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("addStop")}),
+    $("div",{class:"grid grid--tight"},
+      field("stop-lat", t("latLabel"), "text", "off"),
+      field("stop-lng", t("lngLabel"), "text", "off"),
+      field("stop-name-en", t("stopNameEn"), "text", "off"),
+      field("stop-name-ar", t("stopNameAr"), "text", "off")),
+    S.stopTooClose
+      ? $("div",{class:"stack gap2"},
+          Banner("warn", t("stopTooClose")),
+          field("stop-override", t("overrideReason"), "text", "off"))
+      : null,
+    Btn({label:t("addStop"), block:true, dis:S.stopBusy, on:()=>createStopAction()})));
+
+  w.append(MapView({h:190, vehicle:false, route:false, stops:false,
+    onPick:(lat,lng)=>{
+      const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+      if(la) la.value = lat.toFixed(6);
+      if(lo) lo.value = lng.toFixed(6);
+      toast(t("placedStop"));
+    }}));
+
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("importCsv")}),
+    $("p",{class:"t-cap",text:t("csvHint")}),
+    $("textarea",{class:"input", attrs:{id:"stop-csv", "aria-label":t("importCsv")}}),
+    Btn({label:t("importCsv"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>importCsvAction()})));
+
+  w.append($("h2",{class:"t-head",text:t("stopsList")}));
+  const list = $("div",{id:"stops-list"});
+  w.append(list);
+  loadStopsInto(list);
   return w;
+}
+
+async function createStopAction() {
+  const lat = Number(val("stop-lat")), lng = Number(val("stop-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  const payload = {
+    lat, lng, source: "desk",
+    nameEn: val("stop-name-en") || undefined,
+    nameAr: val("stop-name-ar") || undefined,
+  };
+  if (S.stopTooClose) payload.overrideReason = val("stop-override") || undefined;
+  S.stopBusy = true; render();
+  try {
+    await API.createStop(payload);
+    S.stopTooClose = null; S.stopBusy = false;
+    toast(t("placedStop"));
+    render();
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) {
+    S.stopBusy = false;
+    if (e.messageKey === "geo.stop_too_close") {
+      S.stopTooClose = (e.payload && e.payload.details) || {};
+      render();
+    } else { toast(errText(e.messageKey)); render(); }
+  }
+}
+
+async function importCsvAction() {
+  const csv = val("stop-csv");
+  if (!csv.trim()) { toast(t("validation.failed")); return; }
+  S.stopBusy = true; render();
+  try {
+    const res = await API.importStops(csv);
+    S.stopBusy = false;
+    toast(`${res.imported} ${t("importedStops")}`);
+    render();
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function loadStopsInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const stops = await API.listStops();
+    if (!stops.length) { el.append(Empty("stops", t("stopsList"), t("opsNoStops"))); return; }
+    stops.forEach(s=> el.append(Row({
+      icon: "stops",
+      title: $("span",{class:"ltr",text:s.code}),
+      sub: `${s.name_en || s.name_ar || "—"} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
+      right: $("div",{class:"row gap2"},
+        Chip({label:t("stopStatus."+s.status),
+          kind: s.status==="verified" ? "ok" : s.status==="rejected" ? "danger" : s.status==="pending" ? "warn" : ""}),
+        s.status==="draft" ? Btn({label:t("submitStop"), kind:"ghost", on:()=>submitStopAction(s.id)}) : null),
+      bordered:true })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function submitStopAction(id) {
+  try {
+    await API.submitStop(id);
+    toast(t("stopSubmitted"));
+    loadStopsInto(document.getElementById("stops-list"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 function opsRoutes(){                                         // O-23

@@ -541,3 +541,20 @@ output) — see the engineering standard §3.3 and §4.
 - Verified: pnpm db:verify migrations up→down→up + schema drift clean; verify:repo green.
 - Remaining in M2: P2.2 desk tool UI, P2.3 field mode, P2.4 queue UI (the service rules for P2.4 are
   already enforced), P2.5 corridor survey (owner fieldwork).
+
+## M2 — P2.2 desk mapping tool (stops UI + CSV import + OSM map)
+
+- Backend: POST /stops/import (all-or-nothing CSV: parseStopsCsv in domain/csv.ts, createMany in one
+  transaction), POST /stops/:id/submit (draft → pending). Service + controller + tests.
+- Frontend: ops "stops" screen is now a real desk tool — coordinate + bilingual-name form with the
+  duplicate-guard override flow, an OSM map that doubles as a click-picker (6-decimal precision),
+  CSV import, and the stops list with per-status chips + submit-to-pending. MAP_PROVIDER env
+  (default 'osm') selects the provider; /v1/config reports it; MapView + loadMapsConfig handle
+  Google and Leaflet/OSM behind one surface.
+- Fixed a latent bug found while wiring it: the $() helper ignored a bare `id` option AND the list
+  loaders read getElementById() before the node was in the document — the admin staff/audit and ops
+  application/vehicle lists never actually attached. $() now honours id; every initial loader passes
+  the element reference directly.
+- Tests: 114 API (9 new geo service + 5 csv) with break checks observed failing (csv all-or-nothing,
+  csv bounds); 279 web unit (new "STOP MAPPING TOOL" group + 2 break entries observed failing);
+  a11y 14, server 5 green; verify:repo green.

@@ -737,6 +737,22 @@ const m19e = (async () => {
   ok("bypass sign-in enters the app without a code", t.w.S.view==="app", String(t.w.S.view));
 })();
 
+group("M2 — STOP MAPPING TOOL (ops only)");
+(() => {
+  const t=boot();
+  // the tool lives in the ops nav; no other role sees it (§8.1)
+  ok("stops screen exists for ops", (t.w.PAGES.ops||[]).some((p)=>p.k==="stops"));
+  ok("stops screen is NOT in the rider nav", !(t.w.PAGES.rider||[]).some((p)=>p.k==="stops"));
+  ok("stops screen is NOT in the support nav", !(t.w.PAGES.support||[]).some((p)=>p.k==="stops"));
+
+  t.set({role:"ops", user:{id:"u1",role:"operations",name:"Ops"}});
+  t.go("ops","stops");
+  ok("stops tool has a coordinate form", !!t.q("#stop-lat") && !!t.q("#stop-lng"));
+  ok("stops tool has bilingual name fields", !!t.q("#stop-name-en") && !!t.q("#stop-name-ar"));
+  ok("stops tool has a CSV import", !!t.q("#stop-csv"));
+  ok("stops tool lists stops (real loader present)", !!t.q("#stops-list"));
+})();
+
 group("BUILD INTEGRITY");
 {
   ok("no sample content in the bundle (demo data is gone)",

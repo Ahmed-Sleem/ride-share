@@ -110,6 +110,13 @@ const API = {
     API.request("POST", `/ops/driver-applications/${id}/review`, { decision, reason }),
   listVehicles: () => API.request("GET", "/ops/vehicles"),
   reviewVehicle: (id, decision) => API.request("POST", `/ops/vehicles/${id}/review`, { decision }),
+
+  /* ── geography (M2) ────────────────────────────────────────────────── */
+  createStop: (payload) => API.request("POST", "/stops", payload),
+  importStops: (csv) => API.request("POST", "/stops/import", { csv }),
+  listStops: () => API.request("GET", "/stops"),
+  submitStop: (id) => API.request("POST", `/stops/${id}/submit`),
+  reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
 };
 
 class ApiError extends Error {

@@ -273,9 +273,22 @@ async function loadMapsConfig(){
   if (location.protocol === "file:") return; // no network on file:// previews
   try {
     const cfg = await API.getConfig();
-    if (cfg && cfg.maps && cfg.maps.apiKey) {
+    const provider = (cfg && cfg.maps && cfg.maps.provider) || "osm"; // DEC-198: OSM default
+    if (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) {
       const s = document.createElement("script");
       s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
+      s.async = true;
+      s.onload = () => { window.__rsMapsOn = true; render(); };
+      s.onerror = () => {};
+      document.head.appendChild(s);
+    } else if (provider !== "google") {
+      // OpenStreetMap via Leaflet — free, no key, no login (DEC-198).
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(css);
+      const s = document.createElement("script");
+      s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
       s.async = true;
       s.onload = () => { window.__rsMapsOn = true; render(); };
       s.onerror = () => {};

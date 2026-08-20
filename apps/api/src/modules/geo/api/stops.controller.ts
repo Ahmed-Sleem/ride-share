@@ -22,6 +22,10 @@ class ReviewStopDto {
   @IsOptional() @IsString() reason?: string;
 }
 
+class ImportStopsDto {
+  @IsString() @MinLength(1) csv!: string;
+}
+
 type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
@@ -46,6 +50,18 @@ export class StopsController {
       nameEn: dto.nameEn, nameAr: dto.nameAr, lat: dto.lat, lng: dto.lng,
       source: dto.source, overrideReason: dto.overrideReason ?? null,
     });
+  }
+
+  @Post('stops/import')
+  @UseGuards(IdentityGuard)
+  importStops(@Req() req: ReqWithActor, @Body() dto: ImportStopsDto) {
+    return this.stops.importStops(req.actor!, dto.csv);
+  }
+
+  @Post('stops/:id/submit')
+  @UseGuards(IdentityGuard)
+  submit(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.stops.submitStop(req.actor!, id);
   }
 
   @Get('stops')

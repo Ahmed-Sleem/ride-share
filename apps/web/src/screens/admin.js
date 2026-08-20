@@ -58,16 +58,18 @@ function adminStaff() {
         ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
     Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
-  w.append($("div",{id:"staff-list"}), null);
-  loadStaffInto(document.getElementById("staff-list"));
+  const list = $("div",{id:"staff-list"});
+  w.append(list);
+  loadStaffInto(list);
   return w;
 }
 
 function adminAudit() {
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminAudit")}));
-  w.append($("div",{id:"audit-list"}), null);
-  loadAuditInto(document.getElementById("audit-list"));
+  const list = $("div",{id:"audit-list"});
+  w.append(list);
+  loadAuditInto(list);
   return w;
 }
 

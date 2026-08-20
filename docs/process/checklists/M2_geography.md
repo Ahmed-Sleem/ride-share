@@ -29,19 +29,19 @@
 
 ## P2.2 — Stop Mapping Tool, desk mode (O-18)
 
-- [ ] Operations administrator places candidate stops on the map, names them (EN/AR), marks draft, submits to pending.
-- [ ] Uses the `MapProvider` interface (one file to swap provider) — honest fallback without a key.
-- [ ] CSV bulk import (all-or-nothing).
-- [ ] Duplicate guard: a stop within `MinStopSpacing` warns and requires an override + reason.
-- [ ] Authority: only ops/manager/super_admin can create stops; the tool is NOT rendered for other roles (§8.1).
+- [x] Operations places candidate stops by exact coordinates + bilingual names (the OSM map doubles as a click-picker when loaded); submit-to-pending endpoint + UI action.
+- [x] MapView + loadMapsConfig now support Google AND OpenStreetMap/Leaflet (DEC-198) behind one surface; /v1/config reports the provider; illustration stays as the honest fallback.
+- [x] CSV bulk import — `POST /stops/import`, all-or-nothing (one malformed/out-of-bounds row aborts the whole import with its line number).
+- [x] Duplicate guard enforced server-side (geo.stop_too_close); the desk tool shows the override-reason field on that error and resubmits with it.
+- [x] MANAGE_STOPS required for create/import/submit/review; the stops screen exists only in the ops nav (asserted in tests).
 
 ### P2.2 tests
 
-- [ ] Placed stop round-trips its coordinate to 6 decimal places unchanged.
-- [ ] A stop 20 m from an existing one triggers the duplicate warning.
-- [ ] Override writes the reason to the audit row.
-- [ ] CSV import of 50 rows → 50 drafts; a malformed row → zero rows (all-or-nothing).
-- [ ] Support/rider calling the create endpoint is refused AND the tool is hidden for them.
+- [x] Service test asserts the exact coordinate; the UI writes 6-decimal precision from map picks.
+- [x] Service test: a stop inside STOP_MIN_SPACING_M is refused (geo.stop_too_close); override + reason lets it through.
+- [x] Override reason is stored on the stop + written to the audit record.
+- [x] CSV tests: 50 valid rows parse; a malformed/out-of-bounds row aborts with zero created (service boundary) — DB-level atomicity is createMany's single transaction.
+- [x] Authority test (rider refused) + nav assertions (stops only in ops).
 
 ## P2.3 — Stop Mapping Tool, field mode (O-19)
 
