@@ -81,8 +81,9 @@ Documented in `.env.example` (kept in lock-step by `check-env-example.sh`):
 |---|---|
 | M0 foundations | Done — deployed on Railway |
 | M1 identity/auth/landing | Backend + auth + landing done; **demo-data removal (M1-finish) is next** |
-| M2 geography | Not started (decide PostGIS vs lat/lng — G-061) |
-| M3 routes/slots/booking/payment | Not started |
+| M2 geography | **Done except P2.5 fieldwork** — stops, desk tool, field capture, verification queue (DEC-197/198) |
+| M3 routes/slots/booking/payment | **Next** — checklist M3_core_journey.md (DEC-199/202) |
+| GUI polish | Desktop density + landing completeness — checklist GUI_polish.md (DEC-200/201) |
 | M4 safety · M5 commercial · M6 subscriptions · M7 APK · M8 launch | Not started |
 
 ## Rules before you touch code

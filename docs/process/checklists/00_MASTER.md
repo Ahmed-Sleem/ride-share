@@ -7,8 +7,8 @@ file is fully ticked and pushed.
 |---|---|---|---|
 | M0 | Foundations & guard-rails; empty skeleton deploys to Railway | [M0_foundations.md](M0_foundations.md) | **Done** — deployed & verified live |
 | M1 | Identity, auth, real system (no demo data), landing page, motion | [M1_identity_auth.md](M1_identity_auth.md) | **In progress** — planning |
-| M2 | Geography — stops, mapping tool, corridor | `M2_geography.md` | Not started |
-| M3 | Routes, slots & the core journey (first vertical slice) | `M3_core_journey.md` | Not started |
+| M2 | Geography — stops, mapping tool, corridor | [M2_geography.md](M2_geography.md) | **Done except P2.5 fieldwork** |
+| M3 | Routes, slots & the core journey (first vertical slice) | [M3_core_journey.md](M3_core_journey.md) | **Next** |
 | M4 | Safety & support | `M4_safety_support.md` | Not started |
 | M5 | Commercial control | `M5_commercial.md` | Not started |
 | M6 | Recurring travel | `M6_recurring.md` | Not started |
