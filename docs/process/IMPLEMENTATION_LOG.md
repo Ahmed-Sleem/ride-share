@@ -593,3 +593,22 @@ output) — see the engineering standard §3.3 and §4.
   2 break cases (drivers section, policy links) observed failing; 293 unit, 14 a11y, 47 landing,
   repo checks green.
 - Remaining GUI polish: DEC-200 desktop density/shell (checklist section A) and M3 core journey.
+
+## M3 — P3.1 route entity + P3.2 slot grid (backend)
+
+- New `routes` module (17th): domain/slot-grid.ts (pure grid generation), domain/route.ts (gapless
+  append + permutation reorder), infra/routes.repository.ts (SQL only; reorder in one transaction),
+  application/routes.service.ts (create/publish/addStop/reorder/generateSlots/listSlots), api
+  controller, module registered in app.module.
+- Migration 0013 (routes + route_stops with verified-stops trigger + stops_retire_guard trigger
+  refusing retirement of a stop on a published route, naming it) and 0014 (slots with the unique
+  (route, day, time) key for idempotent regeneration).
+- geo: retireStop maps the 23514 retire-guard violation to geo.stop_on_published_route (no
+  cross-module cycle — the guard is at the DB, as the boundary checker forbids geo→routes).
+- Distance = geo's contract (distanceMeters exported via geo/contracts/public.ts) — one definition.
+  Config ROUTE_SPEED_KMH (default 20) estimates cumulative run-time.
+- Tests: 140 API (grid + reorder domain; 8 route-service; 1 geo retire-guard mapping). 5 break
+  checks observed failing (grid window end, permutation skip, past slot, one-stop publish, guard
+  unmapped). Repo checks green (boundaries + env-doc parity). Migrations up clean; schema + types
+  regenerated (13 tables).
+- Deferred: ops routes/slots UI (P3.2 UI) and P3.3 driver claim — next steps.

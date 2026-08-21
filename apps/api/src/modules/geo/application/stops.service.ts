@@ -18,6 +18,18 @@ import type { StopRow } from '../contracts/types.js';
 const STOP_CITY = 'ALX';
 const STOP_ZONE = 'COR'; // the launch corridor — a real zone per corridor comes with P2.5
 
+/** The retire guard raises check_violation (23514) with a deterministic
+    message; extract the route names for the error details. */
+function isRetireGuardViolation(e: unknown): boolean {
+  const err = e as { code?: string; message?: string };
+  return err?.code === '23514' && /stop used by published route/.test(err?.message ?? '');
+}
+
+function routeNamesFrom(e: unknown): string {
+  const m = /route\(s\): (.+)$/.exec((e as { message?: string }).message ?? '');
+  return m ? m[1]! : '';
+}
+
 /** Decode a data-URL photo (data:image/jpeg;base64,…). Returns null when there
     is no photo; throws when the photo is oversized or not an accepted image. */
 function decodePhoto(dataUrl: string | undefined, maxBytes: number): { bytes: Buffer; mimeType: string } | null {
@@ -160,8 +172,9 @@ export class StopsService {
   }
 
   /** Retire a verified stop (CH04 §4.1.2 — never hard-deleted). Retiring a
-      stop used by a published route is refused — but routes land in M3, so the
-      live-route check arrives with route_stops (tracked in the M2 checklist). */
+      stop used by a published route is refused by the database guard
+      (stops_retire_guard, migration 0013) — the error is mapped here so the
+      caller gets the honest conflict, naming the route. */
   async retireStop(actor: Actor, id: string): Promise<{ ok: true }> {
     assertCan(actor.role as unknown as Role, Capability.MANAGE_STOPS);
     const stop = await this.stops.findById(id);
@@ -169,7 +182,17 @@ export class StopsService {
     if (stop.status !== 'verified') {
       throw new ConflictException({ message_key: 'geo.stop_not_verified', details: { status: stop.status } });
     }
-    await this.stops.setStatus(id, 'retired');
+    try {
+      await this.stops.setStatus(id, 'retired');
+    } catch (e) {
+      if (isRetireGuardViolation(e)) {
+        throw new ConflictException({
+          message_key: 'geo.stop_on_published_route',
+          details: { routes: routeNamesFrom(e) },
+        });
+      }
+      throw e;
+    }
     await this.audit.record(actor, 'stop.retire', { targetType: 'stop', targetId: id });
     return { ok: true };
   }

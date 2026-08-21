@@ -1,8 +1,35 @@
+CREATE FUNCTION public.route_stops_require_verified() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+IF NOT EXISTS (SELECT 1 FROM stops WHERE id = NEW.stop_id AND status = 'verified') THEN
+RAISE EXCEPTION 'route_stops.stop_id must reference a verified stop';
+END IF;
+RETURN NEW;
+END;
+$$;
 CREATE FUNCTION public.stop_verifications_append_only() RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
 RAISE EXCEPTION 'stop_verifications is append-only';
+END;
+$$;
+CREATE FUNCTION public.stops_retire_guard() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+route_names text;
+BEGIN
+IF NEW.status = 'retired' AND OLD.status <> 'retired' THEN
+SELECT string_agg(r.name_en, ', ') INTO route_names
+FROM route_stops rs JOIN routes r ON r.id = rs.route_id
+WHERE rs.stop_id = NEW.id AND r.status = 'published';
+IF route_names IS NOT NULL THEN
+RAISE EXCEPTION 'stop used by published route(s): %', route_names USING ERRCODE = '23514';
+END IF;
+END IF;
+RETURN NEW;
 END;
 $$;
 CREATE TABLE public.audit_log (
@@ -39,6 +66,34 @@ NO MINVALUE
 NO MAXVALUE
 CACHE 1;
 ALTER SEQUENCE public.pgmigrations_id_seq OWNED BY public.pgmigrations.id;
+CREATE TABLE public.route_stops (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+route_id uuid NOT NULL,
+stop_id uuid NOT NULL,
+"position" integer NOT NULL,
+distance_from_start_m double precision DEFAULT 0 NOT NULL,
+run_minutes integer DEFAULT 0 NOT NULL,
+CONSTRAINT route_stops_position_check CHECK (("position" >= 1))
+);
+CREATE TABLE public.routes (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+code text NOT NULL,
+name_en text DEFAULT ''::text NOT NULL,
+name_ar text DEFAULT ''::text NOT NULL,
+status text DEFAULT 'draft'::text NOT NULL,
+direction text DEFAULT 'outbound'::text NOT NULL,
+fare_minor integer NOT NULL,
+window_start time without time zone DEFAULT '06:00:00'::time without time zone NOT NULL,
+window_end time without time zone DEFAULT '22:00:00'::time without time zone NOT NULL,
+slot_interval_min integer DEFAULT 15 NOT NULL,
+created_by uuid,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT routes_direction_check CHECK ((direction = ANY (ARRAY['outbound'::text, 'inbound'::text]))),
+CONSTRAINT routes_fare_minor_check CHECK ((fare_minor >= 0)),
+CONSTRAINT routes_slot_interval_min_check CHECK (((slot_interval_min >= 5) AND (slot_interval_min <= 120))),
+CONSTRAINT routes_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'retired'::text])))
+);
 CREATE TABLE public.sessions (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 user_id uuid NOT NULL,
@@ -46,6 +101,15 @@ refresh_token_hash text NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 expires_at timestamp with time zone NOT NULL,
 revoked_at timestamp with time zone
+);
+CREATE TABLE public.slots (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+route_id uuid NOT NULL,
+service_date date NOT NULL,
+departs_at time without time zone NOT NULL,
+required_vehicles integer DEFAULT 1 NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT slots_required_vehicles_check CHECK (((required_vehicles >= 1) AND (required_vehicles <= 10)))
 );
 CREATE TABLE public.stop_photos (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -149,8 +213,22 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_key UNIQUE (user_id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.route_stops
+ADD CONSTRAINT route_stops_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.route_stops
+ADD CONSTRAINT route_stops_route_position_key UNIQUE (route_id, "position");
+ALTER TABLE ONLY public.route_stops
+ADD CONSTRAINT route_stops_route_stop_key UNIQUE (route_id, stop_id);
+ALTER TABLE ONLY public.routes
+ADD CONSTRAINT routes_code_key UNIQUE (code);
+ALTER TABLE ONLY public.routes
+ADD CONSTRAINT routes_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.sessions
 ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.slots
+ADD CONSTRAINT slots_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.slots
+ADD CONSTRAINT slots_route_date_time_key UNIQUE (route_id, service_date, departs_at);
 ALTER TABLE ONLY public.stop_photos
 ADD CONSTRAINT stop_photos_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.stop_verifications
@@ -176,20 +254,32 @@ ADD CONSTRAINT vehicles_plate_key UNIQUE (plate);
 ALTER TABLE ONLY public.verification_codes
 ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
+CREATE INDEX route_stops_route_idx ON public.route_stops USING btree (route_id, "position");
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
+CREATE INDEX slots_route_date_idx ON public.slots USING btree (route_id, service_date);
 CREATE INDEX stop_photos_stop_idx ON public.stop_photos USING btree (stop_id);
 CREATE INDEX stop_verifications_stop_idx ON public.stop_verifications USING btree (stop_id);
 CREATE INDEX stops_lat_lng_idx ON public.stops USING btree (lat, lng);
 CREATE INDEX stops_status_idx ON public.stops USING btree (status) WHERE (status = 'verified'::text);
 CREATE INDEX throttle_records_expires_idx ON public.throttle_records USING btree (expires_at);
 CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
+CREATE TRIGGER route_stops_require_verified BEFORE INSERT OR UPDATE OF stop_id ON public.route_stops FOR EACH ROW EXECUTE FUNCTION public.route_stops_require_verified();
 CREATE TRIGGER stop_verifications_no_update BEFORE DELETE OR UPDATE ON public.stop_verifications FOR EACH ROW EXECUTE FUNCTION public.stop_verifications_append_only();
+CREATE TRIGGER stops_retire_guard BEFORE UPDATE OF status ON public.stops FOR EACH ROW EXECUTE FUNCTION public.stops_retire_guard();
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.route_stops
+ADD CONSTRAINT route_stops_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.route_stops
+ADD CONSTRAINT route_stops_stop_id_fkey FOREIGN KEY (stop_id) REFERENCES public.stops(id) ON DELETE RESTRICT;
+ALTER TABLE ONLY public.routes
+ADD CONSTRAINT routes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.sessions
 ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.slots
+ADD CONSTRAINT slots_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.stop_photos
 ADD CONSTRAINT stop_photos_stop_id_fkey FOREIGN KEY (stop_id) REFERENCES public.stops(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.stop_verifications

@@ -237,3 +237,25 @@ test('retire: a verified stop retires; a draft cannot', async () => {
   const listed = await svc.list(ops, ['retired']);
   assert.ok(listed.some((x) => x.id === s.id), 'now retired');
 });
+
+test('retire: a stop on a published route is refused with the route name (DB guard mapped)', async () => {
+  const { svc, stops } = setup();
+  const s = await svc.createStop(ops, { lat: 31.2, lng: 29.9, source: 'desk' });
+  await svc.submitStop(ops, s.id);
+  await svc.reviewStop(ops2, s.id, 'approved');
+  // simulate the stops_retire_guard trigger firing
+  const original = stops.setStatus.bind(stops);
+  stops.setStatus = async (id: string, status: string) => {
+    if (status === 'retired') {
+      const e: any = new Error('stop used by published route(s): Corniche Line');
+      e.code = '23514';
+      throw e;
+    }
+    return original(id, status);
+  };
+  await assert.rejects(
+    () => svc.retireStop(ops, s.id),
+    (e: unknown) => e instanceof ConflictException &&
+      JSON.stringify((e as any).getResponse()).includes('geo.stop_on_published_route')
+  );
+});

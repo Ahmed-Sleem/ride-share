@@ -17,6 +17,7 @@ import { HealthModule } from './health/health.module.js';
 import { IdentityModule } from './modules/identity/identity.module.js';
 import { DriversModule } from './modules/drivers/drivers.module.js';
 import { GeoModule } from './modules/geo/geo.module.js';
+import { RoutesModule } from './modules/routes/routes.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { SecurityModule } from './security/security.module.js';
 import type { Pool } from 'pg';
@@ -46,6 +47,7 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
     IdentityModule,
     DriversModule,
     GeoModule,
+    RoutesModule,
     AuditModule,
     SecurityModule,
   ],

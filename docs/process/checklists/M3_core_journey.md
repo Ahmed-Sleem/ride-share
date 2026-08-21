@@ -7,15 +7,15 @@
 
 ## P3.1 — Route entity (operator)
 
-- [ ] Migration: `routes` (name_en/ar, flat fare, service window, target frequency, direction) + `route_stops` (ordered sequence over verified stops).
-- [ ] Domain: a route's stops must be verified and ordered; flat fare is per route (DEC-115).
-- [ ] Ops UI: create a route from verified stops (reuse the stops list), set fare + window.
-- [ ] Tests: route creation authority (ops/manager only), ordering, fare.
+- [x] Migration `0013_routes.sql`: routes (code, name_en/ar, status, direction, fare_minor, window, slot_interval) + route_stops (position unique+gapless-by-construction, distance, run_minutes) with a verified-stops trigger AND a stops_retire_guard trigger (published-route retire refusal).
+- [x] Domain: verified-stops enforced by trigger; gapless positions by append/reorder only (route.ts reorderPositions permutation check); flat fare validated.
+- [~] Backend create/publish/add-stop/reorder endpoints are done; the ops routes UI screen lands with P3.2 UI (next step).
+- [x] Tests: authority (rider refused), fare/interval/window validation, gapless append, permutation reorder, publish-needs-two-stops — 5 break checks observed failing.
 
 ## P3.2 — Slot grid
 
-- [ ] Domain: the slot grid is generated from the route's window + frequency (wall-clock local time, DEC-118; grid only, no free times — T2).
-- [ ] Tests: grid generation (interval, window bounds, no collisions).
+- [x] Domain slot-grid.ts: generateSlotTimes(window, interval) — grid only, wall-clock, last departure strictly before end.
+- [x] Tests: 16 departures in 06:00–10:00 @15min; bad window/interval refused; last < end; time round-trips — break-observed.
 
 ## P3.3 — Driver claim (two taps)
 

@@ -49,6 +49,9 @@ export const envSchema = {
   // and the maximum accepted photo size in bytes.
   PHOTO_STORAGE_DIR: z.string().default('./data/photos'),
   PHOTO_MAX_BYTES: z.coerce.number().int().min(100_000).max(50_000_000).default(8_000_000),
+  // Routes (M3): average vehicle speed used to estimate the cumulative
+  // run-time to each stop (the timetable feeds every arrival estimate).
+  ROUTE_SPEED_KMH: z.coerce.number().int().min(5).max(80).default(20),
 
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),

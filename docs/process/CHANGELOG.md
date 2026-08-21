@@ -585,3 +585,11 @@
   DEC-202 (M3 order); R19 research (Uber/Swvl/desktop density); M3 + GUI-polish checklists;
   project map + master status updated.
 - 293 unit / 14 a11y / 47 landing / repo checks green.
+
+## 2026-08-19 — M3 P3.1+P3.2: route entity + slot grid (backend)
+
+- routes module: create/publish route, append verified stops (gapless), atomic reorder with
+  cumulative distances, idempotent slot-grid generation (unique route/day/time).
+- Migrations 0013/0014: routes + route_stops (verified-stops trigger, retire guard naming the
+  route) + slots. Retire guard mapped to an honest conflict in geo.
+- 140 API tests; 5 break checks observed failing; repo checks green; schema + types regenerated.
