@@ -632,3 +632,20 @@ output) — see the engineering standard §3.3 and §4.
 - Tests: 155 API (journeys domain + service) with 4 break checks observed failing; 299 web unit
   (routes tool + work board + updated driver-honesty group, 2 break cases observed failing);
   a11y 14, server 5, repo checks green. Schema + types regenerated (14 tables).
+
+## Branding single-source (owner: centralized branding, §0.3 one-change test)
+
+- New packages/brand/brand.json — the ONE source of brand identity: name (en/ar), tagline,
+  description, wordmark font, logo (viewBox + path + gradient), browser theme-color, email
+  identity/colours. packages/brand/README.md documents the one-change test.
+- Web: build.js reads brand.json, generates the favicon data URI + <title>/meta/theme-color, and
+  injects `const BRAND = …` (before the modules); shell.html carries __BRAND_* tokens (no literal
+  title/favicon/meta left); content.js reads BRAND.name/tagline; components.js LOGO_PATH =
+  BRAND.logo.path and logoSVG viewBox = BRAND.logo.viewBox; wordmarks use --brand-font.
+- API: apps/api/src/config/brand.ts loads the same brand.json (path-resolved, container-safe);
+  notifications.ts derives every subject, body and email colour from it (0 "Ride Share" literals).
+- Enforced by scripts/check-branding.sh (wired into verify-repo): the brand name/logo must not be
+  hardcoded anywhere in apps/*/src. Observed failing when a second definition was planted.
+- Tests: 306 web unit (branding group: title/copy/logo/font/favicon + brand-colours-as-data),
+  2 break cases observed failing (logo path, copy name); 155 API; a11y 14, landing 47, server 5;
+  repo checks green. pnpm-lock + both apps' deps updated (@ride-share/brand workspace:*).

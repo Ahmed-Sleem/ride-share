@@ -27,7 +27,8 @@
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "class-validator": "catalog:",
-    "class-transformer": "catalog:"
+    "class-transformer": "catalog:",
+    "@ride-share/brand": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/testing": "catalog:",

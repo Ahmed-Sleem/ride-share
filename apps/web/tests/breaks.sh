@@ -176,6 +176,14 @@ run_break "landing loses its policy links" src/screens/landing.js \
   's|          policyLink("terms"), policyLink("privacy"), policyLink("safety")),|          null),|' \
   "landing footer links policies"
 
+run_break "logo path hardcoded again (second definition)" src/lib/components.js \
+  's|const LOGO_PATH = BRAND.logo.path;|const LOGO_PATH = "M0 0";|' \
+  "logo path is read from BRAND, not hardcoded"
+
+run_break "copy table stops reading the brand name" src/data/content.js \
+  's|brand:BRAND.name.en, tagline:BRAND.tagline.en,|brand:"X", tagline:BRAND.tagline.en,|' \
+  "copy table reads the brand name"
+
 run_break "routes tool loses its create form" src/screens/staff.js \
   's|      field("route-name-en", t("stopNameEn"), "text", "off"),|      field("route-name-enX", t("stopNameEn"), "text", "off"),|' \
   "routes tool has a create form"

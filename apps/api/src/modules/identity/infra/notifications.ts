@@ -13,6 +13,7 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 import { CONFIG, type Env } from '../../../config/env.js';
+import { BRAND as B } from '../../../config/brand.js';
 import { PinoLoggerService } from '../../../common/logging/logger.js';
 
 export interface Mailer {
@@ -21,15 +22,17 @@ export interface Mailer {
   sendPasswordReset(email: string, code: string): Promise<void>;
 }
 
-/* ── brand + layout, inline-styled (email clients strip <style>) ───────── */
-const BRAND = '#6C63FF';
-const BRAND_DARK = '#5A4FD9';
-const ACCENT = '#FF6A4D';
-const INK = '#15181F';
-const MUTED = '#6B7684';
-const CARD_BG = '#FFFFFF';
-const PAGE_BG = '#F5F7F9';
-const LINE = '#E4E8ED';
+/* ── brand + layout, inline-styled (email clients strip <style>). Every value
+   below comes from the single brand source (packages/brand) — §0.3. ─────── */
+const BRAND = B.email.colors.primary;
+const BRAND_DARK = B.email.colors.primaryDark;
+const ACCENT = B.email.colors.accent;
+const INK = B.email.colors.ink;
+const MUTED = B.email.colors.muted;
+const CARD_BG = B.email.colors.cardBg;
+const PAGE_BG = B.email.colors.pageBg;
+const LINE = B.email.colors.line;
+const NAME = B.name.en;
 
 const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -49,7 +52,7 @@ function renderEmail(opts: {
         <div style="background:${CARD_BG};border:1px solid ${LINE};border-radius:16px;padding:32px 28px;">
           <div style="margin-bottom:24px;">
             <span style="display:inline-block;width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,${BRAND},${ACCENT});vertical-align:middle;"></span>
-            <span style="font-size:18px;font-weight:700;color:${BRAND};vertical-align:middle;margin-left:10px;">Ride Share</span>
+            <span style="font-size:18px;font-weight:700;color:${BRAND};vertical-align:middle;margin-left:10px;">${esc(NAME)}</span>
           </div>
           <h1 style="margin:0 0 12px;font-size:20px;line-height:1.3;color:${INK};">${esc(opts.title)}</h1>
           <p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:${INK};">${esc(opts.body)}</p>
@@ -59,7 +62,7 @@ function renderEmail(opts: {
           <p style="margin:0 0 24px;font-size:13px;color:${MUTED};line-height:1.5;">${esc(opts.note)}</p>
           <div style="border-top:1px solid ${LINE};padding-top:16px;">
             <p style="margin:0;font-size:12px;color:${MUTED};line-height:1.5;">If you didn't request this, you can safely ignore this email — nobody else can use the code.</p>
-            <p style="margin:10px 0 0;font-size:12px;color:${MUTED};">Shared rides, fixed routes, one price. &middot; Ride Share</p>
+            <p style="margin:10px 0 0;font-size:12px;color:${MUTED};">Shared rides, fixed routes, one price. &middot; ${esc(NAME)}</p>
           </div>
         </div>
       </td></tr>
@@ -126,42 +129,42 @@ export class Notifications implements Mailer {
   async sendLoginCode(email: string, code: string): Promise<void> {
     await this.send(
       email,
-      'Ride Share — your sign-in code',
+      `${NAME} — your sign-in code`,
       renderEmail({
         title: 'Your sign-in code',
         code,
-        body: 'Enter this code to sign in to Ride Share. Nobody else can use it, and it expires soon.',
+        body: `Enter this code to sign in to ${NAME}. Nobody else can use it, and it expires soon.`,
         note: 'The code expires in 5 minutes. Never share it with anyone.',
       }),
-      `Your Ride Share sign-in code is ${code}. It expires in 5 minutes.`
+      `Your ${NAME} sign-in code is ${code}. It expires in 5 minutes.`
     );
   }
 
   async sendVerification(email: string, code: string): Promise<void> {
     await this.send(
       email,
-      'Ride Share — verify your email',
+      `${NAME} — verify your email`,
       renderEmail({
         title: 'Verify your email',
         code,
-        body: 'Enter this code to confirm this email address on your Ride Share account.',
+        body: `Enter this code to confirm this email address on your ${NAME} account.`,
         note: 'The code expires in 15 minutes.',
       }),
-      `Your Ride Share verification code is ${code}. It expires in 15 minutes.`
+      `Your ${NAME} verification code is ${code}. It expires in 15 minutes.`
     );
   }
 
   async sendPasswordReset(email: string, code: string): Promise<void> {
     await this.send(
       email,
-      'Ride Share — reset your password',
+      `${NAME} — reset your password`,
       renderEmail({
         title: 'Reset your password',
         code,
         body: 'Enter this code to set a new password. If you did not ask to reset your password, ignore this email.',
         note: 'The code expires in 15 minutes.',
       }),
-      `Your Ride Share password reset code is ${code}. It expires in 15 minutes.`
+      `Your ${NAME} password reset code is ${code}. It expires in 15 minutes.`
     );
   }
 }

@@ -17,6 +17,7 @@ checks=(
   "scripts/check-sql-location.sh"
   "scripts/check-sql-injection.sh"
   "scripts/check-tokens.sh"
+  "scripts/check-branding.sh"
   "scripts/check-authority.sh"
   "scripts/check-hide-not-disable.sh"
 )

@@ -17,5 +17,8 @@
     "jsdom": "catalog:",
     "puppeteer": "catalog:",
     "axe-core": "catalog:"
+  },
+  "dependencies": {
+    "@ride-share/brand": "workspace:*"
   }
 }

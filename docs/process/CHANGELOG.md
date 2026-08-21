@@ -601,3 +601,10 @@
 - Ops Routes is a real tool: create/publish routes, generate slots, view stops + distances.
 - Driver Duty shows real journeys; Driver Work is the real find-work board with claim.
 - 155 API / 299 unit / 14 a11y / 5 server green; break checks observed failing.
+
+## 2026-08-19 — Branding single source (centralized)
+
+- packages/brand/brand.json is now the ONE place for name, tagline, logo, font, favicon, browser
+  theme and email identity; the web build and the API email templates both derive from it.
+- scripts/check-branding.sh fails on a hardcoded brand name/logo in app source (observed failing).
+- 306 unit / 155 API / 14 a11y / 47 landing / 5 server green.

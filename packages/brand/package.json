@@ -1,0 +1,6 @@
+{
+  "name": "@ride-share/brand",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The ONE source of brand identity (name, tagline, logo, font, favicon, email styling). Change it here and it propagates to the web app (build-time) and the API (email templates)."
+}

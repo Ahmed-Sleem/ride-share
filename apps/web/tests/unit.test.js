@@ -482,9 +482,17 @@ group("DESIGN TOKENS — one place to change a value");
   ok("no hardcoded colour in css rules", hex.length===0, hex.slice(0,5).join(","));
   const js=SRC.slice(SRC.indexOf("</style>"));
   const jsHex=(js.match(/#[0-9a-fA-F]{3,8}\b/g)||[]).filter(h=>!/^#[0-9a-fA-F]{6}$/.test(h)||true);
-  const allowed=new Set(["#1B62D6"]); // sample vehicle colour: data, not chrome
+  // allowed: the sample vehicle colour AND every colour the single brand source
+  // carries (favicon gradient, browser theme, email identity — data, not chrome)
+  const allowed=new Set(["#1B62D6"]);
+  const brandMatch=/const BRAND = (\{[\s\S]*?\});\n\n/.exec(js);
+  if (brandMatch) {
+    const brandHex=(JSON.stringify(JSON.parse(brandMatch[1])).match(/#[0-9a-fA-F]{3,8}\b/g)||[]);
+    brandHex.forEach(h=>allowed.add(h.toUpperCase()));
+  }
   const bad=jsHex.filter(h=>!allowed.has(h.toUpperCase()));
   ok("no hardcoded colour in component code", bad.length===0, bad.slice(0,5).join(","));
+  ok("brand colours are data, defined in the brand source", brandMatch!=null, "BRAND not injected");
   ok("root defines the palette", /--brand:/.test(css) && /--danger:/.test(css));
   ok("dark theme overrides the same names", /\[data-theme="dark"\]\{[^}]*--brand:/.test(css));
   const rootVars=[...css.matchAll(/--([a-z0-9-]+):/g)].map(m=>m[1]);
@@ -742,6 +750,18 @@ const m19e = (async () => {
   [...t.all(".btn")].find((b)=>b.textContent.includes(t.w.T.en.signinContinue)).click();
   await new Promise((r)=>setTimeout(r, 20));
   ok("bypass sign-in enters the app without a code", t.w.S.view==="app", String(t.w.S.view));
+})();
+
+group("BRANDING IS SINGLE-SOURCED (§0.3 one-change test)");
+(() => {
+  const t=boot();
+  const B=t.w.BRAND;
+  ok("the brand object is injected", !!B && !!B.name && !!B.logo, "");
+  ok("page title is generated from BRAND", SRC.includes("<title>"+B.name.en+"</title>"), "");
+  ok("copy table reads the brand name", t.w.T.en.brand === B.name.en && t.w.T.ar.brand === B.name.ar, "");
+  ok("logo path is read from BRAND, not hardcoded", /const LOGO_PATH = BRAND\.logo\.path/.test(SRC), "");
+  ok("favicon is a generated data URI", SRC.includes('href="data:image/svg+xml,') , "");
+  ok("the brand font token is defined and used", /--brand-font:/.test(SRC) && /font-family:var\(--brand-font\)/.test(SRC), "");
 })();
 
 group("LANDING COMPLETENESS — riders, drivers, safety, policies");

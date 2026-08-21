@@ -3,7 +3,7 @@
    ══════════════════════════════════════════════════════════════════════ */
 const T = {
 en:{
-  brand:"Ride Share", tagline:"Share the ride. One fixed price.",
+  brand:BRAND.name.en, tagline:BRAND.tagline.en,
   role:{rider:"Rider",driver:"Driver",ops:"Operations",manager:"Manager",support:"Support"},
   nav:{home:"Home",trips:"Trips",wallet:"Wallet",safety:"Safety",profile:"Profile",
        duty:"Duty",work:"Find work",journey:"Journey",earnings:"Earnings",
@@ -203,7 +203,7 @@ en:{
   },
 },
 ar:{
-  brand:"رايد شير", tagline:"شارك الرحلة. سعر ثابت.",
+  brand:BRAND.name.ar, tagline:BRAND.tagline.ar,
   role:{rider:"راكب",driver:"سائق",ops:"العمليات",manager:"مدير",support:"الدعم"},
   nav:{home:"الرئيسية",trips:"رحلاتي",wallet:"المحفظة",safety:"الأمان",profile:"حسابي",
        duty:"الدوام",work:"ابحث عن عمل",journey:"الرحلة",earnings:"الأرباح",

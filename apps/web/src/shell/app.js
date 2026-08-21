@@ -306,7 +306,7 @@ window.addEventListener("online", ()=>{ flushFieldQueue(); }); // offline captur
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
-Object.assign(window, { S, T, PAGES, DEFAULT_PAGE, render, go, back,
+Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
