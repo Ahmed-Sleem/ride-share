@@ -16,13 +16,13 @@
 
 ## B — Landing page completeness (DEC-201)
 
-- [ ] **For riders** section — book a seat, one fixed price, track live, get off anywhere.
-- [ ] **For drivers** section — apply to drive, claim a slot in two taps, earn, weekly payouts.
-- [ ] **Safety / trust** section — verified drivers & stops, boarding code, SOS/share (M4 items labelled "coming soon", never advertised as live).
-- [ ] **Policies footer** — Terms / Privacy / Safety links to honest pages (structure present; legal text is the owner's, DEC-030). Streamline credit stays.
-- [ ] EN + AR copy for every new string; RTL safe.
-- [ ] Unit tests: every section renders, no sample content, policy links exist; break cases observed failing.
-- [ ] a11y + landing browser suites green.
+- [x] **For riders** section — the existing 4 feature cards now sit under a "For riders" heading.
+- [x] **For drivers** section — apply to drive / claim a slot in two taps / earn weekly.
+- [x] **Safety / trust** section — verified drivers, board by code, help within reach (SOS/share labelled "arrive with the safety centre").
+- [x] **Policies footer** — Terms / Privacy / Safety open honest structured pages (legal text marked the operator's, DEC-030); Streamline credit stays an <a>.
+- [x] EN + AR copy added; RTL safe (logical properties).
+- [x] Unit tests: 9 new landing assertions + 2 break cases (drivers section, policies) observed failing; 293 unit green.
+- [x] a11y 14 + landing 47 green.
 
 ## C — Verification
 

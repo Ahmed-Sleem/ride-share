@@ -48,6 +48,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
+  landingDoc:null,                             // landing sub-view: terms|privacy|safety
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };

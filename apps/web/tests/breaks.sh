@@ -168,6 +168,14 @@ run_break "stops tool loses its CSV import" src/screens/staff.js \
   's|    $("textarea",{class:"input", attrs:{id:"stop-csv"|    $("textarea",{class:"input", attrs:{id:"stop-csvX"|' \
   "stops tool has a CSV import"
 
+run_break "landing loses the drivers section" src/screens/landing.js \
+  's|$("h2",{class:"landing__h2",text:t("forDrivers")}),|$("h2",{class:"landing__h2",text:t("forDriversX")}),|' \
+  "landing speaks to drivers"
+
+run_break "landing loses its policy links" src/screens/landing.js \
+  's|          policyLink("terms"), policyLink("privacy"), policyLink("safety")),|          null),|' \
+  "landing footer links policies"
+
 run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js \
   's|    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|    Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|' \
   "own capture hides the approve action"

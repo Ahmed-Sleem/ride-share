@@ -737,6 +737,28 @@ const m19e = (async () => {
   ok("bypass sign-in enters the app without a code", t.w.S.view==="app", String(t.w.S.view));
 })();
 
+group("LANDING COMPLETENESS — riders, drivers, safety, policies");
+(() => {
+  const t=boot();
+  t.w.S.view="landing"; t.w.render();
+  const txt = t.q(".landing").textContent;
+  ok("landing speaks to riders", txt.includes(t.w.T.en.forRiders));
+  ok("landing speaks to drivers", txt.includes(t.w.T.en.forDrivers) && txt.includes(t.w.T.en.driverF2T));
+  ok("landing has a safety section", txt.includes(t.w.T.en.safetyTitle) && txt.includes(t.w.T.en.safetyF1T));
+  ok("landing footer links policies", t.all(".landing__policylink").length === 3,
+     String(t.all(".landing__policylink").length));
+  ok("the Streamline credit is still the <a> link",
+     t.q(".landing__credits") && t.q(".landing__credits").tagName === "A");
+  ok("no sample content on the landing", !/Corniche|Montazah|Smouha/.test(txt));
+
+  // a policy opens the honest structured doc and can go back
+  t.all(".landing__policylink")[0].click();
+  ok("a policy doc opens", t.q(".landing__doc") && t.w.S.landingDoc === "terms");
+  ok("policy doc states the legal text is the operator's", t.q(".landing__doc").textContent.includes("legal"));
+  t.q(".landing__doc .btn--ghost").click();
+  ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
+})();
+
 group("M2 — STOP MAPPING TOOL (ops only)");
 (() => {
   const t=boot();

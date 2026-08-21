@@ -579,3 +579,17 @@ output) — see the engineering standard §3.3 and §4.
 - Deferred honestly: (1) showing the rejection reason to the original surveyor lands with the field
   tool's "my captures" view + M4 notifications; (2) refusing to retire a stop used by a published
   route lands in M3 with route_stops. Both marked [~]/[o] in the M2 checklist.
+
+## GUI polish — landing page completeness (DEC-201)
+
+- Landing grew three sections: For riders (the 4 feature cards under a heading), For drivers
+  (apply to drive / claim a slot in two taps / earn weekly), Safety (verified drivers, board by
+  code, help within reach — SOS/share honestly labelled "arrive with the safety centre").
+- Policies footer: Terms / Privacy / Safety open a structured document page (landingDoc) with the
+  honest note that final legal wording is the operator's (DEC-030); Streamline credit stays an <a>.
+- New copy EN+AR; `.landing__policies` / `.landing__policylink` / `.landing__doc` tokens added
+  (no hardcoded colours).
+- Tests: 9 new unit assertions (sections, policy links, doc opens + back, no sample content) and
+  2 break cases (drivers section, policy links) observed failing; 293 unit, 14 a11y, 47 landing,
+  repo checks green.
+- Remaining GUI polish: DEC-200 desktop density/shell (checklist section A) and M3 core journey.

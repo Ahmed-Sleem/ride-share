@@ -844,6 +844,15 @@ select.input{cursor:pointer}
 /* the vector credit: smaller than the tagline, on its own line, a real link */
 .landing__credits{font-size:var(--f-micro);color:var(--text-muted);text-decoration:none;
   transition:color var(--fast) var(--ease)}
+/* policies row in the footer — same quiet link style, separated by dots */
+.landing__policies{display:flex;align-items:center;gap:var(--s3)}
+.landing__policylink{font-size:var(--f-micro);color:var(--text-muted);text-decoration:none;
+  transition:color var(--fast) var(--ease);cursor:pointer}
+.landing__policylink:hover{color:var(--accent-text);text-decoration:underline}
+.landing__policylink + .landing__policylink::before{content:"·";margin-inline-end:var(--s3);color:var(--text-muted)}
+/* the policy document page — narrow reading measure, comfortable top space */
+.landing__doc{max-width:720px;margin-inline:auto;padding-block:var(--s8);display:flex;flex-direction:column;gap:var(--s4);align-items:flex-start}
+.landing__doc .btn--ghost{margin-inline-start:calc(-1 * var(--s3))}
 .landing__credits:hover{color:var(--accent-text);text-decoration:underline}
 .landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
 
@@ -1106,6 +1115,17 @@ en:{
   slide4T:"Track your ride live", slide4B:"See where your vehicle is and when it arrives.",
   landingFoot:"Shared rides, fixed routes, one price.",
   creditsVectors:"Vectors by Streamline",
+  forRiders:"For riders", forDrivers:"For drivers",
+  driverF1T:"Apply to drive", driverF1B:"Start as a rider, then apply with your documents.",
+  driverF2T:"Claim a slot in two taps", driverF2B:"Pick a published departure and commit — no route drawing, no pricing.",
+  driverF3T:"Earn, paid weekly", driverF3B:"Payouts to your bank or InstaPay.",
+  safetyTitle:"Built to be safe",
+  safetyF1T:"Verified drivers", safetyF1B:"Every driver is screened and every vehicle approved before a first ride.",
+  safetyF2T:"Board by code", safetyF2B:"Your boarding code is checked at the door — the right rider, the right ride.",
+  safetyF3T:"Help within reach", safetyF3B:"SOS and live ride sharing arrive with the safety centre.",
+  policies:"Policies", terms:"Terms", privacy:"Privacy", safetyPolicy:"Safety",
+  policyTermsTitle:"Terms of service", policyPrivacyTitle:"Privacy", policySafetyTitle:"Safety",
+  policyPlaceholder:"This page is structured and ready. The final legal wording is provided by the operator's legal team — the product never collects more than it needs to run the ride.",
   landingBack:"Back to sign in",
   /* auth */
   signIn:"Sign in", createAccount:"Create account",
@@ -1283,6 +1303,17 @@ ar:{
   slide4T:"تتبع رحلتك مباشرة", slide4B:"شاهد مركبتك واعرف موعد وصولها.",
   landingFoot:"ركوبات مشتركة، مسارات ثابتة، سعر واحد.",
   creditsVectors:"Vectors by Streamline",
+  forRiders:"للركاب", forDrivers:"للسائقين",
+  driverF1T:"قدّم للقيادة", driverF1B:"ابدأ كراكب، ثم قدّم بمستنداتك.",
+  driverF2T:"احجز موعدًا بنقرتين", driverF2B:"اختر موعدًا منشورًا والتزم — لا رسم مسارات ولا تسعير.",
+  driverF3T:"اكسب، وتقاضَ أسبوعيًا", driverF3B:"تحويلات إلى حسابك البنكي أو إنستاباي.",
+  safetyTitle:"مصمم ليكون آمنًا",
+  safetyF1T:"سائقون موثّقون", safetyF1B:"كل سائق يخضع للفحص وكل مركبة تُعتمد قبل الرحلة الأولى.",
+  safetyF2T:"الركوب بالكود", safetyF2B:"يُفحص كود الركوب عند الباب — الراكب الصحيح في الرحلة الصحيحة.",
+  safetyF3T:"المساعدة في متناولك", safetyF3B:"الاستغاثة ومشاركة الرحلة المباشرة تأتيان مع مركز الأمان.",
+  policies:"السياسات", terms:"الشروط", privacy:"الخصوصية", safetyPolicy:"الأمان",
+  policyTermsTitle:"شروط الخدمة", policyPrivacyTitle:"الخصوصية", policySafetyTitle:"الأمان",
+  policyPlaceholder:"هذه الصفحة جاهزة البنية. الصياغة القانونية النهائية يقدّمها الفريق القانوني للمشغّل — المنتج لا يجمع أكثر مما يحتاجه لتشغيل الرحلة.",
   landingBack:"العودة لتسجيل الدخول",
   /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
@@ -1407,6 +1438,7 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
+  landingDoc:null,                             // landing sub-view: terms|privacy|safety
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
@@ -2036,6 +2068,7 @@ async function resolveSession() {
    and logical properties; scroll-driven reveals are reduced-motion guarded.
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
+  if (S.landingDoc) return landingDoc();
   return $("div",{class:"landing"},
     $("header",{class:"landing__nav"},
       $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
@@ -2057,11 +2090,26 @@ function landing() {
     $("div",{class:"landing__body"},
 
       $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("forRiders")}),
         $("div",{class:"landing__grid"},
           featureCard("wallet", t("landingF1T"), t("landingF1B"), "mint"),
           featureCard("clock",  t("landingF2T"), t("landingF2B"), "sky"),
           featureCard("promos", t("landingF3T"), t("landingF3B"), "coral"),
           featureCard("livemap",t("landingF4T"), t("landingF4B"), "pink"))),
+
+      $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("forDrivers")}),
+        $("div",{class:"landing__grid"},
+          featureCard("doc",   t("driverF1T"), t("driverF1B"), "sky"),
+          featureCard("clock", t("driverF2T"), t("driverF2B"), "mint"),
+          featureCard("card",  t("driverF3T"), t("driverF3B"), "coral"))),
+
+      $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("safetyTitle")}),
+        $("div",{class:"landing__grid"},
+          featureCard("check", t("safetyF1T"), t("safetyF1B"), "mint"),
+          featureCard("qr",    t("safetyF2T"), t("safetyF2B"), "sky"),
+          featureCard("sos",   t("safetyF3T"), t("safetyF3B"), "coral"))),
 
       $("section",{class:"landing__section"},
         $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
@@ -2078,8 +2126,36 @@ function landing() {
 
       $("footer",{class:"landing__foot"},
         $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}),
+        $("div",{class:"landing__policies"},
+          policyLink("terms"), policyLink("privacy"), policyLink("safety")),
         $("a",{class:"landing__credits", attrs:{href:"https://www.streamlinehq.com",
           target:"_blank", rel:"noopener noreferrer"}, text:t("creditsVectors")}))));
+}
+
+/* Policies — Terms / Privacy / Safety. Structure is real and linked from the
+   footer; the final legal wording is the operator's (DEC-030). */
+function policyLink(kind) {
+  return $("button",{class:"landing__policylink", attrs:{type:"button"}, text:t(kind),
+    on:{click:()=>{ S.landingDoc=kind; render(); }}});
+}
+
+function landingDoc() {
+  const docs = {
+    terms:   { title: t("policyTermsTitle"),   body: t("policyPlaceholder") },
+    privacy: { title: t("policyPrivacyTitle"), body: t("policyPlaceholder") },
+    safety:  { title: t("policySafetyTitle"),  body: t("policyPlaceholder") },
+  };
+  const d = docs[S.landingDoc] || docs.terms;
+  return $("div",{class:"landing"},
+    $("header",{class:"landing__nav"},
+      $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
+      $("div",{class:"row gap2"}, langToggle(), themeToggle())),
+    $("div",{class:"landing__body"},
+      $("section",{class:"landing__section landing__doc"},
+        $("button",{class:"btn btn--ghost", attrs:{type:"button"},
+          on:{click:()=>{ S.landingDoc=null; render(); }}}, icon("back"), $("span",{text:t("landingBack")})),
+        $("h1",{class:"landing__h2",text:d.title}),
+        $("p",{class:"landing__p",text:d.body}))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */

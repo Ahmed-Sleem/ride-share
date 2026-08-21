@@ -7,6 +7,7 @@
    and logical properties; scroll-driven reveals are reduced-motion guarded.
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
+  if (S.landingDoc) return landingDoc();
   return $("div",{class:"landing"},
     $("header",{class:"landing__nav"},
       $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
@@ -28,11 +29,26 @@ function landing() {
     $("div",{class:"landing__body"},
 
       $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("forRiders")}),
         $("div",{class:"landing__grid"},
           featureCard("wallet", t("landingF1T"), t("landingF1B"), "mint"),
           featureCard("clock",  t("landingF2T"), t("landingF2B"), "sky"),
           featureCard("promos", t("landingF3T"), t("landingF3B"), "coral"),
           featureCard("livemap",t("landingF4T"), t("landingF4B"), "pink"))),
+
+      $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("forDrivers")}),
+        $("div",{class:"landing__grid"},
+          featureCard("doc",   t("driverF1T"), t("driverF1B"), "sky"),
+          featureCard("clock", t("driverF2T"), t("driverF2B"), "mint"),
+          featureCard("card",  t("driverF3T"), t("driverF3B"), "coral"))),
+
+      $("section",{class:"landing__section"},
+        $("h2",{class:"landing__h2",text:t("safetyTitle")}),
+        $("div",{class:"landing__grid"},
+          featureCard("check", t("safetyF1T"), t("safetyF1B"), "mint"),
+          featureCard("qr",    t("safetyF2T"), t("safetyF2B"), "sky"),
+          featureCard("sos",   t("safetyF3T"), t("safetyF3B"), "coral"))),
 
       $("section",{class:"landing__section"},
         $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
@@ -49,8 +65,36 @@ function landing() {
 
       $("footer",{class:"landing__foot"},
         $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}),
+        $("div",{class:"landing__policies"},
+          policyLink("terms"), policyLink("privacy"), policyLink("safety")),
         $("a",{class:"landing__credits", attrs:{href:"https://www.streamlinehq.com",
           target:"_blank", rel:"noopener noreferrer"}, text:t("creditsVectors")}))));
+}
+
+/* Policies — Terms / Privacy / Safety. Structure is real and linked from the
+   footer; the final legal wording is the operator's (DEC-030). */
+function policyLink(kind) {
+  return $("button",{class:"landing__policylink", attrs:{type:"button"}, text:t(kind),
+    on:{click:()=>{ S.landingDoc=kind; render(); }}});
+}
+
+function landingDoc() {
+  const docs = {
+    terms:   { title: t("policyTermsTitle"),   body: t("policyPlaceholder") },
+    privacy: { title: t("policyPrivacyTitle"), body: t("policyPlaceholder") },
+    safety:  { title: t("policySafetyTitle"),  body: t("policyPlaceholder") },
+  };
+  const d = docs[S.landingDoc] || docs.terms;
+  return $("div",{class:"landing"},
+    $("header",{class:"landing__nav"},
+      $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
+      $("div",{class:"row gap2"}, langToggle(), themeToggle())),
+    $("div",{class:"landing__body"},
+      $("section",{class:"landing__section landing__doc"},
+        $("button",{class:"btn btn--ghost", attrs:{type:"button"},
+          on:{click:()=>{ S.landingDoc=null; render(); }}}, icon("back"), $("span",{text:t("landingBack")})),
+        $("h1",{class:"landing__h2",text:d.title}),
+        $("p",{class:"landing__p",text:d.body}))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */

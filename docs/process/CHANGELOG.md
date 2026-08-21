@@ -576,3 +576,12 @@
   two-person rule enforced server-side and in the UI (own capture hides approve).
 - Retire endpoint (verified→retired, audited); public near stays verified-only.
 - 125 API / 284 unit / 14 a11y / 5 server / repo checks green; 5 new break checks observed failing.
+
+## 2026-08-19 — Landing page completeness (DEC-201) + M3/GUI direction documented
+
+- Landing: For riders / For drivers / Safety sections + Terms·Privacy·Safety policy pages
+  (structure real, legal wording = owner's per DEC-030).
+- Documented: DEC-199 (A→B planner post-core), DEC-200 (desktop density), DEC-201 (landing),
+  DEC-202 (M3 order); R19 research (Uber/Swvl/desktop density); M3 + GUI-polish checklists;
+  project map + master status updated.
+- 293 unit / 14 a11y / 47 landing / repo checks green.
