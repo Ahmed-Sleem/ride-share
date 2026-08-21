@@ -119,6 +119,13 @@ export class RoutesRepository {
     return rows;
   }
 
+  async findSlotById(id: string): Promise<SlotRow | null> {
+    const { rows } = await this.pool.query<SlotRow>(
+      `SELECT id, route_id, service_date::text AS service_date, departs_at::text AS departs_at, required_vehicles, created_at
+       FROM slots WHERE id = $1`, [id]);
+    return rows[0] ?? null;
+  }
+
   /** For the retire guard on the geo side: is this stop on a published route? */
   async publishedRoutesForStop(stopId: string): Promise<RouteRow[]> {
     const { rows } = await this.pool.query<RouteRow>(

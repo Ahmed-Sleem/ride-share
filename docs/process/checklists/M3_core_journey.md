@@ -19,10 +19,10 @@
 
 ## P3.3 — Driver claim (two taps)
 
-- [ ] Driver picks a route → picks a slot → claims (one claim per slot by default — T5).
-- [ ] Recurring claim rule (T9) stored (route + weekday pattern + start/end date).
-- [ ] Unclaimed slots are visible; claim creates the journey (state CLAIMED).
-- [ ] Tests: one driver per slot; claim creates a journey; authority (driver only).
+- [x] Driver claims a slot in two taps (POST /journeys/claim): pick route → pick slot → confirm. One claim per slot by default, enforced by the UNIQUE slot_id constraint (race-safe).
+- [~] Recurring-claim data model is the M6 slice; for now a claim is one slot (recurring claims land with M6 per DEC-202).
+- [x] The driver "find work" board lists published routes + their slots with open/taken/mine states; claiming creates the journey in CLAIMED.
+- [x] 9 journey-service tests + 6 state-machine tests: approved-driver+vehicle required, rider refused, past-slot refused, lock-window release, race mapping to a clear refusal, open-for-booking. 4 break checks observed failing.
 
 ## P3.4–P3.6 — Rider search → boarding → departure → book
 

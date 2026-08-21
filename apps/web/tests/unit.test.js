@@ -384,7 +384,7 @@ group("ROLE BOUNDARIES");
   ok("no control is shown disabled because of role", roleDisabled===0, String(roleDisabled));
 }
 
-group("DRIVER SCREENS ARE HONEST (no demo shifts/earnings)");
+group("DRIVER SCREENS ARE REAL (duty + work wired, no demo data)");
 {
   const t=boot();
   t.set({role:"driver", user:{id:"u1",role:"driver",name:"Mahmoud",email:"m@x.com"}});
@@ -393,7 +393,14 @@ group("DRIVER SCREENS ARE HONEST (no demo shifts/earnings)");
   ok("large target is 56px", /\.btn--driver\{[^}]*min-height:var\(--tap-driver\)/.test(css));
   ok("--tap-driver is 56px", /--tap-driver:\s*56px/.test(css));
 
-  for(const p of ["duty","work","journey","earnings"]){
+  // duty and work now load REAL journeys/slots from the API — the loaders
+  // must render and must never show sample content.
+  t.go("driver","duty");
+  ok("driver duty renders the real journeys loader", !!t.q("#duty-list") && !sample.test(t.q(".main").textContent));
+  t.go("driver","work");
+  ok("driver work renders the real find-work loader", !!t.q("#work-list") && !sample.test(t.q(".main").textContent));
+
+  for(const p of ["journey","earnings"]){   // still M3-later → honest coming-soon
     t.go("driver",p);
     ok(`driver ${p} is honest (no sample content)`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
   }
@@ -757,6 +764,32 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   ok("policy doc states the legal text is the operator's", t.q(".landing__doc").textContent.includes("legal"));
   t.q(".landing__doc .btn--ghost").click();
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
+})();
+
+group("M3 — ROUTES TOOL + DRIVER WORK BOARD");
+(() => {
+  const t=boot();
+
+  // ops routes screen is a real tool (create form + list loader)
+  t.set({role:"ops", user:{id:"u1",role:"operations",name:"Ops"}});
+  t.go("ops","routes");
+  ok("routes tool has a create form", !!t.q("#route-name-en") && !!t.q("#route-fare"));
+  ok("routes tool has window + interval fields", !!t.q("#route-win-start") && !!t.q("#route-interval"));
+  ok("routes tool lists routes (real loader)", !!t.q("#routes-list"));
+  // riders also have a "routes" page (R-11 route list) — distinct from the ops tool
+
+  // route detail renders stop + slot loaders + publish
+  t.w.S.opsView = "routeDetail";
+  t.w.S.opsTarget = { id:"r1", code:"ALX-R001", name_en:"Corniche", status:"draft",
+    fare_minor:1500, window_start:"06:00", window_end:"10:00", slot_interval_min:15 };
+  t.w.render();
+  ok("route detail renders the publish action", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.publishRoute)));
+  ok("route detail renders stop + slot loaders", !!t.q("#route-stops") && !!t.q("#route-slots"));
+
+  // driver work board renders the real loader
+  t.set({role:"driver", user:{id:"u2",role:"driver",name:"Mahmoud"}});
+  t.go("driver","work");
+  ok("driver work board renders the find-work loader", !!t.q("#work-list"));
 })();
 
 group("M2 — STOP MAPPING TOOL (ops only)");

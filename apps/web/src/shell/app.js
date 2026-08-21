@@ -13,6 +13,7 @@ const SHEETS = {
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
   fieldCapture: () => fieldCaptureSheet(),
+  claimSlot: () => claimSlotSheet(),
 };
 
 /* ══════════════════════════════════════════════════════════════════════

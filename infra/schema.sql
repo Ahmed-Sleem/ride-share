@@ -53,6 +53,20 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT driver_profiles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'under_review'::text, 'approved'::text, 'rejected'::text])))
 );
+CREATE TABLE public.journeys (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+route_id uuid NOT NULL,
+slot_id uuid NOT NULL,
+driver_user_id uuid NOT NULL,
+vehicle_id uuid,
+status text DEFAULT 'CLAIMED'::text NOT NULL,
+committed boolean DEFAULT true NOT NULL,
+seats_total integer DEFAULT 14 NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT journeys_seats_total_check CHECK (((seats_total >= 1) AND (seats_total <= 60))),
+CONSTRAINT journeys_status_check CHECK ((status = ANY (ARRAY['CLAIMED'::text, 'OPEN_FOR_BOOKING'::text, 'LOCKED'::text, 'IN_PROGRESS'::text, 'COMPLETED'::text, 'CANCELLED'::text, 'ABORTED'::text])))
+);
 CREATE TABLE public.pgmigrations (
 id integer NOT NULL,
 name character varying(255) NOT NULL,
@@ -211,6 +225,10 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_key UNIQUE (user_id);
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_slot_id_key UNIQUE (slot_id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.route_stops
@@ -254,6 +272,8 @@ ADD CONSTRAINT vehicles_plate_key UNIQUE (plate);
 ALTER TABLE ONLY public.verification_codes
 ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
+CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
+CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);
 CREATE INDEX route_stops_route_idx ON public.route_stops USING btree (route_id, "position");
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
 CREATE INDEX slots_route_date_idx ON public.slots USING btree (route_id, service_date);
@@ -270,6 +290,14 @@ ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_driver_user_id_fkey FOREIGN KEY (driver_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_slot_id_fkey FOREIGN KEY (slot_id) REFERENCES public.slots(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.journeys
+ADD CONSTRAINT journeys_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.route_stops
 ADD CONSTRAINT route_stops_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.route_stops

@@ -119,4 +119,15 @@ export class DriversRepository {
     );
     return rows[0] ?? null;
   }
+
+  /** A driver's own approved vehicles (the claim needs one). */
+  async vehiclesForUser(userId: string): Promise<VehicleRow[]> {
+    const { rows } = await this.pool.query<VehicleRow>(
+      `SELECT id, owner_user_id, plate, model, colour, fleet_label, status
+       FROM vehicles WHERE owner_user_id = $1 AND status = 'approved'
+       ORDER BY created_at ASC`,
+      [userId]
+    );
+    return rows;
+  }
 }

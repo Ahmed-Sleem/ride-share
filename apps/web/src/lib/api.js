@@ -120,6 +120,22 @@ const API = {
   reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
   retireStop: (id) => API.request("POST", `/stops/${id}/retire`),
 
+  /* ── routes & journeys (M3) ─────────────────────────────────────────── */
+  listRoutes: () => API.request("GET", "/routes"),
+  createRoute: (payload) => API.request("POST", "/routes", payload),
+  getRoute: (id) => API.request("GET", `/routes/${id}`),
+  publishRoute: (id) => API.request("POST", `/routes/${id}/publish`),
+  addStopToRoute: (id, stopId) => API.request("POST", `/routes/${id}/stops`, { stopId }),
+  reorderRoute: (id, orderedStopIds) => API.request("POST", `/routes/${id}/reorder`, { orderedStopIds }),
+  generateSlots: (id, fromDate, toDate) => API.request("POST", `/routes/${id}/slots`, { fromDate, toDate }),
+  listRouteSlots: (id, from, to) => API.request("GET", `/routes/${id}/slots?from=${from}&to=${to}`),
+  driverVehicles: () => API.request("GET", "/driver/vehicles"),
+  claimJourney: (slotId, vehicleId, committed) => API.request("POST", "/journeys/claim", { slotId, vehicleId, committed }),
+  releaseJourney: (id) => API.request("POST", `/journeys/${id}/release`),
+  openJourney: (id) => API.request("POST", `/journeys/${id}/open`),
+  myJourneys: () => API.request("GET", "/journeys/mine"),
+  availableJourneys: (from, to) => API.request("GET", `/journeys/available?from=${from}&to=${to}`),
+
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
     if (typeof fetch !== "function") return null;

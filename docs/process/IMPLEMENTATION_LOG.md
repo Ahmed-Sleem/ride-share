@@ -612,3 +612,23 @@ output) — see the engineering standard §3.3 and §4.
   unmapped). Repo checks green (boundaries + env-doc parity). Migrations up clean; schema + types
   regenerated (13 tables).
 - Deferred: ops routes/slots UI (P3.2 UI) and P3.3 driver claim — next steps.
+
+## M3 — P3.3 driver slot claim (journeys module) + routes/slots UI
+
+- New `journeys` module: domain/journey.ts (state machine CLAIMED→OPEN_FOR_BOOKING→LOCKED→
+  IN_PROGRESS→COMPLETED/CANCELLED/ABORTED), infra/journeys.repository.ts (claim with UNIQUE
+  slot_id = race-safety; claimedSlotIds for the board), application/journeys.service.ts
+  (claimSlot: approved driver + own approved vehicle, past-slot refusal, 23505→clear refusal;
+  releaseClaim inside MinClaimLeadMinutes refused; openForBooking; availableWork), api controller
+  (claim/release/open/mine/available), module.
+- Migration 0015: journeys (slot_id UNIQUE, committed flag, seats_total, status CHECK).
+- Drivers + routes became @Global (the established shared-capability pattern) and grew contract
+  reads: DriversService.assertApprovedDriverWithVehicle + myVehicles; RoutesService.publishedRoutes
+  + slotsForClaim + getSlotById + slotDepartureInstant (UTC+2, no DST). Boundary + SQL checks green.
+- Frontend: ops Routes is a REAL tool (create route with fare EGP→minor units + window + interval,
+  route detail with stops/distances, publish, slot generation + list). Driver Duty shows real
+  journeys (release/open-for-booking) and Driver Work is the real find-work board (slots as
+  open/taken/mine chips, claim sheet picks the approved vehicle). 7 new copy keys EN+AR.
+- Tests: 155 API (journeys domain + service) with 4 break checks observed failing; 299 web unit
+  (routes tool + work board + updated driver-honesty group, 2 break cases observed failing);
+  a11y 14, server 5, repo checks green. Schema + types regenerated (14 tables).

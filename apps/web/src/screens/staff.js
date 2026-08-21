@@ -416,9 +416,145 @@ async function submitStopAction(id) {
 }
 
 function opsRoutes(){                                         // O-23
+  if (S.opsView === "routeDetail") return routeDetailView();
   const w=$("div",{class:"main"});
-  w.append(Empty("routes", t("nav.routes"), t("opsRoutesComing")));
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("newRoute")}),
+    $("div",{class:"grid grid--tight"},
+      field("route-name-en", t("stopNameEn"), "text", "off"),
+      field("route-name-ar", t("stopNameAr"), "text", "off"),
+      field("route-fare", t("fareLabel"), "number", "off"),
+      field("route-interval", t("intervalLabel"), "number", "off"),
+      field("route-win-start", t("windowStart"), "text", "off"),
+      field("route-win-end", t("windowEnd"), "text", "off")),
+    Btn({label:t("newRoute"), block:true, dis:S.stopBusy, on:()=>createRouteAction()})));
+
+  w.append($("h2",{class:"t-head",text:t("nav.routes")}));
+  const list = $("div",{id:"routes-list"});
+  w.append(list);
+  loadRoutesInto(list);
   return w;
+}
+
+async function createRouteAction() {
+  const fare = Number(val("route-fare"));
+  const interval = Number(val("route-interval"));
+  const winStart = val("route-win-start"), winEnd = val("route-win-end");
+  if (!Number.isFinite(fare) || fare <= 0 || !Number.isFinite(interval) || !winStart || !winEnd) {
+    toast(t("validation.failed")); return;
+  }
+  S.stopBusy = true; render();
+  try {
+    await API.createRoute({
+      nameEn: val("route-name-en") || undefined,
+      nameAr: val("route-name-ar") || undefined,
+      fareMinor: Math.round(fare * 100), // EGP → minor units (piastres)
+      windowStart: winStart, windowEnd: winEnd, slotIntervalMin: interval,
+    });
+    S.stopBusy = false; toast(t("save")); render();
+    loadRoutesInto(document.getElementById("routes-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function loadRoutesInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const routes = await API.listRoutes();
+    if (!routes.length) { el.append(Empty("routes", t("nav.routes"), t("opsRoutesComing"))); return; }
+    routes.forEach((r) => el.append(Row({
+      icon: "routes",
+      title: r.name_en || r.name_ar || r.code,
+      sub: `${r.code} · ${money(r.fare_minor / 100)} · ${r.window_start}–${r.window_end} · ${r.slot_interval_min}${t("intervalLabel")}`,
+      right: Chip({label: t("stopStatus." + ({draft:"draft",published:"verified",retired:"retired"}[r.status] || "draft")),
+        kind: r.status === "published" ? "ok" : r.status === "retired" ? "danger" : ""}),
+      bordered: true, chev: true,
+      on: () => { S.opsTarget = r; S.opsView = "routeDetail"; render(); } })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function routeDetailView() {
+  const r = S.opsTarget || {};
+  const w = $("div",{class:"main"});
+  w.append($("div",{class:"row gap2"},
+    $("h1",{class:"t-head grow",text:r.name_en || r.name_ar || r.code}),
+    Chip({label:r.status, kind:r.status==="published"?"ok":""})));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+
+  if (r.status === "draft") {
+    w.append(Banner("info", t("routeNoStops")));
+    w.append(Btn({label:t("publishRoute"), block:true, dis:S.stopBusy, on:()=>publishRouteAction(r.id)}));
+  }
+
+  const stops = $("div",{id:"route-stops"});
+  w.append(stops);
+  loadRouteStopsInto(stops, r.id);
+
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("generateSlots")}),
+    $("div",{class:"grid grid--tight"},
+      field("slots-from", t("slotsFrom"), "text", "off"),
+      field("slots-to", t("slotsTo"), "text", "off")),
+    Btn({label:t("generateSlots"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>generateSlotsAction(r.id)})));
+
+  const slotList = $("div",{id:"route-slots"});
+  w.append(slotList);
+  loadRouteSlotsInto(slotList, r.id);
+  return w;
+}
+
+async function loadRouteStopsInto(el, routeId) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const { route, stops } = await API.getRoute(routeId);
+    if (!stops.length) { el.append(Empty("stops", t("nav.stops"), t("routeNoStops"))); return; }
+    el.append($("h2",{class:"t-head",text:`${stops.length} ${t("stopCount")}`}));
+    stops.forEach((s) => el.append(Row({
+      icon: "stops",
+      title: $("span",{class:"ltr",text:s.stop_code}),
+      sub: `${s.stop_name_en || s.stop_name_ar || "—"} · ${Math.round(s.distance_from_start_m)} m · ${s.run_minutes} min`,
+      right: Chip({label:String(s.position)}),
+      bordered: true })));
+    void route;
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function loadRouteSlotsInto(el, routeId) {
+  if (!el) return;
+  el.innerHTML = "";
+  const today = new Date().toISOString().slice(0, 10);
+  const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  try {
+    const slots = await API.listRouteSlots(routeId, today, week);
+    if (!slots.length) { el.append(Empty("clock", t("generateSlots"), t("noSlotsPublished"))); return; }
+    el.append($("h2",{class:"t-head",text:t("nav.work")}));
+    const days = {};
+    slots.forEach((s) => { (days[s.service_date] ||= []).push(s.departs_at); });
+    Object.entries(days).forEach(([date, times]) => el.append(
+      $("div",{class:"row wrap gap2"}, $("span",{class:"t-cap ltr",text:date}),
+        ...times.map((tm) => Chip({label:String(tm), kind:"info"})))));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function publishRouteAction(id) {
+  S.stopBusy = true; render();
+  try {
+    await API.publishRoute(id);
+    S.stopBusy = false; toast(t("publishRoute")); render();
+    loadRoutesInto(document.getElementById("routes-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function generateSlotsAction(id) {
+  const from = val("slots-from"), to = val("slots-to");
+  if (!from || !to) { toast(t("validation.failed")); return; }
+  S.stopBusy = true; render();
+  try {
+    const res = await API.generateSlots(id, from, to);
+    S.stopBusy = false; toast(`${res.generated}`); render();
+    loadRouteSlotsInto(document.getElementById("route-slots"), id);
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
 function opsUsers(){                                          // O-22

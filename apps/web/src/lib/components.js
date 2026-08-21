@@ -49,7 +49,8 @@ const S = {
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
-  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
+  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
+  claimTarget:null, claimVehicleId:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 

@@ -41,6 +41,12 @@ export class DriversController {
     return this.drivers.addVehicle(req.actor!, dto.plate, dto.model ?? '', dto.colour ?? '');
   }
 
+  @Get('driver/vehicles')
+  @UseGuards(IdentityGuard)
+  myVehicles(@Req() req: ReqWithActor) {
+    return this.drivers.myVehicles(req.actor!);
+  }
+
   @Get('ops/driver-applications')
   @UseGuards(IdentityGuard)
   listApplications(@Req() req: ReqWithActor) {

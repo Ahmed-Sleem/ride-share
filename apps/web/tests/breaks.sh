@@ -176,6 +176,14 @@ run_break "landing loses its policy links" src/screens/landing.js \
   's|          policyLink("terms"), policyLink("privacy"), policyLink("safety")),|          null),|' \
   "landing footer links policies"
 
+run_break "routes tool loses its create form" src/screens/staff.js \
+  's|      field("route-name-en", t("stopNameEn"), "text", "off"),|      field("route-name-enX", t("stopNameEn"), "text", "off"),|' \
+  "routes tool has a create form"
+
+run_break "driver work board loses its loader" src/screens/driver.js \
+  's|  const list = $("div",{id:"work-list"});|  const list = $("div",{id:"work-listX"});|' \
+  "driver work board renders the find-work loader"
+
 run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js \
   's|    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|    Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|' \
   "own capture hides the approve action"

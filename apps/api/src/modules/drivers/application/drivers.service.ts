@@ -3,7 +3,7 @@
    authority) live here and in domain/; persistence in infra/.
    ══════════════════════════════════════════════════════════════════════ */
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { DriversRepository, type DriverProfileRow } from '../infra/drivers.repository.js';
+import { DriversRepository, type DriverProfileRow, type VehicleRow } from '../infra/drivers.repository.js';
 import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import { assertTransition, DRIVER_TRANSITIONS, VEHICLE_TRANSITIONS } from '../domain/state-machine.js';
@@ -33,6 +33,30 @@ export class DriversService {
 
   async myProfile(actor: Actor): Promise<DriverProfileRow | null> {
     return this.drivers.findByUserId(actor.id);
+  }
+
+  /** Journeys (P3.3) need to know a driver is approved AND owns the approved
+      vehicle they intend to drive — one check, one place (§8.2). Throws the
+      honest error instead of returning null, so callers stay thin. */
+  async assertApprovedDriverWithVehicle(userId: string, vehicleId: string): Promise<VehicleRow> {
+    const profile = await this.drivers.findByUserId(userId);
+    if (!profile || profile.status !== 'approved') {
+      throw new ForbiddenException({ message_key: 'drivers.must_be_approved' });
+    }
+    const vehicle = await this.drivers.findVehicle(vehicleId);
+    if (!vehicle || vehicle.owner_user_id !== userId) {
+      throw new ForbiddenException({ message_key: 'drivers.vehicle_not_yours' });
+    }
+    if (vehicle.status !== 'approved') {
+      throw new ForbiddenException({ message_key: 'drivers.vehicle_not_approved' });
+    }
+    return vehicle;
+  }
+
+  /** The driver's own approved vehicles (the claim needs one to pick from). */
+  async myVehicles(actor: Actor): Promise<VehicleRow[]> {
+    assertCan(actor.role as unknown as Role, Capability.CLAIM_SLOT);
+    return this.drivers.vehiclesForUser(actor.id);
   }
 
   async addVehicle(actor: Actor, plate: string, model: string, colour: string) {

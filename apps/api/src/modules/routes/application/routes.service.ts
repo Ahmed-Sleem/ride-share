@@ -137,6 +137,31 @@ export class RoutesService {
     return this.routes.listSlots(routeId, fromDate, toDate);
   }
 
+  /** Published routes — the driver's "find work" board needs them; route
+      existence is not secret, and claims are protected elsewhere. */
+  async publishedRoutes(): Promise<RouteRow[]> {
+    return (await this.routes.list()).filter((r) => r.status === 'published');
+  }
+
+  /** Slots for a route (driver-facing read — no auth; claims are protected). */
+  async slotsForClaim(routeId: string, fromDate: string, toDate: string): Promise<SlotRow[]> {
+    return this.routes.listSlots(routeId, fromDate, toDate);
+  }
+
+  /** Journeys (P3.3) needs a slot's route + departure. No auth here — this is
+      an internal read through the contract, and slot existence is not secret. */
+  async getSlotById(slotId: string): Promise<SlotRow | null> {
+    return this.routes.findSlotById(slotId);
+  }
+
+  /** The departure instant of a slot, in the city's fixed offset (Alexandria =
+      UTC+2, no DST — DEC-118 wall-clock). Returns null for a missing slot. */
+  async slotDepartureInstant(slotId: string): Promise<Date | null> {
+    const slot = await this.routes.findSlotById(slotId);
+    if (!slot) return null;
+    return new Date(`${slot.service_date}T${slot.departs_at}:00+02:00`);
+  }
+
   // ── internals ───────────────────────────────────────────────────────────
   private speedMpm(): number {
     return KMH_TO_M_PER_MIN(this.env.ROUTE_SPEED_KMH);

@@ -52,6 +52,10 @@ export const envSchema = {
   // Routes (M3): average vehicle speed used to estimate the cumulative
   // run-time to each stop (the timetable feeds every arrival estimate).
   ROUTE_SPEED_KMH: z.coerce.number().int().min(5).max(80).default(20),
+  // Journeys (M3): seats on a claimed vehicle by default, and how soon before
+  // departure a claim may no longer be released (MinClaimLeadMinutes).
+  VEHICLE_SEATS: z.coerce.number().int().min(1).max(60).default(14),
+  MIN_CLAIM_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(30),
 
   // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
   PAYMOB_API_KEY: z.string().optional(),

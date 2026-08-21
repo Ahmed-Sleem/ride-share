@@ -593,3 +593,11 @@
 - Migrations 0013/0014: routes + route_stops (verified-stops trigger, retire guard naming the
   route) + slots. Retire guard mapped to an honest conflict in geo.
 - 140 API tests; 5 break checks observed failing; repo checks green; schema + types regenerated.
+
+## 2026-08-19 — M3 P3.3: driver slot claim (journeys) + routes/slots UI
+
+- journeys module: race-safe claim (UNIQUE slot_id), approved-driver+vehicle rule, release
+  lock-window, open-for-booking, the driver "available work" board.
+- Ops Routes is a real tool: create/publish routes, generate slots, view stops + distances.
+- Driver Duty shows real journeys; Driver Work is the real find-work board with claim.
+- 155 API / 299 unit / 14 a11y / 5 server green; break checks observed failing.

@@ -1090,6 +1090,14 @@ en:{
   queuedOffline:"Saved offline — it will upload when you're back online.",
   captureSaved:"Capture saved and sent for verification.",
   capturedBy:"Captured by",
+  newRoute:"New route", fareLabel:"Fare (EGP)", windowStart:"Window start", windowEnd:"Window end",
+  intervalLabel:"Interval (min)", publishRoute:"Publish route", generateSlots:"Generate slots",
+  slotsFrom:"From (YYYY-MM-DD)", slotsTo:"To (YYYY-MM-DD)", stopCount:"stops",
+  routeNoStops:"No stops yet — add verified stops from the Stops tab.",
+  slotUnclaimed:"Open", slotClaimedByYou:"Yours", claimConfirm:"Claim this slot?",
+  noApprovedVehicle:"You need an approved vehicle to claim. Add one from your profile.",
+  pickVehicle:"Vehicle", releaseClaim:"Release", openForBooking:"Open for booking",
+  findWork:"Find work", myJourneysTitle:"My journeys", noSlotsPublished:"No published slots in this range.",
   opsRoutesComing:"Routes and the slot grid arrive with the route model (M3).",
   opsUsersComing:"User management arrives with the journey model (M3).",
   managerComing:"Coverage, pricing, promotions and analytics arrive with commercial control (M5).",
@@ -1278,6 +1286,14 @@ ar:{
   queuedOffline:"حُفظ دون اتصال — سيُرفع عند عودة الاتصال.",
   captureSaved:"حُفظ الالتقاط وأُرسل للتحقق.",
   capturedBy:"التقطها",
+  newRoute:"مسار جديد", fareLabel:"الأجرة (ج.م)", windowStart:"بداية الفترة", windowEnd:"نهاية الفترة",
+  intervalLabel:"الفاصل (دقيقة)", publishRoute:"نشر المسار", generateSlots:"إنشاء المواعيد",
+  slotsFrom:"من (سنة-شهر-يوم)", slotsTo:"إلى (سنة-شهر-يوم)", stopCount:"محطات",
+  routeNoStops:"لا توجد محطات بعد — أضف محطات موثّقة من تبويب المحطات.",
+  slotUnclaimed:"متاح", slotClaimedByYou:"لك", claimConfirm:"حجز هذا الموعد؟",
+  noApprovedVehicle:"تحتاج مركبة معتمدة للحجز. أضف واحدة من حسابك.",
+  pickVehicle:"المركبة", releaseClaim:"إلغاء الحجز", openForBooking:"فتح للحجز",
+  findWork:"ابحث عن عمل", myJourneysTitle:"مواعيدي", noSlotsPublished:"لا توجد مواعيد منشورة في هذه الفترة.",
   opsRoutesComing:"المسارات وشبكة المواعيد تأتيان مع نموذج المسار (M3).",
   opsUsersComing:"إدارة المستخدمين تأتي مع نموذج الرحلة (M3).",
   managerComing:"التغطية والتسعير والعروض والتحليلات تأتي مع التحكم التجاري (M5).",
@@ -1439,7 +1455,8 @@ const S = {
   chosenRoute:null, chosenBoard:null, chosenDep:null, seats:1,
   tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
-  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false, stack:[],
+  opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
+  claimTarget:null, claimVehicleId:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
 };
 
@@ -2010,6 +2027,22 @@ const API = {
   submitStop: (id) => API.request("POST", `/stops/${id}/submit`),
   reviewStop: (id, decision, reason) => API.request("POST", `/stops/${id}/review`, { decision, reason }),
   retireStop: (id) => API.request("POST", `/stops/${id}/retire`),
+
+  /* ── routes & journeys (M3) ─────────────────────────────────────────── */
+  listRoutes: () => API.request("GET", "/routes"),
+  createRoute: (payload) => API.request("POST", "/routes", payload),
+  getRoute: (id) => API.request("GET", `/routes/${id}`),
+  publishRoute: (id) => API.request("POST", `/routes/${id}/publish`),
+  addStopToRoute: (id, stopId) => API.request("POST", `/routes/${id}/stops`, { stopId }),
+  reorderRoute: (id, orderedStopIds) => API.request("POST", `/routes/${id}/reorder`, { orderedStopIds }),
+  generateSlots: (id, fromDate, toDate) => API.request("POST", `/routes/${id}/slots`, { fromDate, toDate }),
+  listRouteSlots: (id, from, to) => API.request("GET", `/routes/${id}/slots?from=${from}&to=${to}`),
+  driverVehicles: () => API.request("GET", "/driver/vehicles"),
+  claimJourney: (slotId, vehicleId, committed) => API.request("POST", "/journeys/claim", { slotId, vehicleId, committed }),
+  releaseJourney: (id) => API.request("POST", `/journeys/${id}/release`),
+  openJourney: (id) => API.request("POST", `/journeys/${id}/open`),
+  myJourneys: () => API.request("GET", "/journeys/mine"),
+  availableJourneys: (from, to) => API.request("GET", `/journeys/available?from=${from}&to=${to}`),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
@@ -2956,14 +2989,134 @@ function driverDuty(){                                        // D-10
     $("div",{class:"t-micro",text:t("greeting")}),
     $("div",{class:"t-lg",text:u.name || "—"}),
     $("div",{class:"t-cap",text:t("roleLabel.driver")})));
-  w.append(Empty("clock", t("noClaims"), t("dutyComingBody")));
+  w.append($("h2",{class:"t-head",text:t("myJourneysTitle")}));
+  const list = $("div",{id:"duty-list"});
+  w.append(list);
+  loadDutyInto(list);
   return w;
+}
+
+async function loadDutyInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const journeys = await API.myJourneys();
+    if (!journeys.length) {
+      el.append(Empty("clock", t("noClaims"), t("noClaimsBody"),
+        Btn({label:t("nav.work"), on:()=>go("work")})));
+      return;
+    }
+    journeys.forEach((j) => el.append(Row({
+      icon: "bus",
+      title: j.route_name_en || j.route_name_ar || j.route_code,
+      sub: `${j.service_date} · ${j.departs_at} · ${j.seats_total} ${t("seats")}`,
+      right: $("div",{class:"row gap2"},
+        Chip({label:j.status, kind:j.status==="CANCELLED"?"danger":j.status==="COMPLETED"?"ok":"warn"}),
+        (j.status === "CLAIMED")
+          ? Btn({label:t("openForBooking"), kind:"ghost", on:()=>openJourneyAction(j.id)})
+          : null),
+      bordered:true })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function openJourneyAction(id) {
+  try { await API.openJourney(id); toast(t("openForBooking")); loadDutyInto(document.getElementById("duty-list")); }
+  catch(e) { toast(errText(e.messageKey)); }
 }
 
 function driverWork(){                                        // D-11
   const w=$("div",{class:"main"});
-  w.append(Empty("work", t("nav.work"), t("workComingBody")));
+  w.append($("h2",{class:"t-head",text:t("findWork")}));
+  const list = $("div",{id:"work-list"});
+  w.append(list);
+  loadWorkInto(list);
   return w;
+}
+
+async function loadWorkInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  const today = new Date().toISOString().slice(0, 10);
+  const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  try {
+    const board = await API.availableJourneys(today, week);
+    if (!board.length || board.every((r) => !r.slots.length)) {
+      el.append(Empty("work", t("findWork"), t("noSlotsPublished")));
+      return;
+    }
+    board.forEach((r) => {
+      const card = Card("",
+        $("div",{class:"stack grow gap1"},
+          $("strong",{text:r.route.nameEn || r.route.nameAr || r.route.code}),
+          $("div",{class:"t-cap",text:`${r.route.code} · ${money(r.route.fareMinor / 100)}`})));
+      const grid = $("div",{class:"row wrap gap2"});
+      r.slots.forEach((s) => {
+        const taken = s.claimed && !s.mine;
+        grid.append(Chip({
+          label: `${s.serviceDate.slice(5)} ${s.departsAt}`,
+          kind: s.mine ? "brand" : taken ? "" : "info",
+          dis: taken || s.mine,
+          pressed: s.mine,
+          on: (taken || s.mine) ? ()=>{}
+             : ()=>claimConfirmSheet(r.route, s),
+        }));
+      });
+      card.append(grid);
+      el.append(card);
+    });
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function claimConfirmSheet(route, slot) {
+  S.claimTarget = { route, slot };
+  openSheet("claimSlot");
+}
+
+function claimSlotSheet() {
+  const { route, slot } = S.claimTarget || {};
+  if (!route || !slot) return Sheet(t("claimSlot"), Banner("danger", t("error.internal")));
+  const vehicles = $("div",{id:"claim-vehicles"});
+  setTimeout(() => loadClaimVehiclesInto(document.getElementById("claim-vehicles")), 0);
+  return Sheet(t("claimSlot"),
+    $("div",{class:"stack gap1"},
+      $("strong",{text:route.nameEn || route.nameAr || route.code}),
+      $("div",{class:"t-cap ltr",text:`${slot.serviceDate} · ${slot.departsAt}`}),
+      $("div",{class:"t-cap",text:t("claimConfirm")})),
+    vehicles,
+    Btn({label:t("claimSlot"), block:true, driver:true, dis:S.stopBusy, on:()=>claimSlotAction()}));
+}
+
+async function loadClaimVehiclesInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const vehicles = await API.driverVehicles();
+    if (!vehicles.length) { el.append(Banner("warn", t("noApprovedVehicle"))); return; }
+    S.claimVehicleId = S.claimVehicleId || vehicles[0].id;
+    vehicles.forEach((v) => el.append(Row({
+      icon: "bus",
+      title: $("span",{class:"ltr",text:v.plate}),
+      sub: v.model || "",
+      selected: S.claimVehicleId === v.id,
+      bordered: true,
+      on: () => { S.claimVehicleId = v.id; render(); } })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function claimSlotAction() {
+  const { slot } = S.claimTarget || {};
+  if (!slot) return;
+  S.stopBusy = true; render();
+  try {
+    const vehicles = await API.driverVehicles();
+    if (!vehicles.length) { S.stopBusy = false; closeSheet(); toast(t("noApprovedVehicle")); render(); return; }
+    const vehicleId = (S.claimVehicleId) || vehicles[0].id;
+    await API.claimJourney(slot.id, vehicleId, true);
+    S.stopBusy = false; S.claimVehicleId = null; S.claimTarget = null;
+    closeSheet(); toast(t("claimed")); render();
+    loadWorkInto(document.getElementById("work-list"));
+    loadDutyInto(document.getElementById("duty-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
 function driverJourney(){                                     // D-20
@@ -3417,9 +3570,145 @@ async function submitStopAction(id) {
 }
 
 function opsRoutes(){                                         // O-23
+  if (S.opsView === "routeDetail") return routeDetailView();
   const w=$("div",{class:"main"});
-  w.append(Empty("routes", t("nav.routes"), t("opsRoutesComing")));
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("newRoute")}),
+    $("div",{class:"grid grid--tight"},
+      field("route-name-en", t("stopNameEn"), "text", "off"),
+      field("route-name-ar", t("stopNameAr"), "text", "off"),
+      field("route-fare", t("fareLabel"), "number", "off"),
+      field("route-interval", t("intervalLabel"), "number", "off"),
+      field("route-win-start", t("windowStart"), "text", "off"),
+      field("route-win-end", t("windowEnd"), "text", "off")),
+    Btn({label:t("newRoute"), block:true, dis:S.stopBusy, on:()=>createRouteAction()})));
+
+  w.append($("h2",{class:"t-head",text:t("nav.routes")}));
+  const list = $("div",{id:"routes-list"});
+  w.append(list);
+  loadRoutesInto(list);
   return w;
+}
+
+async function createRouteAction() {
+  const fare = Number(val("route-fare"));
+  const interval = Number(val("route-interval"));
+  const winStart = val("route-win-start"), winEnd = val("route-win-end");
+  if (!Number.isFinite(fare) || fare <= 0 || !Number.isFinite(interval) || !winStart || !winEnd) {
+    toast(t("validation.failed")); return;
+  }
+  S.stopBusy = true; render();
+  try {
+    await API.createRoute({
+      nameEn: val("route-name-en") || undefined,
+      nameAr: val("route-name-ar") || undefined,
+      fareMinor: Math.round(fare * 100), // EGP → minor units (piastres)
+      windowStart: winStart, windowEnd: winEnd, slotIntervalMin: interval,
+    });
+    S.stopBusy = false; toast(t("save")); render();
+    loadRoutesInto(document.getElementById("routes-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function loadRoutesInto(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const routes = await API.listRoutes();
+    if (!routes.length) { el.append(Empty("routes", t("nav.routes"), t("opsRoutesComing"))); return; }
+    routes.forEach((r) => el.append(Row({
+      icon: "routes",
+      title: r.name_en || r.name_ar || r.code,
+      sub: `${r.code} · ${money(r.fare_minor / 100)} · ${r.window_start}–${r.window_end} · ${r.slot_interval_min}${t("intervalLabel")}`,
+      right: Chip({label: t("stopStatus." + ({draft:"draft",published:"verified",retired:"retired"}[r.status] || "draft")),
+        kind: r.status === "published" ? "ok" : r.status === "retired" ? "danger" : ""}),
+      bordered: true, chev: true,
+      on: () => { S.opsTarget = r; S.opsView = "routeDetail"; render(); } })));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function routeDetailView() {
+  const r = S.opsTarget || {};
+  const w = $("div",{class:"main"});
+  w.append($("div",{class:"row gap2"},
+    $("h1",{class:"t-head grow",text:r.name_en || r.name_ar || r.code}),
+    Chip({label:r.status, kind:r.status==="published"?"ok":""})));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+
+  if (r.status === "draft") {
+    w.append(Banner("info", t("routeNoStops")));
+    w.append(Btn({label:t("publishRoute"), block:true, dis:S.stopBusy, on:()=>publishRouteAction(r.id)}));
+  }
+
+  const stops = $("div",{id:"route-stops"});
+  w.append(stops);
+  loadRouteStopsInto(stops, r.id);
+
+  w.append(Card("card--tight",
+    $("div",{class:"t-micro",text:t("generateSlots")}),
+    $("div",{class:"grid grid--tight"},
+      field("slots-from", t("slotsFrom"), "text", "off"),
+      field("slots-to", t("slotsTo"), "text", "off")),
+    Btn({label:t("generateSlots"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>generateSlotsAction(r.id)})));
+
+  const slotList = $("div",{id:"route-slots"});
+  w.append(slotList);
+  loadRouteSlotsInto(slotList, r.id);
+  return w;
+}
+
+async function loadRouteStopsInto(el, routeId) {
+  if (!el) return;
+  el.innerHTML = "";
+  try {
+    const { route, stops } = await API.getRoute(routeId);
+    if (!stops.length) { el.append(Empty("stops", t("nav.stops"), t("routeNoStops"))); return; }
+    el.append($("h2",{class:"t-head",text:`${stops.length} ${t("stopCount")}`}));
+    stops.forEach((s) => el.append(Row({
+      icon: "stops",
+      title: $("span",{class:"ltr",text:s.stop_code}),
+      sub: `${s.stop_name_en || s.stop_name_ar || "—"} · ${Math.round(s.distance_from_start_m)} m · ${s.run_minutes} min`,
+      right: Chip({label:String(s.position)}),
+      bordered: true })));
+    void route;
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function loadRouteSlotsInto(el, routeId) {
+  if (!el) return;
+  el.innerHTML = "";
+  const today = new Date().toISOString().slice(0, 10);
+  const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  try {
+    const slots = await API.listRouteSlots(routeId, today, week);
+    if (!slots.length) { el.append(Empty("clock", t("generateSlots"), t("noSlotsPublished"))); return; }
+    el.append($("h2",{class:"t-head",text:t("nav.work")}));
+    const days = {};
+    slots.forEach((s) => { (days[s.service_date] ||= []).push(s.departs_at); });
+    Object.entries(days).forEach(([date, times]) => el.append(
+      $("div",{class:"row wrap gap2"}, $("span",{class:"t-cap ltr",text:date}),
+        ...times.map((tm) => Chip({label:String(tm), kind:"info"})))));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function publishRouteAction(id) {
+  S.stopBusy = true; render();
+  try {
+    await API.publishRoute(id);
+    S.stopBusy = false; toast(t("publishRoute")); render();
+    loadRoutesInto(document.getElementById("routes-list"));
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function generateSlotsAction(id) {
+  const from = val("slots-from"), to = val("slots-to");
+  if (!from || !to) { toast(t("validation.failed")); return; }
+  S.stopBusy = true; render();
+  try {
+    const res = await API.generateSlots(id, from, to);
+    S.stopBusy = false; toast(`${res.generated}`); render();
+    loadRouteSlotsInto(document.getElementById("route-slots"), id);
+  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
 function opsUsers(){                                          // O-22
@@ -3492,6 +3781,7 @@ const SHEETS = {
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),
   fieldCapture: () => fieldCaptureSheet(),
+  claimSlot: () => claimSlotSheet(),
 };
 
 /* ══════════════════════════════════════════════════════════════════════
