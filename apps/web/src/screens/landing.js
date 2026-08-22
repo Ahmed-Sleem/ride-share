@@ -79,12 +79,12 @@ function policyLink(kind) {
 }
 
 function landingDoc() {
-  const docs = {
-    terms:   { title: t("policyTermsTitle"),   body: t("policyPlaceholder") },
-    privacy: { title: t("policyPrivacyTitle"), body: t("policyPlaceholder") },
-    safety:  { title: t("policySafetyTitle"),  body: t("policyPlaceholder") },
-  };
-  const d = docs[S.landingDoc] || docs.terms;
+  // Filled, generic, production-ready sections (EN + AR) from the one copy
+  // table. The template note stays: final legal wording is the operator's
+  // (DEC-030) — nothing here is a promise it cannot keep.
+  const key = ({ terms:"policyTerms", privacy:"policyPrivacy", safety:"policySafety" })[S.landingDoc] || "policyTerms";
+  const title = ({ terms:t("policyTermsTitle"), privacy:t("policyPrivacyTitle"), safety:t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
+  const sections = T[S.lang][key] || [];
   return $("div",{class:"landing"},
     $("header",{class:"landing__nav"},
       $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
@@ -93,8 +93,11 @@ function landingDoc() {
       $("section",{class:"landing__section landing__doc"},
         $("button",{class:"btn btn--ghost", attrs:{type:"button"},
           on:{click:()=>{ S.landingDoc=null; render(); }}}, icon("back"), $("span",{text:t("landingBack")})),
-        $("h1",{class:"landing__h2",text:d.title}),
-        $("p",{class:"landing__p",text:d.body}))));
+        $("h1",{class:"landing__h2",text:title}),
+        $("p",{class:"landing__p",text:t("policyTemplateNote")}),
+        sections.map(([h, p]) => $("div",{class:"landing__docsec"},
+          $("h2",{class:"landing__h3",text:h}),
+          $("p",{class:"landing__p",text:p}))))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */

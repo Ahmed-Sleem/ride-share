@@ -890,6 +890,8 @@ select.input{cursor:pointer}
 .landing__policylink + .landing__policylink::before{content:"·";margin-inline-end:var(--s3);color:var(--text-muted)}
 /* the policy document page — narrow reading measure, comfortable top space */
 .landing__doc{max-width:720px;margin-inline:auto;padding-block:var(--s8);display:flex;flex-direction:column;gap:var(--s4);align-items:flex-start}
+.landing__docsec{display:flex;flex-direction:column;gap:var(--s1);width:100%}
+.landing__docsec .landing__h3{margin:0}
 .landing__doc .btn--ghost{margin-inline-start:calc(-1 * var(--s3))}
 .landing__credits:hover{color:var(--accent-text);text-decoration:underline}
 .landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
@@ -1190,7 +1192,33 @@ en:{
   safetyF3T:"Help within reach", safetyF3B:"SOS and live ride sharing arrive with the safety centre.",
   policies:"Policies", terms:"Terms", privacy:"Privacy", safetyPolicy:"Safety",
   policyTermsTitle:"Terms of service", policyPrivacyTitle:"Privacy", policySafetyTitle:"Safety",
-  policyPlaceholder:"This page is structured and ready. The final legal wording is provided by the operator's legal team — the product never collects more than it needs to run the ride.",
+  policyTemplateNote:"This is a template — the final legal wording is provided by the operator's legal team. The product only collects what it needs to run the ride.",
+  policyTerms:[
+    ["The service","Ride Share runs shared rides on fixed routes at a fixed price. A rider boards at a published stop and may get off anywhere along the route."],
+    ["Your account","One email equals one account. Keep your details accurate and your credentials private. Staff accounts are created by the operator's administrator."],
+    ["Booking & fares","The fare is the route's flat price and is locked the moment you book. Seats are limited; a cancelled booking returns its seats to the departure."],
+    ["Boarding","Show your boarding code at the door. It is single-use and tied to your booking and this departure."],
+    ["Rider conduct","Respect the driver and other riders. Keep the vehicle clean and do not carry items that are illegal or dangerous."],
+    ["Driver conduct","Drivers are approved by the operator and run the published departure. They must follow traffic law and the route's published schedule."],
+    ["Payments & refunds","Refunds are issued as wallet credit. Contact support for anything that does not look right on your receipt."],
+    ["Changes & contact","These terms may be updated; the version published here is the one that applies. Reach us through Help for questions or complaints."],
+  ],
+  policyPrivacy:[
+    ["What we collect","Account details, your bookings, your boarding and alighting stops, and — when you allow it — your device location."],
+    ["Why we collect it","To run your ride, board you at the right stop, keep the service safe, and settle payments correctly."],
+    ["What we never do","We do not sell your personal data. It is used to operate the service and nothing else."],
+    ["Who we share with","The driver sees only what your trip needs: your first name, boarding stop and seat count. Authorities receive data only when the law requires it."],
+    ["Keeping & your rights","Data is kept to operate and audit the service. You may request access, correction or deletion of your account and its data."],
+    ["Security & contact","Access is limited and logged. For privacy questions, contact us through Help."],
+  ],
+  policySafety:[
+    ["Our commitment","Safety is designed in: verified drivers, approved vehicles, and boarding by code."],
+    ["Driver & vehicle checks","Every driver's documents and every vehicle are checked and approved before a first trip."],
+    ["Board by code","Your boarding code proves the right rider is on the right ride. Check the vehicle plate before you board."],
+    ["In an emergency","SOS is one tap away from any ride screen and shares your location with help."],
+    ["Report a problem","Every report is reviewed. Severe issues are acted on immediately and reported back to you."],
+    ["Good habits","Wait in a safe, visible spot and stay on the pavement until your vehicle stops."],
+  ],
   landingBack:"Back to sign in",
   /* auth */
   signIn:"Sign in", createAccount:"Create account",
@@ -1391,7 +1419,33 @@ ar:{
   safetyF3T:"المساعدة في متناولك", safetyF3B:"الاستغاثة ومشاركة الرحلة المباشرة تأتيان مع مركز الأمان.",
   policies:"السياسات", terms:"الشروط", privacy:"الخصوصية", safetyPolicy:"الأمان",
   policyTermsTitle:"شروط الخدمة", policyPrivacyTitle:"الخصوصية", policySafetyTitle:"الأمان",
-  policyPlaceholder:"هذه الصفحة جاهزة البنية. الصياغة القانونية النهائية يقدّمها الفريق القانوني للمشغّل — المنتج لا يجمع أكثر مما يحتاجه لتشغيل الرحلة.",
+  policyTemplateNote:"هذه صفحة نموذجية — الصياغة القانونية النهائية يقدّمها الفريق القانوني للمشغّل. المنتج لا يجمع أكثر مما يحتاجه لتشغيل الرحلة.",
+  policyTerms:[
+    ["الخدمة","يقدّم «رايد شير» ركوبات مشتركة على مسارات ثابتة بسعر ثابت. يركب الراكب من محطة منشورة ويمكنه النزول في أي نقطة على المسار."],
+    ["حسابك","بريد واحد = حساب واحد. حافظ على دقة بياناتك وسرّية كلمة المرور. حسابات الموظفين ينشئها مدير المشغّل."],
+    ["الحجز والأجرة","الأجرة هي السعر الثابت للمسار وتُثبَّت لحظة الحجز. المقاعد محدودة؛ وإلغاء الحجز يعيد مقاعده إلى الموعد."],
+    ["الركوب","اعرض كود الركوب عند الباب. الكود يُستخدم مرة واحدة ومرتبط بحجزك وبهذا الموعد."],
+    ["سلوك الراكب","احترم السائق وبقية الركاب. حافظ على نظافة المركبة ولا تحمل مواد غير قانونية أو خطرة."],
+    ["سلوك السائق","السائقون معتمدون من المشغّل ويلتزمون بالموعد المنشور، وعليهم احترام قوانين المرور وجدول المسار."],
+    ["الدفع والاسترداد","تُردّ المبالغ كرصيد في المحفظة. تواصل مع الدعم لأي شيء غير واضح في إيصالك."],
+    ["التعديلات والتواصل","قد تتحدث هذه الشروط؛ والنسخة المنشورة هنا هي المعتمدة. تواصل معنا عبر «مساعدة» للاستفسار أو الشكوى."],
+  ],
+  policyPrivacy:[
+    ["ما نجمعه","بيانات الحساب، حجوزاتك، محطات الركوب والنزول، وموقع جهازك عندما تسمح بذلك."],
+    ["لماذا نجمعه","لتشغيل رحلتك، وإنزالك في المحطة الصحيحة، والحفاظ على أمان الخدمة، وتسوية المدفوعات بدقة."],
+    ["ما لا نفعله أبدًا","لا نبيع بياناتك الشخصية. تُستخدم لتشغيل الخدمة فقط."],
+    ["من نشارك معه","يرى السائق ما تحتاجه رحلتك فقط: اسمك الأول ومحطة الركوب وعدد المقاعد. ولا تصل البيانات للجهات إلا حين يقتضي القانون."],
+    ["الاحتفاظ وحقوقك","تُحفظ البيانات لتشغيل الخدمة وتدقيقها. يمكنك طلب الوصول إلى بياناتك أو تصحيحها أو حذف حسابك."],
+    ["الأمان والتواصل","الوصول محدود ومُسجَّل. لأسئلة الخصوصية تواصل معنا عبر «مساعدة»."],
+  ],
+  policySafety:[
+    ["التزامنا","الأمان مصمَّم في صميم الخدمة: سائقون موثّقون، ومركبات معتمدة، وركوب بالكود."],
+    ["فحص السائق والمركبة","تُفحص مستندات كل سائق وكل مركبة وتُعتمد قبل الرحلة الأولى."],
+    ["الركوب بالكود","كود الركوب يثبت أن الراكب الصحيح في الرحلة الصحيحة. تحقق من لوحة المركبة قبل الركوب."],
+    ["في الطوارئ","زر الاستغاثة على بُعد نقرة واحدة من أي شاشة رحلة ويشارك موقعك مع جهة المساعدة."],
+    ["الإبلاغ عن مشكلة","كل بلاغ يُراجع. الحالات الخطيرة تُعالَج فورًا ويتم إبلاغك بالنتيجة."],
+    ["عادات جيدة","انتظر في مكان آمن وواضح وابقَ على الرصيف حتى تتوقف مركبتك."],
+  ],
   landingBack:"العودة لتسجيل الدخول",
   /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
@@ -2348,12 +2402,12 @@ function policyLink(kind) {
 }
 
 function landingDoc() {
-  const docs = {
-    terms:   { title: t("policyTermsTitle"),   body: t("policyPlaceholder") },
-    privacy: { title: t("policyPrivacyTitle"), body: t("policyPlaceholder") },
-    safety:  { title: t("policySafetyTitle"),  body: t("policyPlaceholder") },
-  };
-  const d = docs[S.landingDoc] || docs.terms;
+  // Filled, generic, production-ready sections (EN + AR) from the one copy
+  // table. The template note stays: final legal wording is the operator's
+  // (DEC-030) — nothing here is a promise it cannot keep.
+  const key = ({ terms:"policyTerms", privacy:"policyPrivacy", safety:"policySafety" })[S.landingDoc] || "policyTerms";
+  const title = ({ terms:t("policyTermsTitle"), privacy:t("policyPrivacyTitle"), safety:t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
+  const sections = T[S.lang][key] || [];
   return $("div",{class:"landing"},
     $("header",{class:"landing__nav"},
       $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
@@ -2362,8 +2416,11 @@ function landingDoc() {
       $("section",{class:"landing__section landing__doc"},
         $("button",{class:"btn btn--ghost", attrs:{type:"button"},
           on:{click:()=>{ S.landingDoc=null; render(); }}}, icon("back"), $("span",{text:t("landingBack")})),
-        $("h1",{class:"landing__h2",text:d.title}),
-        $("p",{class:"landing__p",text:d.body}))));
+        $("h1",{class:"landing__h2",text:title}),
+        $("p",{class:"landing__p",text:t("policyTemplateNote")}),
+        sections.map(([h, p]) => $("div",{class:"landing__docsec"},
+          $("h2",{class:"landing__h3",text:h}),
+          $("p",{class:"landing__p",text:p}))))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */

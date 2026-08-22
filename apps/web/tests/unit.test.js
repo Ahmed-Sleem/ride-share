@@ -880,6 +880,22 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
 })();
 
+group("POLICIES ARE FILLED (terms/privacy/safety, EN + AR)");
+(() => {
+  const t=boot();
+  for(const lang of ["en","ar"]){
+    t.w.S.lang=lang; t.w.S.view="landing"; t.w.S.landingDoc="terms"; t.w.render();
+    ok(`terms doc has real sections (${lang})`, t.all(".landing__docsec").length >= 6,
+       String(t.all(".landing__docsec").length));
+    ok(`terms doc keeps the operator's-legal note (${lang})`,
+       t.q(".landing__doc").textContent.includes(lang==="en" ? "legal" : "القانوني"));
+    t.w.S.landingDoc="privacy"; t.w.render();
+    ok(`privacy doc has real sections (${lang})`, t.all(".landing__docsec").length >= 6);
+    t.w.S.landingDoc="safety"; t.w.render();
+    ok(`safety doc has real sections (${lang})`, t.all(".landing__docsec").length >= 6);
+  }
+})();
+
 group("M3 — RIDER BOOKING FLOW IS REAL");
 (() => {
   const t=boot();

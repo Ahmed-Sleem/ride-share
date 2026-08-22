@@ -178,6 +178,10 @@ run_break "landing loses its policy links" src/screens/landing.js \
   's|          policyLink("terms"), policyLink("privacy"), policyLink("safety")),|          null),|' \
   "landing footer links policies"
 
+run_break "policies revert to empty placeholders" src/data/content.js \
+  's|policyTerms:\[|policyTermsX:[|' \
+  "terms doc has real sections (en)"
+
 run_break "logo path hardcoded again (second definition)" src/lib/components.js \
   's|const LOGO_PATH = BRAND.logo.path;|const LOGO_PATH = "M0 0";|' \
   "logo path is read from BRAND, not hardcoded"

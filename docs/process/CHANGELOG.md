@@ -660,3 +660,9 @@
   "coming soon" screens were removed.
 - Fixed a build bug: injecting the library via a string replacement corrupted the
   bundle with `$&` (now a replacement function).
+
+## 2026-08-22 — Policies filled (Terms / Privacy / Safety, EN + AR)
+
+- The policy pages now carry real, generic, editable content (6 sections each, both
+  languages) instead of a placeholder sentence; the "final legal wording is the
+  operator's" note stays. 338 unit tests green, 77/77 breaks caught.

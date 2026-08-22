@@ -765,3 +765,15 @@ output) — see the engineering standard §3.3 and §4.
 - Tests: 330 web unit (search normalization/fuzzy/screen-filter + seamless-tabs),
   76/76 breaks caught (new: teh-marbuta unification, input label, tabs refetch);
   a11y 14, layout 7452, landing 47, 165 API, repo guards green.
+
+## GUI — policies filled (Terms / Privacy / Safety, EN + AR)
+
+- The policy pages were one placeholder sentence each. Now each renders 6 real,
+  generic, production-ready sections (EN + AR) from the one copy table: Terms
+  (service, account, booking & fares, boarding, conduct, payments, changes),
+  Privacy (what/why/never/share/retention/security), Safety (commitment, checks,
+  board-by-code, SOS, reporting, habits). The template note stays — final legal
+  wording is the operator's (DEC-030).
+- Tests: 8 new assertions (sections render in both languages; the operator's-legal
+  note stays) + a break-case (sections emptied → test fails). 338 unit green;
+  77/77 breaks caught; a11y 14, layout 7452, landing 47 green.
