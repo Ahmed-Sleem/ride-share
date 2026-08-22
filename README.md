@@ -38,9 +38,11 @@ The live app is at **https://ride-shareweb-production.up.railway.app**.
   Arabic/English normalization layer; riders search routes and boarding stops
   and see the bookable journeys nested under each route; the ops stops list
   filters live. Trips tabs switch seamlessly (no refetch, no scroll jump).
-- **Landing page** — hero slideshow, how-it-works, for-riders/for-drivers,
-  policies, bilingual (EN/AR, RTL), light/dark themes, adaptive from 320px to
-  2560px.
+- **Landing page** — a marketing site with a sticky top bar (Ride · Drive ·
+  About · Help · EN/AR · Log in · Sign up), separate rider and driver pages,
+  an About story and a Help FAQ, filled Terms/Privacy/Safety policies, and
+  scroll-driven sticky panels — bilingual (EN/AR, RTL), light/dark themes,
+  adaptive from 320px to 2560px.
 
 Not yet built: wallet/ledger and cash collection, the driver manifest and
 boarding-code scan, the live-journey screens, the A→B planner, and everything
