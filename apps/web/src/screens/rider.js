@@ -171,42 +171,68 @@ function comingSoonRider(){
 
 function riderTrips(){                                        // R-30 — real bookings
   const w=$("div",{class:"main"});
-  const seg=$("div",{class:"seg"});
+  const seg=$("div",{class:"seg", id:"trips-seg"});
   [["upcoming",t("upcoming")],["past",t("past")]].forEach(([k,lbl])=>
-    seg.append($("button",{attrs:{type:"button","aria-pressed":String(S.tripTab===k)},
-      text:lbl, on:{click:()=>{S.tripTab=k; render();}}})));
+    seg.append($("button",{class:"seg__btn",attrs:{type:"button","aria-pressed":String(S.tripTab===k)},
+      text:lbl, on:{click:()=>{ if(S.tripTab===k) return; S.tripTab=k; tripsSyncTabs(); tripsRenderList(); }}})));
   w.append(seg);
   const list = $("div",{id:"rider-trips"});
   w.append(list);
-  loadRiderTripsInto(list);
+  loadRiderTripsInto(list);              // pass the ref: it is not in the DOM yet
   return w;
+}
+
+/* Tab switch must be SEAMLESS (§15 GUI rules: no layout shift, no lost state).
+   A full render() here rebuilds the .main scroller (snapping it to the top —
+   the reported "page moves" bug), refetches /bookings/mine, and drops focus.
+   So the tab click only syncs aria-pressed and re-renders the list from the
+   cache; the list is fetched exactly once. */
+function tripsSyncTabs(){
+  const seg=document.getElementById("trips-seg");
+  if(!seg) return;
+  [["upcoming"],["past"]].forEach(([k],i)=>{
+    const b=seg.children[i];
+    if(b) b.setAttribute("aria-pressed", String(k===S.tripTab));
+  });
+}
+
+function tripsRenderList(el){
+  el = el || document.getElementById("rider-trips");
+  if(!el) return;
+  el.innerHTML="";
+  const bookings=S.tripsCache || [];
+  const upcoming=bookings.filter((b)=> b.status!=="COMPLETED" && b.status!=="CANCELLED" && b.status!=="NO_SHOW");
+  const past=bookings.filter((b)=> !upcoming.includes(b));
+  const shown=S.tripTab==="upcoming" ? upcoming : past;
+  if(!shown.length){ el.append(Empty("trips", t("noTrips"), t("noTripsBody"))); return; }
+  shown.forEach((b)=> el.append(Row({
+    icon:"bus",
+    title: b.route_name_en || b.route_name_ar || "—",
+    sub: `${b.service_date} · ${b.departs_at} · ${b.seats} ${t("seats")} · ${b.code}`,
+    right: $("div",{class:"stack",style:{alignItems:"flex-end"}},
+      $("div",{class:"fare",text:money(b.fare_minor / 100)}),
+      (S.tripTab==="upcoming")
+        ? Btn({label:t("cancelBooking"), kind:"ghost", on:()=>cancelRiderBooking(b.id)})
+        : Chip({label:b.status, kind:b.status==="CANCELLED" ? "danger" : "ok"})),
+    bordered:true })));
 }
 
 async function loadRiderTripsInto(el) {
   if (!el) return;
-  el.innerHTML = "";
   try {
     const bookings = await API.myBookings();
-    const upcoming = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED" && b.status !== "NO_SHOW");
-    const past = bookings.filter((b) => !upcoming.includes(b));
-    const shown = S.tripTab === "upcoming" ? upcoming : past;
-    if (!shown.length) { el.append(Empty("trips", t("noTrips"), t("noTripsBody"))); return; }
-    shown.forEach((b) => el.append(Row({
-      icon: "bus",
-      title: b.route_name_en || b.route_name_ar || "—",
-      sub: `${b.service_date} · ${b.departs_at} · ${b.seats} ${t("seats")} · ${b.code}`,
-      right: $("div",{class:"stack",style:{alignItems:"flex-end"}},
-        $("div",{class:"fare",text:money(b.fare_minor / 100)}),
-        (S.tripTab === "upcoming")
-          ? Btn({label:t("cancelBooking"), kind:"ghost", on:()=>cancelRiderBooking(b.id)})
-          : Chip({label:b.status, kind:b.status === "CANCELLED" ? "danger" : "ok"})),
-      bordered:true })));
-  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+    S.tripsCache = bookings;          // fetch once; tabs filter the cache
+    tripsRenderList(el);
+  } catch(e) { el.innerHTML=""; el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 async function cancelRiderBooking(id) {
-  try { await API.cancelBooking(id); toast(t("cancelBooking")); loadRiderTripsInto(document.getElementById("rider-trips")); }
-  catch(e) { toast(errText(e.messageKey)); }
+  try {
+    await API.cancelBooking(id);
+    S.tripsCache = (S.tripsCache || []).map((b)=> b.id===id ? { ...b, status:"CANCELLED" } : b);
+    tripsRenderList();
+    toast(t("cancelBooking"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 function riderWallet(){                                       // R-40

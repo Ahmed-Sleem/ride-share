@@ -356,6 +356,32 @@ group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
   ok("safety has no fake vehicle", !sample.test(t.q(".main").textContent));
 }
 
+group("TRIPS TAB SWITCH IS SEAMLESS (no refetch, no full render)");
+(async () => {
+  const t=boot();
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
+  let calls=0;
+  const upcoming={ id:"b1", journey_id:"j1", rider_user_id:"u1", boarding_stop_id:"s1", seats:1,
+    fare_minor:1500, code:"111222", status:"CONFIRMED", created_at:new Date(),
+    route_name_en:"Corniche", route_name_ar:"الكورنيش", service_date:"2026-08-23", departs_at:"08:00", stop_name_en:"Sidi Gaber" };
+  const past={ ...upcoming, id:"b2", status:"COMPLETED", service_date:"2026-08-20", code:"333444" };
+  t.w.fetch = async (url) => {
+    if (String(url).includes("/bookings/mine")) { calls++; return { ok:true, json:async()=>[upcoming, past] }; }
+    return { ok:false, status:404, json:async()=>({ message_key:"error.internal" }) };
+  };
+  t.go("rider","trips");
+  await new Promise((r)=>setTimeout(r,20));
+  ok("trips list renders from the first fetch", t.q("#rider-trips").textContent.includes("Corniche"));
+  const seg=t.q("#trips-seg");
+  ok("seg exposes two tabs", !!seg && seg.children.length===2);
+  seg.children[1].click();                        // switch to "past"
+  await new Promise((r)=>setTimeout(r,20));
+  ok("tab switch does NOT refetch (seamless)", calls===1, `fetched ${calls} times`);
+  ok("tab switch shows the past booking", t.q("#rider-trips").textContent.includes("COMPLETED"));
+  ok("tab switch toggles aria-pressed", seg.children[1].getAttribute("aria-pressed")==="true"
+     && seg.children[0].getAttribute("aria-pressed")==="false");
+})();
+
 /* ─────────────────────────────────────────────────────────────────
    D. ROLE BOUNDARIES  (§8.1 hidden, not disabled)
    ───────────────────────────────────────────────────────────────── */

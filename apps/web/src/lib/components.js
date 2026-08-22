@@ -47,7 +47,9 @@ const S = {
   authEmail:"", authName:"", otpBypass:false,
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, lastBooking:null, seats:1,
-  tripTab:"upcoming", offline:false, gettingOff:false, onDuty:true,
+  tripTab:"upcoming", tripsCache:null,                 // bookings cached so tab-switch is seamless
+  riderQuery:"",                                       // live search query on the rider home/routes
+  offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
   claimTarget:null, claimVehicleId:null, stack:[],

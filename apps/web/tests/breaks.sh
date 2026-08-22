@@ -206,6 +206,10 @@ run_break "rider home reverts to sample routes" src/screens/rider.js \
   's|  loadRiderRoutesInto(list);|  loadRiderRoutesInto(list); w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
   "home has no sample route strings"
 
+run_break "trips tab switch reverts to full render (refetch)" src/screens/rider.js \
+  's|on:{click:()=>{ if(S.tripTab===k) return; S.tripTab=k; tripsSyncTabs(); tripsRenderList(); }}|on:{click:()=>{ S.tripTab=k; render(); }}|' \
+  "tab switch does NOT refetch (seamless)"
+
 run_break "back button goes nowhere" src/lib/components.js \
   's|^const back = () => { S.page = S.stack.pop() \|\| DEFAULT_PAGE\[S.role\]; S.sheet=null; render(); };|const back = () => { S.sheet=null; render(); };|' \
   "back returns to routes"
