@@ -33,5 +33,6 @@ catalog:
   jose: 6.2.9
   nodemailer: 9.0.5
   "@types/nodemailer": 8.0.1
+  fuse.js: 6.6.2
 
 catalogMode: strict

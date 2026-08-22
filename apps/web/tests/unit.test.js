@@ -357,7 +357,7 @@ group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
 }
 
 group("TRIPS TAB SWITCH IS SEAMLESS (no refetch, no full render)");
-(async () => {
+const mTrips = (async () => {
   const t=boot();
   t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
   let calls=0;
@@ -380,6 +380,72 @@ group("TRIPS TAB SWITCH IS SEAMLESS (no refetch, no full render)");
   ok("tab switch shows the past booking", t.q("#rider-trips").textContent.includes("COMPLETED"));
   ok("tab switch toggles aria-pressed", seg.children[1].getAttribute("aria-pressed")==="true"
      && seg.children[0].getAttribute("aria-pressed")==="false");
+})();
+
+group("SEARCH — Fuse vendored + Arabic/English normalization");
+const mSearchNorm = (async () => {
+  const t=boot();
+  ok("Fuse is vendored into the bundle", typeof t.w.Fuse === "function");
+  const routes = [
+    { route:{ id:"r1", code:"ALX-R001", name_en:"Corniche Line", name_ar:"خط الكورنيش",
+        fare_minor:1500, window_start:"06:00", window_end:"22:00" },
+      stops:[ { stop_id:"s1", stop_name_en:"Sidi Gaber", stop_name_ar:"سيدي جابر", stop_code:"SG-01" },
+              { stop_id:"s2", stop_name_en:"Smouha", stop_name_ar:"سموحة", stop_code:"SM-02" } ] },
+    { route:{ id:"r2", code:"ALX-R002", name_en:"University Line", name_ar:"خط الجامعة",
+        fare_minor:1200, window_start:"06:00", window_end:"21:00" },
+      stops:[ { stop_id:"s3", stop_name_en:"Ejjazy", stop_name_ar:"الإجازي", stop_code:"EJ-03" } ] },
+  ];
+  const idx = t.w.buildRiderIndex(routes);
+  ok("empty query returns every route", t.w.searchRoutes("", idx).length === 2);
+  ok("English name substring matches", t.w.searchRoutes("corni", idx)[0] === "r1");
+  ok("Arabic name matches (normalized teh marbuta)", t.w.searchRoutes("سموحه", idx)[0] === "r1");
+  ok("Arabic with diacritics matches", t.w.searchRoutes("سَمُوحَة", idx)[0] === "r1");
+  ok("stop name finds its route", t.w.searchRoutes("smouha", idx)[0] === "r1");
+  ok("no match returns empty", t.w.searchRoutes("xyzzy", idx).length === 0);
+  ok("normalization unifies teh marbuta and heh", t.w.normalizeText("سموحة") === t.w.normalizeText("سموحه"));
+  ok("normalization unifies alef variants", t.w.normalizeText("أحمد") === t.w.normalizeText("احمد"));
+  ok("matchesQuery normalizes Arabic", t.w.matchesQuery("سموحه", "سموحة"));
+  ok("matchesQuery is multi-token", t.w.matchesQuery("sidi gaber", "Sidi Gaber Station"));
+  ok("matchesQuery passes empty query", t.w.matchesQuery("", "anything"));
+})();
+
+group("RIDER SEARCH — routes screen filters live");
+const mSearchScreen = (async () => {
+  const t=boot();
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
+  const routes = [
+    { route:{ id:"r1", code:"ALX-R001", name_en:"Corniche Line", name_ar:"خط الكورنيش",
+        fare_minor:1500, window_start:"06:00", window_end:"22:00" },
+      stops:[ { stop_id:"s1", stop_name_en:"Sidi Gaber", stop_name_ar:"سيدي جابر", stop_code:"SG-01" },
+              { stop_id:"s2", stop_name_en:"Smouha", stop_name_ar:"سموحة", stop_code:"SM-02" } ] },
+    { route:{ id:"r2", code:"ALX-R002", name_en:"University Line", name_ar:"خط الجامعة",
+        fare_minor:1200, window_start:"06:00", window_end:"21:00" },
+      stops:[ { stop_id:"s3", stop_name_en:"Ejjazy", stop_name_ar:"الإجازي", stop_code:"EJ-03" } ] },
+  ];
+  const journeys = [ { id:"j1", route_id:"r1", departs: new Date(Date.now()+3600e3).toISOString(),
+      service_date:"2026-08-23", seats_total:14 } ];
+  t.w.fetch = async (url) => {
+    const u=String(url);
+    if(u.includes("/routes/published")) return { ok:true, json:async()=>routes };
+    if(u.includes("/journeys/upcoming")) return { ok:true, json:async()=>journeys };
+    return { ok:false, status:404, json:async()=>({ message_key:"error.internal" }) };
+  };
+  t.go("rider","routes");
+  await new Promise((r)=>setTimeout(r,20));
+  const list=t.q("#rider-routes");
+  ok("routes screen renders route cards", !!list && list.textContent.includes("Corniche"));
+  ok("nested departures show under the route", !!list && list.textContent.includes(t.w.T.en.nextDepartures));
+  const input=t.q(".searchband .searchbar input");
+  ok("routes screen has a live search field", !!input);
+  input.value="university";
+  input.dispatchEvent(new t.w.Event("input", { bubbles:true }));
+  ok("typing filters the list (English)", list.textContent.includes("University") && !list.textContent.includes("Corniche"));
+  input.value="سموحه";
+  input.dispatchEvent(new t.w.Event("input", { bubbles:true }));
+  ok("typing filters the list (Arabic)", list.textContent.includes("Corniche") && !list.textContent.includes("University"));
+  input.value="zzz-nothing";
+  input.dispatchEvent(new t.w.Event("input", { bubbles:true }));
+  ok("no matches shows the honest empty state", list.textContent.includes(t.w.T.en.noSearchResults));
 })();
 
 /* ─────────────────────────────────────────────────────────────────
@@ -908,7 +974,7 @@ group("BUILD INTEGRITY");
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));
 }
 
-Promise.all([m19c, m19e]).then(() => {
+Promise.all([m19c, m19e, mTrips, mSearchNorm, mSearchScreen]).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);
 });

@@ -732,3 +732,36 @@ output) — see the engineering standard §3.3 and §4.
 - Verified: 165 API tests green (incl. the new guard); full local boot reaches
   "api listening"; /healthz → `{ok:true,db:"up"}`; `pnpm verify` + `pnpm db:verify`
   green. Logged G-070 (now CLOSED).
+
+## M3.5 — Seamless trips tabs + advanced search (Fuse.js + Arabic normalization)
+
+- **Trips tab fix (the reported "page moves" bug):** the Upcoming/Past tabs called
+  `render()`, which rebuilt the whole app — recreating the `.main` scroller (snap
+  to top), refetching `/bookings/mine` on every tap, and dropping focus. Now the
+  list is fetched ONCE into `S.tripsCache`; the tab click only syncs `aria-pressed`
+  and re-renders the list in place. Regression test "tab switch does NOT refetch
+  (seamless)" + a break-case (reverting to `render()` refetches and fails).
+- **Search (the dead-input gap):** every "live" search field was a dead `<input>`
+  with no listener and there was zero filtering logic. Now:
+  - `Fuse.js v6.6.2` (Apache-2.0 — note: NOT MIT) is vendored at BUILD time into
+    the single file (never a CDN); wrapped in an IIFE so its `var e,t` can't
+    collide with the app's `const t` translator.
+  - `lib/search.js` owns the index + normalization (§0.3 one search implementation):
+    Arabic diacritics stripped, alef/hamza/waw+hamza/ya+hamza/alef-maqsura/teh-marbuta
+    unified, Latin lowercased — "سموحه" and "سموحة" hit the same stop.
+  - Rider routes screen: live search filters routes; each route card nests its
+    BOOKABLE JOURNEYS (departure chips, best-first → review) and highlights the
+    matched boarding stop. Rider home band navigates to the results screen.
+  - Ops stops list got the same live filter; the dead bands on the "coming soon"
+    ops/users and support/lookup screens were REMOVED (a band with no wired filter
+    is a dead control, §8.1).
+- **Build bug fixed while wiring Fuse:** `shell.replace(MARK, "<script>"+js+…)`
+  used a STRING replacement; the Fuse minified code contains `$&`, which JS
+  interprets as "the matched text" — splicing `<div id="root"></div>` into the
+  middle of the library and breaking the whole bundle. Fixed with a replacement
+  FUNCTION. (A lesson: never string-replace inject code containing `$`.)
+- Also fixed: the async test groups in unit.test.js were fire-and-forget and raced
+  the final tally; they are now awaited in the harness's `Promise.all`.
+- Tests: 330 web unit (search normalization/fuzzy/screen-filter + seamless-tabs),
+  76/76 breaks caught (new: teh-marbuta unification, input label, tabs refetch);
+  a11y 14, layout 7452, landing 47, 165 API, repo guards green.

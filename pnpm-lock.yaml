@@ -51,6 +51,9 @@ catalogs:
     fastify:
       specifier: 5.11.3
       version: 5.11.3
+    fuse.js:
+      specifier: 6.6.2
+      version: 6.6.2
     jose:
       specifier: 6.2.9
       version: 6.2.9
@@ -194,6 +197,9 @@ importers:
       '@ride-share/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      fuse.js:
+        specifier: 'catalog:'
+        version: 6.6.2
     devDependencies:
       axe-core:
         specifier: 'catalog:'
@@ -948,6 +954,10 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+
+  fuse.js@6.6.2:
+    resolution: {integrity: sha512-cJaJkxCCxC8qIIcPBF9yGxY0W/tVZS3uEISDxhYIdtk8OL93pe+6Zj7LjCqVV4dzbqcriOZ+kQ/NE4RXZHsIGA==}
+    engines: {node: '>=10'}
 
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
@@ -2538,6 +2548,8 @@ snapshots:
       mime-types: 2.1.35
 
   function-bind@1.1.2: {}
+
+  fuse.js@6.6.2: {}
 
   get-caller-file@2.0.5: {}
 

@@ -94,22 +94,26 @@ function topbar({title, back:onBack, right, plain}){
    record is the primary job. */
 const SEARCHABLE = {
   rider:  {home:"searchHint", routes:"searchRoute"},
-  ops:    {stops:"searchRoute", users:"Name, phone or ID"},
-  support:{lookup:"Phone or booking reference"}
+  ops:    {stops:"searchRoute"},
 };
 function searchBand(){
   const key = (SEARCHABLE[S.role]||{})[S.page];
   if(!key) return null;
   const label = t(key)===key ? key : t(key);
+  // Every band is a REAL control (§8.1 — never a dead input). The rider home
+  // band navigates to the results screen; the others are live fields wired to
+  // their screen's filter. A screen with no wired filter gets NO band.
+  let bar=null;
+  if(S.role==="rider" && S.page==="home")
+    bar=SearchBar({placeholder:label, on:()=>{ S.riderQuery=""; go("routes"); }});
+  else if(S.role==="rider" && S.page==="routes")
+    bar=SearchBar({placeholder:label, live:true, value:S.riderQuery, onInput:riderSearchChanged});
+  else if(S.role==="ops" && S.page==="stops")
+    bar=SearchBar({placeholder:label, live:true, value:S.stopsQuery, onInput:stopsSearchChanged});
+  if(!bar) return null;
   const def=pageDef();
   const band=$("div",{class:"searchband"+(def.wide?" searchband--wide":"")});
-  const inner=$("div",{class:"searchband__inner"});
-  // On the rider home the search navigates to the list; elsewhere it filters
-  // the list already on screen, so it is a real field.
-  inner.append(S.role==="rider" && S.page==="home"
-    ? SearchBar({placeholder:label, on:()=>go("routes")})
-    : SearchBar({placeholder:label, live:true}));
-  band.append(inner);
+  band.append($("div",{class:"searchband__inner"}, bar));
   return band;
 }
 
@@ -311,6 +315,7 @@ Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
                         setResendUntil, setLockedUntil, cooldownButton,
-                        flushFieldQueue });
+                        flushFieldQueue,
+                        normalizeText, buildRiderIndex, searchRoutes, matchesQuery });
 
 boot();

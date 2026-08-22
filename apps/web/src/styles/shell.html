@@ -594,6 +594,40 @@ select.input{cursor:pointer}
 .routeline{font-weight:var(--fw-semi);font-size:var(--f-lg);line-height:var(--lh-snug)}
 .fare{font-weight:var(--fw-bold);font-size:var(--f-lg);white-space:nowrap;
   font-variant-numeric:tabular-nums}
+
+/* search result card — the container is a DIV (a button cannot nest buttons),
+   the head is the tappable row, the deps are the nested bookable journeys. */
+.routecard--results{display:flex;flex-direction:column;align-items:stretch;
+  gap:0;padding:0;overflow:hidden;cursor:default}
+.routecard--results:hover{transform:none}
+.routecard__head{display:flex;align-items:center;gap:var(--s3);width:100%;
+  min-width:0;padding:var(--s4);min-height:76px;border:0;background:none;
+  text-align:start;cursor:pointer;color:inherit}
+.routecard__head:hover{background:var(--bg-sunken)}
+.routecard__stop{display:flex;align-items:center;gap:var(--s2);
+  padding:var(--s2) var(--s4);background:var(--accent-soft);color:var(--accent-text);
+  border-top:1px solid var(--accent-border)}
+.routecard__stop svg{width:var(--icon-md);height:var(--icon-md);flex:none;
+  fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.routecard__deps{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+  padding:var(--s3) var(--s4);border-top:1px solid var(--line);
+  background:var(--bg-sunken)}
+.routecard__nodeps{color:var(--text-muted)}
+.depchip{min-height:32px;padding:4px 12px;border-radius:var(--r-full);
+  background:var(--bg-base);border:1px solid var(--line);color:var(--text-primary);
+  font-size:var(--f-cap);font-weight:var(--fw-bold);font-variant-numeric:tabular-nums;
+  cursor:pointer;transition:border-color var(--fast) var(--ease),
+  background var(--fast) var(--ease)}
+.depchip:hover{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+
+/* the clear (×) button inside the live search field — hidden until there
+   is a value */
+.searchbar__clear{display:none;width:var(--tap-sm);height:var(--tap-sm);
+  border-radius:var(--r-full);place-items:center;flex:none;color:var(--text-muted)}
+.searchbar__clear--on{display:grid}
+.searchbar__clear:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.searchbar__clear svg{width:var(--icon-md);height:var(--icon-md);fill:none;
+  stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .pricetag{font-size:var(--f-display);font-weight:var(--fw-bold);letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;line-height:var(--lh-tight)}
 .avatar{width:38px;height:38px;border-radius:var(--r-full);background:var(--bg-inset);

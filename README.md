@@ -34,6 +34,10 @@ The live app is at **https://ride-shareweb-production.up.railway.app**.
   create and publish routes and generate the slot grid; drivers claim a slot
   in two taps; riders pick a route → boarding stop → departure → book a seat
   (fare locked at booking, no overselling) and get a boarding code.
+- **Search (Arabic + English)** — Fuse.js (vendored at build, no CDN) with an
+  Arabic/English normalization layer; riders search routes and boarding stops
+  and see the bookable journeys nested under each route; the ops stops list
+  filters live. Trips tabs switch seamlessly (no refetch, no scroll jump).
 - **Landing page** — hero slideshow, how-it-works, for-riders/for-drivers,
   policies, bilingual (EN/AR, RTL), light/dark themes, adaptive from 320px to
   2560px.

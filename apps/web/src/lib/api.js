@@ -138,7 +138,10 @@ const API = {
 
   /* ── rider booking (P3.4–P3.6) ───────────────────────────────────────── */
   publishedRoutes: () => API.request("GET", "/routes/published"),
-  upcomingJourneys: (routeId, from, to) => API.request("GET", `/journeys/upcoming?route=${routeId}&from=${from}&to=${to}`),
+  // routeId may be null → omit the param (server returns journeys on ANY
+  // route in the window; a literal "route=null" would be an invalid uuid).
+  upcomingJourneys: (routeId, from, to) => API.request("GET",
+    `/journeys/upcoming?${routeId ? `route=${routeId}&` : ""}from=${from}&to=${to}`),
   book: (journeyId, boardingStopId, seats) => API.request("POST", "/bookings", { journeyId, boardingStopId, seats }),
   myBookings: () => API.request("GET", "/bookings/mine"),
   cancelBooking: (id) => API.request("POST", `/bookings/${id}/cancel`),

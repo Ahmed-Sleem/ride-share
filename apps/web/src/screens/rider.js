@@ -17,7 +17,7 @@ function riderHome(){                                         // R-10
   return w;
 }
 
-function riderRoutes(){                                       // R-11 — real published routes
+function riderRoutes(){                                       // R-11 — searchable routes + journeys
   const w=$("div",{class:"main"});
   const list = $("div",{id:"rider-routes"});
   w.append(list);
@@ -25,22 +25,90 @@ function riderRoutes(){                                       // R-11 — real p
   return w;
 }
 
+/* Search changed: filter the on-screen list in place — no full render(), so
+   the input keeps its value and focus and the page never jumps. */
+function riderSearchChanged(v){
+  S.riderQuery = v;
+  renderRiderRoutes(document.getElementById("rider-routes") || document.getElementById("rider-home-routes"));
+}
+
 async function loadRiderRoutesInto(el) {
   if (!el) return;
-  el.innerHTML = "";
   try {
-    const routes = await API.publishedRoutes();
-    if (!routes.length) { el.append(Empty("routes", t("nav.routes"), t("noRoutesPublished"))); return; }
-    routes.forEach(({ route, stops }) => el.append(
-      $("button",{class:"routecard", attrs:{type:"button"},
-        on:{click:()=>{ S.chosenRoute = { route, stops }; S.chosenBoard = null; S.chosenDep = null; go("boarding"); }}},
-        $("div",{class:"stack grow gap1"},
-          $("div",{class:"routeline",text:route.name_en || route.name_ar || route.code}),
-          $("div",{class:"t-cap",text:`${stops.length} ${t("stopsList")} · ${route.window_start}–${route.window_end}`})),
-        $("div",{class:"stack",style:{alignItems:"flex-end"}},
-          $("div",{class:"fare",text:money(route.fare_minor / 100)}),
-          $("div",{class:"t-micro",text:t("fixedPrice")})))));
-  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+    // Build the Fuse index once; every keystroke only reads it.
+    if (!S.riderIndex) {
+      const routes = await API.publishedRoutes();
+      S.riderRoutes = routes;
+      S.riderIndex = buildRiderIndex(routes);
+    }
+    // Bookable journeys (all routes, one call) — nested under each route.
+    if (!S.riderJourneys) {
+      const today = new Date().toISOString().slice(0, 10);
+      const week  = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      const journeys = await API.upcomingJourneys(null, today, week).catch(()=>[]);
+      const byRoute = {};
+      (journeys || []).forEach((j)=>{ (byRoute[j.route_id] = byRoute[j.route_id] || []).push(j); });
+      S.riderJourneys = byRoute;
+    }
+    renderRiderRoutes(el);
+  } catch(e) { el.innerHTML=""; el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function renderRiderRoutes(el){
+  if(!el) return;
+  el.innerHTML="";
+  const index = S.riderIndex || [];
+  if(!index.length){ el.append(Empty("routes", t("nav.routes"), t("noRoutesPublished"))); return; }
+  const ids = searchRoutes(S.riderQuery, index);
+  if(!ids.length){ el.append(Empty("routes", t("searchRoute"), t("noSearchResults"))); return; }
+  const byId = Object.fromEntries(index.map((e)=>[e.id, e]));
+  ids.forEach((id)=>{ const entry = byId[id]; if(entry) el.append(routeResultCard(entry)); });
+}
+
+/* A route card with its bookable journeys nested under it (§ search surface:
+   routes first, journeys inside). The card head goes to boarding; each
+   departure chip is a fast path straight to review (first stop, best-first). */
+function routeResultCard(entry){
+  const { route, stops } = entry;
+  const deps = (S.riderJourneys && S.riderJourneys[route.id]) || [];
+  const card = $("div",{class:"routecard routecard--results"});
+  card.append($("button",{class:"routecard__head", attrs:{type:"button"},
+    on:{click:()=>{ S.chosenRoute = { route, stops }; S.chosenBoard = null; S.chosenDep = null; go("boarding"); }}},
+    $("div",{class:"stack grow gap1"},
+      $("div",{class:"routeline",text:route.name_en || route.name_ar || route.code}),
+      $("div",{class:"t-cap",text:`${stops.length} ${t("stopsList")} · ${route.window_start}–${route.window_end}`})),
+    $("div",{class:"stack",style:{alignItems:"flex-end"}},
+      $("div",{class:"fare",text:money(route.fare_minor / 100)}),
+      $("div",{class:"t-micro",text:t("fixedPrice")}))));
+
+  // When the query matched a boarding stop, name it so the hit is visible.
+  if(S.riderQuery){
+    const q = normalizeText(S.riderQuery);
+    const hit = stops.find((s)=> normalizeText((s.stop_name_en||"")+" "+(s.stop_name_ar||"")+" "+(s.stop_code||"")).includes(q));
+    if(hit) card.append($("div",{class:"routecard__stop"},
+      icon("stops"), $("span",{class:"t-cap",text:(hit.stop_name_en || hit.stop_name_ar || hit.stop_code)})));
+  }
+
+  const deprow = $("div",{class:"routecard__deps"});
+  deprow.append($("span",{class:"t-micro",text:t("nextDepartures")}));
+  if(!deps.length){
+    deprow.append($("span",{class:"t-micro routecard__nodeps",text:t("noDeparturesShort")}));
+  } else {
+    deps.slice(0, 4).forEach((j)=>{
+      deprow.append($("button",{class:"depchip ltr", attrs:{type:"button",
+        "aria-label":t("pickDeparture")+" "+new Date(j.departs).toISOString().slice(11,16)},
+        on:{click:()=>{
+          S.chosenRoute = { route, stops };
+          S.chosenBoard = stops[0] ? stops[0].stop_id : null;   // best-first: recommended stop
+          S.chosenDep = j;
+          go("review");
+        }}},
+        new Date(j.departs).toISOString().slice(11, 16)));
+    });
+    if(deps.length > 4) deprow.append($("span",{class:"t-micro",text:"+"+(deps.length - 4)}));
+  }
+  card.append(deprow);
+  return card;
 }
 
 function riderBoarding(){                                     // R-12 — real boarding stops

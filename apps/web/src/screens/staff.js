@@ -391,20 +391,34 @@ async function importCsvAction() {
 
 async function loadStopsInto(el) {
   if (!el) return;
-  el.innerHTML = "";
   try {
-    const stops = await API.listStops();
-    if (!stops.length) { el.append(Empty("stops", t("stopsList"), t("opsNoStops"))); return; }
-    stops.forEach(s=> el.append(Row({
-      icon: "stops",
-      title: $("span",{class:"ltr",text:s.code}),
-      sub: `${s.name_en || s.name_ar || "—"} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
-      right: $("div",{class:"row gap2"},
-        Chip({label:t("stopStatus."+s.status),
-          kind: s.status==="verified" ? "ok" : s.status==="rejected" ? "danger" : s.status==="pending" ? "warn" : ""}),
-        s.status==="draft" ? Btn({label:t("submitStop"), kind:"ghost", on:()=>submitStopAction(s.id)}) : null),
-      bordered:true })));
-  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+    S.stopsCache = await API.listStops();   // full refresh (open + after mutations)
+    renderStops(el);
+  } catch(e) { el.innerHTML=""; el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+/* Live filter: no refetch, no full render — the input keeps focus. */
+function stopsSearchChanged(v){
+  S.stopsQuery = v;
+  renderStops(document.getElementById("stops-list"));
+}
+
+function renderStops(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  const stops = S.stopsCache || [];
+  if (!stops.length) { el.append(Empty("stops", t("stopsList"), t("opsNoStops"))); return; }
+  const shown = stops.filter((s)=> matchesQuery(S.stopsQuery, (s.code||"")+" "+(s.name_en||"")+" "+(s.name_ar||"")));
+  if (!shown.length) { el.append(Empty("stops", t("stopsList"), t("noSearchResults"))); return; }
+  shown.forEach(s=> el.append(Row({
+    icon: "stops",
+    title: $("span",{class:"ltr",text:s.code}),
+    sub: `${s.name_en || s.name_ar || "—"} · ${Number(s.lat).toFixed(6)}, ${Number(s.lng).toFixed(6)}`,
+    right: $("div",{class:"row gap2"},
+      Chip({label:t("stopStatus."+s.status),
+        kind: s.status==="verified" ? "ok" : s.status==="rejected" ? "danger" : s.status==="pending" ? "warn" : ""}),
+      s.status==="draft" ? Btn({label:t("submitStop"), kind:"ghost", on:()=>submitStopAction(s.id)}) : null),
+    bordered:true })));
 }
 
 async function submitStopAction(id) {

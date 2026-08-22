@@ -210,6 +210,10 @@ run_break "trips tab switch reverts to full render (refetch)" src/screens/rider.
   's|on:{click:()=>{ if(S.tripTab===k) return; S.tripTab=k; tripsSyncTabs(); tripsRenderList(); }}|on:{click:()=>{ S.tripTab=k; render(); }}|' \
   "tab switch does NOT refetch (seamless)"
 
+run_break "search normalization drops teh-marbuta unification" src/lib/search.js \
+  's|u0647|u0648|' \
+  "normalization unifies teh marbuta and heh"
+
 run_break "back button goes nowhere" src/lib/components.js \
   's|^const back = () => { S.page = S.stack.pop() \|\| DEFAULT_PAGE\[S.role\]; S.sheet=null; render(); };|const back = () => { S.sheet=null; render(); };|' \
   "back returns to routes"
@@ -236,7 +240,7 @@ run_break "logo loses its gradient" src/lib/components.js \
   "logo references the gradient"
 
 run_break "input loses its label" src/lib/components.js \
-  's|      \$("input",{attrs:{type:"search", placeholder, "aria-label":placeholder}}))|      $("input",{attrs:{type:"search", placeholder}}))|' \
+  's|attrs:{type:"search", placeholder, "aria-label":placeholder}|attrs:{type:"search", placeholder}|' \
   "every input is labelled|field is labelled"
 
 

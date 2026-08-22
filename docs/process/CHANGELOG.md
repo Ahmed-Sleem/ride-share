@@ -647,3 +647,16 @@
   unresolved provider fails CI instead of crash-looping production — observed
   failing for the right reason, then green. 165 API tests total.
 - Live API verified again after the fix ships (Railway auto-deploys on push).
+
+## 2026-08-22 — Seamless trips tabs + advanced search (Fuse.js, Arabic+English)
+
+- Fixed the trips-tab "page moves" bug: switching Upcoming/Past no longer re-renders
+  the app, refetches, or snaps the scroll — the list is fetched once and filtered
+  in place.
+- Search now works: Fuse.js (Apache-2.0) vendored into the single-file build with an
+  Arabic/English normalization layer (diacritics, alef/hamza/teh-marbuta unified).
+  Riders search routes + boarding stops and see bookable journeys nested under each
+  route; the ops stops list gets the same live filter; dead search fields on
+  "coming soon" screens were removed.
+- Fixed a build bug: injecting the library via a string replacement corrupted the
+  bundle with `$&` (now a replacement function).

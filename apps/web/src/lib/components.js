@@ -48,7 +48,8 @@ const S = {
   page:"home", sheet:null, toast:null,
   chosenRoute:null, chosenBoard:null, chosenDep:null, lastBooking:null, seats:1,
   tripTab:"upcoming", tripsCache:null,                 // bookings cached so tab-switch is seamless
-  riderQuery:"",                                       // live search query on the rider home/routes
+  riderQuery:"", riderRoutes:null, riderIndex:null, riderJourneys:null,  // rider search (Fuse index)
+  stopsQuery:"", stopsCache:null,                      // ops stops live filter
   offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
@@ -260,12 +261,31 @@ const Row = ({icon:ic, title, sub, right, on, dis, selected, bordered, chev}) =>
     right||null,
     chev?icon("fwd","chev"):null);
 
-/* Search: its own component. One owner of its box, so nothing fights it. */
-const SearchBar = ({placeholder, on, live}) => live
-  ? $("label",{class:"searchbar searchbar--field"}, icon("lookup"),
-      $("input",{attrs:{type:"search", placeholder, "aria-label":placeholder}}))
-  : $("button",{class:"searchbar", attrs:{type:"button"}, on:{click:on||(()=>{})}},
+/* Search: its own component. One owner of its box, so nothing fights it.
+   `live` renders a REAL field: every keystroke calls onInput (the screen's
+   own filter — never a dead input, §8.1), Enter calls on, and a clear button
+   resets it. The value is restored after a re-render so a navigation never
+   silently drops the query. */
+const SearchBar = ({placeholder, on, live, value, onInput}) => {
+  if (!live)
+    return $("button",{class:"searchbar", attrs:{type:"button"}, on:{click:on||(()=>{})}},
       icon("lookup"), $("span",{class:"grow",text:placeholder}), icon("fwd","chev"));
+
+  const input = $("input",{class:"searchbar__input",
+    attrs:{type:"search", placeholder, "aria-label":placeholder}});
+  if (value) input.value = value;
+  const clear = $("button",{class:"searchbar__clear", attrs:{type:"button","aria-label":t("cancel")},
+    on:{click:()=>{ input.value=""; clear.classList.remove("searchbar__clear--on"); input.focus(); onInput && onInput(""); }}},
+    icon("close"));
+  if (value) clear.classList.add("searchbar__clear--on");
+  input.addEventListener("input", (e)=>{
+    const v = e.currentTarget.value;
+    clear.classList.toggle("searchbar__clear--on", !!v);
+    if (onInput) onInput(v);
+  });
+  input.addEventListener("keydown", (e)=>{ if (e.key==="Enter" && on) on(); });
+  return $("label",{class:"searchbar searchbar--field"}, icon("lookup"), input, clear);
+};
 
 const Table = (heads, rows) => {
   const tb=$("table",{class:"table"});

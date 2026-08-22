@@ -19,6 +19,7 @@
     "axe-core": "catalog:"
   },
   "dependencies": {
-    "@ride-share/brand": "workspace:*"
+    "@ride-share/brand": "workspace:*",
+    "fuse.js": "catalog:"
   }
 }

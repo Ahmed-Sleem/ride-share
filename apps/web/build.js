@@ -49,6 +49,7 @@ if (/__BRAND_[A-Z_]+__/.test(shell)) {
 const PARTS = [
   "data/content.js",
   "lib/components.js",
+  "lib/search.js",
   "lib/api.js",
   "screens/landing.js",
   "screens/auth.js",
@@ -59,7 +60,19 @@ const PARTS = [
   "shell/app.js"
 ];
 
-const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" +
+/* Fuse.js (Apache-2.0, vendored at BUILD time — never a CDN) is inlined
+   before the app code so the classic-script bundle gets the `Fuse` global.
+   The UMD is wrapped in an IIFE: its top-level `var e,t` must not collide
+   with the app's own `const t` (the translator) in the shared classic-script
+   scope. `this` is passed through so the UMD still attaches `Fuse` to the
+   window/global. lib/search.js owns the index and the Arabic/English
+   normalization (§0.3: one search implementation). */
+const FUSE_SRC =
+  "(function(){\n" +
+  fs.readFileSync(path.join(__dirname, "node_modules", "fuse.js", "dist", "fuse.min.js"), "utf8") +
+  "\n}).call(typeof window !== 'undefined' ? window : this);";
+
+const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 
 /* Stickers — the Streamline "Manila" doodles, recolored at build time from
@@ -86,7 +99,11 @@ if (js.includes("</script")) { console.error("FAIL: a source file contains </scr
 const MARK = '<div id="root"></div>';
 if (!shell.includes(MARK)) { console.error("FAIL: injection point not found"); process.exit(1); }
 
-const html = shell.replace(MARK, MARK + "\n<script>\n" + js + stickerJS + "\n</script>");
+/* A replacement FUNCTION, not a string: the injected code contains `$&`
+   (Fuse.js's minified bitap uses `$` as a variable). In a string replacement
+   `$&` means "the matched text" and would corrupt the bundle with
+   "<div id=\"root\"></div>" spliced into the middle of the library. */
+const html = shell.replace(MARK, () => MARK + "\n<script>\n" + js + stickerJS + "\n</script>");
 fs.writeFileSync(OUT, html);
 fs.mkdirSync(path.join(__dirname, "dist"), { recursive: true });
 fs.writeFileSync(path.join(__dirname, "dist", "index.html"), html);
