@@ -26,14 +26,22 @@ The live app is at **https://ride-shareweb-production.up.railway.app**.
   operations/manager/support staff, and views the append-only audit log.
 - **Drivers & vehicles** — apply-to-drive and vehicle registry with an
   operations approval queue (state machine).
-- **Landing page** — hero slideshow, how-it-works, bilingual (EN/AR, RTL),
-  light/dark themes, adaptive from 320px to 2560px.
+- **Stops (M2)** — a desk mapping tool (coordinate/bilingual form, OSM
+  click-to-place map, CSV import), a field-capture flow (accuracy gate,
+  checklist, EXIF-stripped photo, offline queue), and a two-person
+  verification queue.
+- **Routes, slots & the booking flow (M3, first vertical slice)** — operators
+  create and publish routes and generate the slot grid; drivers claim a slot
+  in two taps; riders pick a route → boarding stop → departure → book a seat
+  (fare locked at booking, no overselling) and get a boarding code.
+- **Landing page** — hero slideshow, how-it-works, for-riders/for-drivers,
+  policies, bilingual (EN/AR, RTL), light/dark themes, adaptive from 320px to
+  2560px.
 
-Not yet real: the in-app **rider journey (routes, trips, wallet, duty, ops and
-manager dashboards)** still renders sample content. Removing that and wiring
-those screens to the API is the current work item — see
-[docs/process/checklists/M1_finish_demo.md](docs/process/checklists/M1_finish_demo.md)
-and [docs/planning/PROJECT_MAP.md](docs/planning/PROJECT_MAP.md).
+Not yet built: wallet/ledger and cash collection, the driver manifest and
+boarding-code scan, the live-journey screens, the A→B planner, and everything
+in M4–M8 — see [docs/planning/PROJECT_MAP.md](docs/planning/PROJECT_MAP.md)
+and the [M3 checklist](docs/process/checklists/M3_core_journey.md).
 
 ## Architecture
 
@@ -44,9 +52,9 @@ SQL lives only in `**/infra/*.repository.ts`).
 
 ```
 apps/web/       the interface — assembled from src/ by build.js into one file
-apps/api/       the backend — NestJS + Fastify, 16 module dirs
+apps/api/       the backend — NestJS + Fastify, a modular monolith (17 module dirs)
 apps/mobile/    Capacitor wrapper (planned, BUILD_PLAN P7)
-packages/       shared types (schema-generated) + toolchain config
+packages/       shared types (schema-generated) + toolchain config + brand source
 infra/          migrations, Dockerfile, docker-compose, Railway config
 scripts/        the enforcement scripts behind `pnpm verify`
 docs/           specification, decisions, build plan, project map, process rules
@@ -111,8 +119,9 @@ Variable names only (values are environment-specific). The full list is in
 ## Verification
 
 ```bash
-pnpm verify      # repo guards + build + typecheck + lint + every test
-pnpm db:verify   # migrations up→down→up + schema drift + generated types (needs DATABASE_URL)
+pnpm verify                        # repo guards + build + typecheck + lint + every test
+pnpm --filter @ride-share/web verify   # + full browser suite (a11y, layout, landing, breaks)
+pnpm db:verify                     # migrations up→down→up + schema drift + types (needs DATABASE_URL)
 ```
 
 The test suite deliberately breaks every check once and observes it fail
@@ -126,9 +135,10 @@ The break harnesses live in `apps/web/tests/breaks.sh` and
 |---|---|
 | Foundations, deploy pipeline, guard-rails | Done |
 | Identity, auth, accounts, staff, drivers/vehicles, landing | Done |
-| **Rider journey wired to the API (remove demo data)** | **In progress — M1-finish** |
-| Geography, stops, mapping | Not started — M2 |
-| Routes, slots, booking, boarding, payment | Not started — M3 |
+| Geography — stops, mapping tool, field capture, verification | Done except the corridor survey (owner fieldwork) |
+| **Routes, slots, driver claim, rider booking (M3 P3.1–P3.6)** | **Done** |
+| **Wallet/ledger, manifest + scan, live journey (M3 P3.7–P3.9)** | **In progress** |
+| A→B planner, desktop density | Planned (DEC-199, DEC-200) |
 | Safety, commercial, subscriptions, APK, launch | Not started — M4–M8 |
 
 The product name is provisional and no trademark search has been done.

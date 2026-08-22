@@ -17,7 +17,9 @@ run_break () {                       # name | file | sed-expr | expected-failing
   local out; out="$(node tests/unit.test.js 2>&1)"
   mv "$file.bak" "$file"; node build.js >/dev/null 2>&1
   local hit=""; IFS='|' read -ra WANT <<< "$expect"
-  for e in "${WANT[@]}"; do echo "$out" | grep -q "FAIL  $e" && hit="$e"; done
+  # -F: expectation names are LITERAL strings (e.g. "(no [object Object])" —
+  # a regex grep treats the brackets as a character class and can never match).
+  for e in "${WANT[@]}"; do echo "$out" | grep -Fq "FAIL  $e" && hit="$e"; done
   if [ -n "$hit" ]; then
     echo "  CAUGHT        $name → \"$hit\""; PASS=$((PASS+1))
   else
@@ -153,8 +155,8 @@ run_break "map loses its illustrative label" src/lib/components.js \
   "every drawn map is labelled illustrative"
 
 run_break "driver duty reverts to fake earnings" src/screens/driver.js \
-  's|  w.append(Empty("clock", t("noClaims"), t("dutyComingBody")));|  w.append($("div",{class:"metric",text:"412 EGP"}));|' \
-  "driver duty is honest (no sample content)"
+  's|  w.append($("h2",{class:"t-head",text:t("myJourneysTitle")}));|  w.append($("div",{class:"metric",text:"412 EGP"}));  w.append($("h2",{class:"t-head",text:t("myJourneysTitle")}));|' \
+  "driver duty renders the real journeys loader"
 
 run_break "sample content returns to the bundle" src/data/content.js \
   's|const T = {|const T = {\n  sample:"Corniche Line",|' \
@@ -201,7 +203,7 @@ run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js 
   "own capture hides the approve action"
 
 run_break "rider home reverts to sample routes" src/screens/rider.js \
-  's|  w.append(Empty("routes", t("comingSoon"), t("routesComingBody")));|  w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
+  's|  loadRiderRoutesInto(list);|  loadRiderRoutesInto(list); w.append($("div",{class:"routecard",text:"Corniche Line"}));|' \
   "home has no sample route strings"
 
 run_break "back button goes nowhere" src/lib/components.js \

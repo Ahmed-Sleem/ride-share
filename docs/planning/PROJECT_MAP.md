@@ -16,7 +16,7 @@ Full product definition: `docs/specification/MASTER_SPECIFICATION.md`.
 | Piece | Tech | Why |
 |---|---|---|
 | Frontend | One self-contained HTML file assembled by `apps/web/build.js` — no framework, no CDN, system fonts | DEC-181: the approved single-file GUI is the real web client |
-| Backend | NestJS 11 + Fastify, modular monolith (16 module dirs) | DEC-069 |
+| Backend | NestJS 11 + Fastify, modular monolith (17 module dirs) | DEC-069 |
 | Data | PostgreSQL **only** (no Redis, no ORM). Migrations via node-pg-migrate; SQL only inside `**/infra/*.repository.ts`; schema → generated TS types | DEC-186, DEC-170 |
 | Deploy | Railway (web + api services, managed Postgres), Docker `infra/docker/Dockerfile.node` | DEC-183/191 |
 | Auth | Email + password. scrypt-hashed passwords, JWT (jose), hashed refresh tokens, 6-digit email OTP (hashed at rest, 60s cooldown, 3 tries → 1h lockout), env-seeded "system admin" | DEC-189/192/196 |
@@ -29,29 +29,37 @@ Full product definition: `docs/specification/MASTER_SPECIFICATION.md`.
 - **drivers** — driver application → ops approval state machine; vehicle
   registry + approval.
 - **audit** — append-only audit log (`POST /admin/audit`).
+- **geo** — stops (numeric lat/lng, DEC-197), desk + field capture, photo
+  storage, two-person verification queue.
+- **routes** — routes, ordered stops (gapless positions, cumulative
+  distances), idempotent slot grid.
+- **journeys** — race-safe slot claim (UNIQUE slot_id), state machine
+  CLAIMED→…→COMPLETED, driver work board.
+- **bookings** — fare locked at creation, DB seat guard (no overselling),
+  6-digit boarding code, cancellation returns seats.
 - **health** — `/health` and `/healthz` (503 when DB down, fast).
 - Cross-cutting: `common/throttle` (PostgreSQL-backed rate limiting),
   `security/` (authority resolver + JWT guard), `config/` (env, PG pool).
 
 ### Real — frontend (`apps/web/src/screens/`)
-- **landing** — hero slideshow, how-it-works, feature cards, linked credits.
+- **landing** — hero slideshow, how-it-works, for-riders/for-drivers,
+  policies, linked credits.
 - **auth** — email sign-in/sign-up (smart auto-detect), OTP boxes, password
   eye, resend countdown, lockout, forgot-password — all wired to the API.
 - **admin** — staff management (create/edit/remove, system-admin protection)
   and audit log — real API data.
+- **ops** — driver/vehicle approval queue, stops tool (desk + field +
+  verification), routes/slots tool — real API data.
+- **driver** — duty board, find-work board with two-tap claim — real API data.
+- **rider** — routes → boarding → departures → review → book → boarding code →
+  trips — real API data. Wallet/waiting/onboard are honest "coming in M3"
+  states until P3.7–P3.9.
 - **profile** — real `S.user` + email verification (riders and staff).
 
 ### Skeleton — module dirs with only README/contracts, no endpoints yet
-`analytics`, `bookings`, `config`, `geo`, `journeys`, `matching`,
-`notifications`, `payments` (contracts only), `pricing`, `promotions`,
-`requests`, `support`, `vehicles`. These land in M2–M5.
-
-### NOT REAL YET — the demo content
-`apps/web/src/data/content.js` still ships a `DATA` object of sample
-routes/trips/wallet/etc. The rider **home/trips/wallet/duty/ops/manager
-screens** render that sample data. Removing it and wiring those screens to
-the API with honest empty states is **M1-finish** (next work — checklist in
-`docs/process/checklists/M1_finish_demo.md`).
+`analytics`, `config`, `matching`, `notifications`, `pricing`, `promotions`,
+`requests`, `support`, `vehicles` (module). `payments` has the provider
+contract + Paymob webhook verifier only. These land in M3.7–M5.
 
 ## The verification machinery (why the repo is trustworthy)
 
@@ -80,10 +88,10 @@ Documented in `.env.example` (kept in lock-step by `check-env-example.sh`):
 | Milestone | State |
 |---|---|
 | M0 foundations | Done — deployed on Railway |
-| M1 identity/auth/landing | Backend + auth + landing done; **demo-data removal (M1-finish) is next** |
+| M1 identity/auth/landing | Done (incl. demo-data removal) |
 | M2 geography | **Done except P2.5 fieldwork** — stops, desk tool, field capture, verification queue (DEC-197/198) |
-| M3 routes/slots/booking/payment | **Next** — checklist M3_core_journey.md (DEC-199/202) |
-| GUI polish | Desktop density + landing completeness — checklist GUI_polish.md (DEC-200/201) |
+| M3 routes/slots/booking/payment | **In progress** — P3.1–P3.6 done (route, slot grid, claim, rider booking); P3.7–P3.9 next (wallet/ledger, manifest + scan, live journey) |
+| GUI polish | Landing completeness done (DEC-201); desktop density still open (DEC-200) — checklist GUI_polish.md |
 | M4 safety · M5 commercial · M6 subscriptions · M7 APK · M8 launch | Not started |
 
 ## Rules before you touch code

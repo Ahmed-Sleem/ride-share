@@ -37,6 +37,21 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  �
   page.on("console",m=>{ if(m.type()==="error") errors.push(m.text()); });
   page.on("pageerror",e=>errors.push(String(e)));
 
+  /* The shell measures LAYOUT, not the network. On file:// every relative
+     fetch is blocked by the browser's CORS policy (a test-environment
+     artifact, not an app defect — in production the web server proxies
+     /v1/*). Stub fetch to answer with the standard error shape so the real
+     screens render their honest error/empty states instead of firing
+     blocked requests that would pollute the console-error check. */
+  await page.evaluateOnNewDocument(() => {
+    window.fetch = () => new Promise((resolve) => {
+      setTimeout(() => resolve({
+        ok: false, status: 503,
+        json: async () => ({ code: "503", message_key: "error.unavailable" }),
+      }), 0);
+    });
+  });
+
   const ROLES=["rider","driver","ops","manager","support","super_admin"];
 
   for(const vp of VIEWPORTS){
@@ -180,10 +195,20 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  �
   /* ── overlays, themes, RTL, zoom ─────────────────────────────────── */
   await page.setViewport({width:375,height:812});
   await page.goto(FILE,{waitUntil:"load"});
-  for(const sheet of ["qr","sos","topup","subs","scan","claim","report","contacts","trip","fare"]){
+
+  /* The sheet list is DERIVED from the live SHEETS registry (§0.3 — one
+     definition). A hardcoded list drifted when demo sheets were removed
+     (the test kept asserting deleted sheets); reading the registry means
+     every registered sheet is measured and none can silently fall out of
+     coverage. The core-sheet guard keeps this from going vacuously green. */
+  const sheetNames = await page.evaluate(() => Object.keys(SHEETS));
+  ok("sheet registry exposes the core sheets",
+     ["sos","report","claimSlot","fieldCapture","staffEdit","staffRemove"].every((k) => sheetNames.includes(k)),
+     sheetNames.join(","));
+  for(const sheet of sheetNames){
     await page.evaluate(s=>{
-      S.view="app"; S.authed=true; S.role = (s==="scan"||s==="claim") ? "driver" : (s==="fare" ? "manager" : "rider");
-      S.page = DEFAULT_PAGE[S.role]; openSheet(s);
+      S.view="app"; S.authed=true; S.role="rider"; S.page="home"; S.stack=[];
+      openSheet(s);
     }, sheet);
     // measure AFTER the entry animation; mid-flight geometry is not a defect
     await new Promise(r=>setTimeout(r,400));
@@ -201,6 +226,32 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  �
       ok(`sheet ${sheet} top is on screen`, m.t>=-1, String(m.t));
     }
   }
+
+  /* Wide data must scroll inside its own wrapper, never overflow the page
+     (§18.4 "wide data uses an intentional small-space strategy"). Staff
+     tables have a 560px floor; on a phone that floor must scroll, not push
+     the page wider. */ 
+  await page.setViewport({width:375,height:812});
+  await page.goto(FILE,{waitUntil:"load"});
+  const tableOver = await page.evaluate(()=>{
+    S.view="app"; S.authed=true; S.theme="light"; S.lang="en"; S.role="ops";
+    S.page="queue"; S.stack=[]; S.sheet=null; render();
+    const main=document.querySelector(".main");
+    if(!main) return null;
+    const wrap=document.createElement("div"); wrap.className="tablewrap";
+    const tb=document.createElement("table"); tb.className="table";
+    const tr=document.createElement("tr");
+    for(let i=0;i<8;i++){ const td=document.createElement("td"); td.textContent="Wide cell "+i; tr.appendChild(td); }
+    tb.appendChild(tr); wrap.appendChild(tb);
+    (main.querySelector(".main__inner")||main).appendChild(wrap);
+    const de=document.documentElement;
+    return { wrapOverflowX:getComputedStyle(wrap).overflowX,
+             docScrollW:de.scrollWidth, clientW:de.clientWidth };
+  });
+  ok("wide table scrolls inside its wrapper (no page overflow)",
+     !!tableOver && (tableOver.wrapOverflowX==="auto"||tableOver.wrapOverflowX==="scroll")
+       && tableOver.docScrollW<=tableOver.clientW+1,
+     JSON.stringify(tableOver));
 
   for(const theme of ["light","dark"]) for(const lang of ["en","ar"]){
     const m=await page.evaluate((th,lg)=>{

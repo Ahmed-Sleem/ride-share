@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "start": "node server.js",
-    "test": "node tests/unit.test.js && node --test tests/server.test.js",
+    "test": "node tests/unit.test.js && node tests/a11y.test.js && node --test tests/server.test.js",
     "test:layout": "node tests/layout.test.js",
     "test:landing": "node tests/landing.test.js",
     "test:breaks": "./tests/breaks.sh",

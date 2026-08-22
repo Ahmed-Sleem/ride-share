@@ -668,3 +668,38 @@ output) — see the engineering standard §3.3 and §4.
   repo checks green; schema + types regenerated (15 tables).
 - Deferred (honest): walking-time ranking of boarding points needs a routing provider — arrives with
   the DEC-199 A→B planner; P3.9 live tracking (waiting/onboard screens) next.
+
+## Audit — full-suite verification pass (test drift + CI gaps + doc drift)
+
+- Ran `pnpm verify`, `pnpm db:verify` and `apps/web/verify.sh` against a clean
+  clone. Found and fixed the issues below — all were invisible to the root
+  `pnpm verify` because the GUI verify (`./verify.sh`) could not run in CI.
+- **layout.test.js drift**: the sheet loop hardcoded the deleted demo sheets
+  (qr/topup/subs/scan/contacts/trip/fare) and screens fired real `file://`
+  fetches (CORS console errors) — 9 assertions failed. Fixed: the sheet list is
+  derived from the live `SHEETS` registry (core-sheet guard), fetch is stubbed
+  to the standard error shape, and a dedicated wide-table case keeps the
+  scroll-wrapper guarantee reachable. layout now 7482/7482.
+- **CI exec bits**: `apps/web/verify.sh`, `tests/breaks.sh`, `tests/layout-breaks.sh`
+  were committed 100644, so CI's `./verify.sh` never ran. Fixed: all 17 tracked
+  `*.sh` are 100755.
+- **Break harnesses**: two sed edits targeted M1-finish-removed lines and the
+  expectation matcher used regex grep on names containing `[object Object]` —
+  3 breaks unobservable. Fixed: sed edits updated, matcher switched to `grep -F`.
+  74/74 breaks caught.
+- **Orphaned a11y suite**: `tests/a11y.test.js` (axe) was wired into nothing.
+  Fixed: added to the web `test` script and `verify.sh`.
+- **Docs drift**: README.md, docs/README.md, PROJECT_MAP.md, 00_MASTER.md said
+  the rider journey renders demo data and M2/M3 were "not started". Fixed.
+- **Config drift**: `.env.example` carried a dead `MAP_PROVIDER_KEY` and missed
+  the web vars (`API_INTERNAL_URL`, `MAP_PROVIDER`, `GOOGLE_MAPS_API_KEY`). Fixed.
+- **Duplicate gap register**: `AUDIT_AND_TODO.md` and `OPEN_ITEMS.md` had drifted.
+  Consolidated to one register; `OPEN_ITEMS.md` is now a pointer.
+- **Live smoke test**: the deployed web serves the landing (HTTP 200) but
+  `/healthz` reports `api:"unreachable"` and every `/v1/*` proxy returns 504 —
+  the web cannot reach the api at `API_INTERNAL_URL`. Logged as G-070 (owner
+  action in the Railway dashboard).
+- Verified: `pnpm verify` green (repo checks + build + typecheck + lint + 164 API
+  + web unit/a11y/server); `pnpm db:verify` green (migrations cycle + schema +
+  types); `apps/web/verify.sh` green (307 unit, 14 a11y, 7482 layout, 47 landing,
+  74/74 breaks, 8/8 layout breaks).

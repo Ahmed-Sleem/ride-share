@@ -615,3 +615,22 @@
   fare locked at booking; cancellation returns seats.
 - Rider UI is real: routes → boarding → departures → review → boarding code → trips.
 - 164 API / 307 unit / 14 a11y / 5 server green; break checks observed failing.
+
+## 2026-08-22 — Audit pass: test drift, CI gaps and doc drift fixed
+
+- The web GUI verify (`./verify.sh`) could not actually run in CI: its scripts were
+  committed without the exec bit. All 17 tracked `*.sh` files are now executable.
+- Fixed `layout.test.js` drift from the demo-data removal: the sheet list is now
+  derived from the live SHEETS registry (never drifts again), fetch is stubbed on
+  `file://`, and a wide-table case keeps the scroll-wrapper guarantee measurable.
+  Layout was 9 red; now 7482/7482.
+- Fixed the break harness: two stale sed edits + a regex grep that could never
+  match `[object Object]`. 74/74 breaks caught (was 71 + 3 missed).
+- Wired the orphaned axe a11y suite into `pnpm verify` and `verify.sh`.
+- Corrected `.env.example` (dead `MAP_PROVIDER_KEY` → real web vars).
+- Consolidated the duplicated gap register (`AUDIT_AND_TODO.md` canonical;
+  `OPEN_ITEMS.md` is a pointer) and synced README / docs-README / PROJECT_MAP /
+  00_MASTER status to the actual code.
+- Live smoke test: landing serves, but the deployed web reports `api:"unreachable"`
+  and `/v1/*` returns 504 — logged as G-070 (owner action in Railway).
+- Verified: `pnpm verify`, `pnpm db:verify`, `apps/web/verify.sh` all green.

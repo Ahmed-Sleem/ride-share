@@ -13,21 +13,26 @@ lives in `apps/api/`, and deployment/infrastructure lives in `infra/`.
    the answer is here, and if it is not, that is a gap worth raising.
 3. **[planning/BUILD_PLAN.md](planning/BUILD_PLAN.md)** — how it gets built.
    Start at "How to read a point", then Phase 0.
-4. **[decisions/OPEN_ITEMS.md](decisions/OPEN_ITEMS.md)** — what is unresolved
-   and which risks were accepted deliberately.
+4. **[process/AUDIT_AND_TODO.md](process/AUDIT_AND_TODO.md)** — what is
+   unresolved and which risks were accepted deliberately (the one gap register;
+   `decisions/OPEN_ITEMS.md` points here).
 5. **[process/](process/)** — the standards this project is held to. Read
    these before writing code; they are the reason the codebase looks the way
    it does.
 
 ## Where to start work
 
-The interface is complete. The next work is **BUILD_PLAN Phase 0** —
-repository, toolchain, Docker, database, and the automated guard-rails, all
-before any feature exists. Each point in the plan states what to do, how to
+The current work is **BUILD_PLAN Phase 3, points P3.7–P3.9** — the wallet and
+ledger (cash-first), the driver manifest and boarding-code scan, and the live
+journey screens — after which the first vertical slice is complete. The
+status index is [process/checklists/00_MASTER.md](process/checklists/00_MASTER.md);
+the per-point build detail (what, how, test, break, done) is in
+[BUILD_PLAN.md](planning/BUILD_PLAN.md). Each point states what to do, how to
 test it, how to prove the test can fail, and what "done" means.
 
-Do not start at Phase 3 because it is the interesting part. Phase 0 exists so
-that the rules are enforced by scripts before there is code to argue with.
+Phases 0–2 and Phase 3's P3.1–P3.6 are already built and verified. Do not
+re-litigate completed decisions without reading
+[DECISIONS_REGISTER.md](decisions/DECISIONS_REGISTER.md) first.
 
 ## Contents
 
@@ -51,7 +56,7 @@ The product in full.
 | File | Contents |
 |---|---|
 | `DECISIONS_REGISTER.md` | DEC-001 onward. Superseded rows are marked, not deleted |
-| `OPEN_ITEMS.md` | Gap register. Open questions, accepted risks, and what closed them |
+| `OPEN_ITEMS.md` | Pointer to the gap register in `process/AUDIT_AND_TODO.md` |
 
 ### research/
 Sourced findings behind the decisions — routing cost, batching, fixed versus
@@ -88,5 +93,5 @@ old row stays and is marked superseded, with a pointer to the one that replaced
 it. `DEC-176` supersedes the mobile clause of `DEC-085`; both are readable.
 
 **Gaps are tracked, not forgotten.** Anything unresolved is a `G-` row in
-`OPEN_ITEMS.md` with its current state. A thing is either done or a tracked
-gap. There is no third state.
+`process/AUDIT_AND_TODO.md` with its current state. A thing is either done or
+a tracked gap. There is no third state.
