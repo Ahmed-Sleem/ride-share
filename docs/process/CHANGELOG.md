@@ -666,3 +666,12 @@
 - The policy pages now carry real, generic, editable content (6 sections each, both
   languages) instead of a placeholder sentence; the "final legal wording is the
   operator's" note stays. 338 unit tests green, 77/77 breaks caught.
+
+## 2026-08-22 — Landing v2 (Ride · Drive · About · Help + sticky panels)
+
+- New sticky top bar (Ride/Drive/About/Help, EN/AR, theme, Log in, Sign up) with a
+  compact hamburger menu; four marketing pages for riders, drivers, About and a
+  Help FAQ; a full-bleed sticky stacking-panels section and a subtle hero parallax
+  (native CSS scroll-driven, reduced-motion safe). Policies stay filled (EN + AR).
+- Brand name in the new prose is derived from the single brand source (the branding
+  guard caught a hardcode during the pass and it was fixed).

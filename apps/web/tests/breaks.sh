@@ -170,17 +170,25 @@ run_break "stops tool loses its CSV import" src/screens/staff.js \
   's|    $("textarea",{class:"input", attrs:{id:"stop-csv"|    $("textarea",{class:"input", attrs:{id:"stop-csvX"|' \
   "stops tool has a CSV import"
 
-run_break "landing loses the drivers section" src/screens/landing.js \
-  's|$("h2",{class:"landing__h2",text:t("forDrivers")}),|$("h2",{class:"landing__h2",text:t("forDriversX")}),|' \
-  "landing speaks to drivers"
+run_break "landing loses the drive how-to steps" src/screens/landing.js \
+  's|$("h2", { class: "landing__h2", text: t("driveStepsKick") })|$("h2", { class: "landing__h2", text: t("driveStepsKickX") })|' \
+  "drive page has the how-to steps"
 
 run_break "landing loses its policy links" src/screens/landing.js \
-  's|          policyLink("terms"), policyLink("privacy"), policyLink("safety")),|          null),|' \
+  's|      policyLink("terms"), policyLink("privacy"), policyLink("safety")),|      null),|' \
   "landing footer links policies"
 
 run_break "policies revert to empty placeholders" src/data/content.js \
   's|policyTerms:\[|policyTermsX:[|' \
   "terms doc has real sections (en)"
+
+run_break "landing loses the page nav links" src/screens/landing.js \
+  's|const links = \[\["rider", "navRide"\], \["drive", "navDrive"\], \["about", "navAbout"\], \["help", "navHelp"\]\];|const links = [["rider", "navRide"]];|' \
+  "top bar has Ride/Drive/About/Help links"
+
+run_break "landing loses the sticky stacking panels" src/screens/landing.js \
+  's|      stackPanel("seat",  "violet", t("panel1T"), t("panel1B")),|      null,|' \
+  "rider landing has 4 stacking panels"
 
 run_break "logo path hardcoded again (second definition)" src/lib/components.js \
   's|const LOGO_PATH = BRAND.logo.path;|const LOGO_PATH = "M0 0";|' \
@@ -258,7 +266,7 @@ run_break "splash loses its container" src/shell/app.js \
   "boot shows the splash"
 
 run_break "landing loses its hero" src/screens/landing.js \
-  's|class:"landing__hero"|class:"landing__heroX"|' \
+  's|class: "landing__hero"|class: "landing__heroX"|' \
   "landing renders the hero"
 
 run_break "demo role switcher returns" src/shell/app.js \
@@ -287,7 +295,7 @@ run_break "role-choice chevron loses its size" src/styles/shell.html \
   "role-choice chevron has an explicit size"
 
 run_break "streamline credit loses its link" src/screens/landing.js \
-  's|href:"https://www.streamlinehq.com"|href:"#"|' \
+  's|href: "https://www.streamlinehq.com"|href: "#"|' \
   "Streamline credit is a link"
 
 run_break "slider card returns a gradient" src/styles/shell.html \

@@ -777,3 +777,28 @@ output) — see the engineering standard §3.3 and §4.
 - Tests: 8 new assertions (sections render in both languages; the operator's-legal
   note stays) + a break-case (sections emptied → test fails). 338 unit green;
   77/77 breaks caught; a11y 14, layout 7452, landing 47 green.
+
+## GUI — Landing v2 (Ride/Drive/About/Help + sticky panels + filled policies)
+
+- Uber/Careem-style sticky top bar: brand · Ride (default) · Drive · About · Help ·
+  EN/AR · theme · Log in · Sign up. Compact (<840px) collapses the links into a
+  labelled hamburger menu; the theme toggle and "Log in" hide below 600px (still
+  reachable in the menu). Every control does exactly what it says (§8.1).
+- Four marketing pages, one copy table (EN + AR):
+  - **Rider (default)** — hero slideshow + 6 feature cards (fixed price, schedule
+    ahead, pay cash, live tracking, board-by-code, save) + safety + how-it-works.
+  - **Drive** — hero + 6 driver perks + 4 how-to steps + requirements CTA.
+  - **About** — the honest story (microbus vs ride-hailing vs the middle).
+  - **Help** — a native <details> FAQ (6 questions) — no JS, accessible.
+- Scroll motion, all native + progressive, reduced-motion collapses to static:
+  - scroll-driven reveals (existing animation-timeline: view());
+  - a full-bleed **sticky stacking-panels** section (position: sticky; the next
+    card slides over the last — the "hyper scroll" the owner liked, no library);
+  - a gentle hero parallax via animation-timeline: scroll() (@supports-guarded).
+- Branding guard fired correctly: my prose hardcoded "Ride Share"/"رايد شير" — fixed
+  by deriving the name from BRAND (the §0.3 one-change test, enforced by the check).
+- Tests: 349 unit (new LANDING v2 group: nav links, drive page, about, help FAQ,
+  menu open/navigate, 4 stacking panels) + landing browser suite grew 47→57
+  (every page × 375px & 1440px × EN & AR, no overflow, no console errors);
+  79/79 breaks caught (4 stale landing break-cases re-anchored to the rewrite,
+  2 new). a11y 14, layout 7452, 165 API, repo guards green.

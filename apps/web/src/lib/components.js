@@ -52,6 +52,7 @@ const S = {
   stopsQuery:"", stopsCache:null,                      // ops stops live filter
   offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
+  landingPage:"rider", landingMenu:false,      // landing v2: rider (default) | drive | about | help
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
   claimTarget:null, claimVehicleId:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
@@ -76,6 +77,7 @@ function enterApp(user) {
 function signOut() {
   API.clearSession();
   S.user = null; S.authed = false; S.view = "landing";
+  S.landingPage = "rider"; S.landingMenu = false; S.landingDoc = null;
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
   S.authBusy = false; S.authError = null; S.otpBypass = false;
   S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
@@ -156,6 +158,7 @@ const ICON = {
   lost:'<path d="M20 7H4v13h16z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>',
   back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
   signout:'<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="m10 8 4 4-4 4"/><path d="M14 12H4"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
   sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
   share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',

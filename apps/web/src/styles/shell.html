@@ -896,6 +896,107 @@ select.input{cursor:pointer}
 .landing__credits:hover{color:var(--accent-text);text-decoration:underline}
 .landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
 
+/* ── landing v2: page nav, sticky panels, drive/about/help ──────────────── */
+/* the brand is now a real <button> — reset the native chrome, keep the wordmark */
+.landing__brand{border:0;background:none;padding:0;cursor:pointer;text-align:start}
+.landing__links{display:none;align-items:center;gap:var(--s1);flex:1;justify-content:center;min-width:0}
+.landing__link{border:0;background:none;padding:8px 14px;border-radius:var(--r-full);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
+  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.landing__link:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.landing__link--on{color:var(--brand);background:var(--brand-soft)}
+.landing__actions{display:flex;align-items:center;gap:var(--s2);flex:none}
+.landing__login{border:0;background:none;padding:8px 12px;border-radius:var(--r-full);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
+  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.landing__login:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.landing__menu{display:grid;place-items:center;width:var(--tap-sm);height:var(--tap-sm);
+  border-radius:var(--r-full);border:0;background:none;color:var(--text-primary);
+  cursor:pointer;flex:none}
+.landing__menu:hover{background:var(--bg-sunken)}
+.landing__menu svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.landing__menu-panel{position:absolute;top:calc(100% + var(--s2));inset-inline:var(--s3);
+  display:flex;flex-direction:column;gap:var(--s1);background:var(--bg-base);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-3);
+  padding:var(--s3);z-index:var(--z-sticky)}
+.landing__menulink{border:0;background:none;text-align:start;padding:10px 12px;
+  border-radius:var(--r-sm);font-size:var(--f-body);font-weight:var(--fw-semi);
+  color:var(--text-primary);cursor:pointer}
+.landing__menulink:hover{background:var(--bg-sunken)}
+/* eyebrow kicker above a page title */
+.landing__kick{font-size:var(--f-cap);font-weight:var(--fw-bold);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--accent-text)}
+.landing__body--page{padding-top:var(--s8)}
+.landing__pagetop{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s4)}
+.landing__pagetop .landing__title{max-width:24ch}
+.landing__cta-sub{max-width:44ch;margin:var(--s1) auto 0}
+/* FAQ — native <details>, one interaction pattern, keyboard + a11y free */
+.landing__faq{display:flex;flex-direction:column;gap:var(--s3);max-width:720px}
+.landing__faqitem{background:var(--bg-raised);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:var(--s3) var(--s4)}
+.landing__faqitem summary{cursor:pointer;font-weight:var(--fw-semi);font-size:var(--f-body);
+  color:var(--text-primary);list-style:none;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--s3)}
+.landing__faqitem summary::-webkit-details-marker{display:none}
+.landing__faqitem summary::after{content:"+";font-weight:var(--fw-bold);color:var(--accent-text);
+  font-size:var(--f-lg);line-height:1}
+.landing__faqitem[open] summary::after{content:"−"}
+.landing__faqitem summary:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px;border-radius:var(--r-xs)}
+/* drive hero perk card */
+.driverhero{display:flex;flex-direction:column;align-items:center;gap:var(--s5);
+  background:var(--bg-raised);border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:var(--s6);box-shadow:var(--sh-2);min-width:0}
+.driverhero__art{width:150px;height:150px;--sticker-ink:var(--text-primary)}
+.driverhero__list{display:flex;flex-direction:column;gap:var(--s3);width:100%}
+.driverhero__row{display:flex;align-items:center;gap:var(--s3);font-weight:var(--fw-semi);
+  color:var(--text-primary);font-size:var(--f-body)}
+.driverhero__row svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:var(--ok);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── full-bleed sticky stacking panels (native CSS: the next card slides
+      over the last; reduced-motion collapses to a plain stack) ─────────── */
+.stackpanels{position:relative;display:flex;flex-direction:column;width:100%}
+.stackpanels__kick{padding:0 var(--s6);margin:var(--s8) 0 var(--s6)}
+.stackpanel{position:sticky;top:0;min-height:100dvh;display:flex;align-items:center;
+  justify-content:center;padding:var(--s8) var(--s6);color:var(--on-solid);
+  overflow:hidden}
+.stackpanel--violet{background:var(--violet-700)}
+.stackpanel--mint{background:var(--mint-700)}
+.stackpanel--sky{background:var(--sky-700)}
+.stackpanel--coral{background:var(--coral-700)}
+.stackpanel__inner{max-width:var(--landing-max);width:100%;display:flex;
+  flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
+.stackpanel__art{width:150px;height:150px;--sticker-ink:var(--on-solid)}
+.stackpanel--violet .stackpanel__art{--sticker-accent:var(--violet-300)}
+.stackpanel--mint   .stackpanel__art{--sticker-accent:var(--mint-300)}
+.stackpanel--sky    .stackpanel__art{--sticker-accent:var(--sky-300)}
+.stackpanel--coral  .stackpanel__art{--sticker-accent:var(--coral-300)}
+.stackpanel__t{font-size:clamp(var(--f-title),4.5vw,var(--f-display));
+  font-weight:var(--fw-bold);margin:0;line-height:var(--lh-tight);letter-spacing:-.02em}
+.stackpanel__b{font-size:var(--f-lg);opacity:.92;max-width:46ch;margin:0;line-height:var(--lh-body)}
+
+/* hero parallax — the hero content lags the scroll for depth. Progressive:
+   static where scroll-timeline is unsupported; killed under reduced motion. */
+@media (prefers-reduced-motion: no-preference){
+  @supports (animation-timeline: scroll()){
+    .landing__heroinner{animation:heroscroll linear both;animation-timeline:scroll();
+      animation-range:0px 70vh}
+  }
+  @keyframes heroscroll{from{transform:translateY(0)}to{transform:translateY(72px)}}
+}
+
+@media (min-width:600px){
+  .landing__menu-panel{inset-inline:auto;inset-inline-end:var(--s4);min-width:240px}
+}
+@media (max-width:599.98px){
+  .landing__tgl--theme,.landing__login{display:none}
+}
+@media (min-width:840px){
+  .landing__links{display:flex}
+  .landing__menu{display:none}
+}
+
 /* ── the hero slideshow (modern, youth, same palette) ──────────────────── */
 .slideshow{position:relative;width:100%;min-width:0;border-radius:var(--r-xl);
   border:1px solid var(--line);overflow:hidden;background:var(--bg-raised);

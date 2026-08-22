@@ -861,10 +861,9 @@ group("BRANDING IS SINGLE-SOURCED (§0.3 one-change test)");
 group("LANDING COMPLETENESS — riders, drivers, safety, policies");
 (() => {
   const t=boot();
-  t.w.S.view="landing"; t.w.render();
+  t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
   const txt = t.q(".landing").textContent;
   ok("landing speaks to riders", txt.includes(t.w.T.en.forRiders));
-  ok("landing speaks to drivers", txt.includes(t.w.T.en.forDrivers) && txt.includes(t.w.T.en.driverF2T));
   ok("landing has a safety section", txt.includes(t.w.T.en.safetyTitle) && txt.includes(t.w.T.en.safetyF1T));
   ok("landing footer links policies", t.all(".landing__policylink").length === 3,
      String(t.all(".landing__policylink").length));
@@ -872,12 +871,53 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
      t.q(".landing__credits") && t.q(".landing__credits").tagName === "A");
   ok("no sample content on the landing", !/Corniche|Montazah|Smouha/.test(txt));
 
+  // drivers have their own page (Uber/Careem model)
+  t.w.S.landingPage="drive"; t.w.render();
+  const driveTxt = t.q(".landing").textContent;
+  ok("drive page speaks to drivers", driveTxt.includes(t.w.T.en.forDrivers) && driveTxt.includes(t.w.T.en.driverF2T));
+  ok("drive page has the how-to steps", driveTxt.includes(t.w.T.en.driveStepsKick));
+  ok("drive page has the apply CTA", driveTxt.includes(t.w.T.en.applyToDrive));
+  t.w.S.landingPage="rider"; t.w.render();
+
   // a policy opens the honest structured doc and can go back
   t.all(".landing__policylink")[0].click();
   ok("a policy doc opens", t.q(".landing__doc") && t.w.S.landingDoc === "terms");
   ok("policy doc states the legal text is the operator's", t.q(".landing__doc").textContent.includes("legal"));
   t.q(".landing__doc .btn--ghost").click();
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
+})();
+
+group("LANDING v2 — nav pages, drive, about, help, sticky panels");
+(() => {
+  const t=boot();
+  t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
+
+  // top bar: the Uber-style links + auth actions + menu (compact)
+  ok("top bar has Ride/Drive/About/Help links", ["navRide","navDrive","navAbout","navHelp"]
+     .every((k)=> t.q(".landing").textContent.includes(t.w.T.en[k])));
+  ok("top bar has Log in and Sign up", t.q(".landing").textContent.includes(t.w.T.en.login)
+     && t.q(".landing").textContent.includes(t.w.T.en.signup));
+  ok("compact menu button is labelled", !!t.q(".landing__menu") && t.q(".landing__menu").getAttribute("aria-label") === t.w.T.en.menu);
+
+  // the rider page carries the sticky stacking panels (the parallax section)
+  ok("rider landing has 4 stacking panels", t.all(".stackpanel").length === 4,
+     String(t.all(".stackpanel").length));
+
+  // drive → about → help navigate without a full app render
+  const links = t.all(".landing__link");
+  ok("nav renders 4 links", links.length === 4, String(links.length));
+  links[2].click();                      // About
+  ok("about page renders", t.q(".landing").textContent.includes(t.w.T.en.aboutTitle));
+  t.all(".landing__link")[3].click();    // Help
+  ok("help page renders the FAQ", t.all(".landing__faqitem").length === 6,
+     String(t.all(".landing__faqitem").length));
+
+  // the mobile menu opens and navigates
+  t.w.S.landingPage="rider"; t.w.render();
+  t.q(".landing__menu").click();
+  ok("menu panel opens", !!t.q(".landing__menu-panel"));
+  t.q(".landing__menu-panel .landing__menulink").click();   // first link = Ride
+  ok("menu link navigates and closes", t.w.S.landingPage==="rider" && !t.q(".landing__menu-panel"));
 })();
 
 group("POLICIES ARE FILLED (terms/privacy/safety, EN + AR)");

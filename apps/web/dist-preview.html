@@ -896,6 +896,107 @@ select.input{cursor:pointer}
 .landing__credits:hover{color:var(--accent-text);text-decoration:underline}
 .landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
 
+/* ── landing v2: page nav, sticky panels, drive/about/help ──────────────── */
+/* the brand is now a real <button> — reset the native chrome, keep the wordmark */
+.landing__brand{border:0;background:none;padding:0;cursor:pointer;text-align:start}
+.landing__links{display:none;align-items:center;gap:var(--s1);flex:1;justify-content:center;min-width:0}
+.landing__link{border:0;background:none;padding:8px 14px;border-radius:var(--r-full);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
+  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.landing__link:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.landing__link--on{color:var(--brand);background:var(--brand-soft)}
+.landing__actions{display:flex;align-items:center;gap:var(--s2);flex:none}
+.landing__login{border:0;background:none;padding:8px 12px;border-radius:var(--r-full);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
+  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
+.landing__login:hover{color:var(--text-primary);background:var(--bg-sunken)}
+.landing__menu{display:grid;place-items:center;width:var(--tap-sm);height:var(--tap-sm);
+  border-radius:var(--r-full);border:0;background:none;color:var(--text-primary);
+  cursor:pointer;flex:none}
+.landing__menu:hover{background:var(--bg-sunken)}
+.landing__menu svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.landing__menu-panel{position:absolute;top:calc(100% + var(--s2));inset-inline:var(--s3);
+  display:flex;flex-direction:column;gap:var(--s1);background:var(--bg-base);
+  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-3);
+  padding:var(--s3);z-index:var(--z-sticky)}
+.landing__menulink{border:0;background:none;text-align:start;padding:10px 12px;
+  border-radius:var(--r-sm);font-size:var(--f-body);font-weight:var(--fw-semi);
+  color:var(--text-primary);cursor:pointer}
+.landing__menulink:hover{background:var(--bg-sunken)}
+/* eyebrow kicker above a page title */
+.landing__kick{font-size:var(--f-cap);font-weight:var(--fw-bold);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--accent-text)}
+.landing__body--page{padding-top:var(--s8)}
+.landing__pagetop{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s4)}
+.landing__pagetop .landing__title{max-width:24ch}
+.landing__cta-sub{max-width:44ch;margin:var(--s1) auto 0}
+/* FAQ — native <details>, one interaction pattern, keyboard + a11y free */
+.landing__faq{display:flex;flex-direction:column;gap:var(--s3);max-width:720px}
+.landing__faqitem{background:var(--bg-raised);border:1px solid var(--line);
+  border-radius:var(--r-md);padding:var(--s3) var(--s4)}
+.landing__faqitem summary{cursor:pointer;font-weight:var(--fw-semi);font-size:var(--f-body);
+  color:var(--text-primary);list-style:none;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--s3)}
+.landing__faqitem summary::-webkit-details-marker{display:none}
+.landing__faqitem summary::after{content:"+";font-weight:var(--fw-bold);color:var(--accent-text);
+  font-size:var(--f-lg);line-height:1}
+.landing__faqitem[open] summary::after{content:"−"}
+.landing__faqitem summary:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px;border-radius:var(--r-xs)}
+/* drive hero perk card */
+.driverhero{display:flex;flex-direction:column;align-items:center;gap:var(--s5);
+  background:var(--bg-raised);border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:var(--s6);box-shadow:var(--sh-2);min-width:0}
+.driverhero__art{width:150px;height:150px;--sticker-ink:var(--text-primary)}
+.driverhero__list{display:flex;flex-direction:column;gap:var(--s3);width:100%}
+.driverhero__row{display:flex;align-items:center;gap:var(--s3);font-weight:var(--fw-semi);
+  color:var(--text-primary);font-size:var(--f-body)}
+.driverhero__row svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
+  stroke:var(--ok);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── full-bleed sticky stacking panels (native CSS: the next card slides
+      over the last; reduced-motion collapses to a plain stack) ─────────── */
+.stackpanels{position:relative;display:flex;flex-direction:column;width:100%}
+.stackpanels__kick{padding:0 var(--s6);margin:var(--s8) 0 var(--s6)}
+.stackpanel{position:sticky;top:0;min-height:100dvh;display:flex;align-items:center;
+  justify-content:center;padding:var(--s8) var(--s6);color:var(--on-solid);
+  overflow:hidden}
+.stackpanel--violet{background:var(--violet-700)}
+.stackpanel--mint{background:var(--mint-700)}
+.stackpanel--sky{background:var(--sky-700)}
+.stackpanel--coral{background:var(--coral-700)}
+.stackpanel__inner{max-width:var(--landing-max);width:100%;display:flex;
+  flex-direction:column;align-items:center;text-align:center;gap:var(--s4)}
+.stackpanel__art{width:150px;height:150px;--sticker-ink:var(--on-solid)}
+.stackpanel--violet .stackpanel__art{--sticker-accent:var(--violet-300)}
+.stackpanel--mint   .stackpanel__art{--sticker-accent:var(--mint-300)}
+.stackpanel--sky    .stackpanel__art{--sticker-accent:var(--sky-300)}
+.stackpanel--coral  .stackpanel__art{--sticker-accent:var(--coral-300)}
+.stackpanel__t{font-size:clamp(var(--f-title),4.5vw,var(--f-display));
+  font-weight:var(--fw-bold);margin:0;line-height:var(--lh-tight);letter-spacing:-.02em}
+.stackpanel__b{font-size:var(--f-lg);opacity:.92;max-width:46ch;margin:0;line-height:var(--lh-body)}
+
+/* hero parallax — the hero content lags the scroll for depth. Progressive:
+   static where scroll-timeline is unsupported; killed under reduced motion. */
+@media (prefers-reduced-motion: no-preference){
+  @supports (animation-timeline: scroll()){
+    .landing__heroinner{animation:heroscroll linear both;animation-timeline:scroll();
+      animation-range:0px 70vh}
+  }
+  @keyframes heroscroll{from{transform:translateY(0)}to{transform:translateY(72px)}}
+}
+
+@media (min-width:600px){
+  .landing__menu-panel{inset-inline:auto;inset-inline-end:var(--s4);min-width:240px}
+}
+@media (max-width:599.98px){
+  .landing__tgl--theme,.landing__login{display:none}
+}
+@media (min-width:840px){
+  .landing__links{display:flex}
+  .landing__menu{display:none}
+}
+
 /* ── the hero slideshow (modern, youth, same palette) ──────────────────── */
 .slideshow{position:relative;width:100%;min-width:0;border-radius:var(--r-xl);
   border:1px solid var(--line);overflow:hidden;background:var(--bg-raised);
@@ -1194,7 +1295,7 @@ en:{
   policyTermsTitle:"Terms of service", policyPrivacyTitle:"Privacy", policySafetyTitle:"Safety",
   policyTemplateNote:"This is a template — the final legal wording is provided by the operator's legal team. The product only collects what it needs to run the ride.",
   policyTerms:[
-    ["The service","Ride Share runs shared rides on fixed routes at a fixed price. A rider boards at a published stop and may get off anywhere along the route."],
+    ["The service",BRAND.name.en+" runs shared rides on fixed routes at a fixed price. A rider boards at a published stop and may get off anywhere along the route."],
     ["Your account","One email equals one account. Keep your details accurate and your credentials private. Staff accounts are created by the operator's administrator."],
     ["Booking & fares","The fare is the route's flat price and is locked the moment you book. Seats are limited; a cancelled booking returns its seats to the departure."],
     ["Boarding","Show your boarding code at the door. It is single-use and tied to your booking and this departure."],
@@ -1218,6 +1319,43 @@ en:{
     ["In an emergency","SOS is one tap away from any ride screen and shares your location with help."],
     ["Report a problem","Every report is reviewed. Severe issues are acted on immediately and reported back to you."],
     ["Good habits","Wait in a safe, visible spot and stay on the pavement until your vehicle stops."],
+  ],
+  navRide:"Ride", navDrive:"Drive", navAbout:"About", navHelp:"Help", menu:"Menu",
+  login:"Log in", signup:"Sign up",
+  featureScheduleT:"Schedule ahead", featureScheduleB:"Book a departure for later — same fixed fare, your seat held.",
+  featureCashT:"Pay cash at the door", featureCashB:"No card needed. Pay the driver the fixed fare when you board.",
+  featureCodeT:"Board by code", featureCodeB:"A single-use code gets the right rider on the right ride.",
+  panelKick:"Why it feels different",
+  panel1T:"Your seat, before you leave", panel1B:"Published routes, published times. You know when it leaves and that there's a seat.",
+  panel2T:"One fare, no surprises", panel2B:"The route's flat price is locked the moment you book. No surge, ever.",
+  panel3T:"Board in seconds", panel3B:"Show your code at the door and ride. The number is always on screen — no battery anxiety.",
+  panel4T:"Get off anywhere", panel4B:"Alight anywhere along the route. You're never tied to a stop you don't need.",
+  driveHeroKick:"For drivers",
+  driveHeroT:"Drive on your schedule. Earn weekly.",
+  driveHeroB:"Claim a published departure in two taps and run it. No route drawing, no pricing, no guessing — just drive.",
+  driverF4T:"Choose your hours", driverF4B:"Claim only the departures that fit your day. Release early, it's free.",
+  driverF5T:"No route drawing", driverF5B:"Operators publish the routes and prices. You pick a slot and commit.",
+  driverF6T:"Know your earnings", driverF6B:"A flat fare per route and clear weekly payouts, line by line.",
+  driveStepsKick:"How to start driving",
+  driveStep1T:"Create an account", driveStep1B:"Sign up as a rider — one account for everything.",
+  driveStep2T:"Apply with your documents", driveStep2B:"National ID, licence and vehicle documents. We review and approve.",
+  driveStep3T:"Claim a departure", driveStep3B:"Two taps: pick a route, pick a slot, confirm.",
+  driveStep4T:"Run the ride", driveStep4B:"Board riders by code, keep the published schedule, get paid.",
+  driveReqT:"What you need", driveReqB:"A national ID, a valid driving licence and an approved vehicle.",
+  aboutKick:"About",
+  aboutTitle:"The middle ground between the microbus and ride-hailing.",
+  aboutP1:"Microbuses already move most of Alexandria — cheap and everywhere, but you never know when one leaves, whether there's a seat, or what you'll pay. Ride-hailing solves that and costs several times more.",
+  aboutP2:BRAND.name.en+" is the middle: published routes, published departure times, one flat fare per route, and a seat you booked before you left the house. You board at a fixed stop and get off anywhere along the line.",
+  aboutP3:"Built one corridor at a time, in any city — Alexandria first, then wherever the routes go. The product name is provisional.",
+  helpKick:"Help",
+  helpTitle:"How can we help?",
+  helpItems:[
+    ["How do I book a ride?","Create an account, pick a route, choose a boarding stop and a departure, then confirm. You'll get a boarding code."],
+    ["How do I pay?","One flat fare per route. Pay from your wallet, or in cash to the driver when you board."],
+    ["Can I cancel?","Yes, from your trips. Cancelling returns your seats to the departure."],
+    ["How do I become a driver?","Create a rider account, then apply to drive with your documents. Once approved, claim a departure and start."],
+    ["Where is the service available?","On the published corridors. New cities and corridors are added as they are mapped and verified."],
+    ["How do I reach support?","From Help in the app — by phone or in-app. SOS is one tap from any ride screen."],
   ],
   landingBack:"Back to sign in",
   /* auth */
@@ -1421,7 +1559,7 @@ ar:{
   policyTermsTitle:"شروط الخدمة", policyPrivacyTitle:"الخصوصية", policySafetyTitle:"الأمان",
   policyTemplateNote:"هذه صفحة نموذجية — الصياغة القانونية النهائية يقدّمها الفريق القانوني للمشغّل. المنتج لا يجمع أكثر مما يحتاجه لتشغيل الرحلة.",
   policyTerms:[
-    ["الخدمة","يقدّم «رايد شير» ركوبات مشتركة على مسارات ثابتة بسعر ثابت. يركب الراكب من محطة منشورة ويمكنه النزول في أي نقطة على المسار."],
+    ["الخدمة","يقدّم «"+BRAND.name.ar+"» ركوبات مشتركة على مسارات ثابتة بسعر ثابت. يركب الراكب من محطة منشورة ويمكنه النزول في أي نقطة على المسار."],
     ["حسابك","بريد واحد = حساب واحد. حافظ على دقة بياناتك وسرّية كلمة المرور. حسابات الموظفين ينشئها مدير المشغّل."],
     ["الحجز والأجرة","الأجرة هي السعر الثابت للمسار وتُثبَّت لحظة الحجز. المقاعد محدودة؛ وإلغاء الحجز يعيد مقاعده إلى الموعد."],
     ["الركوب","اعرض كود الركوب عند الباب. الكود يُستخدم مرة واحدة ومرتبط بحجزك وبهذا الموعد."],
@@ -1446,8 +1584,44 @@ ar:{
     ["الإبلاغ عن مشكلة","كل بلاغ يُراجع. الحالات الخطيرة تُعالَج فورًا ويتم إبلاغك بالنتيجة."],
     ["عادات جيدة","انتظر في مكان آمن وواضح وابقَ على الرصيف حتى تتوقف مركبتك."],
   ],
-  landingBack:"العودة لتسجيل الدخول",
-  /* auth */
+  navRide:"الركوب", navDrive:"القيادة", navAbout:"عنّا", navHelp:"مساعدة", menu:"القائمة",
+  login:"دخول", signup:"اشترك",
+  featureScheduleT:"احجز مسبقًا", featureScheduleB:"احجز موعدًا لوقت لاحق — نفس الأجرة الثابتة ومقعدك محجوز.",
+  featureCashT:"ادفع كاش عند الباب", featureCashB:"لا حاجة لبطاقة. ادفع للسائق الأجرة الثابتة عند الركوب.",
+  featureCodeT:"اركب بالكود", featureCodeB:"كود يُستخدم مرة واحدة يضع الراكب الصحيح في الرحلة الصحيحة.",
+  panelKick:"لماذا يبدو الأمر مختلفًا",
+  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف موعد القيام وأن هناك مقعدًا.",
+  panel2T:"أجرة واحدة بلا مفاجآت", panel2B:"سعر المسار الثابت يُثبَّت لحظة الحجز. لا زيادة مفاجئة أبدًا.",
+  panel3T:"اركب في ثوانٍ", panel3B:"اعرض الكود عند الباب واركب. الرقم ظاهر دائمًا على الشاشة — بلا قلق على البطارية.",
+  panel4T:"انزل في أي مكان", panel4B:"انزل في أي نقطة على المسار. لست مقيدًا بمحطة لا تحتاجها.",
+  driveHeroKick:"للسائقين",
+  driveHeroT:"قُد على جدولك. واكسب أسبوعيًا.",
+  driveHeroB:"احجز موعدًا منشورًا بنقرتين وشغّله. لا رسم مسارات ولا تسعير ولا تخمين — قُد فقط.",
+  driverF4T:"اختر ساعاتك", driverF4B:"احجز فقط المواعيد التي تناسب يومك. والإلغاء المبكر مجاني.",
+  driverF5T:"لا رسم للمسارات", driverF5B:"المشغّلون ينشرون المسارات والأسعار. أنت تختار الموعد وتلتزم.",
+  driverF6T:"اعرف أرباحك", driverF6B:"أجرة ثابتة لكل مسار ومدفوعات أسبوعية واضحة، بندًا ببند.",
+  driveStepsKick:"كيف تبدأ القيادة",
+  driveStep1T:"أنشئ حسابًا", driveStep1B:"سجّل كراكب — حساب واحد لكل شيء.",
+  driveStep2T:"قدّم بمستنداتك", driveStep2B:"بطاقة الرقم القومي ورخصة القيادة ومستندات المركبة. نراجع ونعتمد.",
+  driveStep3T:"احجز موعدًا", driveStep3B:"نقرتان: اختر المسار، اختر الموعد، أكّد.",
+  driveStep4T:"شغّل الرحلة", driveStep4B:"أركب الركاب بالكود، التزم بالجدول المنشور، واستلم أجرك.",
+  driveReqT:"ماذا تحتاج", driveReqB:"بطاقة رقم قومي، ورخصة قيادة سارية، ومركبة معتمدة.",
+  aboutKick:"عنّا",
+  aboutTitle:"الحلّ الوسط بين الميكروباص وخدمات الركوب.",
+  aboutP1:"الميكروباص ينقل معظم الإسكندرية فعلًا — رخيص وفي كل مكان، لكنك لا تعرف متى يتحرك ولا هل يوجد مقعد ولا كم ستدفع. وخدمات الركوب تحلّ ذلك لكنها تكلف أضعافًا.",
+  aboutP2:"«"+BRAND.name.ar+"» هو الحلّ الوسط: مسارات منشورة، ومواعيد انطلاق منشورة، وأجرة ثابتة واحدة لكل مسار، ومقعد حجزته قبل أن تغادر البيت. تركب من محطة ثابتة وتنزل في أي مكان على الخط.",
+  aboutP3:"يُبنى مسارًا بعد مسار، في أي مدينة — الإسكندرية أولًا، ثم حيثما امتدت المسارات. اسم المنتج مؤقت.",
+  helpKick:"مساعدة",
+  helpTitle:"كيف نساعدك؟",
+  helpItems:[
+    ["كيف أحجز رحلة؟","أنشئ حسابًا، اختر مسارًا، اختر محطة الركوب وموعد القيام، ثم أكّد. ستحصل على كود ركوب."],
+    ["كيف أدفع؟","أجرة ثابتة واحدة لكل مسار. ادفع من محفظتك أو نقدًا للسائق عند الركوب."],
+    ["هل يمكنني الإلغاء؟","نعم، من رحلاتك. الإلغاء يعيد مقاعدك إلى الموعد."],
+    ["كيف أصبح سائقًا؟","أنشئ حساب راكب ثم قدّم للقيادة بمستنداتك. بعد الاعتماد، احجز موعدًا وابدأ."],
+    ["أين تتوفر الخدمة؟","على الممرات المنشورة. تُضاف المدن والممرات الجديدة فور رسمها والتحقق منها."],
+    ["كيف أتواصل مع الدعم؟","من «مساعدة» داخل التطبيق — هاتفيًا أو من داخل التطبيق. زر الاستغاثة على بُعد نقرة من أي شاشة رحلة."],
+  ],
+  landingBack:"العودة لتسجيل الدخول",  /* auth */
   signIn:"تسجيل الدخول", createAccount:"أنشئ حسابًا",
   staffTab:"الموظفون", riderTab:"الراكب", staffNoSelfSignup:"حسابات الموظفين يُنشئها مدير — لا يوجد تسجيل ذاتي للموظفين.",
   identifierLabel:"البريد الإلكتروني", passwordLabel:"كلمة المرور", passwordHint:"٨ أحرف على الأقل.",
@@ -1574,6 +1748,7 @@ const S = {
   stopsQuery:"", stopsCache:null,                      // ops stops live filter
   offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
+  landingPage:"rider", landingMenu:false,      // landing v2: rider (default) | drive | about | help
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
   claimTarget:null, claimVehicleId:null, stack:[],
   staffEditing:null, staffEditName:"", staffEditRole:"operations"
@@ -1598,6 +1773,7 @@ function enterApp(user) {
 function signOut() {
   API.clearSession();
   S.user = null; S.authed = false; S.view = "landing";
+  S.landingPage = "rider"; S.landingMenu = false; S.landingDoc = null;
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
   S.authBusy = false; S.authError = null; S.otpBypass = false;
   S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
@@ -1678,6 +1854,7 @@ const ICON = {
   lost:'<path d="M20 7H4v13h16z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/>',
   back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
   signout:'<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="m10 8 4 4-4 4"/><path d="M14 12H4"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
   sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
   share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
@@ -2322,112 +2499,290 @@ async function resolveSession() {
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   Landing page — the front door. Clean, branded, city-agnostic. The hero is
-   full-bleed (its glow spans the whole viewport) with capped content; the
-   right side is a modern auto-advancing feature slideshow (pause on hover,
-   dot controls). Feature cards animate on hover; the "how it works" steps
-   reveal a cursor-following tooltip. Light/dark + RTL via the shared tokens
-   and logical properties; scroll-driven reveals are reduced-motion guarded.
+   Landing page — the front door. Uber/Careem-style: a sticky top bar with
+   Ride (default) · Drive · About · Help · language · theme · Log in · Sign up,
+   a separate marketing PAGE for riders and for drivers, an About and a Help
+   page, and filled policy documents. The hero is full-bleed with the feature
+   slideshow; below it, scroll-driven reveals + full-bleed sticky "stacking
+   panels" (native CSS position:sticky — the next panel slides over the last,
+   no scroll library). Everything is light/dark + RTL via the shared tokens,
+   and reduced-motion collapses every effect to the static page.
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
   if (S.landingDoc) return landingDoc();
-  return $("div",{class:"landing"},
-    $("header",{class:"landing__nav"},
-      $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
-      $("div",{class:"row gap2"},
-        langToggle(), themeToggle())),
+  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding })[S.landingPage] || riderLanding;
+  return page();
+}
 
-    /* ── HERO (full-bleed) ───────────────────────────────────────────── */
-    $("section",{class:"landing__hero"},
-      $("div",{class:"landing__heroinner"},
-        $("div",{class:"landing__herotext"},
-          $("h1",{class:"landing__title",text:t("landingHero")}),
-          $("p",{class:"landing__sub",text:t("landingHeroSub")}),
-          $("div",{class:"row gap3"},
-            Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="choose"; S.authError=null; render(); }}),
-            Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }}))),
-        $("div",{class:"landing__heroslide"}, heroSlideshow()))),
+/* ── shared chrome ────────────────────────────────────────────────────── */
 
-    /* ── capped content ──────────────────────────────────────────────── */
-    $("div",{class:"landing__body"},
+/* The sticky top bar. Desktop: brand · Ride/Drive/About/Help · … · EN · theme ·
+   Log in · Sign up. Compact: brand · theme · Sign up · menu (the links + Log in
+   move into the dropdown). §8.1: every control does exactly what it says. */
+function landingNav() {
+  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"]];
+  const nav = $("header", { class: "landing__nav" });
 
-      $("section",{class:"landing__section"},
-        $("h2",{class:"landing__h2",text:t("forRiders")}),
-        $("div",{class:"landing__grid"},
-          featureCard("wallet", t("landingF1T"), t("landingF1B"), "mint"),
-          featureCard("clock",  t("landingF2T"), t("landingF2B"), "sky"),
-          featureCard("promos", t("landingF3T"), t("landingF3B"), "coral"),
-          featureCard("livemap",t("landingF4T"), t("landingF4B"), "pink"))),
+  nav.append($("button", {
+    class: "landing__brand", attrs: { type: "button", "aria-label": t("brand") },
+    on: { click: () => landingGo("rider") },
+  }, logoSVG(), $("span", { text: t("brand") })));
 
-      $("section",{class:"landing__section"},
-        $("h2",{class:"landing__h2",text:t("forDrivers")}),
-        $("div",{class:"landing__grid"},
-          featureCard("doc",   t("driverF1T"), t("driverF1B"), "sky"),
-          featureCard("clock", t("driverF2T"), t("driverF2B"), "mint"),
-          featureCard("card",  t("driverF3T"), t("driverF3B"), "coral"))),
+  const linksEl = $("nav", { class: "landing__links", attrs: { "aria-label": t("menu") } });
+  links.forEach(([k, lbl]) => linksEl.append(landingLink(k, lbl)));
+  nav.append(linksEl);
 
-      $("section",{class:"landing__section"},
-        $("h2",{class:"landing__h2",text:t("safetyTitle")}),
-        $("div",{class:"landing__grid"},
+  const actions = $("div", { class: "landing__actions" });
+  actions.append($("span", { class: "landing__tgl" }, langToggle()),
+                 $("span", { class: "landing__tgl landing__tgl--theme" }, themeToggle()));
+  actions.append($("button", {
+    class: "landing__login", attrs: { type: "button" }, text: t("login"),
+    on: { click: () => authGo("signin") },
+  }));
+  actions.append(Btn({ label: t("signup"), on: () => authGo("signup") }));
+  nav.append(actions);
+
+  nav.append($("button", {
+    class: "landing__menu", attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu) },
+    on: { click: () => { S.landingMenu = !S.landingMenu; render(); } },
+  }, icon("menu")));
+
+  if (S.landingMenu) {
+    const dd = $("div", { class: "landing__menu-panel", attrs: { role: "navigation", "aria-label": t("menu") } });
+    links.forEach(([k, lbl]) => dd.append($("button", {
+      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+      on: { click: () => { S.landingMenu = false; landingGo(k); } },
+    })));
+    dd.append($("div", { class: "divider" }));
+    dd.append($("button", {
+      class: "landing__menulink", attrs: { type: "button" }, text: t("login"),
+      on: { click: () => { S.landingMenu = false; authGo("signin"); } },
+    }));
+    dd.append(Btn({ label: t("signup"), block: true, on: () => { S.landingMenu = false; authGo("signup"); } }));
+    nav.append(dd);
+  }
+  return nav;
+}
+
+function landingLink(k, lbl) {
+  return $("button", {
+    class: "landing__link" + (S.landingPage === k ? " landing__link--on" : ""),
+    attrs: { type: "button", "aria-current": S.landingPage === k ? "page" : null },
+    text: t(lbl),
+    on: { click: () => landingGo(k) },
+  });
+}
+
+/* Navigate between landing pages: swap content and return to the top. */
+function landingGo(page) {
+  S.landingPage = page; S.landingMenu = false; render();
+  const l = document.querySelector(".landing");
+  if (l) l.scrollTop = 0;
+}
+
+function authGo(mode) {
+  S.view = "auth"; S.authMode = mode; S.landingMenu = false;
+  if (mode === "signup") { S.authStep = "choose"; } else { S.loginMethod = null; }
+  S.authError = null;
+  render();
+}
+
+function landingFooter() {
+  return $("footer", { class: "landing__foot" },
+    $("span", { class: "t-cap", text: t("brand") + " · " + t("landingFoot") }),
+    $("div", { class: "landing__policies" },
+      policyLink("terms"), policyLink("privacy"), policyLink("safety")),
+    $("a", { class: "landing__credits", attrs: { href: "https://www.streamlinehq.com",
+      target: "_blank", rel: "noopener noreferrer" }, text: t("creditsVectors") }));
+}
+
+/* ── RIDER page (default) ─────────────────────────────────────────────── */
+function riderLanding() {
+  return $("div", { class: "landing" },
+    landingNav(),
+
+    $("section", { class: "landing__hero" },
+      $("div", { class: "landing__heroinner" },
+        $("div", { class: "landing__herotext" },
+          $("h1", { class: "landing__title", text: t("landingHero") }),
+          $("p", { class: "landing__sub", text: t("landingHeroSub") }),
+          $("div", { class: "row gap3" },
+            Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
+            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
+        $("div", { class: "landing__heroslide" }, heroSlideshow()))),
+
+    $("div", { class: "landing__body" },
+      $("section", { class: "landing__section" },
+        $("h2", { class: "landing__h2", text: t("forRiders") }),
+        $("div", { class: "landing__grid" },
+          featureCard("wallet",  t("landingF1T"), t("landingF1B"), "mint"),
+          featureCard("clock",   t("featureScheduleT"), t("featureScheduleB"), "sky"),
+          featureCard("card",    t("featureCashT"), t("featureCashB"), "coral"),
+          featureCard("livemap", t("landingF4T"), t("landingF4B"), "pink"),
+          featureCard("qr",      t("featureCodeT"), t("featureCodeB"), "lime"),
+          featureCard("promos",  t("landingF3T"), t("landingF3B"), "sky"))),
+
+      $("section", { class: "landing__section" },
+        $("h2", { class: "landing__h2", text: t("safetyTitle") }),
+        $("div", { class: "landing__grid" },
           featureCard("check", t("safetyF1T"), t("safetyF1B"), "mint"),
           featureCard("qr",    t("safetyF2T"), t("safetyF2B"), "sky"),
           featureCard("sos",   t("safetyF3T"), t("safetyF3B"), "coral"))),
 
-      $("section",{class:"landing__section"},
-        $("h2",{class:"landing__h2",text:t("landingHowTitle")}),
-        $("div",{class:"landing__steps"},
+      $("section", { class: "landing__section" },
+        $("h2", { class: "landing__h2", text: t("landingHowTitle") }),
+        $("div", { class: "landing__steps" },
           stepCard("1", "route", t("landingHow1T"), t("landingHow1B"), "violet"),
           stepCard("2", "seat",  t("landingHow2T"), t("landingHow2B"), "sky"),
-          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint"))),
+          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint")))),
 
-      $("section",{class:"landing__cta"},
-        $("h2",{class:"landing__h2",text:t("landingFoot")}),
-        $("div",{class:"row gap3 center"},
-          Btn({label:t("landingCtaStart"), on:()=>{ S.view="auth"; S.authMode="signup"; S.authStep="choose"; S.authError=null; render(); }}),
-          Btn({label:t("landingCtaSignIn"), kind:"outline", on:()=>{ S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }}))),
+    /* full-bleed stacking panels — the sticky "cards slide over each other"
+       scroll effect, native CSS, reduced-motion collapses to a plain stack */
+    $("section", { class: "stackpanels" },
+      $("h2", { class: "landing__h2 stackpanels__kick", text: t("panelKick") }),
+      stackPanel("seat",  "violet", t("panel1T"), t("panel1B")),
+      stackPanel("price", "mint",   t("panel2T"), t("panel2B")),
+      stackPanel("board", "sky",    t("panel3T"), t("panel3B")),
+      stackPanel("route", "coral",  t("panel4T"), t("panel4B"))),
 
-      $("footer",{class:"landing__foot"},
-        $("span",{class:"t-cap",text:t("brand")+" · "+t("landingFoot")}),
-        $("div",{class:"landing__policies"},
-          policyLink("terms"), policyLink("privacy"), policyLink("safety")),
-        $("a",{class:"landing__credits", attrs:{href:"https://www.streamlinehq.com",
-          target:"_blank", rel:"noopener noreferrer"}, text:t("creditsVectors")}))));
+    $("div", { class: "landing__body" },
+      $("section", { class: "landing__cta" },
+        $("h2", { class: "landing__h2", text: t("landingFoot") }),
+        $("div", { class: "row gap3 center" },
+          Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
+          Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
+
+    landingFooter());
 }
 
-/* Policies — Terms / Privacy / Safety. Structure is real and linked from the
-   footer; the final legal wording is the operator's (DEC-030). */
+function stackPanel(ic, tone, title, body) {
+  return $("article", { class: "stackpanel stackpanel--" + tone },
+    $("div", { class: "stackpanel__inner" },
+      stickerEl(ic, "stackpanel__art"),
+      $("h3", { class: "stackpanel__t", text: title }),
+      $("p", { class: "stackpanel__b", text: body })));
+}
+
+/* ── DRIVE page ───────────────────────────────────────────────────────── */
+function driveLanding() {
+  return $("div", { class: "landing" },
+    landingNav(),
+
+    $("section", { class: "landing__hero" },
+      $("div", { class: "landing__heroinner" },
+        $("div", { class: "landing__herotext" },
+          $("div", { class: "landing__kick", text: t("driveHeroKick") }),
+          $("h1", { class: "landing__title", text: t("driveHeroT") }),
+          $("p", { class: "landing__sub", text: t("driveHeroB") }),
+          $("div", { class: "row gap3" },
+            Btn({ label: t("applyToDrive"), on: () => authGo("signup") }),
+            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
+        $("div", { class: "landing__heroslide" }, driverHeroCard()))),
+
+    $("div", { class: "landing__body" },
+      $("section", { class: "landing__section" },
+        $("h2", { class: "landing__h2", text: t("forDrivers") }),
+        $("div", { class: "landing__grid" },
+          featureCard("doc",      t("driverF1T"), t("driverF1B"), "sky"),
+          featureCard("clock",    t("driverF2T"), t("driverF2B"), "mint"),
+          featureCard("card",     t("driverF3T"), t("driverF3B"), "coral"),
+          featureCard("duty",     t("driverF4T"), t("driverF4B"), "pink"),
+          featureCard("routes",   t("driverF5T"), t("driverF5B"), "lime"),
+          featureCard("earnings", t("driverF6T"), t("driverF6B"), "sky"))),
+
+      $("section", { class: "landing__section" },
+        $("h2", { class: "landing__h2", text: t("driveStepsKick") }),
+        $("div", { class: "landing__steps" },
+          stepCard("1", "book",  t("driveStep1T"), t("driveStep1B"), "violet"),
+          stepCard("2", "save",  t("driveStep2T"), t("driveStep2B"), "sky"),
+          stepCard("3", "seat",  t("driveStep3T"), t("driveStep3B"), "mint"),
+          stepCard("4", "track", t("driveStep4T"), t("driveStep4B"), "coral"))),
+
+      $("section", { class: "landing__cta" },
+        $("h2", { class: "landing__h2", text: t("driveReqT") }),
+        $("p", { class: "landing__p landing__cta-sub", text: t("driveReqB") }),
+        $("div", { class: "row gap3 center" },
+          Btn({ label: t("applyToDrive"), on: () => authGo("signup") }),
+          Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
+
+    landingFooter());
+}
+
+/* The drive hero's right side: an honest perk card (marketing copy, not a
+   fake dashboard — it states what driving gives you, never invented numbers). */
+function driverHeroCard() {
+  return $("div", { class: "driverhero" },
+    stickerEl("seat", "driverhero__art"),
+    $("div", { class: "driverhero__list" },
+      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF4T") })),
+      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF2T") })),
+      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF3T") }))));
+}
+
+/* ── ABOUT + HELP pages ───────────────────────────────────────────────── */
+function aboutLanding() {
+  return $("div", { class: "landing" },
+    landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      $("section", { class: "landing__section landing__pagetop" },
+        $("div", { class: "landing__kick", text: t("aboutKick") }),
+        $("h1", { class: "landing__title", text: t("aboutTitle") }),
+        $("p", { class: "landing__p", text: t("aboutP1") }),
+        $("p", { class: "landing__p", text: t("aboutP2") }),
+        $("p", { class: "landing__p", text: t("aboutP3") }),
+        $("div", { class: "row gap3" },
+          Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
+          Btn({ label: t("navDrive"), kind: "outline", on: () => landingGo("drive") })))),
+    landingFooter());
+}
+
+function helpLanding() {
+  return $("div", { class: "landing" },
+    landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      $("section", { class: "landing__section landing__pagetop" },
+        $("div", { class: "landing__kick", text: t("helpKick") }),
+        $("h1", { class: "landing__title", text: t("helpTitle") })),
+      $("section", { class: "landing__section" },
+        $("div", { class: "landing__faq" },
+          (T[S.lang].helpItems || []).map(([q, a]) => $("details", { class: "landing__faqitem" },
+            $("summary", { text: q }),
+            $("p", { class: "landing__p", text: a }))))),
+      landingFooter()));
+}
+
+/* Policies — Terms / Privacy / Safety. Filled, generic, editable content from
+   the one copy table; the template note stays (final legal wording is the
+   operator's, DEC-030). */
 function policyLink(kind) {
-  return $("button",{class:"landing__policylink", attrs:{type:"button"}, text:t(kind),
-    on:{click:()=>{ S.landingDoc=kind; render(); }}});
+  return $("button", { class: "landing__policylink", attrs: { type: "button" }, text: t(kind),
+    on: { click: () => { S.landingDoc = kind; render(); } } });
 }
 
 function landingDoc() {
-  // Filled, generic, production-ready sections (EN + AR) from the one copy
-  // table. The template note stays: final legal wording is the operator's
-  // (DEC-030) — nothing here is a promise it cannot keep.
-  const key = ({ terms:"policyTerms", privacy:"policyPrivacy", safety:"policySafety" })[S.landingDoc] || "policyTerms";
-  const title = ({ terms:t("policyTermsTitle"), privacy:t("policyPrivacyTitle"), safety:t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
+  const key = ({ terms: "policyTerms", privacy: "policyPrivacy", safety: "policySafety" })[S.landingDoc] || "policyTerms";
+  const title = ({ terms: t("policyTermsTitle"), privacy: t("policyPrivacyTitle"), safety: t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
   const sections = T[S.lang][key] || [];
-  return $("div",{class:"landing"},
-    $("header",{class:"landing__nav"},
-      $("div",{class:"landing__brand"}, logoSVG(), $("span",{text:t("brand")})),
-      $("div",{class:"row gap2"}, langToggle(), themeToggle())),
-    $("div",{class:"landing__body"},
-      $("section",{class:"landing__section landing__doc"},
-        $("button",{class:"btn btn--ghost", attrs:{type:"button"},
-          on:{click:()=>{ S.landingDoc=null; render(); }}}, icon("back"), $("span",{text:t("landingBack")})),
-        $("h1",{class:"landing__h2",text:title}),
-        $("p",{class:"landing__p",text:t("policyTemplateNote")}),
-        sections.map(([h, p]) => $("div",{class:"landing__docsec"},
-          $("h2",{class:"landing__h3",text:h}),
-          $("p",{class:"landing__p",text:p}))))));
+  return $("div", { class: "landing" },
+    $("header", { class: "landing__nav" },
+      $("div", { class: "landing__brand" }, logoSVG(), $("span", { text: t("brand") })),
+      $("div", { class: "row gap2" }, langToggle(), themeToggle())),
+    $("div", { class: "landing__body" },
+      $("section", { class: "landing__section landing__doc" },
+        $("button", { class: "btn btn--ghost", attrs: { type: "button" },
+          on: { click: () => { S.landingDoc = null; render(); } } }, icon("back"), $("span", { text: t("landingBack") })),
+        $("h1", { class: "landing__h2", text: title }),
+        $("p", { class: "landing__p", text: t("policyTemplateNote") }),
+        sections.map(([h, p]) => $("div", { class: "landing__docsec" },
+          $("h2", { class: "landing__h3", text: h }),
+          $("p", { class: "landing__p", text: p }))))));
 }
 
 /* ── hero slideshow: auto-advancing feature slides, same palette ────────── */
 
 /* Embed a recolorable sticker (STICKERS, injected by build.js). */
 function stickerEl(key, cls) {
-  const el = $("div",{class:"sticker"+(cls?" "+cls:"")});
+  const el = $("div", { class: "sticker" + (cls ? " " + cls : "") });
   el.innerHTML = STICKERS[key] || "";
   return el;
 }
@@ -2435,38 +2790,38 @@ function stickerEl(key, cls) {
 let slideTimer = null;
 function heroSlideshow() {
   const slides = [
-    { sticker:"price", tone:"violet", title:t("slide1T"), body:t("slide1B") },
-    { sticker:"save",  tone:"coral",  title:t("slide2T"), body:t("slide2B") },
-    { sticker:"book",  tone:"sky",    title:t("slide3T"), body:t("slide3B") },
-    { sticker:"track", tone:"mint",   title:t("slide4T"), body:t("slide4B") },
+    { sticker: "price", tone: "violet", title: t("slide1T"), body: t("slide1B") },
+    { sticker: "save",  tone: "coral",  title: t("slide2T"), body: t("slide2B") },
+    { sticker: "book",  tone: "sky",    title: t("slide3T"), body: t("slide3B") },
+    { sticker: "track", tone: "mint",   title: t("slide4T"), body: t("slide4B") },
   ];
-  const box = $("div",{class:"slideshow",
-    attrs:{"aria-label":t("landingHowTitle")}});
-  const track = $("div",{class:"slideshow__track"});
-  slides.forEach((s,i)=>{
-    track.append($("div",{class:"slide slide--"+s.tone+(i===0?" slide--on":"")},
+  const box = $("div", { class: "slideshow",
+    attrs: { "aria-label": t("landingHowTitle") } });
+  const track = $("div", { class: "slideshow__track" });
+  slides.forEach((s, i) => {
+    track.append($("div", { class: "slide slide--" + s.tone + (i === 0 ? " slide--on" : "") },
       stickerEl(s.sticker, "slide__sticker"),
-      $("h3",{class:"slide__t",text:s.title}),
-      $("p",{class:"slide__b",text:s.body})));
+      $("h3", { class: "slide__t", text: s.title }),
+      $("p", { class: "slide__b", text: s.body })));
   });
-  const dots = $("div",{class:"slideshow__dots"});
-  slides.forEach((s,i)=> dots.append($("button",{
-    class:"slide-dot"+(i===0?" slide-dot--on":""),
-    attrs:{type:"button","aria-label":String(i+1)},
-    on:{click:()=>slideTo(i)}})));
+  const dots = $("div", { class: "slideshow__dots" });
+  slides.forEach((s, i) => dots.append($("button", {
+    class: "slide-dot" + (i === 0 ? " slide-dot--on" : ""),
+    attrs: { type: "button", "aria-label": String(i + 1) },
+    on: { click: () => slideTo(i) } })));
   box.append(track, dots);
 
   // auto-advance; hover pauses. Each landing render clears the previous timer.
   clearInterval(slideTimer);
   S.slideIndex = 0;
-  slideTimer = setInterval(()=>{
+  slideTimer = setInterval(() => {
     if (S.slidePaused) return;
     const boxEl = document.querySelector(".slideshow");
     if (!boxEl) return;
     slideTo((S.slideIndex + 1) % slides.length);
   }, 4000);
-  box.addEventListener("mouseenter", ()=>{ S.slidePaused = true; });
-  box.addEventListener("mouseleave", ()=>{ S.slidePaused = false; });
+  box.addEventListener("mouseenter", () => { S.slidePaused = true; });
+  box.addEventListener("mouseleave", () => { S.slidePaused = false; });
   return box;
 }
 
@@ -2474,46 +2829,46 @@ function slideTo(i) {
   S.slideIndex = i;
   const box = document.querySelector(".slideshow");
   if (!box) return;
-  box.querySelectorAll(".slide").forEach((el,k)=> el.classList.toggle("slide--on", k===i));
-  box.querySelectorAll(".slide-dot").forEach((el,k)=> el.classList.toggle("slide-dot--on", k===i));
+  box.querySelectorAll(".slide").forEach((el, k) => el.classList.toggle("slide--on", k === i));
+  box.querySelectorAll(".slide-dot").forEach((el, k) => el.classList.toggle("slide-dot--on", k === i));
 }
 
 /* ── feature cards ──────────────────────────────────────────────────────── */
 function featureCard(ic, title, body, tone) {
-  return $("div",{class:"landing__feature reveal"},
-    $("div",{class:"landing__featureico landing__featureico--"+tone}, icon(ic)),
-    $("h3",{class:"landing__h3",text:title}),
-    $("p",{class:"landing__p",text:body}));
+  return $("div", { class: "landing__feature reveal" },
+    $("div", { class: "landing__featureico landing__featureico--" + tone }, icon(ic)),
+    $("h3", { class: "landing__h3", text: title }),
+    $("p", { class: "landing__p", text: body }));
 }
 
 /* ── how-it-works steps: number stays on the SAME side in RTL (physical
       right), and a floating tooltip follows the cursor on hover ─────────── */
 function stepCard(n, ic, title, body, tone) {
-  const tip = $("div",{class:"step-tip"},
-    $("span",{class:"step-tip__num ltr",text:n}),
-    $("strong",{text:title}),
-    $("span",{class:"step-tip__body",text:body}));
-  const card = $("div",{class:"landing__step reveal"+(tone? " landing__step--"+tone : "")}, tip,
-    $("div",{class:"landing__stepnum ltr",text:n}),
-    $("div",{class:"landing__stepbody"},
+  const tip = $("div", { class: "step-tip" },
+    $("span", { class: "step-tip__num ltr", text: n }),
+    $("strong", { text: title }),
+    $("span", { class: "step-tip__body", text: body }));
+  const card = $("div", { class: "landing__step reveal" + (tone ? " landing__step--" + tone : "") }, tip,
+    $("div", { class: "landing__stepnum ltr", text: n }),
+    $("div", { class: "landing__stepbody" },
       stickerEl(ic, "landing__stepart"),
-      $("div",{class:"landing__steptext"},
-        $("h3",{class:"landing__h3",text:title}))));
+      $("div", { class: "landing__steptext" },
+        $("h3", { class: "landing__h3", text: title }))));
 
-  card.addEventListener("mousemove", (e)=>{
+  card.addEventListener("mousemove", (e) => {
     const r = card.getBoundingClientRect();
     tip.style.left = Math.min(e.clientX - r.left + 18, r.width - 200) + "px";
     tip.style.top  = Math.max(e.clientY - r.top - 14, 8) + "px";
   });
-  card.addEventListener("mouseenter", ()=> tip.classList.add("step-tip--on"));
-  card.addEventListener("mouseleave", ()=> tip.classList.remove("step-tip--on"));
-  card.addEventListener("click", ()=> tip.classList.toggle("step-tip--on")); // touch
+  card.addEventListener("mouseenter", () => tip.classList.add("step-tip--on"));
+  card.addEventListener("mouseleave", () => tip.classList.remove("step-tip--on"));
+  card.addEventListener("click", () => tip.classList.toggle("step-tip--on")); // touch
   return card;
 }
 
 function langToggle() {
-  return IconBtn({name:"globe", label:t("language"),
-    on:()=>{ S.lang = S.lang==="en" ? "ar" : "en"; storeSet("rs.lang", S.lang); render(); }});
+  return IconBtn({ name: "globe", label: t("language"),
+    on: () => { S.lang = S.lang === "en" ? "ar" : "en"; storeSet("rs.lang", S.lang); render(); } });
 }
 
 

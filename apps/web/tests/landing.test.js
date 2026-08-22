@@ -89,6 +89,28 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
   });
   ok('arabic: step number stays on the right', numPos.right >= 0 && numPos.right < 60, `${numPos.right}px`);
 
+  // landing v2 sub-pages (drive / about / help) carry the same guarantees at
+  // compact and desktop widths, in both languages
+  const SUBPAGES = [['rider', 'en'], ['drive', 'en'], ['about', 'en'], ['help', 'en'], ['drive', 'ar'], ['help', 'ar']];
+  await page.setViewport({ width: 375, height: 812 });
+  for (const [pg, lang] of SUBPAGES) {
+    await page.evaluate((p, l) => { S.lang = l; S.view = 'landing'; S.landingDoc = null; S.landingPage = p; render(); }, pg, lang);
+    await new Promise((r) => setTimeout(r, 120));
+    const m = await page.evaluate(() => ({
+      sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+    }));
+    ok(`${pg} [${lang}] 375px: no horizontal overflow`, m.sw <= m.cw + 1, `${m.sw}>${m.cw}`);
+  }
+  await page.setViewport({ width: 1440, height: 900 });
+  for (const pg of ['rider', 'drive', 'about', 'help']) {
+    await page.evaluate((p) => { S.lang = 'en'; S.view = 'landing'; S.landingPage = p; render(); }, pg);
+    await new Promise((r) => setTimeout(r, 120));
+    const m = await page.evaluate(() => ({
+      sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+    }));
+    ok(`${pg} 1440px: no horizontal overflow`, m.sw <= m.cw + 1, `${m.sw}>${m.cw}`);
+  }
+
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
   console.log(`\n──────── landing: ${pass} passed, ${fail} failed ────────`);
