@@ -608,3 +608,10 @@
   theme and email identity; the web build and the API email templates both derive from it.
 - scripts/check-branding.sh fails on a hardcoded brand name/logo in app source (observed failing).
 - 306 unit / 155 API / 14 a11y / 47 landing / 5 server green.
+
+## 2026-08-19 — M3 P3.4–P3.6: rider search → boarding → booking (bookings module)
+
+- bookings module + migration 0016 with a database seat guard (no overselling under concurrency);
+  fare locked at booking; cancellation returns seats.
+- Rider UI is real: routes → boarding → departures → review → boarding code → trips.
+- 164 API / 307 unit / 14 a11y / 5 server green; break checks observed failing.

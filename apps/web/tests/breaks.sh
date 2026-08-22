@@ -192,6 +192,10 @@ run_break "driver work board loses its loader" src/screens/driver.js \
   's|  const list = $("div",{id:"work-list"});|  const list = $("div",{id:"work-listX"});|' \
   "driver work board renders the find-work loader"
 
+run_break "booked screen loses the boarding code" src/screens/rider.js \
+  's|    w.append(QRPanel({code:b.code}));|    /* removed */;|' \
+  "booked shows the boarding code"
+
 run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js \
   's|    mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|    Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),|' \
   "own capture hides the approve action"

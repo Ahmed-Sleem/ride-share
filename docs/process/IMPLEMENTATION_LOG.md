@@ -649,3 +649,22 @@ output) — see the engineering standard §3.3 and §4.
 - Tests: 306 web unit (branding group: title/copy/logo/font/favicon + brand-colours-as-data),
   2 break cases observed failing (logo path, copy name); 155 API; a11y 14, landing 47, server 5;
   repo checks green. pnpm-lock + both apps' deps updated (@ride-share/brand workspace:*).
+
+## M3 — P3.4–P3.6 rider search → boarding → book (bookings module)
+
+- New `bookings` module: domain/booking.ts (status, 6-digit code), infra (SQL only; joined
+  byRider), application (book: fare locked at creation, boarding stop must be on the route, seat
+  pre-check + DB-guard mapping, cancel returns seats), api (POST /bookings, GET /bookings/mine,
+  POST /bookings/:id/cancel), module. Migration 0016: bookings + bookings_seat_guard trigger
+  (SUM of non-cancelled seats ≤ journey.seats_total — overselling impossible under concurrency).
+- Routes contract: publishedWithStops (rider), getRouteFare, hasStop; GET /routes/published.
+  Journeys contract: upcomingForRiders + getForBooking (bookable status + future); GET /journeys/upcoming.
+- Rider UI: home (greeting + routes/trips CTAs + real routes), routes (real published routes with
+  fares), boarding (stops in order, recommended first), departures (real upcoming journeys with
+  times), review (flat fare × seats, stepper, confirm), booked (real boarding code QR + numeric),
+  trips (real bookings, cancel returns seats). waiting/onboard stay honest "coming soon" (P3.9).
+- Tests: 164 API (9 bookings tests; 4 break checks: seat pre-check, guard mapping, off-route, fare
+  lock) + 307 web unit (rider flow group + boarding-code break observed failing); a11y 14, server 5,
+  repo checks green; schema + types regenerated (15 tables).
+- Deferred (honest): walking-time ranking of boarding points needs a routing provider — arrives with
+  the DEC-199 A→B planner; P3.9 live tracking (waiting/onboard screens) next.

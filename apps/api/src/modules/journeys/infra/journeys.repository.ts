@@ -60,6 +60,27 @@ export class JourneysRepository {
     await this.pool.query("UPDATE journeys SET status = 'CANCELLED', updated_at = now() WHERE id = $1", [id]);
   }
 
+  /** Journeys on a route within a service-date window (joined route + slot). */
+  async byRouteAndWindow(routeId: string | null, from: string, to: string): Promise<JourneyRow[]> {
+    const params: unknown[] = [];
+    let where = 'j.status IN (\'CLAIMED\',\'OPEN_FOR_BOOKING\',\'LOCKED\',\'IN_PROGRESS\') AND s.service_date BETWEEN $1::date AND $2::date';
+    params.push(from, to);
+    if (routeId) { where += ' AND j.route_id = $3'; params.push(routeId); }
+    const { rows } = await this.pool.query<JourneyRow>(
+      `SELECT j.id, j.route_id, j.slot_id, j.driver_user_id, j.vehicle_id, j.status,
+              j.committed, j.seats_total, j.created_at,
+              r.code AS route_code, r.name_en AS route_name_en, r.name_ar AS route_name_ar,
+              s.service_date::text AS service_date, s.departs_at::text AS departs_at
+       FROM journeys j
+       JOIN routes r ON r.id = j.route_id
+       JOIN slots s ON s.id = j.slot_id
+       WHERE ${where}
+       ORDER BY s.service_date ASC, s.departs_at ASC`,
+      params
+    );
+    return rows;
+  }
+
   /** Which of these slots are already claimed (the driver board's "taken" state). */
   async claimedSlotIds(slotIds: string[]): Promise<string[]> {
     if (!slotIds.length) return [];

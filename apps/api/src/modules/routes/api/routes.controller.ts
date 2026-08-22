@@ -47,6 +47,13 @@ export class RoutesController {
     return this.routes.list(req.actor!);
   }
 
+  /** Riders see published routes + their boarding stops (P3.4/P3.5). */
+  @Get('routes/published')
+  @UseGuards(IdentityGuard)
+  published(@Req() _req: ReqWithActor) {
+    return this.routes.publishedWithStops();
+  }
+
   @Get('routes/:id')
   @UseGuards(IdentityGuard)
   get(@Req() req: ReqWithActor, @Param('id') id: string) {

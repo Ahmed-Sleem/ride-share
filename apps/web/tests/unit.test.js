@@ -336,18 +336,20 @@ group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
   ok("home has no sample route strings", !sample.test(t.q(".main").textContent));
   ok("home greets the real user", t.q(".main").textContent.includes("Nour"));
 
+  // routes, trips, departures and review are REAL now (API loaders, no sample data)
   t.go("rider","routes");
-  ok("routes shows the coming-soon state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
-
+  ok("routes renders the real loader, no sample content", !!t.q("#rider-routes") && !sample.test(t.q(".main").textContent));
   t.go("rider","trips");
-  ok("trips shows the honest empty state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
+  ok("trips renders the real loader, no sample content", !!t.q("#rider-trips") && !sample.test(t.q(".main").textContent));
+  t.go("rider","departures");
+  ok("departures renders the real loader", !!t.q("#departures-list") && !sample.test(t.q(".main").textContent));
 
   t.go("rider","wallet");
   ok("wallet shows the coming-soon state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
 
-  for(const p of ["boarding","departures","review","booked","waiting","onboard"]){
+  for(const p of ["waiting","onboard"]){   // live tracking lands in P3.9
     t.go("rider",p);
-    ok(`booking step ${p} is honestly 'coming soon'`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
+    ok(`live step ${p} is honestly 'coming soon'`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
   }
 
   t.go("rider","safety");
@@ -784,6 +786,27 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   ok("policy doc states the legal text is the operator's", t.q(".landing__doc").textContent.includes("legal"));
   t.q(".landing__doc .btn--ghost").click();
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
+})();
+
+group("M3 — RIDER BOOKING FLOW IS REAL");
+(() => {
+  const t=boot();
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
+
+  // review renders the fare + seats stepper + confirm (no fake data)
+  t.w.S.chosenRoute = { route: { id:"r1", code:"ALX-R001", name_en:"Corniche", fare_minor:1500 },
+    stops: [{ stop_id:"s1", stop_name_en:"Gate 2", stop_code:"ALX-COR-001", position:1 }] };
+  t.w.S.chosenBoard = "s1";
+  t.w.S.chosenDep = { id:"j1", seats_total:14, service_date:"2026-09-01", departs:"2026-09-01T12:00:00+02:00" };
+  t.go("rider","review");
+  ok("review shows the locked fare (route fare × seats)", t.q(".pricetag").textContent.includes("15"));
+  ok("review has a seat stepper", t.all(".stepper button").length === 2);
+  ok("review offers confirm booking", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.confirmBooking)));
+
+  // booked screen shows the boarding code when a booking exists
+  t.w.S.lastBooking = { code:"482917", seats:1, fare_minor:1500 };
+  t.go("rider","booked");
+  ok("booked shows the boarding code", t.q(".qrcode") && t.q(".qrcode").textContent === "482917");
 })();
 
 group("M3 — ROUTES TOOL + DRIVER WORK BOARD");

@@ -1,3 +1,20 @@
+CREATE FUNCTION public.bookings_seat_guard() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+cap integer;
+total integer;
+BEGIN
+SELECT seats_total INTO cap FROM journeys WHERE id = NEW.journey_id;
+SELECT COALESCE(SUM(seats), 0) INTO total
+FROM bookings
+WHERE journey_id = NEW.journey_id AND status <> 'CANCELLED' AND id <> NEW.id;
+IF total + NEW.seats > cap THEN
+RAISE EXCEPTION 'journey has no seats left' USING ERRCODE = '23514';
+END IF;
+RETURN NEW;
+END;
+$$;
 CREATE FUNCTION public.route_stops_require_verified() RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -42,6 +59,21 @@ before jsonb,
 after jsonb,
 reason text,
 created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE public.bookings (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+journey_id uuid NOT NULL,
+rider_user_id uuid NOT NULL,
+boarding_stop_id uuid NOT NULL,
+seats integer NOT NULL,
+fare_minor integer NOT NULL,
+code text NOT NULL,
+status text DEFAULT 'RESERVED'::text NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT bookings_fare_minor_check CHECK ((fare_minor >= 0)),
+CONSTRAINT bookings_seats_check CHECK (((seats >= 1) AND (seats <= 4))),
+CONSTRAINT bookings_status_check CHECK ((status = ANY (ARRAY['RESERVED'::text, 'CONFIRMED'::text, 'ON_BOARD'::text, 'COMPLETED'::text, 'CANCELLED'::text, 'NO_SHOW'::text])))
 );
 CREATE TABLE public.driver_profiles (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -221,6 +253,10 @@ CONSTRAINT verification_codes_kind_check CHECK ((kind = ANY (ARRAY['email_login'
 ALTER TABLE ONLY public.pgmigrations ALTER COLUMN id SET DEFAULT nextval('public.pgmigrations_id_seq'::regclass);
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.bookings
+ADD CONSTRAINT bookings_code_key UNIQUE (code);
+ALTER TABLE ONLY public.bookings
+ADD CONSTRAINT bookings_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.driver_profiles
@@ -272,6 +308,8 @@ ADD CONSTRAINT vehicles_plate_key UNIQUE (plate);
 ALTER TABLE ONLY public.verification_codes
 ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
+CREATE INDEX bookings_journey_idx ON public.bookings USING btree (journey_id);
+CREATE INDEX bookings_rider_idx ON public.bookings USING btree (rider_user_id, created_at DESC);
 CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
 CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);
 CREATE INDEX route_stops_route_idx ON public.route_stops USING btree (route_id, "position");
@@ -283,11 +321,18 @@ CREATE INDEX stops_lat_lng_idx ON public.stops USING btree (lat, lng);
 CREATE INDEX stops_status_idx ON public.stops USING btree (status) WHERE (status = 'verified'::text);
 CREATE INDEX throttle_records_expires_idx ON public.throttle_records USING btree (expires_at);
 CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
+CREATE TRIGGER bookings_seat_guard BEFORE INSERT OR UPDATE OF seats ON public.bookings FOR EACH ROW EXECUTE FUNCTION public.bookings_seat_guard();
 CREATE TRIGGER route_stops_require_verified BEFORE INSERT OR UPDATE OF stop_id ON public.route_stops FOR EACH ROW EXECUTE FUNCTION public.route_stops_require_verified();
 CREATE TRIGGER stop_verifications_no_update BEFORE DELETE OR UPDATE ON public.stop_verifications FOR EACH ROW EXECUTE FUNCTION public.stop_verifications_append_only();
 CREATE TRIGGER stops_retire_guard BEFORE UPDATE OF status ON public.stops FOR EACH ROW EXECUTE FUNCTION public.stops_retire_guard();
 ALTER TABLE ONLY public.audit_log
 ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.bookings
+ADD CONSTRAINT bookings_boarding_stop_id_fkey FOREIGN KEY (boarding_stop_id) REFERENCES public.stops(id) ON DELETE RESTRICT;
+ALTER TABLE ONLY public.bookings
+ADD CONSTRAINT bookings_journey_id_fkey FOREIGN KEY (journey_id) REFERENCES public.journeys(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.bookings
+ADD CONSTRAINT bookings_rider_user_id_fkey FOREIGN KEY (rider_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.journeys

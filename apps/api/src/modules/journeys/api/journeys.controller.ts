@@ -47,4 +47,11 @@ export class JourneysController {
   available(@Req() req: ReqWithActor, @Query('from') from: string, @Query('to') to: string) {
     return this.journeys.availableWork(req.actor!, from, to);
   }
+
+  /** Riders: upcoming bookable departures on a route (P3.6). */
+  @Get('journeys/upcoming')
+  @UseGuards(IdentityGuard)
+  upcoming(@Req() _req: ReqWithActor, @Query('route') route: string, @Query('from') from: string, @Query('to') to: string) {
+    return this.journeys.upcomingForRiders(route || null, from, to);
+  }
 }

@@ -143,6 +143,31 @@ export class RoutesService {
     return (await this.routes.list()).filter((r) => r.status === 'published');
   }
 
+  /** Published routes WITH their verified, ordered stops — the rider's
+      route + boarding-point screens (P3.4/P3.5). Public read: a published
+      route is, by definition, something riders may see. */
+  async publishedWithStops(): Promise<Array<{ route: RouteRow; stops: RouteStopRow[] }>> {
+    const published = (await this.routes.list()).filter((r) => r.status === 'published');
+    const out = [];
+    for (const route of published) {
+      out.push({ route, stops: await this.routes.stops(route.id) });
+    }
+    return out;
+  }
+
+  /** The flat fare of a route (bookings lock it per seat at creation). */
+  async getRouteFare(routeId: string): Promise<number> {
+    const route = await this.routes.findById(routeId);
+    if (!route) throw new NotFoundException({ message_key: 'routes.not_found' });
+    return route.fare_minor;
+  }
+
+  /** Is `stopId` a stop on `routeId`? (booking boarding-point validation). */
+  async hasStop(routeId: string, stopId: string): Promise<boolean> {
+    const stops = await this.routes.stops(routeId);
+    return stops.some((s) => s.stop_id === stopId);
+  }
+
   /** Slots for a route (driver-facing read — no auth; claims are protected). */
   async slotsForClaim(routeId: string, fromDate: string, toDate: string): Promise<SlotRow[]> {
     return this.routes.listSlots(routeId, fromDate, toDate);

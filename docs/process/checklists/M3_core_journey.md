@@ -26,10 +26,10 @@
 
 ## P3.4–P3.6 — Rider search → boarding → departure → book
 
-- [ ] Rider picks a route (list or map), a boarding point (DEC-120), a departure, seat count.
-- [ ] Price shown up front (flat fare × seats), locked at booking (DEC-056).
-- [ ] Booking creates a Booking in RESERVED→CONFIRMED; seat inventory decrements.
-- [ ] Tests: booking authority (rider), seats, price lock, sold-out honesty.
+- [x] Rider flow: published routes (GET /routes/published) → boarding stops (route order, recommended first) → upcoming bookable journeys (GET /journeys/upcoming) → review (seats stepper) → book.
+- [x] Review shows the flat fare × seats; the booking stores fare_minor at creation (locked — a later fare change never rewrites it).
+- [x] POST /bookings creates RESERVED with a 6-digit code; seat inventory is enforced by the bookings_seat_guard DB trigger (parallel bookings cannot oversell); cancellation returns seats.
+- [x] 164 API tests incl. 9 bookings-service tests (fare lock, off-route refusal, seat cap, guard mapping, cancel-returns-seats, authority) — 4 break checks observed failing; 307 web unit (rider flow group + boarding-code break observed failing).
 
 ## P3.7 — Money (minimal, cash-first)
 

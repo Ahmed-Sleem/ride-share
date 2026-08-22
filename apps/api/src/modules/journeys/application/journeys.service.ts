@@ -78,6 +78,34 @@ export class JourneysService {
     return { ok: true };
   }
 
+  /** Rider-facing departures (P3.6): bookable journeys on a route with their
+      departure instant, filtered to those that have not departed. */
+  async upcomingForRiders(routeId: string | null, from: string, to: string): Promise<Array<JourneyRow & { departs: string }>> {
+    const rows = await this.journeys.byRouteAndWindow(routeId, from, to);
+    const out: Array<JourneyRow & { departs: string }> = [];
+    for (const row of rows) {
+      const departs = await this.routes.slotDepartureInstant(row.slot_id);
+      if (!departs || departs.getTime() <= Date.now()) continue;
+      if (row.status !== 'CLAIMED' && row.status !== 'OPEN_FOR_BOOKING') continue;
+      out.push({ ...row, departs: departs.toISOString() });
+    }
+    return out;
+  }
+
+  /** A journey a rider may book (P3.6): exists, bookable status, in the future. */
+  async getForBooking(journeyId: string): Promise<JourneyRow> {
+    const journey = await this.journeys.findById(journeyId);
+    if (!journey) throw new NotFoundException({ message_key: 'journeys.not_found' });
+    if (journey.status !== 'CLAIMED' && journey.status !== 'OPEN_FOR_BOOKING') {
+      throw new ConflictException({ message_key: 'journeys.not_bookable', details: { status: journey.status } });
+    }
+    const departs = await this.routes.slotDepartureInstant(journey.slot_id);
+    if (departs && departs.getTime() <= Date.now()) {
+      throw new ConflictException({ message_key: 'journeys.departed' });
+    }
+    return journey;
+  }
+
   /** The driver's own journeys (duty board). */
   async myJourneys(actor: Actor): Promise<JourneyRow[]> {
     assertCan(actor.role as unknown as Role, Capability.CLAIM_SLOT);

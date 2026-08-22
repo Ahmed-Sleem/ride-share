@@ -136,6 +136,13 @@ const API = {
   myJourneys: () => API.request("GET", "/journeys/mine"),
   availableJourneys: (from, to) => API.request("GET", `/journeys/available?from=${from}&to=${to}`),
 
+  /* ── rider booking (P3.4–P3.6) ───────────────────────────────────────── */
+  publishedRoutes: () => API.request("GET", "/routes/published"),
+  upcomingJourneys: (routeId, from, to) => API.request("GET", `/journeys/upcoming?route=${routeId}&from=${from}&to=${to}`),
+  book: (journeyId, boardingStopId, seats) => API.request("POST", "/bookings", { journeyId, boardingStopId, seats }),
+  myBookings: () => API.request("GET", "/bookings/mine"),
+  cancelBooking: (id) => API.request("POST", `/bookings/${id}/cancel`),
+
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
     if (typeof fetch !== "function") return null;
