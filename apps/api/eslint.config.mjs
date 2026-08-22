@@ -32,5 +32,13 @@ export default tseslint.config(
   {
     files: ['src/config/env.ts'],
     rules: { 'no-restricted-syntax': 'off' },
-  }
+  },
+  {
+    // Test files are fixtures, not a second reader of configuration: the
+    // DI-graph compile test must SET process.env before importing AppModule
+    // (which reads it through the single entry point, config/env.ts). This
+    // exemption exists so a regression guard can boot the real graph.
+    files: ['src/**/*.test.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
 );

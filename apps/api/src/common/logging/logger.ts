@@ -55,6 +55,15 @@ export class PinoLoggerService implements LoggerService {
   }
 
   private fmt(message: unknown, args: unknown[]): Record<string, unknown> {
+    // An Error logged directly (e.g. Nest's ExceptionsZone reporting a
+    // bootstrap/DI failure) must carry its MESSAGE and stack: Error.message /
+    // .name / .stack are non-enumerable, so pino would otherwise log only the
+    // enumerable props ({type, context, …}) and the real reason stays hidden
+    // — the exact trap that made a broken module wiring crash-loop silently.
+    if (message instanceof Error) {
+      const { name, message: msg, stack, ...rest } = message;
+      return { msg: msg || name, name, stack, ...rest };
+    }
     if (typeof message === 'string' && args.length > 0) {
       return { msg: message, context: args[0] };
     }

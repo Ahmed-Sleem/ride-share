@@ -38,9 +38,13 @@ async function bootstrap(): Promise<void> {
     // bodyLimit: field-capture photos arrive as base64 in JSON; 10 MB covers a
     // phone JPEG with headroom (the service still enforces PHOTO_MAX_BYTES).
     new FastifyAdapter({ logger: false, trustProxy: true, bodyLimit: 10_485_760 }),
-    { logger: false }
+    // The real logger is wired in HERE, not with { logger: false }: Nest's
+    // ExceptionsZone catches DI/bootstrap errors, logs them through this
+    // logger, then process.exit(1). With the logger disabled that error is
+    // swallowed and the container crash-loops silently (the exact failure
+    // this file produced when the journeys module missed @Global).
+    { logger: new PinoLoggerService(logger) }
   );
-  app.useLogger(new PinoLoggerService(logger));
 
   // Security headers. CSP disabled: this service serves JSON, not HTML.
   await app.register(helmet, { contentSecurityPolicy: false });
@@ -59,6 +63,10 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err: unknown) => {
-  process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
+  // A silent exit is undiagnosable: log the full error (name + message +
+  // stack, falling back to a stringified non-Error). This is the difference
+  // between "crash loop" and a one-line fix.
+  const e = err instanceof Error ? err : new Error(String(err));
+  process.stderr.write(`bootstrap failed: ${e.stack ?? `${e.name}: ${e.message}`}\n`);
   process.exit(1);
 });

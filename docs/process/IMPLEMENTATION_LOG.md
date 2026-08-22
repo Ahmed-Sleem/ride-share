@@ -703,3 +703,32 @@ output) — see the engineering standard §3.3 and §4.
   + web unit/a11y/server); `pnpm db:verify` green (migrations cycle + schema +
   types); `apps/web/verify.sh` green (307 unit, 14 a11y, 7482 layout, 47 landing,
   74/74 breaks, 8/8 layout breaks).
+
+## M3 — production crash-loop root cause (JourneysModule missing @Global)
+
+- Symptom: the Railway api service "crashed 2h ago" and looped — logs showed the
+  bypass warning, "migrations complete", then `ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL` /
+  `Exit status 1` with NO error text, on every restart. The web proxy returned
+  504 for every /v1/* (the api never listened).
+- Diagnosis (reproduced locally with the production env): the crash is inside
+  `NestFactory.create`. Nest's ExceptionsZone catches DI errors, logs them via
+  the app logger, then `process.exit(1)` — and because main.ts created the app
+  with `{ logger: false }`, that error was swallowed, so the container died
+  silently and Railway restarted it forever.
+- Real error (surfaced by wiring the real logger into create): `Nest can't
+  resolve dependencies of the BookingsService (BookingsRepository, ?,
+  RoutesService, AuditService). Please make sure that the argument
+  JourneysService at index [1] is available in the BookingsModule module.`
+  — JourneysModule lacked `@Global()`, unlike routes/drivers/geo/audit, so
+  bookings (which resolves JourneysService via contracts/public.ts) broke the
+  whole graph. Unit tests never caught it because each service is tested with
+  fakes, not through the real AppModule.
+- Fixes: (1) `@Global()` on JourneysModule; (2) `NestFactory.create` now takes
+  the real PinoLoggerService instead of `{ logger: false }`; (3) the logger's
+  fmt() now serializes an Error's message/name/stack (pino drops non-enumerable
+  props, which is why the reason was invisible); (4) bootstrap catch logs the
+  full stack; (5) NEW regression guard `src/app.graph.test.ts` compiles the real
+  AppModule — observed failing for the right reason before the fix, green after.
+- Verified: 165 API tests green (incl. the new guard); full local boot reaches
+  "api listening"; /healthz → `{ok:true,db:"up"}`; `pnpm verify` + `pnpm db:verify`
+  green. Logged G-070 (now CLOSED).

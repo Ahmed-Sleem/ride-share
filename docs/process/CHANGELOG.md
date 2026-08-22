@@ -634,3 +634,16 @@
 - Live smoke test: landing serves, but the deployed web reports `api:"unreachable"`
   and `/v1/*` returns 504 — logged as G-070 (owner action in Railway).
 - Verified: `pnpm verify`, `pnpm db:verify`, `apps/web/verify.sh` all green.
+
+## 2026-08-22 — Fix: API crash loop (JourneysModule missing @Global)
+
+- The deployed API had been silently crash-looping: `BookingsService` could not
+  inject `JourneysService` because JourneysModule was the one cross-module
+  module missing `@Global()`, and the failure was invisible because the app was
+  created with `{ logger: false }` (Nest's ExceptionsZone swallows bootstrap
+  errors and exits 1). Fixed all four layers: the wiring, the silent logger, the
+  logger's Error serialization, and the bootstrap catch's stack output.
+- Added a DI-graph compile test (`apps/api/src/app.graph.test.ts`) so any future
+  unresolved provider fails CI instead of crash-looping production — observed
+  failing for the right reason, then green. 165 API tests total.
+- Live API verified again after the fix ships (Railway auto-deploys on push).
