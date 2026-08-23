@@ -824,3 +824,29 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: fully fixed — the CI job's pass/fail now depends only on real drift, not on the
   caller's database state; one implementation of the comparison (gen-db-types.mjs) is reused;
   the guard was observed failing. Related: G-073 (billing) still blocks CI from RUNNING at all.
+
+## 2026-08-24 — G-073/G-075: CI restored by making the repo public (owner decision)
+
+- What: Actions minutes were exhausted since 2026-08-18 (all runs 3s-failed, no execution);
+  the owner approved public visibility with the full content inventory in front of them.
+- Files: none (GitHub repo visibility flipped via API; DEC-203 recorded in the register).
+- Verified: re-run of the failed jobs on `2cf3f99` executed for real — Verify ✅ 54s,
+  Verify database ✅ 54s (also the first real-CI proof of the G-074 fix), Build images ✅;
+  GUI suite ran to completion. History/secret scan before flipping: 68 commits, one
+  GitHub-noreply author, zero secret patterns in any blob.
+
+## 2026-08-24 — G-076: Paymob webhook verifier used the wrong signature scheme
+
+- What: verifier HMAC'd `JSON.stringify(obj)`; Paymob's official scheme HMAC-SHA512s the
+  concatenated VALUES of a fixed 20-field ordered list (missing → empty string), hex
+  lowercase. Old code would reject every real webhook once live keys arrived.
+- Files: `apps/api/src/modules/payments/contracts/webhook.verifier.ts` (rewritten),
+  `webhook.verifier.test.ts` (rebuilt), `docs/research/05_PAYMOB_INTEGRATION.md` (new, R20).
+- Tests: 7 verifier tests incl. an independently-written literal signed string (card
+  sample), a wallet sample with absent `source_data.pan`, tamper/wrong-secret/malformed
+  rejections, and a REGRESSION guard that the old whole-JSON scheme is rejected.
+- Verified: 168/168 API tests; §0.2 break — removing `order.id` from the field list fails
+  exactly the 3 signature tests, restore → green.
+- Self-check: matches the official algorithm from two official Paymob doc sites; still
+  to be exercised end-to-end against a real signed sandbox webhook during the P3.7 build
+  (noted as [UNVERIFIED — sandbox] in R20 §9).

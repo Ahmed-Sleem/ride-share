@@ -702,3 +702,20 @@
   database — empty in CI — so the job could never pass on any commit since M1.5 (hidden until
   now by G-073's dead CI). Break-observed: staged type corruption → `✗ drifted` (exit 1);
   empty-DB and schema-carrying-DB `pnpm db:verify` both green.
+
+## 2026-08-24 — CI restored live (repo public), Paymob reference R20, verifier fixed (G-076)
+
+- **G-073 CLOSED — the repo is public (DEC-203)** and GitHub Actions executes again: re-run
+  on HEAD `2cf3f99` → Verify ✅, Verify database ✅ (first REAL CI run of the G-074 fix),
+  Build images ✅, GUI suite ran to completion. Free standard-runner minutes on public repos
+  replace the exhausted private-minute budget.
+- **R20 — `docs/research/05_PAYMOB_INTEGRATION.md`**: the complete Paymob reference (owner
+  request): classic Accept flow with exact endpoints/bodies, official webhook HMAC algorithm,
+  sandbox test data, refunds/void/capture, payouts API (M5), the owner account checklist, and
+  the env design — incl. `PAYMOB_ENABLED` master flag (DEC-204: Paymob first in the UI, cash
+  second; hidden-not-disabled when off).
+- **G-076 CLOSED**: the Paymob webhook verifier used the wrong signature scheme (whole-JSON
+  HMAC instead of the official 20-field value concatenation). Rewritten + regression guard
+  (old scheme now REJECTED by test) + §0.2 break-observed (field-list corruption fails the
+  3 signature tests). 168 API tests green.
+- Decisions: DEC-203 (repo public), DEC-204 (payment surface) appended; G-075 closed.
