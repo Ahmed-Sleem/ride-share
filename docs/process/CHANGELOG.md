@@ -694,3 +694,11 @@
   sanitization pass (process/planning/research/investor material is in the tree AND history).
   Inventory + owner MCQ before any visibility change.
 - Docs-only change this commit; no code touched.
+
+## 2026-08-24 — G-074 fixed: CI verify-db made CI-proof (types from migrations, not the caller's DB)
+
+- `check-db-types.sh` now builds a scratch database from the migrations and generates/compares
+  `db.generated.ts` against that scratch schema. The old version read `DATABASE_URL`'s own
+  database — empty in CI — so the job could never pass on any commit since M1.5 (hidden until
+  now by G-073's dead CI). Break-observed: staged type corruption → `✗ drifted` (exit 1);
+  empty-DB and schema-carrying-DB `pnpm db:verify` both green.

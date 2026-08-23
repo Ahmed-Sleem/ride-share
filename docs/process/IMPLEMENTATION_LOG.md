@@ -802,3 +802,25 @@ output) — see the engineering standard §3.3 and §4.
   (every page × 375px & 1440px × EN & AR, no overflow, no console errors);
   79/79 breaks caught (4 stale landing break-cases re-anchored to the rewrite,
   2 new). a11y 14, layout 7452, 165 API, repo guards green.
+
+## 2026-08-24 — G-074: CI verify-db could never pass (types check read the caller's DB)
+
+- What: `check-db-types.sh` regenerated `db.generated.ts` from `DATABASE_URL`'s own database.
+  In CI that is the EMPTY service container, so the generated file was `[]` and the committed
+  file (real tables since M1.5) never matched — a guaranteed red on every commit the moment
+  Actions minutes return (G-073 hid it). The check now builds its own scratch database from
+  the migrations and generates/compares types against THAT, so the invariant under test is
+  exactly "committed types == what the migrations produce", locally and in CI alike.
+- Files: `scripts/check-db-types.sh` (rewritten; scratch lifecycle mirrors `check-migrations.sh`).
+- Tests: no unit test (shell guard); break-observed per §0.2 instead (below).
+- Verified:
+  - TEST A — empty `DATABASE_URL` (the old CI failure condition): check PASSES (old script failed).
+  - TEST B — §0.2 break: `db.generated.ts` corrupted and STAGED (simulates a committed drift)
+    → check fails `✗ FAIL: … drifted` (exit 1) for the right reason. Working-tree-only edits
+    are healed by regeneration — by design; the guard protects committed state.
+  - TEST C — full `pnpm db:verify` against a schema-carrying DB: green.
+  - TEST D — full `pnpm db:verify` against an EMPTY DB (pure CI simulation): green.
+  - Scratch databases are dropped via an EXIT trap (verified: no `rideshare_typescheck` left).
+- Self-check: fully fixed — the CI job's pass/fail now depends only on real drift, not on the
+  caller's database state; one implementation of the comparison (gen-db-types.mjs) is reused;
+  the guard was observed failing. Related: G-073 (billing) still blocks CI from RUNNING at all.
