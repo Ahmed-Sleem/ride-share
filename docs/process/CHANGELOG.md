@@ -675,3 +675,22 @@
   (native CSS scroll-driven, reduced-motion safe). Policies stay filled (EN + AR).
 - Brand name in the new prose is derived from the single brand source (the branding
   guard caught a hardcode during the pass and it was fixed).
+
+## 2026-08-24 — Session start: reality check + CI audit (G-073/G-074/G-075 opened)
+
+- Fresh-clone baseline re-verified locally, all green: `pnpm verify` (repo guards + build +
+  typecheck + lint + 165 API + web unit), `apps/web/verify.sh` (a11y 14, layout 7452,
+  landing 57, breaks 79/79, layout-breaks 8/8), `pnpm db:verify` (migrations cycle + schema +
+  types, against a local schema-carrying Postgres 17). Live: web `/healthz` → `api:"up"`,
+  `/v1/healthz` → `db:"up"`.
+- **G-073 opened**: GitHub Actions has not EXECUTED since 2026-08-17 ~22:57 — all jobs on all
+  later commits fail within ~3s with no logs (Actions minutes/spending exhausted). Proven by
+  run timing + missing log blobs + a live re-run on HEAD today failing the same way. Owner
+  action required (billing, or public repo — which triggers G-075).
+- **G-074 opened**: CI `verify-db` job could never pass on any commit since M1.5 —
+  `check-db-types.sh` regenerates types from the EMPTY CI service DB. Reproduced locally.
+  Fix planned this session: derive the types check from the migrations' scratch schema.
+- **G-075 opened**: going public (to restore free CI) needs the REPOSITORY_STANDARD
+  sanitization pass (process/planning/research/investor material is in the tree AND history).
+  Inventory + owner MCQ before any visibility change.
+- Docs-only change this commit; no code touched.
