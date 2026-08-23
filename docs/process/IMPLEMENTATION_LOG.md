@@ -850,3 +850,16 @@ output) — see the engineering standard §3.3 and §4.
 - Self-check: matches the official algorithm from two official Paymob doc sites; still
   to be exercised end-to-end against a real signed sandbox webhook during the P3.7 build
   (noted as [UNVERIFIED — sandbox] in R20 §9).
+
+## 2026-08-24 — G-077: CI GUI job Chrome-cache failure
+
+- What: first real CI GUI run since 2026-08-17 failed — puppeteer's Chrome was never
+  downloaded because the pnpm store cache makes install skip package postinstalls.
+- Files: `.github/workflows/ci.yml` (verify-gui job: explicit `puppeteer browsers install
+  chrome` + `actions/cache` on `~/.cache/puppeteer` keyed by the puppeteer pin).
+- Verified: `pnpm exec puppeteer browsers install chrome` proven idempotent locally
+  (installed → re-run returns instantly); YAML validated; repo guards green. The break was
+  observed as a REAL CI failure on `1640f6d` (Chrome missing → layout suite cannot launch);
+  the proof of fix is the next CI run green on `ad5e7e7`+.
+- Self-check: deterministic on cold cache (explicit download), fast on warm cache (browser
+  cache hit); no change to what the suite checks — only environment provisioning.
