@@ -37,6 +37,16 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The pnpm store cache makes install skip dependency postinstalls
+      # (packages are "reused" as already built), so puppeteer's Chrome
+      # download never runs on cached runs — cache the browser itself and
+      # install it explicitly (idempotent; downloads only on cache miss).
+      - name: Cache puppeteer Chrome
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-workspace.yaml') }}
+      - run: pnpm --filter @ride-share/web exec puppeteer browsers install chrome
       - run: pnpm --filter @ride-share/web verify
 
   verify-db:

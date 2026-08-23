@@ -719,3 +719,15 @@
   (old scheme now REJECTED by test) + §0.2 break-observed (field-list corruption fails the
   3 signature tests). 168 API tests green.
 - Decisions: DEC-203 (repo public), DEC-204 (payment surface) appended; G-075 closed.
+
+## 2026-08-24 — G-077: CI GUI job had a hidden Chrome-cache failure (fixed)
+
+- First real CI GUI run since 2026-08-17 failed with "Could not find Chrome": the pnpm store
+  cache (saved by `cache: pnpm`) restores packages as already-built, so puppeteer's
+  postinstall — the Chrome download — is skipped on every cached run, and the browser lives
+  outside the store (`~/.cache/puppeteer`) so it was never cached. Present since the cache
+  was first written; invisible because CI billing was dead (G-073) and the one green GUI run
+  (e78f097) predates the cache.
+- Fix: the `verify-gui` job now caches `~/.cache/puppeteer` (keyed on the puppeteer pin in
+  `pnpm-workspace.yaml`) and installs Chrome explicitly (`puppeteer browsers install chrome`,
+  idempotent). Break-observed = the real CI failure above; proof = the next run green.
