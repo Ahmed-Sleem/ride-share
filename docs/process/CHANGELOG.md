@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 2026-08-24 — Starfield placed, not hashed
+
+- Dust coordinates are composed (corner clusters, a high arc, centre kept clear)
+  and tiled vertically so the sky holds while they travel.
+
+## 2026-08-24 — Starfield dust: mixed size/speed, faster scroll
+
+- Desktop story dust is three compositor layers of irregular stars (box-shadow),
+  not a grid. Near stars travel farther/faster than far ones.
+
+## 2026-08-24 — One desktop dust layer (scroll-driven, not per slide)
+
+- Per-slide specks removed (they lagged). One sticky field of dots sits over the
+  whole story on desktop only, two CSS layers, `animation-timeline: --land`.
+  Mobile and reduced-motion show none.
+
+## 2026-08-24 — Last story slide match + scroll-linked dust
+
+- Desktop last chapter is one viewport tall so it does not linger after the others.
+- Story dust is 64 tokens-only specks in three depths; they translate with `--sy`
+  while the slide copy stays pinned.
+
+## 2026-08-24 — Story slides stay centred; more desktop hold; new board/noroute art
+
+- Desktop: each story chapter is taller than the viewport; the illustration + copy stay
+  sticky-centred while the user scrolls, then the next chapter covers it. Particles, orbs
+  and mesh still move with `--sy`. Mobile stays one-viewport chapters (no extra hold).
+- “Board in seconds” uses `boardfast` (phone photo). Drive “No route drawing” uses `noroute`
+  (strategy). How-it-works board art is unchanged.
+- Removed the leftover truncated HTML after `</html>` in `shell.html`.
+
 ## 2026-07-29 session 1
 
 - Created project workspace `/home/user/project_rideshare` with git repo and `_working_docs/` structure.
@@ -666,6 +697,22 @@
 - The policy pages now carry real, generic, editable content (6 sections each, both
   languages) instead of a placeholder sentence; the "final legal wording is the
   operator's" note stays. 338 unit tests green, 77/77 breaks caught.
+
+## 2026-08-24 — Landing story: layered chapters (Ride + Drive)
+
+- Hero is copy + CTAs only (no intro doodles). After it: four full-bleed sticky
+  chapters with mesh, orbs, drawing route, giant index — tokens only, reduced-motion
+  safe. Drive page uses the same story with driver copy. Unit 350 green.
+
+## 2026-08-24 — Landing v3 (story after hero, no slideshow, no duplicate safety)
+
+- Rider page: hero slideshow removed; floating hero art + sticky story panels sit
+  immediately after the hero. Feature grid is one list (schedule, cash, live, save,
+  verified drivers, help). “Built to be safe” is gone. Board-by-code stays only in
+  How it works. Policies: light cash/wallet polish; still generic + legal note.
+- Nav unchanged: Ride · Drive · About · Help. Tokens only; reduced-motion still
+  kills motion. Web unit tests 350 green. Browser landing suite [UNVERIFIED] here
+  (Chrome shared libs missing in this sandbox).
 
 ## 2026-08-22 — Landing v2 (Ride · Drive · About · Help + sticky panels)
 

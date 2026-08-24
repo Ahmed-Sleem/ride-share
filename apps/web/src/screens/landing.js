@@ -9,6 +9,7 @@
    and reduced-motion collapses every effect to the static page.
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
+  document.querySelectorAll("body > .step-tip").forEach((el) => el.remove());
   if (S.landingDoc) return landingDoc();
   const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding })[S.landingPage] || riderLanding;
   return page();
@@ -91,14 +92,12 @@ function landingFooter() {
   return $("footer", { class: "landing__foot" },
     $("span", { class: "t-cap", text: t("brand") + " · " + t("landingFoot") }),
     $("div", { class: "landing__policies" },
-      policyLink("terms"), policyLink("privacy"), policyLink("safety")),
-    $("a", { class: "landing__credits", attrs: { href: "https://www.streamlinehq.com",
-      target: "_blank", rel: "noopener noreferrer" }, text: t("creditsVectors") }));
+      policyLink("terms"), policyLink("privacy"), policyLink("safety")));
 }
 
 /* ── RIDER page (default) ─────────────────────────────────────────────── */
 function riderLanding() {
-  return $("div", { class: "landing" },
+  const root = $("div", { class: "landing" },
     landingNav(),
 
     $("section", { class: "landing__hero" },
@@ -109,43 +108,33 @@ function riderLanding() {
           $("div", { class: "row gap3" },
             Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
             Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
-        $("div", { class: "landing__heroslide" }, heroSlideshow()))),
+        heroStage("hero"))),
+
+    $("section", { class: "stackpanels", attrs: { "aria-label": t("panelKick") } },
+      storyDust(),
+      stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),
+      stackPanel("price", "2", "mint",   t("panel2T"), t("panel2B")),
+      stackPanel("boardfast", "3", "sky",    t("panel3T"), t("panel3B")),
+      stackPanel("route", "4", "coral",  t("panel4T"), t("panel4B"))),
 
     $("div", { class: "landing__body" },
-      $("section", { class: "landing__section" },
-        $("h2", { class: "landing__h2", text: t("forRiders") }),
+      $("section", { class: "landing__section landing__section--afterstory" },
         $("div", { class: "landing__grid" },
           featureCard("wallet",  t("landingF1T"), t("landingF1B"), "mint"),
           featureCard("clock",   t("featureScheduleT"), t("featureScheduleB"), "sky"),
           featureCard("card",    t("featureCashT"), t("featureCashB"), "coral"),
           featureCard("livemap", t("landingF4T"), t("landingF4B"), "pink"),
-          featureCard("qr",      t("featureCodeT"), t("featureCodeB"), "lime"),
-          featureCard("promos",  t("landingF3T"), t("landingF3B"), "sky"))),
-
-      $("section", { class: "landing__section" },
-        $("h2", { class: "landing__h2", text: t("safetyTitle") }),
-        $("div", { class: "landing__grid" },
-          featureCard("check", t("safetyF1T"), t("safetyF1B"), "mint"),
-          featureCard("qr",    t("safetyF2T"), t("safetyF2B"), "sky"),
-          featureCard("sos",   t("safetyF3T"), t("safetyF3B"), "coral"))),
+          featureCard("promos",  t("landingF3T"), t("landingF3B"), "lime"),
+          featureCard("check",   t("safetyF1T"), t("safetyF1B"), "mint"),
+          featureCard("sos",     t("safetyF3T"), t("safetyF3B"), "coral"))),
 
       $("section", { class: "landing__section" },
         $("h2", { class: "landing__h2", text: t("landingHowTitle") }),
         $("div", { class: "landing__steps" },
-          stepCard("1", "route", t("landingHow1T"), t("landingHow1B"), "violet"),
+          stepCard("1", "way",   t("landingHow1T"), t("landingHow1B"), "violet"),
           stepCard("2", "seat",  t("landingHow2T"), t("landingHow2B"), "sky"),
-          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint")))),
+          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint"))),
 
-    /* full-bleed stacking panels — the sticky "cards slide over each other"
-       scroll effect, native CSS, reduced-motion collapses to a plain stack */
-    $("section", { class: "stackpanels" },
-      $("h2", { class: "landing__h2 stackpanels__kick", text: t("panelKick") }),
-      stackPanel("seat",  "violet", t("panel1T"), t("panel1B")),
-      stackPanel("price", "mint",   t("panel2T"), t("panel2B")),
-      stackPanel("board", "sky",    t("panel3T"), t("panel3B")),
-      stackPanel("route", "coral",  t("panel4T"), t("panel4B"))),
-
-    $("div", { class: "landing__body" },
       $("section", { class: "landing__cta" },
         $("h2", { class: "landing__h2", text: t("landingFoot") }),
         $("div", { class: "row gap3 center" },
@@ -153,19 +142,79 @@ function riderLanding() {
           Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
 
     landingFooter());
+  bindStoryScroll(root);
+  return root;
 }
 
-function stackPanel(ic, tone, title, body) {
+/* Sticky chapter: illustration + particles + parallax layers.
+   Kick line lives on the first slide (not above the slider). */
+function storyDust() {
+  return $("div", { class: "stackpanels__dust", attrs: { "aria-hidden": "true" } },
+    dustLayer("far", DUST.far),
+    dustLayer("mid", DUST.mid),
+    dustLayer("near", DUST.near));
+}
+
+/* Composed sky, not a hash scatter: clusters at the corners, a thin arc
+   above the copy, and the centre (art + title) left clear. */
+const DUST = {
+  far: [
+    [4,8,1],[9,14,1],[14,6,1],[18,18,1],[7,28,1],[22,10,1],
+    [78,7,1],[84,12,1],[91,6,1],[96,16,1],[88,24,1],[80,20,1],
+    [6,72,1],[11,80,1],[3,88,1],[16,90,1],[8,96,1],
+    [82,78,1],[90,84,1],[95,74,1],[88,92,1],[76,88,1],
+    [30,4,1],[38,8,1],[46,3,1],[54,7,1],[62,4,1],[70,9,1],
+    [28,94,1],[42,96,1],[58,93,1],[66,97,1],
+  ],
+  mid: [
+    [8,12,2],[15,20,1],[12,32,2],
+    [86,10,2],[93,18,1],[80,28,2],[97,30,1],
+    [5,68,2],[10,84,1],[18,76,2],
+    [84,70,2],[92,80,1],[78,86,2],
+    [34,10,1],[50,6,2],[66,12,1],
+    [24,88,1],[48,92,2],[72,90,1],
+  ],
+  near: [
+    [6,16,3],[16,8,2],
+    [90,14,3],[84,6,2],
+    [8,82,3],
+    [92,76,3],[86,90,2],
+    [48,8,2],
+    [20,92,2],[70,88,3],
+  ],
+};
+
+function dustLayer(kind, stars) {
+  const el = $("div", { class: "stackpanels__dustin stackpanels__dustin--" + kind });
+  const tiled = [];
+  [0, 110, 220].forEach((off) => {
+    stars.forEach(([x, y, r]) => tiled.push(x + "vw " + (y + off) + "vh 0 " + r + "px var(--on-solid)"));
+  });
+  el.style.boxShadow = tiled.join(",");
+  return el;
+}
+
+function stackPanel(ic, n, tone, title, body, kick) {
+  const copyKids = [];
+  if (kick) copyKids.push($("div", { class: "landing__kick stackpanel__kick", text: kick }));
+  copyKids.push($("h3", { class: "stackpanel__t", text: title }));
+  copyKids.push($("p", { class: "stackpanel__b", text: body }));
   return $("article", { class: "stackpanel stackpanel--" + tone },
+    $("div", { class: "stackpanel__stage", attrs: { "aria-hidden": "true" } },
+      $("div", { class: "stackpanel__mesh" }),
+      $("div", { class: "stackpanel__orb stackpanel__orb--a" }),
+      $("div", { class: "stackpanel__orb stackpanel__orb--b" }),
+      $("div", { class: "stackpanel__orb stackpanel__orb--c" }),
+      $("div", { class: "stackpanel__ring" }),
+      $("span", { class: "stackpanel__ghost ltr", text: n })),
     $("div", { class: "stackpanel__inner" },
       stickerEl(ic, "stackpanel__art"),
-      $("h3", { class: "stackpanel__t", text: title }),
-      $("p", { class: "stackpanel__b", text: body })));
+      $("div", { class: "stackpanel__copy" }, ...copyKids)));
 }
 
 /* ── DRIVE page ───────────────────────────────────────────────────────── */
 function driveLanding() {
-  return $("div", { class: "landing" },
+  const root = $("div", { class: "landing" },
     landingNav(),
 
     $("section", { class: "landing__hero" },
@@ -177,11 +226,17 @@ function driveLanding() {
           $("div", { class: "row gap3" },
             Btn({ label: t("applyToDrive"), on: () => authGo("signup") }),
             Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
-        $("div", { class: "landing__heroslide" }, driverHeroCard()))),
+        heroStage("drivehero"))),
+
+    $("section", { class: "stackpanels", attrs: { "aria-label": t("driveHeroKick") } },
+      storyDust(),
+      stackPanel("hours", "1", "sky",    t("driverF4T"), t("driverF4B"), t("driveHeroKick")),
+      stackPanel("book",  "2", "mint",   t("driverF2T"), t("driverF2B")),
+      stackPanel("save",  "3", "coral",  t("driverF3T"), t("driverF3B")),
+      stackPanel("noroute", "4", "violet", t("driverF5T"), t("driverF5B"))),
 
     $("div", { class: "landing__body" },
-      $("section", { class: "landing__section" },
-        $("h2", { class: "landing__h2", text: t("forDrivers") }),
+      $("section", { class: "landing__section landing__section--afterstory" },
         $("div", { class: "landing__grid" },
           featureCard("doc",      t("driverF1T"), t("driverF1B"), "sky"),
           featureCard("clock",    t("driverF2T"), t("driverF2B"), "mint"),
@@ -194,9 +249,9 @@ function driveLanding() {
         $("h2", { class: "landing__h2", text: t("driveStepsKick") }),
         $("div", { class: "landing__steps" },
           stepCard("1", "book",  t("driveStep1T"), t("driveStep1B"), "violet"),
-          stepCard("2", "save",  t("driveStep2T"), t("driveStep2B"), "sky"),
-          stepCard("3", "seat",  t("driveStep3T"), t("driveStep3B"), "mint"),
-          stepCard("4", "track", t("driveStep4T"), t("driveStep4B"), "coral"))),
+          stepCard("2", "secure", t("driveStep2T"), t("driveStep2B"), "sky"),
+          stepCard("3", "hours", t("driveStep3T"), t("driveStep3B"), "mint"),
+          stepCard("4", "drivehero", t("driveStep4T"), t("driveStep4B"), "coral"))),
 
       $("section", { class: "landing__cta" },
         $("h2", { class: "landing__h2", text: t("driveReqT") }),
@@ -206,17 +261,8 @@ function driveLanding() {
           Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
 
     landingFooter());
-}
-
-/* The drive hero's right side: an honest perk card (marketing copy, not a
-   fake dashboard — it states what driving gives you, never invented numbers). */
-function driverHeroCard() {
-  return $("div", { class: "driverhero" },
-    stickerEl("seat", "driverhero__art"),
-    $("div", { class: "driverhero__list" },
-      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF4T") })),
-      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF2T") })),
-      $("div", { class: "driverhero__row" }, icon("check"), $("span", { text: t("driverF3T") }))));
+  bindStoryScroll(root);
+  return root;
 }
 
 /* ── ABOUT + HELP pages ───────────────────────────────────────────────── */
@@ -278,8 +324,6 @@ function landingDoc() {
           $("p", { class: "landing__p", text: p }))))));
 }
 
-/* ── hero slideshow: auto-advancing feature slides, same palette ────────── */
-
 /* Embed a recolorable sticker (STICKERS, injected by build.js). */
 function stickerEl(key, cls) {
   const el = $("div", { class: "sticker" + (cls ? " " + cls : "") });
@@ -287,50 +331,32 @@ function stickerEl(key, cls) {
   return el;
 }
 
-let slideTimer = null;
-function heroSlideshow() {
-  const slides = [
-    { sticker: "price", tone: "violet", title: t("slide1T"), body: t("slide1B") },
-    { sticker: "save",  tone: "coral",  title: t("slide2T"), body: t("slide2B") },
-    { sticker: "book",  tone: "sky",    title: t("slide3T"), body: t("slide3B") },
-    { sticker: "track", tone: "mint",   title: t("slide4T"), body: t("slide4B") },
-  ];
-  const box = $("div", { class: "slideshow",
-    attrs: { "aria-label": t("landingHowTitle") } });
-  const track = $("div", { class: "slideshow__track" });
-  slides.forEach((s, i) => {
-    track.append($("div", { class: "slide slide--" + s.tone + (i === 0 ? " slide--on" : "") },
-      stickerEl(s.sticker, "slide__sticker"),
-      $("h3", { class: "slide__t", text: s.title }),
-      $("p", { class: "slide__b", text: s.body })));
-  });
-  const dots = $("div", { class: "slideshow__dots" });
-  slides.forEach((s, i) => dots.append($("button", {
-    class: "slide-dot" + (i === 0 ? " slide-dot--on" : ""),
-    attrs: { type: "button", "aria-label": String(i + 1) },
-    on: { click: () => slideTo(i) } })));
-  box.append(track, dots);
-
-  // auto-advance; hover pauses. Each landing render clears the previous timer.
-  clearInterval(slideTimer);
-  S.slideIndex = 0;
-  slideTimer = setInterval(() => {
-    if (S.slidePaused) return;
-    const boxEl = document.querySelector(".slideshow");
-    if (!boxEl) return;
-    slideTo((S.slideIndex + 1) % slides.length);
-  }, 4000);
-  box.addEventListener("mouseenter", () => { S.slidePaused = true; });
-  box.addEventListener("mouseleave", () => { S.slidePaused = false; });
-  return box;
+function heroStage(ic) {
+  return $("div", { class: "heroart heroart--one", attrs: { "aria-hidden": "true" } },
+    stickerEl(ic, "heroart__s heroart__s--solo"));
 }
 
-function slideTo(i) {
-  S.slideIndex = i;
-  const box = document.querySelector(".slideshow");
-  if (!box) return;
-  box.querySelectorAll(".slide").forEach((el, k) => el.classList.toggle("slide--on", k === i));
-  box.querySelectorAll(".slide-dot").forEach((el, k) => el.classList.toggle("slide-dot--on", k === i));
+function bindStoryScroll(scroller) {
+  if (!scroller) return;
+  if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  let ticking = false;
+  const tick = () => {
+    ticking = false;
+    const vh = scroller.clientHeight || 1;
+    const hero = scroller.querySelector(".landing__hero");
+    if (hero) {
+      const t = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / Math.max(hero.offsetHeight, 1)));
+      hero.style.setProperty("--hy", t.toFixed(3));
+    }
+    scroller.querySelectorAll(".stackpanel").forEach((p) => {
+      const t = Math.max(-1, Math.min(1, -p.getBoundingClientRect().top / vh));
+      p.style.setProperty("--sy", t.toFixed(3));
+    });
+  };
+  scroller.addEventListener("scroll", () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(tick); }
+  }, { passive: true });
+  requestAnimationFrame(tick);
 }
 
 /* ── feature cards ──────────────────────────────────────────────────────── */
@@ -344,25 +370,47 @@ function featureCard(ic, title, body, tone) {
 /* ── how-it-works steps: number stays on the SAME side in RTL (physical
       right), and a floating tooltip follows the cursor on hover ─────────── */
 function stepCard(n, ic, title, body, tone) {
-  const tip = $("div", { class: "step-tip" },
+  const tip = $("div", { class: "step-tip", attrs: { role: "tooltip" } },
     $("span", { class: "step-tip__num ltr", text: n }),
     $("strong", { text: title }),
     $("span", { class: "step-tip__body", text: body }));
-  const card = $("div", { class: "landing__step reveal" + (tone ? " landing__step--" + tone : "") }, tip,
+  const card = $("div", { class: "landing__step reveal" + (tone ? " landing__step--" + tone : "") },
     $("div", { class: "landing__stepnum ltr", text: n }),
     $("div", { class: "landing__stepbody" },
       stickerEl(ic, "landing__stepart"),
       $("div", { class: "landing__steptext" },
-        $("h3", { class: "landing__h3", text: title }))));
+        $("h3", { class: "landing__h3", text: title }),
+        $("p", { class: "landing__stepdesc landing__p", text: body }))));
+  document.body.appendChild(tip);
 
-  card.addEventListener("mousemove", (e) => {
-    const r = card.getBoundingClientRect();
-    tip.style.left = Math.min(e.clientX - r.left + 18, r.width - 200) + "px";
-    tip.style.top  = Math.max(e.clientY - r.top - 14, 8) + "px";
+  const isCompact = () => typeof window.matchMedia === "function" &&
+    window.matchMedia("(hover: none), (max-width: 839.98px)").matches;
+  let raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
+  const place = () => {
+    raf = 0;
+    tx += (cx - tx) * 0.22;
+    ty += (cy - ty) * 0.22;
+    const w = 240, h = tip.offsetHeight || 88, pad = 12;
+    const x = Math.min(window.innerWidth - w - pad, Math.max(pad, tx + 16));
+    const y = Math.min(window.innerHeight - h - pad, Math.max(pad, ty - h - 12));
+    tip.style.transform = "translate3d(" + x + "px," + y + "px,0)";
+    if (tip.classList.contains("step-tip--on") && (Math.abs(cx - tx) > 0.4 || Math.abs(cy - ty) > 0.4))
+      raf = requestAnimationFrame(place);
+  };
+  card.addEventListener("pointerenter", (e) => {
+    if (isCompact()) return;
+    cx = e.clientX; cy = e.clientY; tx = cx; ty = cy;
+    tip.classList.add("step-tip--on");
+    if (!raf) raf = requestAnimationFrame(place);
   });
-  card.addEventListener("mouseenter", () => tip.classList.add("step-tip--on"));
-  card.addEventListener("mouseleave", () => tip.classList.remove("step-tip--on"));
-  card.addEventListener("click", () => tip.classList.toggle("step-tip--on")); // touch
+  card.addEventListener("pointermove", (e) => {
+    if (isCompact() || !tip.classList.contains("step-tip--on")) return;
+    cx = e.clientX; cy = e.clientY;
+    if (!raf) raf = requestAnimationFrame(place);
+  });
+  card.addEventListener("pointerleave", () => {
+    tip.classList.remove("step-tip--on");
+  });
   return card;
 }
 

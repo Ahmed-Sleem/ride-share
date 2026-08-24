@@ -33,7 +33,8 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
       const doc = document.documentElement;
       const landing = document.querySelector('.landing');
       const hero = document.querySelector('.landing__hero');
-      const map = document.querySelector('.slideshow');
+      const story = document.querySelector('.stackpanel');
+      const art = document.querySelector('.heroart');
       const lb = landing ? landing.getBoundingClientRect() : null;
       const hb = hero ? hero.getBoundingClientRect() : null;
       return {
@@ -43,7 +44,9 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
         docScrollW: doc.scrollWidth,
         heroH: hb ? Math.round(hb.height) : 0,
         vh: doc.clientHeight,
-        hasMap: !!map,
+        hasArt: !!art,
+        hasStory: !!story,
+        panels: document.querySelectorAll('.stackpanel').length,
       };
     });
     const id = `${vp.w}×${vp.h}`;
@@ -51,8 +54,9 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
       Math.abs(m.landingW - m.vw) <= 1, `${m.landingW} vs ${m.vw}`);
     ok(`${id}: landing starts at the left edge`, m.landingL >= -1, String(m.landingL));
     ok(`${id}: no horizontal overflow`, m.docScrollW <= m.vw + 1, `${m.docScrollW} > ${m.vw}`);
-    ok(`${id}: hero is at least one viewport tall`, m.heroH >= m.vh - 80, `${m.heroH} vs ${m.vh}`);
-    ok(`${id}: hero slideshow renders`, m.hasMap);
+    ok(`${id}: hero is tall enough to read`, m.heroH >= 200, `${m.heroH}`);
+    ok(`${id}: hero has one intro illustration`, m.hasArt);
+    ok(`${id}: story panels follow the hero`, m.hasStory && m.panels === 4, String(m.panels));
 
     // auth card centered
     await page.evaluate(() => { S.view = 'auth'; S.authMode = 'signin'; S.loginMethod = null; render(); });

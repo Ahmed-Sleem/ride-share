@@ -603,8 +603,9 @@ group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
   t.w.S.view="landing"; t.w.render();
   ok("landing renders the hero", !!t.q(".landing__hero"));
   ok("landing has both CTAs", t.all(".landing .btn").length>=2, String(t.all(".landing .btn").length));
-  ok("landing shows the features slideshow", !!t.q(".slideshow"));
-  ok("slideshow has exactly 4 slides", t.all(".slideshow .slide").length===4, String(t.all(".slideshow .slide").length));
+  ok("landing shows one intro illustration", !!t.q(".heroart--one") && t.all(".heroart .sticker").length===1);
+  ok("one-color illustrations use currentColor", /fill=\\"currentColor\\"/.test(SRC) || /fill="currentColor"/.test(SRC));
+  ok("story panels sit after the hero", t.all(".stackpanel").length===4, String(t.all(".stackpanel").length));
 
   t.w.S.view="auth"; t.w.render();
   ok("auth renders a card", !!t.q(".authwrap__card"));
@@ -689,28 +690,21 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   // footer credit: a real link, smaller text, on its own line
   t.w.S.view="landing"; t.w.render();
   const cr = t.q(".landing__credits");
-  ok("Streamline credit is a link", !!cr && cr.tagName==="A" &&
-     (cr.getAttribute("href")||"").includes("streamlinehq.com"), cr && cr.tagName);
-  ok("credit uses the micro size (smaller than the tagline)",
-     /\.landing__credits\{[^}]*font-size:var\(--f-micro\)/.test(CSS));
-  ok("credit sits on its own line under the tagline",
-     !!cr && cr.parentElement === t.q(".landing__foot") &&
-     t.q(".landing__foot").children.length >= 2);
+  ok("footer has no Streamline credit", !t.q(".landing__credits"));
 
-  // slider cards: ONE bold pop colour each (700 steps), flat, no gradient
-  ok("slider cards are bold (violet card has no gradient)",
-     /\.slide--violet\{background:var\(--violet-700\)\}/.test(CSS) &&
-     !/\.slide--violet\{background:linear-gradient/.test(CSS));
-  ok("all four slider cards use the bold 700 shades",
-     /\.slide--coral\{background:var\(--coral-700\)\}/.test(CSS) &&
-     /\.slide--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
-     /\.slide--mint\{background:var\(--mint-700\)\}/.test(CSS));
-  ok("slider text is white on the bold card", /\.slide\{[^}]*color:var\(--on-solid\)/.test(CSS));
-  ok("slider doodle is white line-work with a same-hue light accent",
-     /\.slide__sticker\{[^}]*--sticker-ink:var\(--on-solid\)/.test(CSS) &&
-     /\.slide--violet \.slide__sticker\{--sticker-accent:var\(--violet-300\)\}/.test(CSS) &&
-     /\.slide--coral \.slide__sticker\{--sticker-accent:var\(--coral-300\)\}/.test(CSS));
-  ok("slides pop in with a springy overshoot", /@keyframes slidepop/.test(CSS) && /@keyframes stickerpop/.test(CSS));
+  // story panels: ONE bold pop colour each (700 steps), flat, no gradient
+  ok("story panels are bold (violet card has no gradient)",
+     /\.stackpanel--violet\{background:var\(--violet-700\)\}/.test(CSS) &&
+     !/\.stackpanel--violet\{background:linear-gradient/.test(CSS));
+  ok("all four story panels use the bold 700 shades",
+     /\.stackpanel--coral\{background:var\(--coral-700\)\}/.test(CSS) &&
+     /\.stackpanel--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
+     /\.stackpanel--mint\{background:var\(--mint-700\)\}/.test(CSS));
+  ok("story panel text is white on the bold card", /\.stackpanel\{[^}]*color:var\(--on-solid\)/.test(CSS));
+  ok("story doodle is white line-work with a same-hue light accent",
+     /\.stackpanel__art\{[^}]*color:var\(--on-solid\)/.test(CSS) &&
+     /\.stackpanel--violet\{background:var\(--violet-700\)\}/.test(CSS));
+  ok("stickers float with a springy motion", /@keyframes stickerfloat/.test(CSS));
   ok("hero glow drifts very slowly", /\.landing__hero\{[^}]*animation:herodrift/.test(CSS) && /@keyframes herodrift/.test(CSS));
 
   // bounce easing drives the feature-card hover
@@ -863,12 +857,15 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   const t=boot();
   t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
   const txt = t.q(".landing").textContent;
-  ok("landing speaks to riders", txt.includes(t.w.T.en.forRiders));
-  ok("landing has a safety section", txt.includes(t.w.T.en.safetyTitle) && txt.includes(t.w.T.en.safetyF1T));
+  ok("landing speaks to riders", txt.includes(t.w.T.en.landingF1T));
+  ok("landing has no duplicate safety block", !txt.includes(t.w.T.en.safetyTitle));
+  const featTxt = t.all(".landing__feature").map((el)=>el.textContent).join("|");
+  ok("landing folds safety into features (no board-by-code card)",
+     featTxt.includes(t.w.T.en.safetyF1T) && featTxt.includes(t.w.T.en.safetyF3T)
+     && !featTxt.includes(t.w.T.en.featureCodeT));
   ok("landing footer links policies", t.all(".landing__policylink").length === 3,
      String(t.all(".landing__policylink").length));
-  ok("the Streamline credit is still the <a> link",
-     t.q(".landing__credits") && t.q(".landing__credits").tagName === "A");
+  ok("the Streamline credit is gone", !t.q(".landing__credits"));
   ok("no sample content on the landing", !/Corniche|Montazah|Smouha/.test(txt));
 
   // drivers have their own page (Uber/Careem model)

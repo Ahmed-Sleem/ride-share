@@ -284,23 +284,23 @@ run_break "resend button removed" src/screens/auth.js \
   "resend button shows a countdown and is disabled"
 
 
-# ── M1.7: hero slideshow ──────────────────────────────────────────────────
-run_break "slideshow removed from the hero" src/screens/landing.js \
-  's|heroSlideshow()))),|null))),|' \
-  "landing shows the features slideshow"
+# ── M1.7: hero art (no slideshow) ─────────────────────────────────────────
+run_break "story panels removed from the rider page" src/screens/landing.js \
+  's|stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),|null,|' \
+  "story panels sit after the hero|rider landing has 4 stacking panels"
 
 # ── M1.8: email auth + slider polish ──────────────────────────────────────
 run_break "role-choice chevron loses its size" src/styles/shell.html \
   's|.rolechoice .chev{color:var(--text-muted);width:var(--icon-md);height:var(--icon-md);flex:none}|.rolechoice .chev{color:var(--text-muted);flex:none}|' \
   "role-choice chevron has an explicit size"
 
-run_break "streamline credit loses its link" src/screens/landing.js \
-  's|href: "https://www.streamlinehq.com"|href: "#"|' \
-  "Streamline credit is a link"
+run_break "streamline credit returns" src/screens/landing.js \
+  's|policyLink("safety")));|policyLink("safety")), $("a",{class:"landing__credits",text:"Vectors by Streamline"}));|' \
+  "footer has no Streamline credit|the Streamline credit is gone"
 
-run_break "slider card returns a gradient" src/styles/shell.html \
-  's|.slide--violet{background:var(--violet-700)}|.slide--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
-  "slider cards are bold (violet card has no gradient)"
+run_break "story panel returns a gradient" src/styles/shell.html \
+  's|.stackpanel--violet{background:var(--violet-700)}|.stackpanel--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
+  "story panels are bold (violet card has no gradient)"
 
 run_break "feature hover loses the bounce" src/styles/shell.html \
   's|transform var(--slow) var(--bounce),border-color|transform var(--slow) var(--ease),border-color|' \

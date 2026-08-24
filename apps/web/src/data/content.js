@@ -142,7 +142,7 @@ en:{
     ["Boarding","Show your boarding code at the door. It is single-use and tied to your booking and this departure."],
     ["Rider conduct","Respect the driver and other riders. Keep the vehicle clean and do not carry items that are illegal or dangerous."],
     ["Driver conduct","Drivers are approved by the operator and run the published departure. They must follow traffic law and the route's published schedule."],
-    ["Payments & refunds","Refunds are issued as wallet credit. Contact support for anything that does not look right on your receipt."],
+    ["Payments & refunds","Pay the locked fare in cash at boarding or from your wallet when that option is on. Refunds return as wallet credit. Contact support if a receipt looks wrong."],
     ["Changes & contact","These terms may be updated; the version published here is the one that applies. Reach us through Help for questions or complaints."],
   ],
   policyPrivacy:[
@@ -427,7 +427,7 @@ ar:{
     ["الركوب","اعرض كود الركوب عند الباب. الكود يُستخدم مرة واحدة ومرتبط بحجزك وبهذا الموعد."],
     ["سلوك الراكب","احترم السائق وبقية الركاب. حافظ على نظافة المركبة ولا تحمل مواد غير قانونية أو خطرة."],
     ["سلوك السائق","السائقون معتمدون من المشغّل ويلتزمون بالموعد المنشور، وعليهم احترام قوانين المرور وجدول المسار."],
-    ["الدفع والاسترداد","تُردّ المبالغ كرصيد في المحفظة. تواصل مع الدعم لأي شيء غير واضح في إيصالك."],
+    ["الدفع والاسترداد","ادفع الأجرة المثبتة نقدًا عند الركوب أو من محفظتك عند توفّر ذلك. تُردّ المبالغ كرصيد في المحفظة. تواصل مع الدعم إن بدا الإيصال غير صحيح."],
     ["التعديلات والتواصل","قد تتحدث هذه الشروط؛ والنسخة المنشورة هنا هي المعتمدة. تواصل معنا عبر «مساعدة» للاستفسار أو الشكوى."],
   ],
   policyPrivacy:[

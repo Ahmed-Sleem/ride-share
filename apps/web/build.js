@@ -76,23 +76,24 @@ const FUSE_SRC =
 const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 
-/* Stickers — the Streamline "Manila" doodles, recolored at build time from
-   their two source colours (#001434 navy → --sticker-ink, #3D9CFB blue →
-   --sticker-accent) so they follow the theme and each slide's palette tint. */
-const STICKER_DIR = path.join(__dirname, "assets", "stickers");
-const STICKER_KEYS = ["price","save","book","track","route","seat","board"];
+/* One-color line illustrations. The pack uses fill="black" / fill="none"
+   only — we promote black to currentColor so the parent token sets ink
+   (page text, or white on a colour slide). No palette flattening. */
+const ILLU_DIR  = path.join(__dirname, "assets", "undraw");
+const ILLU_KEYS  = ["hero","drivehero","seat","price","save","book","track","route","board","way","hours","secure","boardfast","noroute"];
 const stickers = {};
-for (const k of STICKER_KEYS) {
-  let svg = fs.readFileSync(path.join(STICKER_DIR, k + ".svg"), "utf8");
+for (const k of ILLU_KEYS) {
+  let svg = fs.readFileSync(path.join(ILLU_DIR, k + ".svg"), "utf8");
+  if (svg.includes("</script")) { console.error("FAIL: illustration contains </script"); process.exit(1); }
   svg = svg.replace(/>\s+</g, "><");
   svg = svg.replace(/\s+/g, " ").trim();
   svg = svg.replace(/width="[^"]*" height="[^"]*"/, "");
-  svg = svg.replace(/fill="none"/, "");
-  svg = svg.replace(/fill="#001434"/g, 'style="fill:var(--sticker-ink)"');
-  svg = svg.replace(/fill="#3D9CFB"/g, 'style="fill:var(--sticker-accent)"');
+  svg = svg.replace(/fill=(["'])black\1/gi, "fill=\"currentColor\"");
+  svg = svg.replace(/stroke=(["'])black\1/gi, "stroke=\"currentColor\"");
+  svg = svg.replace(/fill=(["'])#0{3,8}\1/gi, "fill=\"currentColor\"");
   stickers[k] = svg;
 }
-const stickerJS = "\n\n/* Stickers (Streamline Manila, recolored to tokens) */\nconst STICKERS = " +
+const stickerJS = "\n\n/* Illustrations (one-color pack, currentColor → tokens) */\nconst STICKERS = " +
   JSON.stringify(stickers) + ";\n";
 
 if (js.includes("</script")) { console.error("FAIL: a source file contains </script"); process.exit(1); }
