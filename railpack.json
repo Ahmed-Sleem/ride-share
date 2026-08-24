@@ -3,10 +3,10 @@
   "provider": "node",
   "steps": {
     "build": {
-      "commands": ["...", "pnpm --filter @ride-share/mobile build"]
+      "commands": ["...", "pnpm --filter @ride-share/mobile build", "pnpm --filter @ride-share/api build"]
     }
   },
   "deploy": {
-    "startCommand": "node apps/mobile/server.js"
+    "startCommand": "node scripts/railway-start.cjs"
   }
 }

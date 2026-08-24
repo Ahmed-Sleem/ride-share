@@ -22,8 +22,11 @@ tables. PostGIS is deferred to M2 (DEC-184, G-061).
    imported service often stays on **Railpack** (not Docker) — that is
    why it used to fail with “No start command” (the root package is a
    workspace, not an app). The repo now has a root `start` /
-   `railpack.json` / `index.js` that boot the mobile wrap. `api` and
-   `web` keep using the Dockerfile builder and never run that entry.
+   `railpack.json` / `scripts/railway-start.cjs` that boot **mobile** by
+   default and the **api** if `RAILWAY_SERVICE_NAME` contains `api`.
+   Prefer Dockerfile for `api`/`web` (`infra/docker/Dockerfile.node`,
+   `PROJECT=api|web`). If `api` is left on Railpack, start compiles
+   `dist/main.js` when the image did not copy it.
    Optional (cleaner, skips puppeteer): switch the mobile service
    builder to Dockerfile → `apps/mobile/Dockerfile`, context = repo root.
    Variables match `web`. Keep `api` and `web`.

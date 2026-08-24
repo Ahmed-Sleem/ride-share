@@ -9,7 +9,7 @@
     "lint": "eslint src",
     "pretest": "tsc -p tsconfig.json",
     "test": "node --test dist/",
-    "start": "node dist/main.js"
+    "start": "node scripts/start.cjs"
   },
   "dependencies": {
     "zod": "catalog:",
@@ -28,11 +28,11 @@
     "rxjs": "catalog:",
     "class-validator": "catalog:",
     "class-transformer": "catalog:",
+    "typescript": "catalog:",
     "@ride-share/brand": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/testing": "catalog:",
-    "typescript": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/nodemailer": "catalog:",

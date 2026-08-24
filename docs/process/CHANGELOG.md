@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-08-24 — API Railpack crash: missing dist/main.js
+
+- Railway `api` was starting `node dist/main.js` with no compile (Railpack, not
+  the Docker image). `apps/api` start now compiles when `dist/` is absent.
+- Root Railpack start routes by `RAILWAY_SERVICE_NAME` and also builds the API.
+
 ## 2026-08-24 — P7.4 Capacitor journey GPS (Path B, DEC-176 stay)
 
 - `Platform.watchPosition` + `LocationTrack`: batch up to 8 fixes / 30s, flush leftover on stop. Tracking starts only on `IN_PROGRESS` and stops otherwise.

@@ -173,6 +173,9 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
       zod:
         specifier: 'catalog:'
         version: 3.25.76
@@ -198,9 +201,6 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.67.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
