@@ -66,7 +66,7 @@ const PAGES = {
     {k:"profile", ic:"profile", fn:staffProfile,   dock:true, foot:true}
   ],
   super_admin:[
-    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
+    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},

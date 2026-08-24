@@ -33,14 +33,17 @@ export class AuditRepository {
     );
   }
 
-  async list(limit = 100): Promise<unknown[]> {
+  async list(limit = 25, offset = 0): Promise<{ items: unknown[]; total: number }> {
+    const lim = Math.min(Math.max(1, Math.floor(limit)), 100);
+    const off = Math.max(0, Math.floor(offset));
     const { rows } = await this.pool.query(
-      `SELECT a.id, a.action, a.target_type, a.target_id, a.before, a.after, a.reason,
+      `SELECT a.id, a.action, a.target_type, a.target_id, a.reason,
               a.created_at, u.email, u.name AS actor_name
        FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id
-       ORDER BY a.created_at DESC LIMIT $1`,
-      [limit]
+       ORDER BY a.created_at DESC LIMIT $1 OFFSET $2`,
+      [lim, off]
     );
-    return rows;
+    const count = await this.pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM audit_log`);
+    return { items: rows, total: Number(count.rows[0]?.n || 0) };
   }
 }

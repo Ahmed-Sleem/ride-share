@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-24 — Admin overview + paged audit (Path B)
+
+- Super-admin home: lecture banner removed; tiles are the same `Row` primitive
+  as the rest of the app (users / flag / queue / bus). Dead `go("vehicles")`
+  now opens the real queue.
+- `nav.admin` / Staff / Audit exist EN+AR — top bar no longer shows `nav.admin`.
+- Audit log: server `limit`/`offset` + `total`; 25-row pages; who / when /
+  action on one row so columns no longer collide.
+
 ## 2026-08-24 — P7.3 camera scan + APK Node 22 + schema order
 
 - Driver journey: Scan QR next to the always-visible 6-digit field. Camera

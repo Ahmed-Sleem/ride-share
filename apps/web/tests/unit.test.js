@@ -1043,10 +1043,7 @@ group("BUILD INTEGRITY");
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));
 }
 
-Promise.all([m19c, m19e, mTrips, mSearchNorm, mSearchScreen]).then(() => {
-  console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
-  process.exit(fail?1:0);
-});
+const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen];
 
 /* ═══════════════════════════════════════════════════════════════════
    PATH A — wallet & payments (P3.7.4). S.wallet/S.payConfig drive the
@@ -1204,6 +1201,37 @@ group("PATH A — RouteMap renders data-bound stops with an accessible list");
   ok("no highlight → no boarding chip anywhere", !/Boarding here/.test(el3.textContent));
 }
 
+/* ===== Path B — admin overview + audit paging ===== */
+group("PATH B — admin overview uses real rows, not broken tiles");
+{
+  const t=boot();
+  t.set({role:"super_admin", user:{id:"u1",role:"super_admin",name:"Admin"}});
+  t.go("super_admin","admin");
+  const main=t.q(".main").textContent;
+  ok("top bar is Administration, not nav.admin", t.q(".topbar__title").textContent===t.w.T.en.adminArea);
+  ok("nav.admin is translated", t.w.T.en.nav.admin==="Overview" && t.w.T.ar.nav.admin==="نظرة عامة");
+  ok("staff self-signup lecture is gone from admin home", !main.includes(t.w.T.en.staffNoSelfSignup));
+  ok("home uses row items with real icons", t.all(".rowitem").length>=4 && t.all(".rowitem svg").length>=4);
+  ok("home does not use the broken metric tiles", !t.q(".metric--link"));
+}
+
+group("PATH B — audit log is paged");
+const mAdminAudit = (async () => {
+  const t=boot();
+  t.set({role:"super_admin", user:{id:"u1",role:"super_admin",name:"Admin"}, auditPage:0});
+  let seen="";
+  t.w.fetch = async (url) => {
+    seen=String(url);
+    const items=[{ action:"booking.scan", actor_name:"Dina", created_at:"2026-08-24T10:00:00Z", target_type:"booking", reason:null }];
+    return { ok:true, json:async()=>({ items, total:40, limit:25, offset:0 }) };
+  };
+  t.go("super_admin","adminAudit");
+  await new Promise((r)=>setTimeout(r,20));
+  ok("audit request is paged", /limit=25/.test(seen) && /offset=0/.test(seen), seen);
+  ok("audit shows the human action + who + when", /booking · scan/.test(t.q(".main").textContent) && /Dina/.test(t.q(".main").textContent));
+  ok("audit shows next because total > page", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.j_auditNext)));
+})();
+
 /* ===== Path B — P7.2 driver outbox ===== */
 group("PATH B — camera scan copy + Platform.scanCode (P7.3)");
 {
@@ -1246,3 +1274,9 @@ group("PATH A — RouteMap i18n parity (m_* keys)");
     ok(`${k} resolves in both languages`, en!==k && ar!==k && en!==ar);
   });
 }
+
+pendingAsync.push(mAdminAudit);
+Promise.all(pendingAsync).then(() => {
+  console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
+  process.exit(fail?1:0);
+});

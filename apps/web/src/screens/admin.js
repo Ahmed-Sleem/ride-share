@@ -7,18 +7,12 @@
    ══════════════════════════════════════════════════════════════════════ */
 function adminHome() {
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid"},
-    adminStat("adminStaff", t("adminStaff"), ()=>go("adminStaff")),
-    adminStat("adminAudit", t("adminAudit"), ()=>go("adminAudit")),
-    adminStat("queue",   t("adminDriverQueue"), ()=>go("queue")),
-    adminStat("vehicles", t("adminVehicleQueue"), ()=>go("vehicles"))));
-  w.append(Banner("info", t("staffNoSelfSignup")));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"users", title:t("adminStaff"), sub:t("j_adminStaffSub"), chev:true, bordered:true, on:()=>go("adminStaff")}),
+    Row({icon:"flag", title:t("adminAudit"), sub:t("j_adminAuditSub"), chev:true, bordered:true, on:()=>go("adminAudit")}),
+    Row({icon:"queue", title:t("adminDriverQueue"), sub:t("j_adminQueueSub"), chev:true, bordered:true, on:()=>go("queue")}),
+    Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")})));
   return w;
-}
-
-function adminStat(ic, label, on) {
-  return $("button",{class:"metric metric--link", attrs:{type:"button"}, on:{click:on}},
-    $("div",{class:"row gap2"}, icon(ic), $("div",{class:"metric__l",text:label})));
 }
 
 /* Staff profile — account + appearance settings only. Wallet, subscriptions
@@ -66,7 +60,6 @@ function adminStaff() {
 
 function adminAudit() {
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminAudit")}));
   const list = $("div",{id:"audit-list"});
   w.append(list);
   loadAuditInto(list);
@@ -159,16 +152,49 @@ async function confirmStaffRemove() {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
+const AUDIT_PAGE = 25;
+
+function auditActionLabel(action) {
+  const key = "j_act_" + String(action || "").replace(/\./g, "_");
+  const copy = t(key);
+  return copy !== key ? copy : String(action || "—").replace(/\./g, " · ");
+}
+
+function auditWhen(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 16).replace("T", " ");
+  return d.toLocaleString(S.lang === "ar" ? "ar-EG" : "en-GB", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 async function loadAuditInto(el) {
   if(!el) return;
   el.innerHTML="";
+  const page = Math.max(0, S.auditPage || 0);
   try {
-    const entries = await API.listAudit();
-    if(!entries.length){ el.append(Empty("board", t("adminAudit"), t("adminAuditEmpty"))); return; }
-    entries.forEach(e=> el.append(Row({
+    const res = await API.listAudit(AUDIT_PAGE, page * AUDIT_PAGE);
+    const items = Array.isArray(res) ? res : (res && res.items) || [];
+    const total = Array.isArray(res) ? res.length : Number((res && res.total) || 0);
+    if(!items.length){ el.append(Empty("flag", t("adminAudit"), t("adminAuditEmpty"))); return; }
+    const from = page * AUDIT_PAGE + 1;
+    const to = page * AUDIT_PAGE + items.length;
+    el.append($("div",{class:"row gap2"},
+      $("h2",{class:"t-head grow",text:t("adminAudit")}),
+      $("div",{class:"t-cap ltr",text:`${from}–${to} ${t("j_auditPageOf")} ${total}`})));
+    items.forEach((e)=> el.append(Row({
       icon:"flag",
-      title: e.action,
-      sub: `${e.actor_name || "—"} · ${(e.created_at||"").slice(0,16).replace("T"," ")}${e.reason ? " · "+e.reason : ""}`,
+      title: auditActionLabel(e.action),
+      sub: `${t("j_auditWho")} · ${e.actor_name || e.email || "—"} · ${t("j_auditWhen")} · ${auditWhen(e.created_at)}` +
+        (e.target_type ? ` · ${e.target_type}` : "") +
+        (e.reason ? ` · ${e.reason}` : ""),
       bordered:true })));
-  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+    const more = (page + 1) * AUDIT_PAGE < total;
+    if (page > 0 || more) {
+      el.append($("div",{class:"row wrap gap2"},
+        page > 0 ? Btn({label:t("j_auditPrev"), kind:"secondary", on:()=>{ S.auditPage = page - 1; loadAuditInto(el); }}) : null,
+        more ? Btn({label:t("j_auditNext"), kind:"secondary", on:()=>{ S.auditPage = page + 1; loadAuditInto(el); }}) : null));
+    }
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }

@@ -1578,7 +1578,8 @@ en:{
        duty:"Duty",work:"Find work",journey:"Journey",earnings:"Earnings",
        queue:"Queue",livemap:"Live map",stops:"Stops",routes:"Routes",users:"Users",
        board:"Board",coverage:"Coverage",pricing:"Pricing",promos:"Promotions",analytics:"Analytics",
-       lookup:"Lookup",tickets:"Tickets",lost:"Lost property"},
+       lookup:"Lookup",tickets:"Tickets",lost:"Lost property",
+       admin:"Overview",adminStaff:"Staff",adminAudit:"Audit"},
   /* auth */
   getStarted:"Get started", browse:"Browse routes first", emailHelp:"We'll email you a 6-digit code.",
   continue:"Continue", verify:"Verify",
@@ -1807,6 +1808,12 @@ en:{
   adminDriverQueue:"Driver applications", adminVehicleQueue:"Vehicles",
   adminSystemAdmin:"Main admin", adminEdit:"Edit", adminRemove:"Remove",
   adminEditTitle:"Edit staff", adminRemoveConfirm:"Remove this staff account? They lose access immediately.",
+  j_adminStaffSub:"Create and review staff accounts",
+  j_adminAuditSub:"Who did what, and when",
+  j_adminQueueSub:"Driver applications to review",
+  j_adminVehSub:"Vehicles waiting on the same queue",
+  j_auditPrev:"Previous", j_auditNext:"Next", j_auditPageOf:"of",
+  j_auditWho:"Who", j_auditWhen:"When",
   roleLabel:{rider:"Rider",driver:"Driver",operations:"Operations Admin",manager:"Manager",support:"Support Agent",super_admin:"Super Admin"},
   /* API error keys (message_key) → friendly copy. errText() falls back to
      error.internal when a key is unknown. */
@@ -1923,7 +1930,8 @@ ar:{
        duty:"الدوام",work:"ابحث عن عمل",journey:"الرحلة",earnings:"الأرباح",
        queue:"الطلبات",livemap:"الخريطة",stops:"المحطات",routes:"المسارات",users:"المستخدمون",
        board:"اللوحة",coverage:"التغطية",pricing:"التسعير",promos:"العروض",analytics:"التحليلات",
-       lookup:"بحث",tickets:"التذاكر",lost:"المفقودات"},
+       lookup:"بحث",tickets:"التذاكر",lost:"المفقودات",
+       admin:"نظرة عامة",adminStaff:"الموظفون",adminAudit:"التدقيق"},
   getStarted:"ابدأ", browse:"تصفح المسارات أولاً", emailHelp:"سنرسل لك كودًا من ٦ أرقام على بريدك الإلكتروني.",
   continue:"متابعة", verify:"تأكيد",
   otpTitle:"أدخل الكود", otpSent:"أُرسل إلى", resendIn:"إعادة الإرسال بعد", resend:"إعادة إرسال الكود",
@@ -2147,6 +2155,12 @@ ar:{
   adminDriverQueue:"طلبات السائقين", adminVehicleQueue:"المركبات",
   adminSystemAdmin:"المدير الرئيسي", adminEdit:"تعديل", adminRemove:"إزالة",
   adminEditTitle:"تعديل موظف", adminRemoveConfirm:"إزالة حساب هذا الموظف؟ سيفقد الوصول فورًا.",
+  j_adminStaffSub:"إنشاء حسابات الموظفين ومراجعتها",
+  j_adminAuditSub:"من فعل ماذا ومتى",
+  j_adminQueueSub:"طلبات السائقين للمراجعة",
+  j_adminVehSub:"المركبات في نفس الطابور",
+  j_auditPrev:"السابق", j_auditNext:"التالي", j_auditPageOf:"من",
+  j_auditWho:"من", j_auditWhen:"متى",
   roleLabel:{rider:"راكب",driver:"سائق",operations:"مسؤول عمليات",manager:"مدير",support:"وكيل دعم",super_admin:"مدير عام"},
   error:{internal:"حدث خطأ ما. حاول مرة أخرى.",
          unavailable:"الخدمة مشغولة أو غير متاحة الآن. حاول مرة أخرى بعد قليل.",
@@ -2316,7 +2330,8 @@ const S = {
   landingPage:"rider", landingMenu:false,      // landing v2: rider (default) | drive | about | help
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
   claimTarget:null, claimVehicleId:null, stack:[],
-  staffEditing:null, staffEditName:"", staffEditRole:"operations"
+  staffEditing:null, staffEditName:"", staffEditRole:"operations",
+  auditPage:0,
 };
 
 /* enter the signed-in app with the session user; role comes from auth, never
@@ -3138,7 +3153,7 @@ const API = {
   createStaff: (payload) => API.request("POST", "/admin/staff", payload),
   updateStaff: (id, payload) => API.request("PATCH", `/admin/staff/${id}`, payload),
   deleteStaff: (id) => API.request("DELETE", `/admin/staff/${id}`),
-  listAudit: () => API.request("GET", "/admin/audit"),
+  listAudit: (limit, offset) => API.request("GET", `/admin/audit?limit=${limit||25}&offset=${offset||0}`),
 
   /* ── drivers & vehicles ───────────────────────────────────────────── */
   driverApply: () => API.request("POST", "/driver/apply"),
@@ -4196,18 +4211,12 @@ async function resetConfirm() {
    ══════════════════════════════════════════════════════════════════════ */
 function adminHome() {
   const w=$("div",{class:"main"});
-  w.append($("div",{class:"grid"},
-    adminStat("adminStaff", t("adminStaff"), ()=>go("adminStaff")),
-    adminStat("adminAudit", t("adminAudit"), ()=>go("adminAudit")),
-    adminStat("queue",   t("adminDriverQueue"), ()=>go("queue")),
-    adminStat("vehicles", t("adminVehicleQueue"), ()=>go("vehicles"))));
-  w.append(Banner("info", t("staffNoSelfSignup")));
+  w.append($("div",{class:"rowgroup"},
+    Row({icon:"users", title:t("adminStaff"), sub:t("j_adminStaffSub"), chev:true, bordered:true, on:()=>go("adminStaff")}),
+    Row({icon:"flag", title:t("adminAudit"), sub:t("j_adminAuditSub"), chev:true, bordered:true, on:()=>go("adminAudit")}),
+    Row({icon:"queue", title:t("adminDriverQueue"), sub:t("j_adminQueueSub"), chev:true, bordered:true, on:()=>go("queue")}),
+    Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")})));
   return w;
-}
-
-function adminStat(ic, label, on) {
-  return $("button",{class:"metric metric--link", attrs:{type:"button"}, on:{click:on}},
-    $("div",{class:"row gap2"}, icon(ic), $("div",{class:"metric__l",text:label})));
 }
 
 /* Staff profile — account + appearance settings only. Wallet, subscriptions
@@ -4255,7 +4264,6 @@ function adminStaff() {
 
 function adminAudit() {
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminAudit")}));
   const list = $("div",{id:"audit-list"});
   w.append(list);
   loadAuditInto(list);
@@ -4348,18 +4356,51 @@ async function confirmStaffRemove() {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
+const AUDIT_PAGE = 25;
+
+function auditActionLabel(action) {
+  const key = "j_act_" + String(action || "").replace(/\./g, "_");
+  const copy = t(key);
+  return copy !== key ? copy : String(action || "—").replace(/\./g, " · ");
+}
+
+function auditWhen(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 16).replace("T", " ");
+  return d.toLocaleString(S.lang === "ar" ? "ar-EG" : "en-GB", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 async function loadAuditInto(el) {
   if(!el) return;
   el.innerHTML="";
+  const page = Math.max(0, S.auditPage || 0);
   try {
-    const entries = await API.listAudit();
-    if(!entries.length){ el.append(Empty("board", t("adminAudit"), t("adminAuditEmpty"))); return; }
-    entries.forEach(e=> el.append(Row({
+    const res = await API.listAudit(AUDIT_PAGE, page * AUDIT_PAGE);
+    const items = Array.isArray(res) ? res : (res && res.items) || [];
+    const total = Array.isArray(res) ? res.length : Number((res && res.total) || 0);
+    if(!items.length){ el.append(Empty("flag", t("adminAudit"), t("adminAuditEmpty"))); return; }
+    const from = page * AUDIT_PAGE + 1;
+    const to = page * AUDIT_PAGE + items.length;
+    el.append($("div",{class:"row gap2"},
+      $("h2",{class:"t-head grow",text:t("adminAudit")}),
+      $("div",{class:"t-cap ltr",text:`${from}–${to} ${t("j_auditPageOf")} ${total}`})));
+    items.forEach((e)=> el.append(Row({
       icon:"flag",
-      title: e.action,
-      sub: `${e.actor_name || "—"} · ${(e.created_at||"").slice(0,16).replace("T"," ")}${e.reason ? " · "+e.reason : ""}`,
+      title: auditActionLabel(e.action),
+      sub: `${t("j_auditWho")} · ${e.actor_name || e.email || "—"} · ${t("j_auditWhen")} · ${auditWhen(e.created_at)}` +
+        (e.target_type ? ` · ${e.target_type}` : "") +
+        (e.reason ? ` · ${e.reason}` : ""),
       bordered:true })));
-  } catch(e) { el.append(Banner("danger", e.messageKey || "error.internal")); }
+    const more = (page + 1) * AUDIT_PAGE < total;
+    if (page > 0 || more) {
+      el.append($("div",{class:"row wrap gap2"},
+        page > 0 ? Btn({label:t("j_auditPrev"), kind:"secondary", on:()=>{ S.auditPage = page - 1; loadAuditInto(el); }}) : null,
+        more ? Btn({label:t("j_auditNext"), kind:"secondary", on:()=>{ S.auditPage = page + 1; loadAuditInto(el); }}) : null));
+    }
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 
@@ -6353,7 +6394,7 @@ const PAGES = {
     {k:"profile", ic:"profile", fn:staffProfile,   dock:true, foot:true}
   ],
   super_admin:[
-    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true},
+    {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},

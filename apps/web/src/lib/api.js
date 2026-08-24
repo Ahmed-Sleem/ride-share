@@ -102,7 +102,7 @@ const API = {
   createStaff: (payload) => API.request("POST", "/admin/staff", payload),
   updateStaff: (id, payload) => API.request("PATCH", `/admin/staff/${id}`, payload),
   deleteStaff: (id) => API.request("DELETE", `/admin/staff/${id}`),
-  listAudit: () => API.request("GET", "/admin/audit"),
+  listAudit: (limit, offset) => API.request("GET", `/admin/audit?limit=${limit||25}&offset=${offset||0}`),
 
   /* ── drivers & vehicles ───────────────────────────────────────────── */
   driverApply: () => API.request("POST", "/driver/apply"),

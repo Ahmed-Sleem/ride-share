@@ -56,7 +56,8 @@ const S = {
   landingPage:"rider", landingMenu:false,      // landing v2: rider (default) | drive | about | help
   opsView:null, opsTarget:null, stopTooClose:null, stopBusy:false,
   claimTarget:null, claimVehicleId:null, stack:[],
-  staffEditing:null, staffEditName:"", staffEditRole:"operations"
+  staffEditing:null, staffEditName:"", staffEditRole:"operations",
+  auditPage:0,
 };
 
 /* enter the signed-in app with the session user; role comes from auth, never

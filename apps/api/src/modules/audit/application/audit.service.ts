@@ -34,8 +34,11 @@ export class AuditService {
   }
 
   /** Super Admin only (CH02 §2.4: "View audit log" is Admin). */
-  async list(actor: AuditActor): Promise<unknown[]> {
+  async list(actor: AuditActor, limit = 25, offset = 0): Promise<{ items: unknown[]; total: number; limit: number; offset: number }> {
     assertCan(actor.role as unknown as Role, Capability.VIEW_AUDIT);
-    return this.audit.list();
+    const lim = Math.min(Math.max(1, Math.floor(limit)), 100);
+    const off = Math.max(0, Math.floor(offset));
+    const page = await this.audit.list(lim, off);
+    return { items: page.items, total: page.total, limit: lim, offset: off };
   }
 }
