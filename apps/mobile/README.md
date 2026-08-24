@@ -1,46 +1,98 @@
 # Mobile (Capacitor, DEC-176)
 
-Android APK wrapping **the same** `@ride-share/web` build. There is no second
-UI. Screens never import `@capacitor/*` — they call `Platform` in
-`packages/platform`.
+One UI. The Android APK is the **same** `@ride-share/web` HTML running inside a
+native WebView. Screens never import `@capacitor/*` — they call `Platform`
+(`packages/platform`). Native plugins (GPS, share, later camera/push) attach
+at runtime when the WebView injects `window.Capacitor`.
 
-## Why Railway has a `mobile` service
+## How it works
 
-Railway auto-imports one service per workspace app. An empty `apps/mobile`
-has no `start` script, so the component crash-loops while `api` and `web`
-work. This package now:
-
-1. **builds** the web HTML into `www/` + `dist/` (Capacitor `webDir`);
-2. **starts** a health-checked server (`/healthz`) that serves that HTML and
-   proxies `/v1/*` the same way `apps/web` does.
-
-Set the service:
-
-| Setting | Value |
-|---|---|
-| Root directory | repository root (`/`) — **not** `apps/mobile` |
-| Dockerfile | `apps/mobile/Dockerfile` |
-| Healthcheck | `/healthz` |
-| Variables | same as `web`: `PORT`, `API_INTERNAL_URL`, `MAP_PROVIDER`, `GOOGLE_MAPS_API_KEY` |
-
-## Local APK (developer machine with Android SDK)
-
-```bash
-pnpm --filter @ride-share/mobile build
-cd apps/mobile
-npx cap add android     # once
-npx cap sync android
-npx cap open android    # or: ./android/gradlew -p android assembleDebug
+```
+[ rider / driver phone ]
+        │
+        │  installed APK  (Capacitor Android project)
+        ▼
+  WebView loads www/index.html   ← a copy of the web build, baked in at APK build time
+        │
+        │  /v1/*  (same origin as the WebView’s start URL, or the live API via the
+        │          web/mobile proxy — same contract as the browser)
+        ▼
+  Railway  api  +  Postgres
 ```
 
-Signing keys never enter git (`.gitignore` + `check-secrets.sh`). Play
-upload (P7.6) uses CI secrets.
+- **Browser** (ride-share web URL, or the Railway `mobile` URL): always the
+  latest deploy. Refresh = new UI.
+- **Installed APK**: the UI is **the HTML that was in `www/` when that APK was
+  assembled**. Shipping a product change to phones means **building a new APK**
+  (and later, a Play update). There is **no** silent live-reload of the store
+  app when you push to GitHub/Railway. That is deliberate: a store app that
+  rewrites itself from the network is a different product (and a Play policy
+  problem) until we add a signed OTA channel (not in P7.1).
+- **Debug-only** exception: Capacitor can point the WebView at a live
+  `server.url`. We do **not** ship that in release.
 
-## What this point is / is not
+## Do website updates auto-update the APK?
 
-**P7.1 (this commit):** shell, one-codebase rule, Railway-healthy service,
-boundary check with a proven break.
+| Surface | Auto-updates when you push `main`? |
+|---|---|
+| Web (Railway `web`) | **Yes** — next page load |
+| Railway `mobile` URL (browser) | **Yes** — same HTML server |
+| Installed APK / future iPhone app | **No** — new binary (Play / TestFlight / sideload) |
 
-**Not yet (later P7 points, tracked):** offline outbox (P7.2), native
-camera scan (P7.3), background location gate (P7.4), FCM (P7.5), signed
-Play AAB (P7.6).
+API/data changes (routes, bookings, SOS) apply immediately: the APK talks to
+the live API. Only **UI and client logic** baked into the APK stay old until
+you rebuild.
+
+## How to get an APK
+
+### A. GitHub Actions (no Android Studio)
+
+Every push to `main` runs the **Android debug APK** job.
+
+1. Open https://github.com/Ahmed-Sleem/ride-share/actions
+2. Open the latest green **CI** run → **Android debug APK (Capacitor)**
+3. Download the artifact `ride-share-debug-apk`
+4. On the phone: allow “install unknown apps”, open the `.apk`
+
+This APK is **debug-signed** (fine for you, drivers in a closed trial, QA).
+It is **not** a Play Store release (P7.6: upload key in GitHub secrets, never
+in git).
+
+### B. Your machine (Android Studio / SDK)
+
+```bash
+pnpm install --frozen-lockfile
+export ANDROID_HOME=...          # or ANDROID_SDK_ROOT
+bash apps/mobile/scripts/make-apk.sh
+# → apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Signing keys never enter git.
+
+## iPhone later
+
+Capacitor supports iOS the same way (`npx cap add ios`). We **do not ship
+iPhone in P7** (DEC-176: Android first). When you want it:
+
+1. Apple Developer Program (~$99/year)
+2. A Mac with Xcode
+3. `npx cap add ios` + `cap sync` — **same** `www/` and `Platform` code
+4. TestFlight, then App Store
+
+The rider/driver UI is not rewritten. The DEC-176 gate (P7.4 background GPS)
+is Android-first; if Capacitor background location fails the bar, **only the
+driver app** may move to React Native — riders stay on Capacitor, including
+iPhone.
+
+## Railway `mobile` service
+
+Auto-import used **Railpack** on the monorepo root (no root `start` → red).
+Fixed: root `start` / `index.js` / `railpack.json` boot `apps/mobile/server.js`.
+Optional: switch that service to Dockerfile `apps/mobile/Dockerfile`.
+
+Variables: same as `web` (`PORT`, `API_INTERNAL_URL`, maps).
+
+## Remaining M7 points (not half-built)
+
+See `docs/process/checklists/M7_capacitor.md`: P7.2 outbox, P7.3 camera,
+P7.4 background GPS, P7.5 push, P7.6 Play signing.

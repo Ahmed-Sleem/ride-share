@@ -89,6 +89,8 @@ jobs:
         run: docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=api -t ride-share-api .
       - name: Build web image
         run: docker build -f infra/docker/Dockerfile.node --build-arg PROJECT=web -t ride-share-web .
+      - name: Build mobile image (Capacitor wrap / Railway health)
+        run: docker build -f apps/mobile/Dockerfile -t ride-share-mobile .
       - name: Runner must not run as root (P0.4)
         run: |
           uid="$(docker run --rm --entrypoint sh ride-share-api -c 'id -u')"
@@ -97,3 +99,30 @@ jobs:
           test "$uid" != "0" || { echo "web image runs as root"; exit 1; }
           uid="$(docker run --rm --entrypoint sh ride-share-mobile -c 'id -u')"
           test "$uid" != "0" || { echo "mobile image runs as root"; exit 1; }
+
+  apk:
+    name: Android debug APK (Capacitor)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Wrap web + generate Android project + assembleDebug
+        run: bash apps/mobile/scripts/make-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ride-share-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

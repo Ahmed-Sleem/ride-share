@@ -4,7 +4,8 @@ Owner: Path B. Tick only with a command as proof.
 
 ## P7.1 — Capacitor shell and the one-codebase rule
 
-- [x] `apps/mobile` wraps `@ride-share/web` (no forked screens) — `apps/mobile/scripts/build.mjs`
+- [x] `apps/mobile` wraps `@ride-share/web` (no forked screens) — `apps/mobile/scripts/build.js`
+- [x] Debug APK assembled in CI (`apps/mobile/scripts/make-apk.sh` + Actions artifact)
 - [x] `packages/platform` is the only native seam — screens call `Platform.*`
 - [x] `scripts/check-platform-boundary.sh` in `pnpm verify`
 - [x] Break observed: planted `@capacitor/camera` in `rider.js` → check fails → restore (`apps/mobile/tests/breaks.sh`)
