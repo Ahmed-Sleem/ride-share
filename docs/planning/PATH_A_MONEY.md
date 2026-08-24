@@ -349,3 +349,12 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
   (+ `pnpm db:verify` when migrations changed) before every push; the FULL
   browser suite is GitHub CI's job** (it runs the identical `verify.sh` in
   the `verify-gui` job). Treat red CI as stop-everything and fix forward.
+
+- 2026-08-24 (later) — **P3.7 backend COMPLETE**: migration 0017 + ledger
+  domain (closed-system caught a sign-model bug pre-integration) + payments
+  service/controller/webhook + real Paymob adapter (G-078 fixed) + env/flag.
+  201 API tests; §0.2 breaks observed (HMAC, amount, idempotency, trigger).
+  Next: P3.7.4 wallet UI (top-up sheet, balance + entries, payment choice
+  component for B's review screen, driver earnings embed), then e2e with
+  Paymob sandbox when keys arrive. Open MCQs: COMMISSION_PERCENT (G-079),
+  top-up presets.

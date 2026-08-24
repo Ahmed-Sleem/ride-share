@@ -31,11 +31,24 @@
 - [x] POST /bookings creates RESERVED with a 6-digit code; seat inventory is enforced by the bookings_seat_guard DB trigger (parallel bookings cannot oversell); cancellation returns seats.
 - [x] 164 API tests incl. 9 bookings-service tests (fare lock, off-route refusal, seat cap, guard mapping, cancel-returns-seats, authority) — 4 break checks observed failing; 307 web unit (rider flow group + boarding-code break observed failing).
 
-## P3.7 — Money (minimal, cash-first)
+## P3.7 — Money (minimal, cash-first) — Path A (docs/planning/PATH_A_MONEY.md)
 
-- [ ] Booking records a fare; a per-rider wallet/ledger table (wallet is a balance + entries).
-- [ ] Cash collection recorded by the driver at boarding (scan).
-- [ ] Tests: ledger is append-only; totals reconcile.
+- [x] Booking records a fare (fare_minor locked since P3.6); a per-rider wallet
+      now derives from the double-entry ledger (migration 0017: append-only
+      `ledger_entries` + `payment_orders` + derived `account_balances` view —
+      no mutable balance column anywhere).
+- [~] Cash collection recorded by the driver at boarding: the backend is DONE
+      (`POST /payments/cash-collected`, idempotent, journey-driver-checked,
+      DEC-078 posting sequence); the driver's manifest button is Path B's
+      P3.8 screen (feature-detected via the payments contract).
+- [~] Paymob top-up backend DONE (checkout + official-HMAC webhook, idempotent
+      by provider txn, amount re-checked; `PAYMOB_ENABLED` master flag,
+      DEC-204). The wallet UI (P3.7.4) is the remaining half.
+- [x] Tests: ledger append-only (DB trigger blocks UPDATE/DELETE — observed
+      failing with 23514); totals reconcile (closed-system Σ=0 + 1,000-random
+      property test); webhook replay 5× = one effect (break-observed); bad
+      signature / amount mismatch / unknown order refusals (break-observed);
+      cash-collected idempotency (break-observed). 201 API tests green.
 
 ## P3.8 — Boarding code + manifest
 

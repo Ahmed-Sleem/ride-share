@@ -863,3 +863,29 @@ output) — see the engineering standard §3.3 and §4.
   the proof of fix is the next CI run green on `ad5e7e7`+.
 - Self-check: deterministic on cold cache (explicit download), fast on warm cache (browser
   cache hit); no change to what the suite checks — only environment provisioning.
+
+## 2026-08-24 — P3.7 backend (Path A): ledger, payment orders, Paymob service
+
+- What: the money backend of P3.7 — double-entry append-only ledger, derived
+  balances, payment orders with webhook idempotency, the Paymob top-up flow
+  (real live adapter + honest sandbox), cash-collected posting (DEC-078),
+  refund-as-credit contract, PAYMOB_ENABLED feature flag (DEC-204).
+- Files: infra/migrations/0017_payments_ledger.sql, infra/schema.sql,
+  packages/shared-types/src/db.generated.ts, apps/api/src/modules/payments/**
+  (domain/ledger.ts + tests, infra/payments.repository.ts,
+  application/payments.service.ts + tests, api/payments.controller.ts,
+  payments.module.ts, contracts/public.ts, paymob.adapter.ts + tests,
+  provider.interface.ts), security/authority/authority.resolver.ts,
+  config/env.ts, app.module.ts, .env.example, M3 checklist.
+- Tests: 201 API green (20 domain, 17 service, 5 adapter). §0.2 breaks
+  observed: skip-HMAC (2 tests red), skip-amount-recheck (1 red,
+  compiling break), drop-cash-idempotency (1 red), domain leg-drop (3 red),
+  DB append-only trigger blocks UPDATE+DELETE (23514, live probe). A
+  sign-convention modelling flaw was caught by the closed-system test and
+  fixed before any integration.
+- Verified: pnpm verify exit 0 (all guards clean); pnpm db:verify green
+  (schema + types + up/down cycle); webhook replay ×5 = one posting set.
+- Self-check: complete backend; balances derived only; no mocks (sandbox
+  REFUSES); UI half (P3.7.4) remains — tracked in the checklist as [~].
+  Open: COMMISSION_PERCENT launch value (owner MCQ), Paymob sandbox keys
+  (owner account, R20 §5).

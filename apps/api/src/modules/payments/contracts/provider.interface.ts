@@ -9,9 +9,10 @@
 export type ProviderMode = 'sandbox' | 'live';
 
 export interface CreateCheckoutRequest {
-  orderId: string; // our idempotency key — the ledger's booking order id
+  orderId: string; // our idempotency key — sent as merchant_order_id (R20)
   amountMinor: number; // integer piasters
   currency: 'EGP';
+  purpose?: string; // line-item label ("wallet top-up", "fare …")
   billing?: { name?: string; phone?: string; email?: string; city?: string };
 }
 
@@ -32,7 +33,8 @@ export type PaymentStatus = 'succeeded' | 'failed' | 'pending';
 
 export interface PaymentEvent {
   id: string; // provider transaction id — the idempotency key for the ledger
-  orderId: string; // our order id
+  orderId: string; // OUR order id (merchant_order_id), never the provider's
+  providerOrderId?: string; // the provider's own order id, for support/audit
   amountMinor: number;
   status: PaymentStatus;
   raw: unknown; // the verified payload, stored for the audit trail

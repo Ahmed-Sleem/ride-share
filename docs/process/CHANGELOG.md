@@ -746,3 +746,33 @@
   new `screens/wallet.js` (Path A ownership) so the two agents never share a screen
   file; build.js PARTS registers it. Build 415.9 KB, 349 unit + 14 a11y green.
 - CI fully green on `ad5e7e7` and `c092b69` (all four jobs) — G-077 proof complete.
+
+## 2026-08-24 — M3 P3.7 backend: double-entry ledger + payment orders + Paymob (Path A)
+
+- Migration 0017 (Path A odd-numbered): `ledger_entries` (append-only by DB
+  trigger — UPDATE/DELETE observed blocked with 23514; each row is a balanced
+  debit→credit transfer; classic normalcy: driver_cash/provider_clearing are
+  debit-normal assets), `payment_orders` (id IS merchant_order_id;
+  provider_txn_id UNIQUE = webhook idempotency), derived `account_balances`
+  view. Schema + generated types regenerated; db:verify green.
+- Domain (pure, 20 tests): DEC-078 cash sequence (commission split funded by
+  the driver-cash liability), wallet fare payment, refund-as-credit,
+  over-refund refusal, integer-minor-units invariants, closed-system Σ=0 +
+  1,000-random-history property test. My own closed-system test caught a real
+  sign-model inconsistency BEFORE any money could move — fixed in both the
+  domain and the view.
+- PaymentsService + repository + controller: GET /payments/config (boolean
+  only), GET /payments/wallet (derived), POST /payments/topup (honest refusal
+  when Paymob unconfigured — no order rows), POST /payments/webhook (HMAC
+  FIRST → idempotent claim → amount re-check → one-transaction apply; NO
+  identity guard — the signature is the auth; rate-limited),
+  POST /payments/cash-collected (journey driver only, idempotent),
+  GET /payments/driver/earnings; issueCredit contract for Path B's cancel
+  flow. PAYMENTS_SELF capability in the ONE resolver. Paymob adapter: real
+  live checkout implemented (auth-token cache → order → payment key → iframe,
+  R20) with sandbox still refusing honestly; G-078 fixed (normalizeWebhook now
+  maps OUR merchant_order_id — regression-guarded).
+- Env: PAYMOB_ENABLED / MODE / BASE_URL / IFRAME_ID / WALLET_INTEGRATION_ID /
+  COMMISSION_PERCENT (default 0 — owner MCQ pending for the launch value).
+- 201 API tests green; three service breaks + the DB trigger observed failing;
+  pnpm verify + db:verify green. Wallet UI (P3.7.4) next session (Path A).

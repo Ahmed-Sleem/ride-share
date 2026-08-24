@@ -15,6 +15,13 @@ END IF;
 RETURN NEW;
 END;
 $$;
+CREATE FUNCTION public.ledger_append_only() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+RAISE EXCEPTION 'ledger entries are append-only' USING ERRCODE = '23514';
+END;
+$$;
 CREATE FUNCTION public.route_stops_require_verified() RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -49,6 +56,31 @@ END IF;
 RETURN NEW;
 END;
 $$;
+CREATE TABLE public.ledger_entries (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+txn_id uuid NOT NULL,
+debit_account text NOT NULL,
+credit_account text NOT NULL,
+amount_minor integer NOT NULL,
+reason text NOT NULL,
+ref_type text,
+ref_id uuid,
+config_version text DEFAULT '1'::text NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT ledger_entries_accounts_diff CHECK ((debit_account <> credit_account)),
+CONSTRAINT ledger_entries_amount_minor_check CHECK ((amount_minor > 0))
+);
+CREATE VIEW public.account_balances AS
+SELECT account,
+sum(delta_minor) AS balance_minor
+FROM ( SELECT ledger_entries.credit_account AS account,
+ledger_entries.amount_minor AS delta_minor
+FROM public.ledger_entries
+UNION ALL
+SELECT ledger_entries.debit_account,
+(- ledger_entries.amount_minor)
+FROM public.ledger_entries) legs
+GROUP BY account;
 CREATE TABLE public.audit_log (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 actor_id uuid,
@@ -98,6 +130,23 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT journeys_seats_total_check CHECK (((seats_total >= 1) AND (seats_total <= 60))),
 CONSTRAINT journeys_status_check CHECK ((status = ANY (ARRAY['CLAIMED'::text, 'OPEN_FOR_BOOKING'::text, 'LOCKED'::text, 'IN_PROGRESS'::text, 'COMPLETED'::text, 'CANCELLED'::text, 'ABORTED'::text])))
+);
+CREATE TABLE public.payment_orders (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+rider_user_id uuid NOT NULL,
+kind text NOT NULL,
+amount_minor integer NOT NULL,
+status text DEFAULT 'created'::text NOT NULL,
+provider text DEFAULT 'paymob'::text NOT NULL,
+provider_order_id text,
+provider_txn_id text,
+booking_id uuid,
+raw jsonb,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT payment_orders_amount_minor_check CHECK ((amount_minor > 0)),
+CONSTRAINT payment_orders_kind_check CHECK ((kind = ANY (ARRAY['topup'::text, 'booking'::text]))),
+CONSTRAINT payment_orders_status_check CHECK ((status = ANY (ARRAY['created'::text, 'pending'::text, 'succeeded'::text, 'failed'::text])))
 );
 CREATE TABLE public.pgmigrations (
 id integer NOT NULL,
@@ -265,6 +314,12 @@ ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_slot_id_key UNIQUE (slot_id);
+ALTER TABLE ONLY public.ledger_entries
+ADD CONSTRAINT ledger_entries_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.payment_orders
+ADD CONSTRAINT payment_orders_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.payment_orders
+ADD CONSTRAINT payment_orders_provider_txn_id_key UNIQUE (provider_txn_id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.route_stops
@@ -312,6 +367,11 @@ CREATE INDEX bookings_journey_idx ON public.bookings USING btree (journey_id);
 CREATE INDEX bookings_rider_idx ON public.bookings USING btree (rider_user_id, created_at DESC);
 CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
 CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);
+CREATE INDEX ledger_entries_credit_idx ON public.ledger_entries USING btree (credit_account, created_at DESC);
+CREATE INDEX ledger_entries_debit_idx ON public.ledger_entries USING btree (debit_account, created_at DESC);
+CREATE INDEX ledger_entries_ref_idx ON public.ledger_entries USING btree (ref_type, ref_id) WHERE (ref_type IS NOT NULL);
+CREATE INDEX ledger_entries_txn_idx ON public.ledger_entries USING btree (txn_id);
+CREATE INDEX payment_orders_rider_idx ON public.payment_orders USING btree (rider_user_id, created_at DESC);
 CREATE INDEX route_stops_route_idx ON public.route_stops USING btree (route_id, "position");
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
 CREATE INDEX slots_route_date_idx ON public.slots USING btree (route_id, service_date);
@@ -322,6 +382,7 @@ CREATE INDEX stops_status_idx ON public.stops USING btree (status) WHERE (status
 CREATE INDEX throttle_records_expires_idx ON public.throttle_records USING btree (expires_at);
 CREATE INDEX verification_codes_target_idx ON public.verification_codes USING btree (kind, channel, target);
 CREATE TRIGGER bookings_seat_guard BEFORE INSERT OR UPDATE OF seats ON public.bookings FOR EACH ROW EXECUTE FUNCTION public.bookings_seat_guard();
+CREATE TRIGGER ledger_append_only BEFORE DELETE OR UPDATE ON public.ledger_entries FOR EACH ROW EXECUTE FUNCTION public.ledger_append_only();
 CREATE TRIGGER route_stops_require_verified BEFORE INSERT OR UPDATE OF stop_id ON public.route_stops FOR EACH ROW EXECUTE FUNCTION public.route_stops_require_verified();
 CREATE TRIGGER stop_verifications_no_update BEFORE DELETE OR UPDATE ON public.stop_verifications FOR EACH ROW EXECUTE FUNCTION public.stop_verifications_append_only();
 CREATE TRIGGER stops_retire_guard BEFORE UPDATE OF status ON public.stops FOR EACH ROW EXECUTE FUNCTION public.stops_retire_guard();
@@ -343,6 +404,10 @@ ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_slot_id_fkey FOREIGN KEY (slot_id) REFERENCES public.slots(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.payment_orders
+ADD CONSTRAINT payment_orders_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE SET NULL;
+ALTER TABLE ONLY public.payment_orders
+ADD CONSTRAINT payment_orders_rider_user_id_fkey FOREIGN KEY (rider_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.route_stops
 ADD CONSTRAINT route_stops_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.route_stops

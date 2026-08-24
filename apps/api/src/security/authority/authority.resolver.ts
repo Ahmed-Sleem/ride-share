@@ -24,6 +24,7 @@ export enum Capability {
   BOOK_RIDE = 'book.ride',
   MANAGE_OWN_ACCOUNT = 'account.self',
   APPLY_AS_DRIVER = 'driver.apply',
+  PAYMENTS_SELF = 'payments.self',
   // driver (a driver may also ride — CH02 2.4 "Create a Ride Request: Driver Y (as a rider)")
   RUN_DUTY = 'duty.run',
   CLAIM_SLOT = 'slot.claim',
@@ -51,11 +52,12 @@ export enum Capability {
 }
 
 const MATRIX: Record<Role, ReadonlySet<Capability>> = {
-  [Role.RIDER]: new Set([Capability.BOOK_RIDE, Capability.MANAGE_OWN_ACCOUNT, Capability.APPLY_AS_DRIVER]),
+  [Role.RIDER]: new Set([Capability.BOOK_RIDE, Capability.MANAGE_OWN_ACCOUNT, Capability.APPLY_AS_DRIVER, Capability.PAYMENTS_SELF]),
   [Role.DRIVER]: new Set([
     Capability.BOOK_RIDE, // a driver may ride (CH02 2.4)
     Capability.MANAGE_OWN_ACCOUNT,
     Capability.APPLY_AS_DRIVER,
+    Capability.PAYMENTS_SELF,
     Capability.RUN_DUTY,
     Capability.CLAIM_SLOT,
     Capability.SCAN_BOARDING,

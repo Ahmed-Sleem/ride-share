@@ -57,10 +57,20 @@ export const envSchema = {
   VEHICLE_SEATS: z.coerce.number().int().min(1).max(60).default(14),
   MIN_CLAIM_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(30),
 
-  // ── payments (Paymob, Phase 3 — optional until keys arrive) ───────────
+  // ── payments (Paymob, P3.7 Path A — optional until keys arrive) ──────
+  // PAYMOB_ENABLED is the master feature flag (DEC-204): the Paymob option
+  // is HIDDEN app-wide when false — effective availability = flag AND keys.
+  PAYMOB_ENABLED: z.enum(['true', 'false']).default('false'),
+  PAYMOB_MODE: z.enum(['sandbox', 'live']).default('sandbox'),
+  PAYMOB_BASE_URL: z.string().default('https://accept.paymob.com/api'),
   PAYMOB_API_KEY: z.string().optional(),
   PAYMOB_HMAC_SECRET: z.string().optional(),
   PAYMOB_INTEGRATION_ID: z.string().optional(),
+  PAYMOB_IFRAME_ID: z.string().optional(),
+  PAYMOB_WALLET_INTEGRATION_ID: z.string().optional(),
+  // Platform commission on fares, integer percent 0..90. Default 0 = no
+  // commission is taken until the owner sets the launch value (open MCQ).
+  COMMISSION_PERCENT: z.coerce.number().int().min(0).max(90).default(0),
 
   // ── email (login codes + verification + password reset) ──────────────
   // Generic SMTP — works with Resend (smtp.resend.com:465, user "resend",
