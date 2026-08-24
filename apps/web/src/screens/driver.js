@@ -185,15 +185,22 @@ async function loadDriverJourneyInto(pick, scan, list) {
       const acts = $("div",{class:"row wrap gap2"});
       const st = (journeys.find((x)=>x.id===jid)||{}).status;
       if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
-        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>API.startJourney(jid))}));
+        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>queueOrSend("start","POST",`/journeys/${jid}/start`))}));
       if (st === "IN_PROGRESS") {
-        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.arriveStop(jid))}));
-        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.completeJourney(jid))}));
+        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("arrive","POST",`/journeys/${jid}/arrive`))}));
+        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("complete","POST",`/journeys/${jid}/complete`))}));
         acts.append(Btn({label:t("sos"), kind:"danger", driver:true, on:()=>openSheet("sos")}));
         acts.append(Btn({label:t("j_abortRide"), kind:"danger", on:()=>{
           const reason = window.prompt(t("j_abortWhy")) || "";
-          if (reason) dutyAct(()=>API.abortJourney(jid, reason));
+          if (reason) dutyAct(()=>queueOrSend("abort","POST",`/journeys/${jid}/abort`,{ reason }));
         }}));
+      }
+      const box = driverOutbox();
+      if (box) {
+        const pend = box.pending().length;
+        const rev = box.review();
+        if (pend) live.prepend(Banner("info", t("j_outboxPending")+" · "+pend));
+        if (rev.length) live.prepend(Banner("warn", t("j_outboxReview")+" · "+rev.length));
       }
       live.append(acts);
     } catch (e) { live.append(Banner("info", errText(e.messageKey))); }
@@ -217,7 +224,7 @@ async function scanCodeAction(journeyId) {
   if (code.length !== 6) { toast(t("validation.code")); return; }
   S.stopBusy = true; render();
   try {
-    await API.scanBooking(journeyId, code);
+    await queueOrSend("scan", "POST", "/bookings/scan", { journeyId, code });
     S.scanCode = "";
     S.stopBusy = false;
     toast(t("j_boarded"));
@@ -251,6 +258,52 @@ async function loadManifestInto(el, journeyId) {
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
+function driverOutbox() {
+  if (typeof Outbox === "undefined") return null;
+  if (!Outbox.live()) {
+    Outbox.install({
+      persist: Outbox.localPersist("rs.outbox.v1"),
+      maxAgeMs: Outbox.DEFAULT_MAX_AGE_MS,
+      send: (item) => API.request(item.method, item.path, item.body, { "idempotency-key": item.id }),
+    });
+  }
+  return Outbox.live();
+}
+
+function isOfflineErr(e) {
+  return !!(e && (e.code === "NETWORK" || e.messageKey === "error.network" || e.messageKey === "error.unavailable"));
+}
+
+async function queueOrSend(kind, method, path, body) {
+  const box = driverOutbox();
+  const item = box ? await box.enqueue({ kind, method, path, body: body || null }) : null;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    toast(t("j_queued"));
+    return { queued: true };
+  }
+  if (box) {
+    const r = await box.flush();
+    if (r.stopped === "network") { toast(t("j_queued")); return { queued: true }; }
+    const mine = box.review().find((i) => item && i.id === item.id);
+    if (mine && mine.status === "conflict") {
+      throw Object.assign(new Error(mine.lastError), { messageKey: mine.lastError });
+    }
+    return { ok: true };
+  }
+  try {
+    return await API.request(method, path, body);
+  } catch (e) {
+    if (isOfflineErr(e)) { toast(t("j_queued")); return { queued: true }; }
+    throw e;
+  }
+}
+
+async function flushDriverOutbox() {
+  const box = driverOutbox();
+  if (!box) return;
+  await box.flush();
+}
+
 async function dutyAct(fn) {
   S.stopBusy = true; render();
   try { await fn(); S.stopBusy = false; render(); }
@@ -259,7 +312,7 @@ async function dutyAct(fn) {
 
 async function cashTap(bookingId) {
   if (typeof API.cashCollected !== "function") return;
-  try { await API.cashCollected(bookingId); toast(t("cashCollected")); }
+  try { await queueOrSend("cash", "POST", "/payments/cash-collected", { bookingId }); toast(t("cashCollected")); }
   catch (e) { toast(errText(e.messageKey)); }
 }
 

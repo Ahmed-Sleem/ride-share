@@ -1360,6 +1360,174 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
 
 
+/* Driver outbox (BUILD_PLAN P7.2, DEC-099).
+   One ordered, durable queue. Replay is in seq order. Network failure
+   stops the flush so later actions cannot overtake earlier ones. A 4xx
+   conflict is surfaced, never last-write-wins. Age > maxAge → review,
+   never silent drop. Position updates for the same path coalesce. */
+(function (root) {
+  const g = root || (typeof globalThis !== "undefined" ? globalThis : this);
+  const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+  function newId() {
+    try {
+      if (g.crypto && typeof g.crypto.randomUUID === "function") return g.crypto.randomUUID();
+    } catch (_) { /* */ }
+    return "ob-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+  }
+
+  function memoryPersist(seed) {
+    let data = seed ? JSON.parse(JSON.stringify(seed)) : { seq: 0, items: [] };
+    return {
+      load: async () => JSON.parse(JSON.stringify(data)),
+      save: async (next) => { data = JSON.parse(JSON.stringify(next)); },
+      _dump: () => data,
+    };
+  }
+
+  function localPersist(key) {
+    const k = key || "rs.outbox.v1";
+    return {
+      load: async () => {
+        try {
+          const raw = g.localStorage ? g.localStorage.getItem(k) : null;
+          if (!raw) return { seq: 0, items: [] };
+          const p = JSON.parse(raw);
+          if (!p || !Array.isArray(p.items)) return { seq: 0, items: [] };
+          return p;
+        } catch (_) { return { seq: 0, items: [] }; }
+      },
+      save: async (next) => {
+        try { if (g.localStorage) g.localStorage.setItem(k, JSON.stringify(next)); } catch (_) { /* quota */ }
+      },
+    };
+  }
+
+  function createOutbox(opts) {
+    const o = opts || {};
+    const persist = o.persist || memoryPersist();
+    const now = o.now || (() => Date.now());
+    const maxAgeMs = o.maxAgeMs != null ? o.maxAgeMs : DEFAULT_MAX_AGE_MS;
+    let send = o.send || (async () => { throw Object.assign(new Error("error.network"), { code: "NETWORK", messageKey: "error.network" }); });
+    let state = { seq: 0, items: [] };
+    let flushing = false;
+
+    async function hydrate() {
+      state = await persist.load();
+      if (!state || !Array.isArray(state.items)) state = { seq: 0, items: [] };
+    }
+    async function commit() {
+      await persist.save(state);
+    }
+
+    function pending() { return state.items.filter((i) => i.status === "pending"); }
+    function review() { return state.items.filter((i) => i.status === "stale" || i.status === "conflict"); }
+
+    async function enqueue(input) {
+      await hydrate();
+      const kind = input.kind;
+      const method = (input.method || "POST").toUpperCase();
+      const path = input.path;
+      const body = input.body == null ? null : input.body;
+      if (kind === "position") {
+        const existing = state.items.find((i) => i.status === "pending" && i.kind === "position" && i.path === path);
+        if (existing) {
+          existing.body = body;
+          existing.updatedAt = now();
+          await commit();
+          return existing;
+        }
+      }
+      state.seq += 1;
+      const item = {
+        id: input.id || newId(),
+        seq: state.seq,
+        kind,
+        method,
+        path,
+        body,
+        status: "pending",
+        createdAt: now(),
+        updatedAt: now(),
+        attempts: 0,
+        lastError: null,
+      };
+      state.items.push(item);
+      await commit();
+      return item;
+    }
+
+    async function flush() {
+      if (flushing) return { stopped: "busy" };
+      flushing = true;
+      try {
+        await hydrate();
+        const ordered = state.items.filter((i) => i.status === "pending").sort((a, b) => a.seq - b.seq);
+        for (const item of ordered) {
+          if (now() - item.createdAt > maxAgeMs) {
+            item.status = "stale";
+            item.updatedAt = now();
+            await commit();
+            continue;
+          }
+          item.attempts += 1;
+          item.updatedAt = now();
+          await commit();
+          try {
+            await send(item);
+            state.items = state.items.filter((i) => i.id !== item.id);
+            await commit();
+          } catch (err) {
+            const code = err && (err.code || err.status);
+            const key = err && (err.messageKey || err.message);
+            const network = code === "NETWORK" || key === "error.network" || key === "error.unavailable" || Number(code) >= 500;
+            if (network) {
+              item.lastError = key || "error.network";
+              await commit();
+              return { stopped: "network", at: item.id };
+            }
+            item.status = "conflict";
+            item.lastError = key || String(code || "conflict");
+            await commit();
+          }
+        }
+        return { stopped: null };
+      } finally {
+        flushing = false;
+      }
+    }
+
+    async function dismiss(id) {
+      await hydrate();
+      state.items = state.items.filter((i) => i.id !== id);
+      await commit();
+    }
+
+    return {
+      enqueue, flush, dismiss, pending, review, hydrate,
+      setSend(fn) { send = fn; },
+      snapshot() { return JSON.parse(JSON.stringify(state)); },
+    };
+  }
+
+  const Outbox = {
+    DEFAULT_MAX_AGE_MS,
+    memoryPersist,
+    localPersist,
+    create: createOutbox,
+    _live: null,
+    install(opts) {
+      this._live = createOutbox(opts);
+      return this._live;
+    },
+    live() { return this._live; },
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = { Outbox, createOutbox, memoryPersist };
+  g.Outbox = Outbox;
+})(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
+
+
 /* ══════════════════════════════════════════════════════════════════════
    1. COPY — every readable string, both languages, in one place.
    ══════════════════════════════════════════════════════════════════════ */
@@ -1694,6 +1862,9 @@ en:{
   j_cat_punctuality:"Punctuality", j_cat_other:"Other", j_cat_sos:"SOS",
   j_dec_no_action:"No action", j_dec_warning:"Warning", j_dec_training:"Training",
   j_dec_suspension:"Suspension", j_dec_removal:"Permanent removal",
+  j_queued:"Saved offline — will send when you reconnect",
+  j_outboxPending:"Waiting to send",
+  j_outboxReview:"Needs review — not sent",
   support:{ booking_not_found:"That booking was not found.", bad_category:"Pick a valid category.",
     body_required:"Describe what happened.", share_expired:"This share link has expired.",
     not_found:"Incident not found.", illegal_transition:"That step is not allowed from the current state.",
@@ -2028,6 +2199,9 @@ ar:{
   j_cat_punctuality:"الالتزام بالموعد", j_cat_other:"أخرى", j_cat_sos:"استغاثة",
   j_dec_no_action:"لا إجراء", j_dec_warning:"إنذار", j_dec_training:"تدريب",
   j_dec_suspension:"إيقاف", j_dec_removal:"فصل نهائي",
+  j_queued:"حُفظ دون اتصال — سيُرسل عند عودة الشبكة",
+  j_outboxPending:"بانتظار الإرسال",
+  j_outboxReview:"يحتاج مراجعة — لم يُرسل",
   support:{ booking_not_found:"هذا الحجز غير موجود.", bad_category:"اختر تصنيفًا صالحًا.",
     body_required:"صف ما حدث.", share_expired:"انتهت صلاحية رابط المشاركة.",
     not_found:"الحادثة غير موجودة.", illegal_transition:"هذه الخطوة غير مسموحة من الحالة الحالية.",
@@ -2846,11 +3020,14 @@ const API = {
     try { localStorage.removeItem("rs.user"); } catch {}
   },
 
-  async request(method, path, body) {
+  async request(method, path, body, extraHeaders) {
     if (typeof fetch !== "function") throw new ApiError("NETWORK", "error.network", null);
     const headers = { "content-type": "application/json" };
     const token = this.access();
     if (token) headers["authorization"] = "Bearer " + token;
+    if (extraHeaders && typeof extraHeaders === "object") {
+      for (const [k, v] of Object.entries(extraHeaders)) if (v != null) headers[k] = String(v);
+    }
     let res;
     try {
       res = await fetch(this.base + path, {
@@ -4852,6 +5029,7 @@ async function makeShare(id){
 }
 
 
+
 /* ══════════════════════════════════════════════════════════════════════
    WALLET & PAYMENTS screens (Path A — money). Owned exclusively by the
    money path (docs/planning/PATH_A_MONEY.md). Everything renders from the
@@ -5229,15 +5407,22 @@ async function loadDriverJourneyInto(pick, scan, list) {
       const acts = $("div",{class:"row wrap gap2"});
       const st = (journeys.find((x)=>x.id===jid)||{}).status;
       if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
-        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>API.startJourney(jid))}));
+        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>queueOrSend("start","POST",`/journeys/${jid}/start`))}));
       if (st === "IN_PROGRESS") {
-        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.arriveStop(jid))}));
-        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.completeJourney(jid))}));
+        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("arrive","POST",`/journeys/${jid}/arrive`))}));
+        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("complete","POST",`/journeys/${jid}/complete`))}));
         acts.append(Btn({label:t("sos"), kind:"danger", driver:true, on:()=>openSheet("sos")}));
         acts.append(Btn({label:t("j_abortRide"), kind:"danger", on:()=>{
           const reason = window.prompt(t("j_abortWhy")) || "";
-          if (reason) dutyAct(()=>API.abortJourney(jid, reason));
+          if (reason) dutyAct(()=>queueOrSend("abort","POST",`/journeys/${jid}/abort`,{ reason }));
         }}));
+      }
+      const box = driverOutbox();
+      if (box) {
+        const pend = box.pending().length;
+        const rev = box.review();
+        if (pend) live.prepend(Banner("info", t("j_outboxPending")+" · "+pend));
+        if (rev.length) live.prepend(Banner("warn", t("j_outboxReview")+" · "+rev.length));
       }
       live.append(acts);
     } catch (e) { live.append(Banner("info", errText(e.messageKey))); }
@@ -5261,7 +5446,7 @@ async function scanCodeAction(journeyId) {
   if (code.length !== 6) { toast(t("validation.code")); return; }
   S.stopBusy = true; render();
   try {
-    await API.scanBooking(journeyId, code);
+    await queueOrSend("scan", "POST", "/bookings/scan", { journeyId, code });
     S.scanCode = "";
     S.stopBusy = false;
     toast(t("j_boarded"));
@@ -5295,6 +5480,52 @@ async function loadManifestInto(el, journeyId) {
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
+function driverOutbox() {
+  if (typeof Outbox === "undefined") return null;
+  if (!Outbox.live()) {
+    Outbox.install({
+      persist: Outbox.localPersist("rs.outbox.v1"),
+      maxAgeMs: Outbox.DEFAULT_MAX_AGE_MS,
+      send: (item) => API.request(item.method, item.path, item.body, { "idempotency-key": item.id }),
+    });
+  }
+  return Outbox.live();
+}
+
+function isOfflineErr(e) {
+  return !!(e && (e.code === "NETWORK" || e.messageKey === "error.network" || e.messageKey === "error.unavailable"));
+}
+
+async function queueOrSend(kind, method, path, body) {
+  const box = driverOutbox();
+  const item = box ? await box.enqueue({ kind, method, path, body: body || null }) : null;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    toast(t("j_queued"));
+    return { queued: true };
+  }
+  if (box) {
+    const r = await box.flush();
+    if (r.stopped === "network") { toast(t("j_queued")); return { queued: true }; }
+    const mine = box.review().find((i) => item && i.id === item.id);
+    if (mine && mine.status === "conflict") {
+      throw Object.assign(new Error(mine.lastError), { messageKey: mine.lastError });
+    }
+    return { ok: true };
+  }
+  try {
+    return await API.request(method, path, body);
+  } catch (e) {
+    if (isOfflineErr(e)) { toast(t("j_queued")); return { queued: true }; }
+    throw e;
+  }
+}
+
+async function flushDriverOutbox() {
+  const box = driverOutbox();
+  if (!box) return;
+  await box.flush();
+}
+
 async function dutyAct(fn) {
   S.stopBusy = true; render();
   try { await fn(); S.stopBusy = false; render(); }
@@ -5303,7 +5534,7 @@ async function dutyAct(fn) {
 
 async function cashTap(bookingId) {
   if (typeof API.cashCollected !== "function") return;
-  try { await API.cashCollected(bookingId); toast(t("cashCollected")); }
+  try { await queueOrSend("cash", "POST", "/payments/cash-collected", { bookingId }); toast(t("cashCollected")); }
   catch (e) { toast(errText(e.messageKey)); }
 }
 
@@ -6276,6 +6507,7 @@ function boot(){
   S.view="boot"; render();
   loadMapsConfig();                             // fire-and-forget, never blocks boot
   flushFieldQueue();                            // field captures saved offline upload now
+  if (typeof flushDriverOutbox === "function") flushDriverOutbox();
   const minDelay = new Promise(r=>setTimeout(r, 1500));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
@@ -6319,7 +6551,10 @@ async function loadMapsConfig(){
 }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
-window.addEventListener("online", ()=>{ flushFieldQueue(); }); // offline captures go up on reconnect
+window.addEventListener("online", ()=>{
+  flushFieldQueue();
+  if (typeof flushDriverOutbox === "function") flushDriverOutbox();
+});
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
@@ -6328,7 +6563,7 @@ Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
                         setResendUntil, setLockedUntil, cooldownButton,
-                        flushFieldQueue,
+                        flushFieldQueue, flushDriverOutbox, queueOrSend, Outbox,
                         normalizeText, buildRiderIndex, searchRoutes, matchesQuery });
 
 boot();

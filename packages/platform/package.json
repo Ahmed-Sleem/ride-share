@@ -5,6 +5,6 @@
   "description": "One Platform interface — camera, GPS, storage, share, push. Web uses browser APIs; Capacitor uses native plugins at runtime. Screens import this, never @capacitor/* (DEC-176, P7.1).",
   "main": "src/index.js",
   "scripts": {
-    "test": "node --test src/index.test.js"
+    "test": "node --test src/index.test.js src/outbox.test.js"
   }
 }

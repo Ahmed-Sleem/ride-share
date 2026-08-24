@@ -139,6 +139,12 @@ payload jsonb DEFAULT '{}'::jsonb NOT NULL,
 actor_id uuid,
 occurred_at timestamp with time zone DEFAULT now() NOT NULL
 );
+CREATE TABLE public.idempotency_receipts (
+key text NOT NULL,
+actor_id uuid NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+body jsonb NOT NULL
+);
 CREATE TABLE public.incidents (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 kind text NOT NULL,
@@ -374,6 +380,8 @@ ALTER TABLE ONLY public.in_app_notifications
 ADD CONSTRAINT in_app_notifications_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.incident_events
 ADD CONSTRAINT incident_events_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.idempotency_receipts
+ADD CONSTRAINT idempotency_receipts_pkey PRIMARY KEY (key);
 ALTER TABLE ONLY public.incidents
 ADD CONSTRAINT incidents_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
@@ -438,6 +446,7 @@ CREATE INDEX bookings_rider_idx ON public.bookings USING btree (rider_user_id, c
 CREATE INDEX in_app_notifications_user_idx ON public.in_app_notifications USING btree (user_id, created_at DESC);
 CREATE INDEX incident_events_incident_idx ON public.incident_events USING btree (incident_id, occurred_at);
 CREATE INDEX incidents_reporter_idx ON public.incidents USING btree (reporter_user_id, created_at DESC);
+CREATE INDEX idempotency_receipts_actor_idx ON public.idempotency_receipts USING btree (actor_id, created_at DESC);
 CREATE INDEX incidents_status_idx ON public.incidents USING btree (status, created_at DESC);
 CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
 CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);

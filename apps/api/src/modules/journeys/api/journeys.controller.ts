@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nest
 import { IsBoolean, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
 import { JourneysService } from '../application/journeys.service.js';
+import { IdempotencyService, readIdempotencyKey } from '../application/idempotency.service.js';
 import { IdentityGuard } from '../../../security/identity.guard.js';
 import type { Actor } from '../../identity/contracts/types.js';
 
@@ -20,7 +21,10 @@ type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
 export class JourneysController {
-  constructor(private readonly journeys: JourneysService) {}
+  constructor(
+    private readonly journeys: JourneysService,
+    private readonly idem: IdempotencyService,
+  ) {}
 
   @Post('journeys/claim')
   @UseGuards(IdentityGuard)
@@ -62,19 +66,19 @@ export class JourneysController {
   @Post('journeys/:id/start')
   @UseGuards(IdentityGuard)
   start(@Req() req: ReqWithActor, @Param('id') id: string) {
-    return this.journeys.start(req.actor!, id);
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.journeys.start(req.actor!, id));
   }
 
   @Post('journeys/:id/position')
   @UseGuards(IdentityGuard)
   position(@Req() req: ReqWithActor, @Param('id') id: string, @Body() dto: PositionDto) {
-    return this.journeys.position(req.actor!, id, dto.lat, dto.lng);
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.journeys.position(req.actor!, id, dto.lat, dto.lng));
   }
 
   @Post('journeys/:id/arrive')
   @UseGuards(IdentityGuard)
   arrive(@Req() req: ReqWithActor, @Param('id') id: string) {
-    return this.journeys.arriveNext(req.actor!, id);
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.journeys.arriveNext(req.actor!, id));
   }
 
   @Get('journeys/:id/progress')

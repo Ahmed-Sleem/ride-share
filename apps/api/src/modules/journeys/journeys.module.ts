@@ -7,11 +7,13 @@ import { Global, Module } from '@nestjs/common';
 import { JourneysController } from './api/journeys.controller.js';
 import { JourneysService } from './application/journeys.service.js';
 import { JourneysRepository } from './infra/journeys.repository.js';
+import { IdempotencyRepository } from './infra/idempotency.repository.js';
+import { IdempotencyService } from './application/idempotency.service.js';
 
 @Global()
 @Module({
   controllers: [JourneysController],
-  providers: [JourneysService, JourneysRepository],
-  exports: [JourneysService],
+  providers: [JourneysService, JourneysRepository, IdempotencyRepository, IdempotencyService],
+  exports: [JourneysService, IdempotencyService],
 })
 export class JourneysModule {}

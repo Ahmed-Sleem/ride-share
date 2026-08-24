@@ -1204,6 +1204,18 @@ group("PATH A — RouteMap renders data-bound stops with an accessible list");
   ok("no highlight → no boarding chip anywhere", !/Boarding here/.test(el3.textContent));
 }
 
+/* ===== Path B — P7.2 driver outbox ===== */
+group("PATH B — driver outbox is wired and bilingual");
+{
+  const t=boot();
+  ok("Outbox is on the window", typeof t.w.Outbox === "object" && typeof t.w.Outbox.create === "function");
+  ok("queueOrSend exists", typeof t.w.queueOrSend === "function");
+  t.w.S.lang="en"; const en=t.w.eval("t(\"j_queued\")");
+  t.w.S.lang="ar"; const ar=t.w.eval("t(\"j_queued\")");
+  t.w.S.lang="en";
+  ok("j_queued both languages", en!=="j_queued" && ar!=="j_queued" && en!==ar);
+}
+
 /* ===== Path B — P7.1 Platform (one codebase) ===== */
 group("PATH B — Platform is the only native seam");
 {

@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/comm
 import { IsInt, IsString, Max, Min, MinLength } from 'class-validator';
 import type { FastifyRequest } from 'fastify';
 import { BookingsService } from '../application/bookings.service.js';
+import { IdempotencyService, readIdempotencyKey } from '../../journeys/contracts/public.js';
 import { IdentityGuard } from '../../../security/identity.guard.js';
 import type { Actor } from '../../identity/contracts/types.js';
 
@@ -25,7 +26,10 @@ type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
 export class BookingsController {
-  constructor(private readonly bookings: BookingsService) {}
+  constructor(
+    private readonly bookings: BookingsService,
+    private readonly idem: IdempotencyService,
+  ) {}
 
   @Post('bookings')
   @UseGuards(IdentityGuard)
@@ -48,7 +52,7 @@ export class BookingsController {
   @Post('bookings/scan')
   @UseGuards(IdentityGuard)
   scan(@Req() req: ReqWithActor, @Body() dto: ScanDto) {
-    return this.bookings.scan(req.actor!, dto);
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.bookings.scan(req.actor!, dto));
   }
 
   @Get('journeys/:id/manifest')
@@ -72,7 +76,7 @@ export class BookingsController {
   @Post('journeys/:id/complete')
   @UseGuards(IdentityGuard)
   finish(@Req() req: ReqWithActor, @Param('id') id: string) {
-    return this.bookings.finishJourney(req.actor!, id);
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.bookings.finishJourney(req.actor!, id));
   }
 
   @Post('journeys/:id/abort')

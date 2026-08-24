@@ -25,11 +25,14 @@ const API = {
     try { localStorage.removeItem("rs.user"); } catch {}
   },
 
-  async request(method, path, body) {
+  async request(method, path, body, extraHeaders) {
     if (typeof fetch !== "function") throw new ApiError("NETWORK", "error.network", null);
     const headers = { "content-type": "application/json" };
     const token = this.access();
     if (token) headers["authorization"] = "Bearer " + token;
+    if (extraHeaders && typeof extraHeaders === "object") {
+      for (const [k, v] of Object.entries(extraHeaders)) if (v != null) headers[k] = String(v);
+    }
     let res;
     try {
       res = await fetch(this.base + path, {

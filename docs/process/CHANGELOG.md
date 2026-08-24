@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2026-08-24 — P7.2 driver outbox (Path B)
+
+- One ordered durable outbox (`packages/platform/src/outbox.js`): airplane-mode
+  enqueue, persist across kill, replay in seq, stop on network so later
+  actions cannot overtake, 4xx conflicts surfaced, age → review not drop,
+  position coalesce (explicit rule).
+- Server `idempotency_receipts` (migration **0022**): same actor+key returns
+  the first body. Scan/start/arrive/complete/abort/position wrap the receipt.
+- Driver scan/start/arrive/complete/abort/cash go through `queueOrSend`.
+  Flush on boot and `online`. EN+AR `j_queued` / pending / review banners.
+
 ## 2026-08-24 — Debug APK from CI (Path B)
 
 - `apps/mobile/scripts/make-apk.sh` + CI job **Android debug APK**.
