@@ -103,6 +103,7 @@ code text NOT NULL,
 status text DEFAULT 'RESERVED'::text NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
+alight_requested_at timestamp with time zone,
 CONSTRAINT bookings_fare_minor_check CHECK ((fare_minor >= 0)),
 CONSTRAINT bookings_seats_check CHECK (((seats >= 1) AND (seats <= 4))),
 CONSTRAINT bookings_status_check CHECK ((status = ANY (ARRAY['RESERVED'::text, 'CONFIRMED'::text, 'ON_BOARD'::text, 'COMPLETED'::text, 'CANCELLED'::text, 'NO_SHOW'::text])))
@@ -117,6 +118,19 @@ created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
 CONSTRAINT driver_profiles_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'under_review'::text, 'approved'::text, 'rejected'::text])))
 );
+CREATE TABLE public.in_app_notifications (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+user_id uuid NOT NULL,
+kind text NOT NULL,
+title_en text NOT NULL,
+title_ar text NOT NULL,
+body_en text NOT NULL,
+body_ar text NOT NULL,
+ref_type text,
+ref_id uuid,
+read_at timestamp with time zone,
+created_at timestamp with time zone DEFAULT now() NOT NULL
+);
 CREATE TABLE public.journeys (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 route_id uuid NOT NULL,
@@ -128,6 +142,11 @@ committed boolean DEFAULT true NOT NULL,
 seats_total integer DEFAULT 14 NOT NULL,
 created_at timestamp with time zone DEFAULT now() NOT NULL,
 updated_at timestamp with time zone DEFAULT now() NOT NULL,
+last_lat double precision,
+last_lng double precision,
+last_position_at timestamp with time zone,
+arrived_stop_index integer DEFAULT 0 NOT NULL,
+CONSTRAINT journeys_arrived_stop_index_check CHECK ((arrived_stop_index >= 0)),
 CONSTRAINT journeys_seats_total_check CHECK (((seats_total >= 1) AND (seats_total <= 60))),
 CONSTRAINT journeys_status_check CHECK ((status = ANY (ARRAY['CLAIMED'::text, 'OPEN_FOR_BOOKING'::text, 'LOCKED'::text, 'IN_PROGRESS'::text, 'COMPLETED'::text, 'CANCELLED'::text, 'ABORTED'::text])))
 );
@@ -310,6 +329,8 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_key UNIQUE (user_id);
+ALTER TABLE ONLY public.in_app_notifications
+ADD CONSTRAINT in_app_notifications_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
@@ -365,6 +386,7 @@ ADD CONSTRAINT verification_codes_pkey PRIMARY KEY (id);
 CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC);
 CREATE INDEX bookings_journey_idx ON public.bookings USING btree (journey_id);
 CREATE INDEX bookings_rider_idx ON public.bookings USING btree (rider_user_id, created_at DESC);
+CREATE INDEX in_app_notifications_user_idx ON public.in_app_notifications USING btree (user_id, created_at DESC);
 CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
 CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);
 CREATE INDEX ledger_entries_credit_idx ON public.ledger_entries USING btree (credit_account, created_at DESC);
@@ -396,6 +418,8 @@ ALTER TABLE ONLY public.bookings
 ADD CONSTRAINT bookings_rider_user_id_fkey FOREIGN KEY (rider_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.in_app_notifications
+ADD CONSTRAINT in_app_notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_driver_user_id_fkey FOREIGN KEY (driver_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.journeys

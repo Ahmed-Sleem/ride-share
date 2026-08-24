@@ -60,9 +60,9 @@
 
 ## P3.9 — Live journey (minimal)
 
-- [ ] Driver journey screen: manifest, next stop, "arrived", end journey (schedule adherence per DEC-119 is tracked as config MaxScheduleSlip).
-- [ ] Rider waiting screen: boarding code + "your ride is arriving" status.
-- [ ] Tests: journey state machine transitions.
+- [x] Driver journey screen: manifest, next stop, "arrived", end journey (schedule adherence per DEC-119 is tracked as config MaxScheduleSlip).
+- [x] Rider waiting screen: boarding code + "your ride is arriving" status.
+- [x] Tests: journey state machine transitions.
 
 ## Verification
 

@@ -17,6 +17,10 @@ class ScanDto {
   @IsString() @MinLength(1) code!: string;
 }
 
+class AbortDto {
+  @IsString() @MinLength(1) reason!: string;
+}
+
 type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
@@ -51,5 +55,29 @@ export class BookingsController {
   @UseGuards(IdentityGuard)
   manifest(@Req() req: ReqWithActor, @Param('id') id: string) {
     return this.bookings.manifest(req.actor!, id);
+  }
+
+  @Post('bookings/:id/alight')
+  @UseGuards(IdentityGuard)
+  alight(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.bookings.requestAlight(req.actor!, id);
+  }
+
+  @Get('bookings/:id/live')
+  @UseGuards(IdentityGuard)
+  live(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.bookings.liveForRider(req.actor!, id);
+  }
+
+  @Post('journeys/:id/complete')
+  @UseGuards(IdentityGuard)
+  finish(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.bookings.finishJourney(req.actor!, id);
+  }
+
+  @Post('journeys/:id/abort')
+  @UseGuards(IdentityGuard)
+  abort(@Req() req: ReqWithActor, @Param('id') id: string, @Body() dto: AbortDto) {
+    return this.bookings.abortJourney(req.actor!, id, dto.reason);
   }
 }

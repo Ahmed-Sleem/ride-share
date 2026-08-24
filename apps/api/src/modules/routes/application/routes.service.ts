@@ -168,6 +168,11 @@ export class RoutesService {
     return stops.some((s) => s.stop_id === stopId);
   }
 
+  /** Ordered stops for a live journey (internal read). */
+  async stopsOnRoute(routeId: string) {
+    return this.routes.stops(routeId);
+  }
+
   /** Slots for a route (driver-facing read — no auth; claims are protected). */
   async slotsForClaim(routeId: string, fromDate: string, toDate: string): Promise<SlotRow[]> {
     return this.routes.listSlots(routeId, fromDate, toDate);

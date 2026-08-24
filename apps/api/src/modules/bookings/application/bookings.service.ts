@@ -2,11 +2,12 @@
    (DEC-056); seat inventory is enforced by the DB trigger, with a friendly
    pre-check for a clean error; a cancelled booking frees its seats because the
    guard only counts non-cancelled rows. */
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { BookingsRepository } from '../infra/bookings.repository.js';
 import { JourneysService } from '../../journeys/contracts/public.js';
 import { RoutesService } from '../../routes/contracts/public.js';
 import { AuditService } from '../../audit/contracts/public.js';
+import { NotificationsService } from '../../notifications/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import { CONFIG, type Env } from '../../../config/env.js';
 import { newBookingCode } from '../domain/booking.js';
@@ -19,9 +20,10 @@ export class BookingsService {
   constructor(
     @Inject(CONFIG) private readonly env: Env,
     private readonly bookings: BookingsRepository,
-    private readonly journeys: JourneysService,
+    @Inject(forwardRef(() => JourneysService)) private readonly journeys: JourneysService,
     private readonly routes: RoutesService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly notes: NotificationsService,
   ) {}
 
   /** Book seats on a journey (P3.6). Boarding is at one stop on the route;
@@ -147,6 +149,60 @@ export class BookingsService {
       throw new ForbiddenException({ message_key: 'journeys.not_yours' });
     }
     return this.bookings.manifest(journeyId);
+  }
+
+  async requestAlight(actor: Actor, bookingId: string): Promise<{ ok: true }> {
+    assertCan(actor.role as unknown as Role, Capability.BOOK_RIDE);
+    const booking = await this.bookings.findById(bookingId);
+    if (!booking) throw new NotFoundException({ message_key: 'bookings.not_found' });
+    if (booking.rider_user_id !== actor.id) {
+      throw new ForbiddenException({ message_key: 'bookings.not_yours' });
+    }
+    if (booking.status !== 'ON_BOARD') {
+      throw new ConflictException({ message_key: 'bookings.cannot_alight' });
+    }
+    await this.bookings.requestAlight(bookingId);
+    await this.audit.record(actor, 'booking.alight', { targetType: 'booking', targetId: bookingId });
+    return { ok: true };
+  }
+
+  async completeBoardedOn(journeyId: string): Promise<void> {
+    await this.bookings.completeOnBoard(journeyId);
+  }
+
+  async finishJourney(actor: Actor, journeyId: string): Promise<{ ok: true }> {
+    await this.journeys.complete(actor, journeyId);
+    await this.bookings.completeOnBoard(journeyId);
+    return { ok: true };
+  }
+
+  async abortJourney(actor: Actor, journeyId: string, reason: string): Promise<{ ok: true }> {
+    await this.journeys.abort(actor, journeyId, reason);
+    const riders = await this.bookings.riderIdsOnJourney(journeyId);
+    for (const uid of riders) {
+      await this.notes.notify({
+        userId: uid, kind: 'journey_aborted',
+        titleEn: 'Your ride was cancelled', titleAr: 'أُلغيت رحلتك',
+        bodyEn: reason || 'The driver could not complete this departure.',
+        bodyAr: reason || 'تعذّر على السائق إكمال هذا الموعد.',
+        refType: 'journey', refId: journeyId,
+      });
+    }
+    return { ok: true };
+  }
+
+  async riderIdsOn(journeyId: string): Promise<string[]> {
+    return this.bookings.riderIdsOnJourney(journeyId);
+  }
+
+  async liveForRider(actor: Actor, bookingId: string) {
+    assertCan(actor.role as unknown as Role, Capability.BOOK_RIDE);
+    const booking = await this.bookings.findById(bookingId);
+    if (!booking) throw new NotFoundException({ message_key: 'bookings.not_found' });
+    if (booking.rider_user_id !== actor.id) {
+      throw new ForbiddenException({ message_key: 'bookings.not_yours' });
+    }
+    return this.journeys.progressForRider(booking);
   }
 
   async getBookingForPayment(bookingId: string) {

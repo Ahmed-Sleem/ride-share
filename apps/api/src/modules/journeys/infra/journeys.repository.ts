@@ -27,7 +27,8 @@ export class JourneysRepository {
   async findById(id: string): Promise<JourneyRow | null> {
     const { rows } = await this.pool.query<JourneyRow>(
       `SELECT j.id, j.route_id, j.slot_id, j.driver_user_id, j.vehicle_id, j.status,
-              j.committed, j.seats_total, j.created_at,
+              j.committed, j.seats_total, j.created_at, j.arrived_stop_index,
+              j.last_lat, j.last_lng, j.last_position_at,
               r.code AS route_code, r.name_en AS route_name_en, r.name_ar AS route_name_ar,
               s.service_date::text AS service_date, s.departs_at::text AS departs_at
        FROM journeys j
@@ -40,7 +41,8 @@ export class JourneysRepository {
   async byDriver(driverUserId: string): Promise<JourneyRow[]> {
     const { rows } = await this.pool.query<JourneyRow>(
       `SELECT j.id, j.route_id, j.slot_id, j.driver_user_id, j.vehicle_id, j.status,
-              j.committed, j.seats_total, j.created_at,
+              j.committed, j.seats_total, j.created_at, j.arrived_stop_index,
+              j.last_lat, j.last_lng, j.last_position_at,
               r.code AS route_code, r.name_en AS route_name_en, r.name_ar AS route_name_ar,
               s.service_date::text AS service_date, s.departs_at::text AS departs_at
        FROM journeys j
@@ -53,6 +55,17 @@ export class JourneysRepository {
 
   async setStatus(id: string, status: JourneyStatus): Promise<void> {
     await this.pool.query('UPDATE journeys SET status = $1, updated_at = now() WHERE id = $2', [status, id]);
+  }
+
+  async setPosition(id: string, lat: number, lng: number): Promise<void> {
+    await this.pool.query(
+      `UPDATE journeys SET last_lat = $2, last_lng = $3, last_position_at = now(), updated_at = now()
+       WHERE id = $1`, [id, lat, lng]);
+  }
+
+  async setArrivedIndex(id: string, index: number): Promise<void> {
+    await this.pool.query(
+      `UPDATE journeys SET arrived_stop_index = $2, updated_at = now() WHERE id = $1`, [id, index]);
   }
 
   /** Release = CANCELLED before departure (the only "un-claim" in the slice). */
@@ -68,7 +81,8 @@ export class JourneysRepository {
     if (routeId) { where += ' AND j.route_id = $3'; params.push(routeId); }
     const { rows } = await this.pool.query<JourneyRow>(
       `SELECT j.id, j.route_id, j.slot_id, j.driver_user_id, j.vehicle_id, j.status,
-              j.committed, j.seats_total, j.created_at,
+              j.committed, j.seats_total, j.created_at, j.arrived_stop_index,
+              j.last_lat, j.last_lng, j.last_position_at,
               r.code AS route_code, r.name_en AS route_name_en, r.name_ar AS route_name_ar,
               s.service_date::text AS service_date, s.departs_at::text AS departs_at
        FROM journeys j

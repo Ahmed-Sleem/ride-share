@@ -58,6 +58,7 @@ export const envSchema = {
   MIN_CLAIM_LEAD_MINUTES: z.coerce.number().int().min(0).max(240).default(30),
   BOARDING_WINDOW_BEFORE_MIN: z.coerce.number().int().min(0).max(180).default(15),
   BOARDING_WINDOW_AFTER_MIN: z.coerce.number().int().min(0).max(180).default(30),
+  MAX_SCHEDULE_SLIP_MIN: z.coerce.number().int().min(0).max(120).default(10),
 
   // ── payments (Paymob, P3.7 Path A — optional until keys arrive) ──────
   // PAYMOB_ENABLED is the master feature flag (DEC-204): the Paymob option

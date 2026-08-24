@@ -10,6 +10,7 @@ import { DriversService } from '../../drivers/contracts/public.js';
 import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import { assertJourneyTransition } from '../domain/journey.js';
+import { exceedsMaxSlip, nextStopAfter, plannedArrival, slipMinutes, type PlannedStop } from '../domain/slip.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import type { JourneyRow } from '../contracts/types.js';
 
@@ -20,7 +21,7 @@ export class JourneysService {
     private readonly journeys: JourneysRepository,
     private readonly routes: RoutesService,
     private readonly drivers: DriversService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
   ) {}
 
   /** Claim a published slot (creates the journey in CLAIMED). Requires an
@@ -152,6 +153,108 @@ export class JourneysService {
     await this.journeys.setStatus(journeyId, 'OPEN_FOR_BOOKING');
     await this.audit.record(actor, 'journey.open', { targetType: 'journey', targetId: journeyId });
     return { ok: true };
+  }
+
+  private async ownDuty(actor: Actor, journeyId: string) {
+    assertCan(actor.role as unknown as Role, Capability.RUN_DUTY);
+    const journey = await this.journeys.findById(journeyId);
+    if (!journey) throw new NotFoundException({ message_key: 'journeys.not_found' });
+    if (journey.driver_user_id !== actor.id) {
+      throw new ForbiddenException({ message_key: 'journeys.not_yours' });
+    }
+    return journey;
+  }
+
+  async start(actor: Actor, journeyId: string): Promise<{ ok: true }> {
+    const journey = await this.ownDuty(actor, journeyId);
+    let from = journey.status;
+    if (from === 'OPEN_FOR_BOOKING') {
+      assertJourneyTransition('OPEN_FOR_BOOKING', 'LOCKED');
+      await this.journeys.setStatus(journeyId, 'LOCKED');
+      from = 'LOCKED';
+    }
+    assertJourneyTransition(from, 'IN_PROGRESS');
+    await this.journeys.setStatus(journeyId, 'IN_PROGRESS');
+    await this.audit.record(actor, 'journey.start', { targetType: 'journey', targetId: journeyId });
+    return { ok: true };
+  }
+
+  async complete(actor: Actor, journeyId: string): Promise<{ ok: true }> {
+    const journey = await this.ownDuty(actor, journeyId);
+    assertJourneyTransition(journey.status, 'COMPLETED');
+    await this.journeys.setStatus(journeyId, 'COMPLETED');
+    await this.audit.record(actor, 'journey.complete', { targetType: 'journey', targetId: journeyId });
+    return { ok: true };
+  }
+
+  async abort(actor: Actor, journeyId: string, reason: string): Promise<{ ok: true }> {
+    const journey = await this.ownDuty(actor, journeyId);
+    const to = journey.status === 'IN_PROGRESS' ? 'ABORTED' : 'CANCELLED';
+    assertJourneyTransition(journey.status, to);
+    await this.journeys.setStatus(journeyId, to);
+    await this.audit.record(actor, 'journey.abort', {
+      targetType: 'journey', targetId: journeyId, after: { to, reason },
+    });
+    return { ok: true };
+  }
+
+  async position(actor: Actor, journeyId: string, lat: number, lng: number): Promise<{ ok: true }> {
+    await this.ownDuty(actor, journeyId);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new ConflictException({ message_key: 'journeys.bad_position' });
+    }
+    await this.journeys.setPosition(journeyId, lat, lng);
+    return { ok: true };
+  }
+
+  async arriveNext(actor: Actor, journeyId: string): Promise<{ ok: true; arrivedIndex: number }> {
+    const journey = await this.ownDuty(actor, journeyId);
+    if (journey.status !== 'IN_PROGRESS') {
+      throw new ConflictException({ message_key: 'journeys.not_in_progress' });
+    }
+    const next = await this.nextStopInfo(journey);
+    if (next.exceedsSlip) {
+      throw new ConflictException({ message_key: 'journeys.over_slip' });
+    }
+    const idx = next.stop ? next.stop.position : (journey.arrived_stop_index ?? 0);
+    await this.journeys.setArrivedIndex(journeyId, idx);
+    await this.audit.record(actor, 'journey.arrive', { targetType: 'journey', targetId: journeyId, after: { idx } });
+    return { ok: true, arrivedIndex: idx };
+  }
+
+  async progress(actor: Actor, journeyId: string) {
+    const journey = await this.ownDuty(actor, journeyId);
+    return this.nextStopInfo(journey);
+  }
+
+  async progressForRider(booking: { journey_id: string; boarding_stop_id: string; code: string; status: string }) {
+    const journey = await this.journeys.findById(booking.journey_id);
+    if (!journey) throw new NotFoundException({ message_key: 'journeys.not_found' });
+    const info = await this.nextStopInfo(journey);
+    const arriving = journey.status === 'IN_PROGRESS' && info.stop?.stopId === booking.boarding_stop_id;
+    return { journey, ...info, arriving, code: booking.code, bookingStatus: booking.status };
+  }
+
+  private async nextStopInfo(journey: JourneyRow) {
+    const rows = await this.routes.stopsOnRoute(journey.route_id);
+    const planned: PlannedStop[] = rows.map((s) => ({
+      stopId: s.stop_id, position: s.position, runMinutes: s.run_minutes,
+      nameEn: s.stop_name_en ?? '', nameAr: s.stop_name_ar ?? '',
+    }));
+    const stop = nextStopAfter(planned, journey.arrived_stop_index ?? 0);
+    const departs = await this.routes.slotDepartureInstant(journey.slot_id);
+    let slip = 0;
+    if (stop && departs) {
+      slip = slipMinutes(plannedArrival(departs, stop.runMinutes), new Date());
+    }
+    const max = this.env.MAX_SCHEDULE_SLIP_MIN;
+    return {
+      stop,
+      slipMinutes: slip,
+      maxSlip: max,
+      exceedsSlip: exceedsMaxSlip(slip, max),
+      status: journey.status,
+    };
   }
 }
 

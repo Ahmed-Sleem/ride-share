@@ -11,6 +11,10 @@ export interface JourneyRow {
   committed: boolean;
   seats_total: number;
   created_at: Date;
+  arrived_stop_index?: number;
+  last_lat?: number | null;
+  last_lng?: number | null;
+  last_position_at?: Date | null;
   // joined for display
   route_code?: string;
   route_name_en?: string;

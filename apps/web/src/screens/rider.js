@@ -238,8 +238,43 @@ function riderBooked(){                                       // R-15 / R-21 —
   return w;
 }
 
-function riderWaiting(){ return comingSoonRider(); }          // R-20 (live tracking — P3.9)
-function riderOnboard(){ return comingSoonRider(); }          // R-22 (live journey — P3.9)
+function riderWaiting(){                                      // R-20
+  return riderLiveScreen("waiting");
+}
+function riderOnboard(){                                      // R-22
+  return riderLiveScreen("onboard");
+}
+
+function riderLiveScreen(mode) {
+  const w=$("div",{class:"main"});
+  const box=$("div",{id:"rider-live"});
+  w.append(box);
+  loadRiderLive(box, mode);
+  return w;
+}
+
+async function loadRiderLive(el, mode) {
+  if (!el) return;
+  el.innerHTML = "";
+  const b = S.lastBooking || (S.tripsCache || []).find((x) => x.status === "ON_BOARD" || x.status === "CONFIRMED" || x.status === "RESERVED");
+  if (!b || !b.id) { el.append(Empty("clock", t("j_waiting"), t("noTripsBody"))); return; }
+  try {
+    const live = await API.bookingLive(b.id);
+    if (live.code) el.append(QRPanel({code:String(live.code)}));
+    if (live.arriving) el.append(Banner("ok", t("j_arriving")));
+    else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+    if (live.stop) {
+      const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
+      el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+    }
+    if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
+      el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
+        try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
+        catch(e){ toast(errText(e.messageKey)); }
+      }}));
+    }
+  } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
 
 function comingSoonRider(){
   const w=$("div",{class:"main"});

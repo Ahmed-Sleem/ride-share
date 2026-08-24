@@ -33,6 +33,7 @@ class FakeRoutes {
   slot: SlotRow | null = { id: 's1', route_id: 'r1', service_date: '2026-09-01', departs_at: '12:00', required_vehicles: 1, created_at: new Date() };
   async getSlotById(_id: string) { return this.slot; }
   async slotDepartureInstant(_id: string) { return this.slot ? new Date(`${this.slot.service_date}T${this.slot.departs_at}:00+02:00`) : null; }
+  async stopsOnRoute() { return []; }
 }
 class FakeDrivers {
   mode: 'ok' | 'not_approved' | 'not_yours' | 'vehicle_not_approved' = 'ok';
@@ -52,6 +53,7 @@ const env = () => ({
   AUTH_OTP_BYPASS: 'false', STOP_MIN_SPACING_M: 100, STOP_MAX_GAP_M: 1000,
   STOP_MAX_FIX_ACCURACY_M: 20, PHOTO_STORAGE_DIR: '/tmp/rs-photos-test', PHOTO_MAX_BYTES: 8_000_000,
   ROUTE_SPEED_KMH: 20, VEHICLE_SEATS: 14, MIN_CLAIM_LEAD_MINUTES: 30,
+  BOARDING_WINDOW_BEFORE_MIN: 15, BOARDING_WINDOW_AFTER_MIN: 30, MAX_SCHEDULE_SLIP_MIN: 10,
 }) as unknown as Env;
 
 function setup() {
@@ -132,6 +134,31 @@ test('openForBooking transitions CLAIMED → OPEN_FOR_BOOKING', async () => {
   const j = await svc.claimSlot(driver, 's1', 'v1');
   await svc.openForBooking(driver, j.id);
   assert.equal((await svc.myJourneys(driver)).find((x) => x.id === j.id)!.status, 'OPEN_FOR_BOOKING');
+});
+
+test('start from OPEN locks then goes IN_PROGRESS; complete is legal', async () => {
+  const { svc } = setup();
+  const j = await svc.claimSlot(driver, 's1', 'v1');
+  await svc.openForBooking(driver, j.id);
+  await svc.start(driver, j.id);
+  assert.equal((await svc.myJourneys(driver)).find((x) => x.id === j.id)!.status, 'IN_PROGRESS');
+  await svc.complete(driver, j.id);
+  assert.equal((await svc.myJourneys(driver)).find((x) => x.id === j.id)!.status, 'COMPLETED');
+});
+
+test('completed cannot start again', async () => {
+  const { svc } = setup();
+  const j = await svc.claimSlot(driver, 's1', 'v1');
+  await svc.openForBooking(driver, j.id);
+  await svc.start(driver, j.id);
+  await svc.complete(driver, j.id);
+  await assert.rejects(() => svc.start(driver, j.id));
+});
+
+test('a rider cannot update position', async () => {
+  const { svc } = setup();
+  const j = await svc.claimSlot(driver, 's1', 'v1');
+  await assert.rejects(() => svc.position(rider, j.id, 31.2, 29.9), ForbiddenException);
 });
 
 test('race: a duplicate claim (UNIQUE violation) maps to a clear refusal', async () => {

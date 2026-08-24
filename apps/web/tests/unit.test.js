@@ -347,9 +347,9 @@ group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
   t.go("rider","wallet");
   ok("wallet shows the real loader (P3.7 — no coming-soon)", !sample.test(t.q(".main").textContent) && !t.q(".empty"));
 
-  for(const p of ["waiting","onboard"]){   // live tracking lands in P3.9
+  for(const p of ["waiting","onboard"]){
     t.go("rider",p);
-    ok(`live step ${p} is honestly 'coming soon'`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
+    ok(`live step ${p} has a live loader`, !!t.q("#rider-live") && !sample.test(t.q(".main").textContent), p);
   }
 
   t.go("rider","safety");
@@ -1109,4 +1109,6 @@ group("PATH B — boarding scan UI + copy");
   t.w.S.role="rider"; t.w.S.page="booked"; t.w.S.lastBooking={code:"123456", route_name_en:"Line"};
   t.w.render();
   ok("booked screen shows the 6 digits", !!t.q(".qrcode") && t.q(".qrcode").textContent.includes("123456"));
+  ok("start/complete/alight clients exist",
+     typeof t.w.API.startJourney === "function" && typeof t.w.API.requestAlight === "function");
 }

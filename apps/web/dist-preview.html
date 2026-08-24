@@ -1516,6 +1516,10 @@ en:{
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
   j_noPassengers:"No one booked this departure yet.", j_pickJourney:"Pick a departure",
   j_noActiveJourney:"Claim a departure, then come here to board riders.",
+  j_startRide:"Start the ride", j_completeRide:"Complete ride", j_abortRide:"Abort ride",
+  j_arrivedStop:"Arrived at stop", j_slip:"Schedule", j_arriving:"Your ride is arriving",
+  j_waiting:"Waiting for your ride", j_alightOk:"Driver notified you are getting off next",
+  j_abortWhy:"Why are you aborting?",
   bookings:{ not_found:"That code is not on this departure.",
     already_boarded:"This rider is already on board.",
     wrong_journey:"That code is for a different departure.",
@@ -1809,6 +1813,10 @@ ar:{
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
   j_noPassengers:"لا حجوزات على هذا الموعد بعد.", j_pickJourney:"اختر موعدًا",
   j_noActiveJourney:"احجز موعدًا ثم عد إلى هنا لإركاب الركاب.",
+  j_startRide:"ابدأ الرحلة", j_completeRide:"أكمل الرحلة", j_abortRide:"أجهض الرحلة",
+  j_arrivedStop:"وصلت المحطة", j_slip:"الجدول", j_arriving:"رحلتك تصل الآن",
+  j_waiting:"في انتظار رحلتك", j_alightOk:"أُبلغ السائق أنك ستنزل التالية",
+  j_abortWhy:"لماذا تُجهض الرحلة؟",
   bookings:{ not_found:"هذا الكود ليس على هذا الموعد.",
     already_boarded:"هذا الراكب ركب بالفعل.",
     wrong_journey:"هذا الكود لموعد آخر.",
@@ -2579,6 +2587,14 @@ const API = {
   /* ===== journeys client (Path B) ===== */
   scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),
   journeyManifest: (id) => API.request("GET", `/journeys/${id}/manifest`),
+  startJourney: (id) => API.request("POST", `/journeys/${id}/start`),
+  completeJourney: (id) => API.request("POST", `/journeys/${id}/complete`),
+  abortJourney: (id, reason) => API.request("POST", `/journeys/${id}/abort`, { reason }),
+  arriveStop: (id) => API.request("POST", `/journeys/${id}/arrive`),
+  journeyProgress: (id) => API.request("GET", `/journeys/${id}/progress`),
+  journeyPosition: (id, lat, lng) => API.request("POST", `/journeys/${id}/position`, { lat, lng }),
+  bookingLive: (id) => API.request("GET", `/bookings/${id}/live`),
+  requestAlight: (id) => API.request("POST", `/bookings/${id}/alight`),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
@@ -3821,8 +3837,43 @@ function riderBooked(){                                       // R-15 / R-21 —
   return w;
 }
 
-function riderWaiting(){ return comingSoonRider(); }          // R-20 (live tracking — P3.9)
-function riderOnboard(){ return comingSoonRider(); }          // R-22 (live journey — P3.9)
+function riderWaiting(){                                      // R-20
+  return riderLiveScreen("waiting");
+}
+function riderOnboard(){                                      // R-22
+  return riderLiveScreen("onboard");
+}
+
+function riderLiveScreen(mode) {
+  const w=$("div",{class:"main"});
+  const box=$("div",{id:"rider-live"});
+  w.append(box);
+  loadRiderLive(box, mode);
+  return w;
+}
+
+async function loadRiderLive(el, mode) {
+  if (!el) return;
+  el.innerHTML = "";
+  const b = S.lastBooking || (S.tripsCache || []).find((x) => x.status === "ON_BOARD" || x.status === "CONFIRMED" || x.status === "RESERVED");
+  if (!b || !b.id) { el.append(Empty("clock", t("j_waiting"), t("noTripsBody"))); return; }
+  try {
+    const live = await API.bookingLive(b.id);
+    if (live.code) el.append(QRPanel({code:String(live.code)}));
+    if (live.arriving) el.append(Banner("ok", t("j_arriving")));
+    else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+    if (live.stop) {
+      const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
+      el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+    }
+    if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
+      el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
+        try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
+        catch(e){ toast(errText(e.messageKey)); }
+      }}));
+    }
+  } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
 
 function comingSoonRider(){
   const w=$("div",{class:"main"});
@@ -4376,6 +4427,30 @@ async function loadDriverJourneyInto(pick, scan, list) {
       on: () => { S.scanJourneyId = j.id; render(); },
     })));
     const jid = S.scanJourneyId;
+    const live = $("div",{id:"journey-live"});
+    scan.append(live);
+    try {
+      const p = await API.journeyProgress(jid);
+      const slipKind = p.exceedsSlip ? "danger" : (p.slipMinutes > 0 ? "warn" : "ok");
+      const nextName = p.stop ? (S.lang==="ar" ? p.stop.nameAr : p.stop.nameEn) : "—";
+      live.append(Card("",
+        $("div",{class:"t-micro",text:t("nextStop")}),
+        $("strong",{text:nextName}),
+        Chip({label:t("j_slip")+" "+p.slipMinutes+"'", kind:slipKind})));
+      const acts = $("div",{class:"row wrap gap2"});
+      const st = (journeys.find((x)=>x.id===jid)||{}).status;
+      if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
+        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>API.startJourney(jid))}));
+      if (st === "IN_PROGRESS") {
+        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.arriveStop(jid))}));
+        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.completeJourney(jid))}));
+        acts.append(Btn({label:t("j_abortRide"), kind:"danger", on:()=>{
+          const reason = window.prompt(t("j_abortWhy")) || "";
+          if (reason) dutyAct(()=>API.abortJourney(jid, reason));
+        }}));
+      }
+      live.append(acts);
+    } catch (e) { live.append(Banner("info", errText(e.messageKey))); }
     scan.append($("h2",{class:"t-head",text:t("j_scanTitle")}));
     scan.append($("p",{class:"t-cap",text:t("j_scanHint")}));
     const field = $("input",{class:"input ltr", attrs:{
@@ -4419,7 +4494,7 @@ async function loadManifestInto(el, journeyId) {
       el.append(Row({
         icon: p.status === "ON_BOARD" ? "check" : "seat",
         title: p.rider_name || "—",
-        sub: `${stop} · ${p.seats} · ${p.code}`,
+        sub: `${stop} · ${p.seats} · ${p.code}` + (p.alight_requested_at ? " · "+t("imGettingOff") : ""),
         right: $("div",{class:"row gap2"},
           Chip({label:p.status === "ON_BOARD" ? t("scanned") : t("notScanned"),
             kind: p.status === "ON_BOARD" ? "ok" : ""}),
@@ -4428,6 +4503,12 @@ async function loadManifestInto(el, journeyId) {
       }));
     });
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function dutyAct(fn) {
+  S.stopBusy = true; render();
+  try { await fn(); S.stopBusy = false; render(); }
+  catch (e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
 async function cashTap(bookingId) {

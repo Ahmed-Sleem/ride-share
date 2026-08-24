@@ -172,6 +172,30 @@ async function loadDriverJourneyInto(pick, scan, list) {
       on: () => { S.scanJourneyId = j.id; render(); },
     })));
     const jid = S.scanJourneyId;
+    const live = $("div",{id:"journey-live"});
+    scan.append(live);
+    try {
+      const p = await API.journeyProgress(jid);
+      const slipKind = p.exceedsSlip ? "danger" : (p.slipMinutes > 0 ? "warn" : "ok");
+      const nextName = p.stop ? (S.lang==="ar" ? p.stop.nameAr : p.stop.nameEn) : "—";
+      live.append(Card("",
+        $("div",{class:"t-micro",text:t("nextStop")}),
+        $("strong",{text:nextName}),
+        Chip({label:t("j_slip")+" "+p.slipMinutes+"'", kind:slipKind})));
+      const acts = $("div",{class:"row wrap gap2"});
+      const st = (journeys.find((x)=>x.id===jid)||{}).status;
+      if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
+        acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>API.startJourney(jid))}));
+      if (st === "IN_PROGRESS") {
+        acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.arriveStop(jid))}));
+        acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.completeJourney(jid))}));
+        acts.append(Btn({label:t("j_abortRide"), kind:"danger", on:()=>{
+          const reason = window.prompt(t("j_abortWhy")) || "";
+          if (reason) dutyAct(()=>API.abortJourney(jid, reason));
+        }}));
+      }
+      live.append(acts);
+    } catch (e) { live.append(Banner("info", errText(e.messageKey))); }
     scan.append($("h2",{class:"t-head",text:t("j_scanTitle")}));
     scan.append($("p",{class:"t-cap",text:t("j_scanHint")}));
     const field = $("input",{class:"input ltr", attrs:{
@@ -215,7 +239,7 @@ async function loadManifestInto(el, journeyId) {
       el.append(Row({
         icon: p.status === "ON_BOARD" ? "check" : "seat",
         title: p.rider_name || "—",
-        sub: `${stop} · ${p.seats} · ${p.code}`,
+        sub: `${stop} · ${p.seats} · ${p.code}` + (p.alight_requested_at ? " · "+t("imGettingOff") : ""),
         right: $("div",{class:"row gap2"},
           Chip({label:p.status === "ON_BOARD" ? t("scanned") : t("notScanned"),
             kind: p.status === "ON_BOARD" ? "ok" : ""}),
@@ -224,6 +248,12 @@ async function loadManifestInto(el, journeyId) {
       }));
     });
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function dutyAct(fn) {
+  S.stopBusy = true; render();
+  try { await fn(); S.stopBusy = false; render(); }
+  catch (e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
 async function cashTap(bookingId) {

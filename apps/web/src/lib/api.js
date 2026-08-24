@@ -149,6 +149,14 @@ const API = {
   /* ===== journeys client (Path B) ===== */
   scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),
   journeyManifest: (id) => API.request("GET", `/journeys/${id}/manifest`),
+  startJourney: (id) => API.request("POST", `/journeys/${id}/start`),
+  completeJourney: (id) => API.request("POST", `/journeys/${id}/complete`),
+  abortJourney: (id, reason) => API.request("POST", `/journeys/${id}/abort`, { reason }),
+  arriveStop: (id) => API.request("POST", `/journeys/${id}/arrive`),
+  journeyProgress: (id) => API.request("GET", `/journeys/${id}/progress`),
+  journeyPosition: (id, lat, lng) => API.request("POST", `/journeys/${id}/position`, { lat, lng }),
+  bookingLive: (id) => API.request("GET", `/bookings/${id}/live`),
+  requestAlight: (id) => API.request("POST", `/bookings/${id}/alight`),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {

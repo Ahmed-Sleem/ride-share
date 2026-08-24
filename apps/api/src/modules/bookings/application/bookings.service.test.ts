@@ -59,7 +59,8 @@ function setup() {
   const routes = new FakeRoutes();
   const audit = new FakeAudit();
   const env = { BOARDING_WINDOW_BEFORE_MIN: 15, BOARDING_WINDOW_AFTER_MIN: 30 } as never;
-  const svc = new BookingsService(env, repo as never, journeys as never, routes as never, audit as never);
+  const notes = { notify: async () => {} };
+  const svc = new BookingsService(env, repo as never, journeys as never, routes as never, audit as never, notes as never);
   return { svc, repo, journeys, routes, audit };
 }
 const rider = { id: 'r1', role: 'rider' as const };

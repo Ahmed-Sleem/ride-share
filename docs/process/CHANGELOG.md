@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-24 — P3.9 live journey (Path B)
+
+- POST start/complete/abort/position/arrive + GET progress. Start from OPEN
+  locks then goes IN_PROGRESS. Complete marks ON_BOARD bookings COMPLETED.
+  Abort notifies booked riders (in-app). Slip = minutes behind timetable;
+  arrive refused when slip > MAX_SCHEDULE_SLIP_MIN (default 10).
+- Rider waiting/onboard: live status, next stop, arriving banner, alight signal.
+- Migration 0018 (even): position, arrived index, alight_requested_at, notifications.
+
 ## 2026-08-24 — P3.8 boarding scan + manifest (Path B)
 
 - POST /bookings/scan (SCAN_BOARDING): single-use; this driver's journey only;

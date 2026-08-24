@@ -73,7 +73,7 @@ export class BookingsRepository {
   }>> {
     const { rows } = await this.pool.query(
       `SELECT b.id, b.journey_id, b.rider_user_id, b.boarding_stop_id, b.seats, b.fare_minor,
-              b.code, b.status, b.created_at,
+              b.code, b.status, b.created_at, b.alight_requested_at,
               split_part(u.name, ' ', 1) AS rider_name,
               st.name_en AS stop_name_en, st.name_ar AS stop_name_ar
        FROM bookings b
@@ -83,5 +83,24 @@ export class BookingsRepository {
          AND b.status IN ('RESERVED','CONFIRMED','ON_BOARD')
        ORDER BY st.name_en, b.created_at`, [journeyId]);
     return rows as Array<BookingRow & { rider_name: string; stop_name_en: string; stop_name_ar: string }>;
+  }
+
+  async requestAlight(id: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE bookings SET alight_requested_at = now(), updated_at = now()
+       WHERE id = $1 AND alight_requested_at IS NULL`, [id]);
+  }
+
+  async completeOnBoard(journeyId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE bookings SET status = 'COMPLETED', updated_at = now()
+       WHERE journey_id = $1 AND status = 'ON_BOARD'`, [journeyId]);
+  }
+
+  async riderIdsOnJourney(journeyId: string): Promise<string[]> {
+    const { rows } = await this.pool.query<{ rider_user_id: string }>(
+      `SELECT DISTINCT rider_user_id FROM bookings
+       WHERE journey_id = $1 AND status <> 'CANCELLED'`, [journeyId]);
+    return rows.map((r) => r.rider_user_id);
   }
 }
