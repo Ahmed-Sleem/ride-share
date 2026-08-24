@@ -8,12 +8,15 @@
 function opsQueue(){                                          // O-10
   if(S.opsView==="review") return opsReview();
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminDriverQueue")}));
+  const appsCol = $("div",{class:"stack gap3"},
+    $("h2",{class:"t-head",text:t("adminDriverQueue")}));
   const appList = $("div",{id:"app-list"});
-  w.append(appList);
-  w.append($("h2",{class:"t-head",text:t("adminVehicleQueue")}));
+  appsCol.append(appList);
+  const vehCol = $("div",{class:"stack gap3"},
+    $("h2",{class:"t-head",text:t("adminVehicleQueue")}));
   const vehList = $("div",{id:"veh-list"});
-  w.append(vehList);
+  vehCol.append(vehList);
+  w.append($("div",{class:"desk-split"}, appsCol, vehCol));
   loadApplicationsInto(appList);
   loadVehiclesInto(vehList);
   return w;
@@ -178,7 +181,7 @@ async function loadPendingInto(el) {
   el.innerHTML = "";
   try {
     const stops = await API.listStops("pending");
-    if (!stops.length) { el.append(Empty("stops", t("pendingReview"), t("noPendingStops"))); return; }
+    if (!stops.length) { return; }
     stops.forEach((s) => el.append(Row({
       icon: s.source === "field" ? "walk" : "stops",
       title: $("span",{class:"ltr",text:s.code}),
@@ -431,21 +434,23 @@ async function submitStopAction(id) {
 
 function opsRoutes(){                                         // O-23
   if (S.opsView === "routeDetail") return routeDetailView();
+  if (S.opsView === "stopReview") return stopReviewView();
   const w=$("div",{class:"main"});
-  w.append(Card("card--tight",
+  const pending = $("div",{id:"pending-list"});
+  w.append(pending);
+  loadPendingInto(pending);
+  const form = Card("card--tight",
     $("div",{class:"t-micro",text:t("newRoute")}),
-    $("div",{class:"grid grid--tight"},
+    $("div",{class:"grid"},
       field("route-name-en", t("stopNameEn"), "text", "off"),
       field("route-name-ar", t("stopNameAr"), "text", "off"),
       field("route-fare", t("fareLabel"), "number", "off"),
       field("route-interval", t("intervalLabel"), "number", "off"),
       field("route-win-start", t("windowStart"), "text", "off"),
       field("route-win-end", t("windowEnd"), "text", "off")),
-    Btn({label:t("newRoute"), block:true, dis:S.stopBusy, on:()=>createRouteAction()})));
-
-  w.append($("h2",{class:"t-head",text:t("nav.routes")}));
+    Btn({label:t("newRoute"), dis:S.stopBusy, on:()=>createRouteAction()}));
   const list = $("div",{id:"routes-list"});
-  w.append(list);
+  w.append($("div",{class:"desk-split"}, form, list));
   loadRoutesInto(list);
   return w;
 }
@@ -475,6 +480,7 @@ async function loadRoutesInto(el) {
   el.innerHTML = "";
   try {
     const routes = await API.listRoutes();
+    el.append($("h2",{class:"t-head",text:t("nav.routes")}));
     if (!routes.length) { el.append(Empty("routes", t("nav.routes"), t("opsRoutesComing"))); return; }
     routes.forEach((r) => el.append(Row({
       icon: "routes",
@@ -489,32 +495,81 @@ async function loadRoutesInto(el) {
 
 function routeDetailView() {
   const r = S.opsTarget || {};
+  const draft = r.status === "draft";
   const w = $("div",{class:"main"});
   w.append($("div",{class:"row gap2"},
     $("h1",{class:"t-head grow",text:r.name_en || r.name_ar || r.code}),
     Chip({label:r.status, kind:r.status==="published"?"ok":""})));
   w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
 
-  if (r.status === "draft") {
-    w.append(Banner("info", t("routeNoStops")));
-    w.append(Btn({label:t("publishRoute"), block:true, dis:S.stopBusy, on:()=>publishRouteAction(r.id)}));
-  }
+  const stopForm = draft ? Card("card--tight",
+    $("div",{class:"t-micro",text:t("j_routeStops")}),
+    $("div",{class:"t-cap",text:t("j_routeStopsHint")}),
+    $("div",{class:"grid"},
+      field("stop-lat", t("latLabel"), "text", "off"),
+      field("stop-lng", t("lngLabel"), "text", "off"),
+      field("stop-name-en", t("stopNameEn"), "text", "off"),
+      field("stop-name-ar", t("stopNameAr"), "text", "off")),
+    S.stopTooClose
+      ? $("div",{class:"stack gap2"},
+          Banner("warn", t("stopTooClose")),
+          field("stop-override", t("overrideReason"), "text", "off"))
+      : null,
+    MapView({h:220, vehicle:false, route:false, stops:false,
+      onPick:(lat,lng)=>{
+        const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+        if(la) la.value = lat.toFixed(6);
+        if(lo) lo.value = lng.toFixed(6);
+        toast(t("placedStop"));
+      }}),
+    Btn({label:t("addStop"), dis:S.stopBusy, on:()=>addStopToRouteAction(r.id)})) : null;
 
   const stops = $("div",{id:"route-stops"});
-  w.append(stops);
-  loadRouteStopsInto(stops, r.id);
-
-  w.append(Card("card--tight",
+  const slotsCard = Card("card--tight",
     $("div",{class:"t-micro",text:t("generateSlots")}),
-    $("div",{class:"grid grid--tight"},
+    $("div",{class:"grid"},
       field("slots-from", t("slotsFrom"), "text", "off"),
       field("slots-to", t("slotsTo"), "text", "off")),
-    Btn({label:t("generateSlots"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>generateSlotsAction(r.id)})));
-
+    Btn({label:t("generateSlots"), kind:"secondary", dis:S.stopBusy, on:()=>generateSlotsAction(r.id)}));
   const slotList = $("div",{id:"route-slots"});
-  w.append(slotList);
+  w.append($("div",{class:"desk-split"},
+    $("div",{class:"stack gap4"},
+      stopForm,
+      draft ? Btn({label:t("publishRoute"), dis:S.stopBusy, on:()=>publishRouteAction(r.id)}) : null,
+      slotsCard),
+    $("div",{class:"stack gap4"}, stops, slotList)));
+  loadRouteStopsInto(stops, r.id);
   loadRouteSlotsInto(slotList, r.id);
   return w;
+}
+
+async function addStopToRouteAction(routeId) {
+  const lat = Number(val("stop-lat")), lng = Number(val("stop-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  const payload = {
+    lat, lng, source: "desk",
+    nameEn: val("stop-name-en") || undefined,
+    nameAr: val("stop-name-ar") || undefined,
+  };
+  if (S.stopTooClose) payload.overrideReason = val("stop-override") || undefined;
+  S.stopBusy = true; render();
+  try {
+    const created = await API.createStop(payload);
+    const stopId = created && (created.id || (created.stop && created.stop.id));
+    if (!stopId) throw Object.assign(new Error("geo.stop_create_failed"), { messageKey: "error.internal" });
+    if (created.status === "draft") {
+      try { await API.submitStop(stopId); } catch { /* attach still works */ }
+    }
+    await API.addStopToRoute(routeId, stopId);
+    S.stopTooClose = null; S.stopBusy = false;
+    toast(t("placedStop")); render();
+  } catch(e) {
+    S.stopBusy = false;
+    if (e.messageKey === "geo.stop_too_close") {
+      S.stopTooClose = (e.payload && e.payload.details) || {};
+      render();
+    } else { toast(errText(e.messageKey)); render(); }
+  }
 }
 
 async function loadRouteStopsInto(el, routeId) {

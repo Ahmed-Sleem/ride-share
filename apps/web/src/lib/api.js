@@ -8,7 +8,11 @@
    No mocks: a request that cannot reach a backend is a real error state,
    never a fabricated success.                                       */
 const API = {
-  base: "/v1",
+  /* Same-origin /v1 on the website. The native shell injects the public
+     web origin so the APK talks to the live API (AUTH_OTP_BYPASS included). */
+  base: (typeof window !== "undefined" && window.__RS_PUBLIC_ORIGIN)
+    ? String(window.__RS_PUBLIC_ORIGIN).replace(/\/$/, "") + "/v1"
+    : "/v1",
   access: () => storeGet("rs.access"),
   refreshToken: () => storeGet("rs.refresh"),
   user: () => { try { return JSON.parse(storeGet("rs.user") || "null"); } catch { return null; } },

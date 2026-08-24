@@ -198,8 +198,11 @@
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0;overflow:hidden}
 html.native,html.native body{overscroll-behavior:none;touch-action:manipulation}
-html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t))}
+html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t));padding-bottom:calc(var(--s6) + var(--safe-b))}
+html.native .authwrap__card{width:min(440px,100%);box-shadow:none;border:0;background:transparent;padding:var(--s4) 0}
 html.native .splash{padding-top:var(--safe-t)}
+html.native .btn{min-height:var(--tap)}
+html.native .sheet{padding-bottom:calc(var(--s5) + var(--safe-b))}
 .dlqr{width:220px;height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg-base);image-rendering:pixelated}
 body{background:var(--bg-page);color:var(--text-primary);
   font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
@@ -433,7 +436,17 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .btn--ghost:hover:not([disabled]){background:var(--brand-soft)}
 .btn--danger{background:var(--danger);color:var(--on-solid)}
 .btn--block{width:100%;flex:1 1 auto}
+.btn--sm{min-height:var(--tap-sm);padding-inline:var(--s3);font-size:var(--f-cap);border-radius:var(--r-sm)}
 .btn--driver{min-height:var(--tap-driver);font-size:var(--f-lg);border-radius:var(--r-lg)}
+.pager{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0}
+.setting{display:grid;gap:var(--s3);align-items:center;grid-template-columns:1fr;min-width:0}
+.setting__copy{display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.setting__edit{display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+.desk-split{display:grid;gap:var(--s4);grid-template-columns:1fr;min-width:0}
+@media (min-width:840px){
+  .setting{grid-template-columns:minmax(0,1.2fr) minmax(12rem,1fr)}
+  .desk-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+}
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .btn[aria-busy="true"]{pointer-events:none}
 

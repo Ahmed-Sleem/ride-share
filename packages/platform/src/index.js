@@ -9,8 +9,18 @@
   function cap() {
     try {
       const C = g.Capacitor;
-      if (C && typeof C.isNativePlatform === "function" && C.isNativePlatform()) return C;
-      if (C && C.isNative === true) return C;
+      if (!C) return null;
+      if (typeof C.isNativePlatform === "function" && C.isNativePlatform()) return C;
+      if (C.isNative === true) return C;
+      if (typeof C.getPlatform === "function") {
+        const p = C.getPlatform();
+        if (p && p !== "web") return C;
+      }
+      if (C.platform && C.platform !== "web") return C;
+      try {
+        const proto = String((g.location && g.location.protocol) || "");
+        if (proto === "capacitor:" || proto === "ionic:") return C;
+      } catch (_) { /* no location */ }
     } catch (_) { /* browser / jsdom */ }
     return null;
   }

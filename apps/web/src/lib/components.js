@@ -84,9 +84,13 @@ function enterApp(user) {
   }
 }
 
+function isNativeApp() {
+  return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+}
+
 function signOut() {
   API.clearSession();
-  S.user = null; S.authed = false; S.view = "landing";
+  S.user = null; S.authed = false; S.view = isNativeApp() ? "auth" : "landing";
   S.landingPage = "rider"; S.landingMenu = false; S.landingDoc = null;
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
   S.authBusy = false; S.authError = null; S.otpBypass = false;
@@ -227,8 +231,8 @@ const icon = (n, cls) => {
 /* ══════════════════════════════════════════════════════════════════════
    5. COMPONENTS — pure functions: props -> element
    ══════════════════════════════════════════════════════════════════════ */
-const Btn = ({label, kind="primary", block, driver, icon:ic, on, dis}) =>
-  $("button",{class:`btn btn--${kind}${block?" btn--block":""}${driver?" btn--driver":""}`,
+const Btn = ({label, kind="primary", block, driver, icon:ic, on, dis, size}) =>
+  $("button",{class:`btn btn--${kind}${block?" btn--block":""}${driver?" btn--driver":""}${size==="sm"?" btn--sm":""}`,
     attrs:{type:"button", disabled:dis||null}, on:{click:on||(()=>{})}},
     ic?icon(ic):null, $("span",{text:label}));
 

@@ -12,9 +12,8 @@ function adminHome() {
     Row({icon:"flag", title:t("adminAudit"), sub:t("j_adminAuditSub"), chev:true, bordered:true, on:()=>go("adminAudit")}),
     Row({icon:"queue", title:t("adminDriverQueue"), sub:t("j_adminQueueSub"), chev:true, bordered:true, on:()=>go("queue")}),
     Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")}),
-    Row({icon:"pricing", title:t("j_settingsTitle"), sub:t("j_settingsSub"), chev:true, bordered:true, on:()=>go("adminSettings")}),
-    Row({icon:"routes", title:t("nav.routes"), sub:t("j_adminRoutesSub"), chev:true, bordered:true, on:()=>go("routes")}),
-    Row({icon:"stops", title:t("nav.stops"), sub:t("j_adminStopsSub"), chev:true, bordered:true, on:()=>go("stops")})));
+    Row({icon:"pricing", title:t("nav.adminSettings"), sub:t("j_settingsSub"), chev:true, bordered:true, on:()=>go("adminSettings")}),
+    Row({icon:"routes", title:t("nav.routes"), sub:t("j_adminRoutesSub"), chev:true, bordered:true, on:()=>go("routes")})));
   return w;
 }
 
@@ -44,18 +43,18 @@ function adminStaff() {
   const w=$("div",{class:"main"});
   w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
   w.append(Card("card--tight",
-    $("div",{class:"grid grid--tight"},
+    $("div",{class:"grid"},
       field("staff-name", t("adminName"), "text"),
       field("staff-phone", t("adminPhone"), "tel"),
-      field("staff-email", t("adminEmail"), "email")),
-    field("staff-password", t("adminPassword"), "password"),
+      field("staff-email", t("adminEmail"), "email"),
+      field("staff-password", t("adminPassword"), "password")),
     $("p",{class:"t-cap",text:t("j_staffPassHint")}),
     $("div",{class:"field"},
       $("label",{text:t("adminRole")}),
       $("select",{class:"input", id:"staff-role"},
         ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
-    Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
+    Btn({label:t("adminCreate"), on:()=>createStaff()})));
   const list = $("div",{id:"staff-list"});
   w.append(list);
   loadStaffInto(list);
@@ -176,20 +175,21 @@ function auditWhen(iso) {
 }
 
 function auditPager(el, page, pages, total) {
-  const bar = $("div",{class:"row wrap gap2", attrs:{"aria-label":t("j_auditPager")}});
-  bar.append(Btn({label:t("j_auditPrev"), kind:"secondary", dis: page<=0, on:()=>{ if(page>0){ S.auditPage = page - 1; loadAuditInto(el); }}}));
+  const bar = $("div",{class:"pager", attrs:{"aria-label":t("j_auditPager")}});
+  const goPage = (n) => { S.auditPage = n; loadAuditInto(el); };
+  bar.append(Btn({label:t("j_auditPrev"), kind:"secondary", size:"sm", dis: page<=0, on:()=>{ if(page>0) goPage(page - 1); }}));
   const windowStart = Math.max(0, page - 2);
   const windowEnd = Math.min(pages - 1, page + 2);
   if (windowStart > 0)
-    bar.append(Btn({label:"1", kind: page===0?"primary":"ghost", on:()=>{ S.auditPage = 0; loadAuditInto(el); }}));
+    bar.append(Btn({label:"1", kind: page===0?"primary":"ghost", size:"sm", on:()=>goPage(0)}));
   if (windowStart > 1) bar.append($("span",{class:"t-cap",text:"…"}));
   for (let i = windowStart; i <= windowEnd; i++) {
-    bar.append(Btn({label:String(i+1), kind: i===page?"primary":"ghost", on:()=>{ S.auditPage = i; loadAuditInto(el); }}));
+    bar.append(Btn({label:String(i+1), kind: i===page?"primary":"ghost", size:"sm", on:()=>goPage(i)}));
   }
   if (windowEnd < pages - 2) bar.append($("span",{class:"t-cap",text:"…"}));
   if (windowEnd < pages - 1)
-    bar.append(Btn({label:String(pages), kind: page===pages-1?"primary":"ghost", on:()=>{ S.auditPage = pages-1; loadAuditInto(el); }}));
-  bar.append(Btn({label:t("j_auditNext"), kind:"secondary", dis: page>=pages-1, on:()=>{ if(page<pages-1){ S.auditPage = page + 1; loadAuditInto(el); }}}));
+    bar.append(Btn({label:String(pages), kind: page===pages-1?"primary":"ghost", size:"sm", on:()=>goPage(pages-1)}));
+  bar.append(Btn({label:t("j_auditNext"), kind:"secondary", size:"sm", dis: page>=pages-1, on:()=>{ if(page<pages-1) goPage(page + 1); }}));
   bar.append($("span",{class:"t-cap ltr",text:`${total} ${t("j_auditRows")}`}));
   return bar;
 }
@@ -209,7 +209,6 @@ async function loadAuditInto(el) {
     el.append($("div",{class:"row gap2"},
       $("h2",{class:"t-head grow",text:t("adminAudit")}),
       $("div",{class:"t-cap ltr",text:`${from}–${to} ${t("j_auditPageOf")} ${total}`})));
-    el.append(auditPager(el, page, pages, total));
     const rows = items.map((e)=> $("tr",{},
       $("td",{class:"ltr",text:auditWhen(e.created_at)}),
       $("td",{text:e.actor_name || e.email || "—"}),
@@ -229,15 +228,48 @@ function adminSettings() {
   return w;
 }
 
-function settingField(id, label, envVal, overrideVal) {
+function settingField(id, label, help, envVal, overrideVal) {
   const usingPage = overrideVal != null;
-  return $("div",{class:"field"},
-    $("label",{attrs:{for:id}, text:label}),
-    $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${envVal}`}),
-    $("input",{class:"input", attrs:{id, type:"text", inputmode:"numeric", value: usingPage ? String(overrideVal) : String(envVal)}}),
-    $("label",{class:"row gap2"},
-      $("input",{attrs:{type:"checkbox", id:id+"-ovr", checked: usingPage ? "" : null}}),
-      $("span",{class:"t-cap",text:t("j_settingsOverride")})));
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:label}),
+      help ? $("div",{class:"t-cap",text:help}) : null,
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${envVal}`})),
+    $("div",{class:"setting__edit"},
+      $("input",{class:"input", attrs:{id, type:"text", inputmode:"numeric", value: usingPage ? String(overrideVal) : String(envVal)}}),
+      $("label",{class:"row gap2"},
+        $("input",{attrs:{type:"checkbox", id:id+"-ovr", checked: usingPage ? "" : null}}),
+        $("span",{class:"t-cap",text:t("j_settingsOverride")}))));
+}
+
+function settingToggle(id, label, help, envOn, overrideVal) {
+  const sel = overrideVal === true ? "true" : overrideVal === false ? "false" : "env";
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:label}),
+      help ? $("div",{class:"t-cap",text:help}) : null,
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${envOn ? t("j_on") : t("j_off")}`})),
+    $("div",{class:"setting__edit"},
+      $("select",{class:"input", attrs:{id}},
+        $("option",{attrs:{value:"env", selected: sel==="env" ? "" : null}, text:t("j_settingsUseEnv")}),
+        $("option",{attrs:{value:"true", selected: sel==="true" ? "" : null}, text:t("j_on")}),
+        $("option",{attrs:{value:"false", selected: sel==="false" ? "" : null}, text:t("j_off")}))));
+}
+
+function settingOtp(id, s) {
+  const ovr = s.override.auth_otp_bypass;
+  const sel = ovr === true ? "skip" : ovr === false ? "require" : "env";
+  const liveOn = !s.env.auth_otp_bypass;
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:t("j_setEmailVerify")}),
+      $("div",{class:"t-cap",text:t("j_setEmailVerifyHelp")}),
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${liveOn ? t("j_emailVerifyOn") : t("j_emailVerifyOff")}`})),
+    $("div",{class:"setting__edit"},
+      $("select",{class:"input", attrs:{id}},
+        $("option",{attrs:{value:"env", selected: sel==="env" ? "" : null}, text:t("j_settingsUseEnv")}),
+        $("option",{attrs:{value:"require", selected: sel==="require" ? "" : null}, text:t("j_emailVerifyOn")}),
+        $("option",{attrs:{value:"skip", selected: sel==="skip" ? "" : null}, text:t("j_emailVerifyOff")}))));
 }
 
 async function loadOwnerSettingsInto(el) {
@@ -246,24 +278,19 @@ async function loadOwnerSettingsInto(el) {
   try {
     const s = await API.getOwnerSettings();
     S.ownerSettings = s;
-    el.append($("h2",{class:"t-head",text:t("j_settingsTitle")}));
-    el.append(Banner("info", t("j_settingsHelp")));
+    el.append($("h2",{class:"t-head",text:t("nav.adminSettings")}));
     el.append(Card("card--tight",
-      settingField("set-comm", t("j_setCommission"), s.env.commission_percent, s.override.commission_percent),
-      settingField("set-nbd", t("j_setBehDay"), s.env.notify_behavioural_max_day, s.override.notify_behavioural_max_day),
-      settingField("set-nbg", t("j_setBehGap"), s.env.notify_behavioural_gap_hours, s.override.notify_behavioural_gap_hours),
-      settingField("set-npd", t("j_setPromoDay"), s.env.notify_promo_max_day, s.override.notify_promo_max_day),
-      settingField("set-npw", t("j_setPromoWeek"), s.env.notify_promo_max_week, s.override.notify_promo_max_week),
-      settingField("set-nnt", t("j_setNonTx"), s.env.notify_non_tx_max_day, s.override.notify_non_tx_max_day),
-      $("div",{class:"field"},
-        $("label",{text:t("j_setPaymob")}),
-        $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${s.env.paymob_enabled ? t("j_on") : t("j_off")}`}),
-        $("select",{class:"input", attrs:{id:"set-paymob"}},
-          $("option",{attrs:{value:"env"}, text:t("j_settingsUseEnv")}),
-          $("option",{attrs:{value:"true", selected: s.override.paymob_enabled===true ? "" : null}, text:t("j_on")}),
-          $("option",{attrs:{value:"false", selected: s.override.paymob_enabled===false ? "" : null}, text:t("j_off")}))),
-      Btn({label:t("save"), block:true, on:()=>saveOwnerSettings()})));
-    el.append($("p",{class:"t-cap",text:`${t("j_settingsEffective")}: ${t("j_setCommission")} ${s.effective.commission_percent}% · Paymob ${s.effective.paymob_enabled?t("j_on"):t("j_off")}`}));
+      settingField("set-comm", t("j_setCommission"), null, s.env.commission_percent, s.override.commission_percent),
+      settingField("set-nbd", t("j_setBehDay"), null, s.env.notify_behavioural_max_day, s.override.notify_behavioural_max_day),
+      settingField("set-nbg", t("j_setBehGap"), null, s.env.notify_behavioural_gap_hours, s.override.notify_behavioural_gap_hours),
+      settingField("set-npd", t("j_setPromoDay"), null, s.env.notify_promo_max_day, s.override.notify_promo_max_day),
+      settingField("set-npw", t("j_setPromoWeek"), null, s.env.notify_promo_max_week, s.override.notify_promo_max_week),
+      settingField("set-nnt", t("j_setNonTx"), null, s.env.notify_non_tx_max_day, s.override.notify_non_tx_max_day),
+      settingToggle("set-paymob", t("j_setPaymob"), null, s.env.paymob_enabled, s.override.paymob_enabled),
+      settingOtp("set-otp", s),
+      Btn({label:t("save"), on:()=>saveOwnerSettings()})));
+    const otpOn = !s.effective.auth_otp_bypass;
+    el.append($("p",{class:"t-cap",text:`${t("j_settingsEffective")}: ${t("j_setCommission")} ${s.effective.commission_percent}% · ${t("j_setPaymob")} ${s.effective.paymob_enabled?t("j_on"):t("j_off")} · ${t("j_setEmailVerify")} ${otpOn?t("j_emailVerifyOn"):t("j_emailVerifyOff")}`}));
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
@@ -285,7 +312,7 @@ async function saveOwnerSettings() {
     notify_promo_max_week: readOverride("set-npw"),
     notify_non_tx_max_day: readOverride("set-nnt"),
     paymob_enabled: pay === "env" ? null : pay === "true",
-    auth_otp_bypass: otp === "env" ? null : otp === "true",
+    auth_otp_bypass: otp === "env" ? null : otp === "skip",
   };
   try {
     await API.saveOwnerSettings(payload);

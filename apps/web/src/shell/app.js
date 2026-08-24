@@ -46,7 +46,6 @@ const PAGES = {
   ops:[
     {k:"queue",   ic:"queue",   fn:opsQueue,   dock:true, wide:true},
     {k:"livemap", ic:"livemap", fn:opsLiveMap, dock:true, wide:true},
-    {k:"stops",   ic:"stops",   fn:opsStops,   dock:true, wide:true},
     {k:"routes",  ic:"routes",  fn:opsRoutes,  dock:true, wide:true},
     {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true},
     {k:"profile", ic:"profile", fn:staffProfile, dock:true, foot:true}
@@ -69,10 +68,9 @@ const PAGES = {
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
-    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true, title:"j_settingsTitle"}, /* path B */
+    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
-    {k:"stops",      ic:"stops",    fn:opsStops,      dock:true, wide:true}, /* path B — root can map */
-    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true}, /* path B — root can price */
+    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true},
     {k:"livemap",    ic:"livemap",  fn:opsLiveMap,    dock:true, wide:true}, /* path B — existing ops surface */
     {k:"tickets",    ic:"tickets",  fn:supportTickets,dock:true, wide:true}, /* path B — existing support surface */
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
@@ -194,6 +192,10 @@ function render(){
 
   /* view machine: boot splash → landing → auth → the signed-in app */
   if(S.view==="boot"){ root.append(bootSplash()); return; }
+  if(typeof isNativeApp === "function" && isNativeApp() && !S.authed){
+    if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
+    root.append(auth()); return;
+  }
   if(S.view==="landing"){ root.append(landing()); return; }
   if(S.view==="auth"){ root.append(auth()); return; }
   if(!S.authed){ S.view="landing"; root.append(landing()); return; }
@@ -286,7 +288,7 @@ function boot(){
     if(S.view!=="boot") return;                 // a test or a tap already left
     if(user){ enterApp(user); }
     else {
-      const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+      const native = typeof isNativeApp === "function" ? isNativeApp() : false;
       S.view = native ? "auth" : "landing";
       if (native) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
       render();

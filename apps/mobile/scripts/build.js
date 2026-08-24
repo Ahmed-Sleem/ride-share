@@ -39,7 +39,12 @@ fs.rmSync(www, { recursive: true, force: true });
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(www, { recursive: true });
 fs.mkdirSync(path.join(dist, "www"), { recursive: true });
-const html = fs.readFileSync(webHtml, "utf8");
+const origin = (process.env.MOBILE_WEB_ORIGIN || process.env.PUBLIC_WEB_ORIGIN ||
+  "https://ride-shareweb-production.up.railway.app").replace(/\/$/, "");
+let html = fs.readFileSync(webHtml, "utf8");
+const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};</script>`;
+if (html.includes("</head>")) html = html.replace("</head>", inject + "</head>");
+else html = inject + html;
 fs.writeFileSync(path.join(www, "index.html"), html);
 fs.writeFileSync(path.join(dist, "www", "index.html"), html);
 fs.copyFileSync(path.join(HERE, "server.js"), path.join(dist, "server.js"));
@@ -50,6 +55,7 @@ const cfg = {
   appName: BRAND.name.en,
   webDir: "www",
   android: { allowMixedContent: false },
+  server: { androidScheme: "https", hostname: "localhost", allowNavigation: [origin.replace(/^https?:\/\//, "")] },
   plugins: {
     SplashScreen: {
       launchAutoHide: true,

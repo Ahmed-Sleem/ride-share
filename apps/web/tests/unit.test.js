@@ -990,6 +990,7 @@ group("M3 — ROUTES TOOL + DRIVER WORK BOARD");
   t.w.render();
   ok("route detail renders the publish action", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.publishRoute)));
   ok("route detail renders stop + slot loaders", !!t.q("#route-stops") && !!t.q("#route-slots"));
+  ok("route detail owns stop add (no separate stops page)", !!t.q("#stop-lat") && !!t.q("#stop-name-en"));
 
   // driver work board renders the real loader
   t.set({role:"driver", user:{id:"u2",role:"driver",name:"Mahmoud"}});
@@ -997,23 +998,25 @@ group("M3 — ROUTES TOOL + DRIVER WORK BOARD");
   ok("driver work board renders the find-work loader", !!t.q("#work-list"));
 })();
 
-group("M2 — STOP MAPPING TOOL (ops only)");
+group("M2 — STOPS ARE A ROUTE PROPERTY (no independent page)");
 (() => {
   const t=boot();
-  // the tool lives in the ops nav; no other role sees it (§8.1)
-  ok("stops screen exists for ops", (t.w.PAGES.ops||[]).some((p)=>p.k==="stops"));
+  ok("stops page is gone from ops nav", !(t.w.PAGES.ops||[]).some((p)=>p.k==="stops"));
+  ok("stops page is gone from super_admin nav", !(t.w.PAGES.super_admin||[]).some((p)=>p.k==="stops"));
   ok("stops screen is NOT in the rider nav", !(t.w.PAGES.rider||[]).some((p)=>p.k==="stops"));
-  ok("stops screen is NOT in the support nav", !(t.w.PAGES.support||[]).some((p)=>p.k==="stops"));
+  ok("nav.adminSettings is Settings", t.w.T.en.nav.adminSettings==="Settings");
 
   t.set({role:"ops", user:{id:"u1",role:"operations",name:"Ops"}});
-  t.go("ops","stops");
-  ok("stops tool has a coordinate form", !!t.q("#stop-lat") && !!t.q("#stop-lng"));
-  ok("stops tool has bilingual name fields", !!t.q("#stop-name-en") && !!t.q("#stop-name-ar"));
-  ok("stops tool has a CSV import", !!t.q("#stop-csv"));
-  ok("stops tool lists stops (real loader present)", !!t.q("#stops-list"));
-  ok("stops tool shows the pending verification queue", !!t.q("#pending-list"));
+  t.go("ops","routes");
+  ok("routes list has pending review slot", !!t.q("#pending-list"));
 
-  // P2.4 review: select a pending stop → the review view renders checklist + reason
+  t.w.S.opsView = "routeDetail";
+  t.w.S.opsTarget = { id:"r1", code:"ALX-R001", name_en:"Corniche", status:"draft",
+    fare_minor:1500, window_start:"06:00", window_end:"10:00", slot_interval_min:15 };
+  t.w.render();
+  ok("route form has stop coordinates", !!t.q("#stop-lat") && !!t.q("#stop-lng"));
+  ok("route form has bilingual stop names", !!t.q("#stop-name-en") && !!t.q("#stop-name-ar"));
+
   t.w.S.opsView = "stopReview";
   t.w.S.opsTarget = { id:"s1", code:"ALX-COR-001", lat:31.2, lng:29.9, status:"pending",
     source:"field", created_by:"someone-else", stand_ok:true, lit_ok:true, legal_stop_ok:true, reachable_ok:true, gps_accuracy_m:8 };
@@ -1022,7 +1025,6 @@ group("M2 — STOP MAPPING TOOL (ops only)");
   ok("review view offers approve (not your own capture)", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.approveStop)));
   ok("review view renders the field checklist", t.q(".main").textContent.includes(t.w.T.en.standOk));
 
-  // two-person rule: your OWN capture hides the approve action (§8.1 absent, not disabled)
   t.w.S.opsTarget.created_by = "u1";
   t.w.render();
   const hasApprove = [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.approveStop));
@@ -1067,6 +1069,19 @@ const mW1 = (async () => {
   ok("payWallet client exists", typeof t.w.API.payWallet === "function");
   ok("j_paidWallet both languages", t.w.T.en.j_paidWallet && t.w.T.ar.j_paidWallet !== t.w.T.en.j_paidWallet);
 })();
+
+group("NATIVE APP — skip landing, same API origin hook");
+{
+  const t=boot();
+  ok("default kind is web in jsdom", t.w.Platform.kind()==="web");
+  t.w.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android" };
+  ok("kind is native when Capacitor reports native", t.w.Platform.kind()==="native");
+  t.w.S.view="boot"; t.w.S.authed=false; t.w.render();
+  t.w.S.view="landing"; t.w.S.authed=false; t.w.render();
+  ok("native never shows the marketing landing", !t.q(".landing") && !!t.q(".authwrap"));
+  ok("native welcome copy is on the auth card", /Welcome|أهلا/.test(t.q(".authwrap").textContent));
+  t.w.Capacitor = undefined;
+}
 
 const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen, mW1];
 
@@ -1319,6 +1334,35 @@ group("PATH A — RouteMap i18n parity (m_* keys)");
 }
 
 pendingAsync.push(mAdminAudit);
+
+group("OWNER SETTINGS — two-col rows + email verification");
+const mSettings = (async () => {
+  const t=boot();
+  t.set({role:"super_admin", user:{id:"u1",role:"super_admin",name:"Admin",isSystemAdmin:true}});
+  t.w.fetch = async (url) => {
+    if (String(url).includes("/admin/settings")) return { ok:true, json:async()=>({
+      env:{ commission_percent:0, notify_behavioural_max_day:3, notify_behavioural_gap_hours:24,
+        notify_promo_max_day:2, notify_promo_max_week:6, notify_non_tx_max_day:4,
+        paymob_enabled:false, auth_otp_bypass:false },
+      override:{ commission_percent:null, notify_behavioural_max_day:null, notify_behavioural_gap_hours:null,
+        notify_promo_max_day:null, notify_promo_max_week:null, notify_non_tx_max_day:null,
+        paymob_enabled:null, auth_otp_bypass:null },
+      effective:{ commission_percent:0, notify_behavioural_max_day:3, notify_behavioural_gap_hours:24,
+        notify_promo_max_day:2, notify_promo_max_week:6, notify_non_tx_max_day:4,
+        paymob_enabled:false, auth_otp_bypass:false },
+    }) };
+    return { ok:false, status:404, json:async()=>({ message_key:"error.internal" }) };
+  };
+  t.go("super_admin","adminSettings");
+  await new Promise((r)=>setTimeout(r,20));
+  const main=t.q(".main").textContent;
+  ok("settings nav label is Settings", t.q(".topbar__title").textContent===t.w.T.en.nav.adminSettings);
+  ok("no Railway disclaimer", !/Railway/.test(main));
+  ok("email verification control is present", !!t.q("#set-otp") && /Email verification/.test(main));
+  ok("commission and Paymob are present", !!t.q("#set-comm") && !!t.q("#set-paymob"));
+  ok("settings use the two-column setting rows", t.all(".setting").length>=6);
+})();
+pendingAsync.push(mSettings);
 Promise.all(pendingAsync).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);

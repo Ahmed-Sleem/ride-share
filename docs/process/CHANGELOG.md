@@ -1152,3 +1152,12 @@
   EN+AR. Tests: 242 API + 455 web unit green; the 320px overflow audit probe
   (the exact suite measurement that caught the planner) run locally on every
   touched page — widest=0 everywhere before push.
+
+## 2026-08-25 — Super-admin GUI + native APK boot
+
+- Audit pager only after the table; compact buttons from --tap-sm.
+- Settings is two-column, labelled Settings, email-verification toggle, no Railway banner.
+- Stops are a route property (no independent Stops page).
+- Native shell never opens the marketing landing; splash → sign-in.
+- APK talks to the public web origin so AUTH_OTP_BYPASS matches the website.
+- Launcher icons still painted from packages/brand (same source as the favicon).
