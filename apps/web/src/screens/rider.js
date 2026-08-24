@@ -411,6 +411,7 @@ async function loadRiderLive(el, mode) {
           catch(e){ toast(errText(e.messageKey)); }
         }}));
       }
+      el.append(Btn({label:t("sos"), kind:"danger", block:true, on:()=>openSheet("sos")}));
       delay = 15000;
     } catch (e) {
       if (!el.isConnected) return;
@@ -500,13 +501,32 @@ async function cancelRiderBooking(id) {
 
 function riderSafety(){                                       // R-60
   const w=$("div",{class:"main"});
-  w.append(Banner("info", t("safetyCentre")));
+  w.append(Banner("info", t("j_safetyHint")));
   w.append($("div",{class:"rowgroup"},
-    Row({icon:"sos",   title:t("sos"), sub:t("emergency"), chev:true, on:()=>openSheet("sos")}),
-    Row({icon:"share", title:t("shareTrip"), chev:true, on:()=>toast(t("shareTrip"))}),
-    Row({icon:"flag",  title:t("reportProblem"), chev:true, on:()=>openSheet("report")}),
-    Row({icon:"phone", title:t("callSupport"), chev:true, on:()=>toast(t("callSupport"))})));
+    Row({icon:"sos",   title:t("sos"), sub:t("j_sosSub"), chev:true, on:()=>openSheet("sos")}),
+    (S.lastBooking || (S.tripsCache||[]).some((b)=>b.status==="CONFIRMED"||b.status==="ON_BOARD"||b.status==="RESERVED"))
+      ? Row({icon:"share", title:t("shareTrip"), sub:t("j_shareSub"), chev:true, on:()=>openSheet("shareRide")})
+      : null,
+    Row({icon:"flag",  title:t("reportProblem"), sub:t("j_reportSub"), chev:true, on:()=>openSheet("report")})));
+  const mine=$("div",{id:"safety-tickets"});
+  w.append($("h2",{class:"t-head",text:t("j_myTickets")}));
+  w.append(mine);
+  loadMyIncidents(mine);
   return w;
+}
+
+async function loadMyIncidents(el){
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const rows = await API.myIncidents();
+    if(!rows.length){ el.append(Empty("flag", t("j_myTickets"), t("j_noTickets"))); return; }
+    rows.forEach((r)=> el.append(Row({
+      icon: r.kind==="sos" ? "sos" : "flag",
+      title: t("j_cat_"+r.category) === "j_cat_"+r.category ? r.category : t("j_cat_"+r.category),
+      sub: `${r.status} · ${r.severity}` + (r.decision ? " · "+r.decision : ""),
+      bordered:true })));
+  } catch(e){ el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 function riderProfile(){                                      // R-80
@@ -608,4 +628,86 @@ function switchEl(on){
     "aria-checked":String(!!on),"aria-label":t("notifications")},
     on:{click:(e)=>{ const b=e.currentTarget;
       b.setAttribute("aria-checked", b.getAttribute("aria-checked")==="true"?"false":"true"); }}});
+}
+
+function activeBookingId(){
+  const b = S.lastBooking || (S.tripsCache || []).find((x)=> x.status==="ON_BOARD" || x.status==="CONFIRMED" || x.status==="RESERVED");
+  return b && b.id;
+}
+
+function sosSheet(){
+  return Sheet(t("sos"),
+    Banner("danger", t("j_sosWarn")),
+    $("label",{class:"rowitem rowitem--bordered"},
+      $("input",{attrs:{type:"checkbox", id:"sos-silent", "aria-label":t("j_sosSilent")}}),
+      $("span",{class:"grow",text:t("j_sosSilent")})),
+    Btn({label:t("j_sosSend"), kind:"danger", block:true, on:()=>sendSos()}));
+}
+
+async function sendSos(){
+  const silent = !!(document.getElementById("sos-silent") && document.getElementById("sos-silent").checked);
+  const bookingId = activeBookingId();
+  const body = { silent, bookingId: bookingId || undefined };
+  const loc = () => new Promise((resolve)=>{
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (p)=> resolve({ lat:p.coords.latitude, lng:p.coords.longitude }),
+      ()=> resolve(null),
+      { enableHighAccuracy:true, timeout:4000, maximumAge:15000 });
+  });
+  const pos = await loc();
+  if (pos) { body.lat = pos.lat; body.lng = pos.lng; }
+  try {
+    await API.raiseSos(body);
+    closeSheet();
+    if (!silent) toast(t("j_sosOk"));
+  } catch(e){ toast(errText(e.messageKey)); }
+}
+
+function reportSheet(){
+  const cats = ["assault","harassment","dangerous_driving","discrimination","theft","vehicle_condition","punctuality","other"];
+  return Sheet(t("reportProblem"),
+    $("div",{class:"field"},
+      $("label",{attrs:{for:"rep-cat"}, text:t("j_category")}),
+      $("select",{class:"input", attrs:{id:"rep-cat", "aria-label":t("j_category")}},
+        ...cats.map((c)=> $("option",{attrs:{value:c}, text: t("j_cat_"+c)==="j_cat_"+c ? c : t("j_cat_"+c)})))),
+    $("div",{class:"field"},
+      $("label",{attrs:{for:"rep-body"}, text:t("j_reportBody")}),
+      $("textarea",{class:"input", attrs:{id:"rep-body", "aria-label":t("j_reportBody")}})),
+    Btn({label:t("submit"), block:true, on:()=>sendReport()}));
+}
+
+async function sendReport(){
+  const category = val("rep-cat");
+  const body = val("rep-body");
+  try {
+    await API.fileReport({ category, body, bookingId: activeBookingId() || undefined });
+    closeSheet(); toast(t("j_reportOk"));
+  } catch(e){ toast(errText(e.messageKey)); }
+}
+
+function shareRideSheet(){
+  const id = activeBookingId();
+  if(!id) return Sheet(t("shareTrip"), Empty("share", t("shareTrip"), t("j_shareNeedRide")));
+  return Sheet(t("shareTrip"),
+    $("p",{class:"t-cap",text:t("j_shareSub")}),
+    Btn({label:t("j_shareMake"), block:true, on:()=>makeShare(id)}),
+    $("div",{id:"share-out"}));
+}
+
+async function makeShare(id){
+  try {
+    const res = await API.createShareLink(id);
+    const url = location.origin + "/?share=" + res.token;
+    const out = document.getElementById("share-out");
+    if(out){
+      out.innerHTML="";
+      out.append($("div",{class:"field"},
+        $("label",{attrs:{for:"share-url"}, text:t("j_shareLink")}),
+        $("input",{class:"input ltr", attrs:{id:"share-url", readonly:true, value:url, "aria-label":t("j_shareLink")}})));
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try { await navigator.clipboard.writeText(url); toast(t("j_shareCopied")); } catch { /* leave the field */ }
+    }
+  } catch(e){ toast(errText(e.messageKey)); }
 }

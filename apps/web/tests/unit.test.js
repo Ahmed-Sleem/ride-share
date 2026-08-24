@@ -1159,6 +1159,21 @@ group("PATH B — A→B planner (DEC-199)");
      && t.w.T.ar.j_planTitle !== t.w.T.en.j_planTitle);
 }
 
+group("PATH B — M4 safety (SOS + report + share)");
+{
+  const t=boot();
+  ok("SOS client exists", typeof t.w.API.raiseSos === "function");
+  ok("report client exists", typeof t.w.API.fileReport === "function");
+  ok("share client exists", typeof t.w.API.createShareLink === "function");
+  ok("j_sosSend both languages", !!t.w.T.en.j_sosSend && t.w.T.ar.j_sosSend !== t.w.T.en.j_sosSend);
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
+  t.go("rider","safety");
+  ok("safety centre lists SOS", t.q(".main").textContent.includes(t.w.T.en.sos));
+  ok("safety does not fake a phone call", !t.q(".main").textContent.includes(t.w.T.en.callSupport));
+  t.w.openSheet("sos");
+  ok("SOS sheet is a live send, not coming-soon", !!t.q(".sheet") && t.q(".sheet").textContent.includes(t.w.T.en.j_sosSend));
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    PATH A — RouteMap, the one data-bound map primitive (R21). jsdom has
    no map SDK → the honest fallback + the accessible stop list are the

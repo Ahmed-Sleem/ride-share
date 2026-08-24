@@ -3,12 +3,10 @@
    ══════════════════════════════════════════════════════════════════════ */
 const SHEETS = {
   /* Safety & support actions arrive in M4 — honest placeholders, no fake calls. */
-  sos: () => Sheet(t("sos"),
-    Banner("danger", t("sos")),
-    $("div",{class:"t-cap",text:t("safetyComingBody")})),
-
-  report: () => Sheet(t("reportProblem"),
-    $("div",{class:"t-cap",text:t("reportComingBody")})),
+  sos: () => sosSheet(),
+  report: () => reportSheet(),
+  shareRide: () => shareRideSheet(),
+  decideIncident: () => decideIncidentSheet(),
 
   staffEdit: () => staffEdit(),
   staffRemove: () => staffRemove(),

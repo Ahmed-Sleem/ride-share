@@ -616,11 +616,64 @@ function supportLookup(){                                     // S-11
 }
 function supportTickets(){                                    // S-12
   const w=$("div",{class:"main"});
-  w.append(Empty("tickets", t("nav.tickets"), t("supportComing")));
+  const list=$("div",{id:"incident-queue"});
+  w.append(list);
+  loadIncidentQueue(list);
   return w;
+}
+
+async function loadIncidentQueue(el){
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const rows = await API.incidentQueue();
+    if(!rows.length){ el.append(Empty("tickets", t("nav.tickets"), t("j_queueEmpty"))); return; }
+    rows.forEach((r)=> el.append(incidentRow(r)));
+  } catch(e){ el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function incidentRow(r){
+  const actions=$("div",{class:"row wrap gap2"});
+  if(r.status==="OPEN" || r.status==="TRIAGE"){
+    actions.append(Btn({label:t("j_investigate"), kind:"secondary", on:async()=>{
+      try { await API.investigateIncident(r.id); toast(t("j_investigate")); loadIncidentQueue(document.getElementById("incident-queue")); }
+      catch(e){ toast(errText(e.messageKey)); }
+    }}));
+  }
+  if(r.status==="INVESTIGATING"){
+    actions.append(Btn({label:t("j_decide"), on:()=>{ S.opsTarget=r; openSheet("decideIncident"); }}));
+  }
+  return Card("card--tight",
+    $("div",{class:"row gap2"},
+      $("strong",{class:"grow",text:r.kind==="sos"?t("sos"):(t("j_cat_"+r.category)==="j_cat_"+r.category?r.category:t("j_cat_"+r.category))}),
+      Chip({label:r.severity, kind:r.severity==="severe"||r.severity==="high"?"danger":"warn"})),
+    $("div",{class:"t-cap",text:r.status+(r.body?" · "+r.body:"")}),
+    r.precautionary ? Banner("danger", t("j_precaution")) : null,
+    actions);
 }
 function supportLost(){                                       // S-14
   const w=$("div",{class:"main"});
   w.append(Empty("lost", t("nav.lost"), t("supportComing")));
   return w;
+}
+
+function decideIncidentSheet(){
+  const r = S.opsTarget || {};
+  return Sheet(t("j_decide"),
+    $("div",{class:"t-cap",text:r.category || ""}),
+    $("div",{class:"field"},
+      $("label",{attrs:{for:"dec-kind"}, text:t("j_decide")}),
+      $("select",{class:"input", attrs:{id:"dec-kind", "aria-label":t("j_decide")}},
+        ...["no_action","warning","training","suspension","removal"].map((d)=>
+          $("option",{attrs:{value:d}, text:t("j_dec_"+d)==="j_dec_"+d?d:t("j_dec_"+d)})))),
+    $("div",{class:"field"},
+      $("label",{attrs:{for:"dec-why"}, text:t("reason")}),
+      $("textarea",{class:"input", attrs:{id:"dec-why", "aria-label":t("reason")}})),
+    Btn({label:t("save"), block:true, on:async()=>{
+      try {
+        await API.decideIncident(r.id, val("dec-kind"), val("dec-why"));
+        closeSheet(); toast(t("j_decide"));
+        loadIncidentQueue(document.getElementById("incident-queue"));
+      } catch(e){ toast(errText(e.messageKey)); }
+    }}));
 }

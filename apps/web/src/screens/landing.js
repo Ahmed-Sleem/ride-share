@@ -10,9 +10,42 @@
    ══════════════════════════════════════════════════════════════════════ */
 function landing() {
   document.querySelectorAll("body > .step-tip").forEach((el) => el.remove());
+  const shareTok = (typeof location !== "undefined" && location.search)
+    ? new URLSearchParams(location.search).get("share") : null;
+  if (shareTok) return shareLanding(shareTok);
   if (S.landingDoc) return landingDoc();
   const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding })[S.landingPage] || riderLanding;
   return page();
+}
+
+function shareLanding(token) {
+  const root = $("div", { class: "landing" }, landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      $("section", { class: "landing__section landing__pagetop" },
+        $("h1", { class: "landing__title", text: t("j_shareTitle") }),
+        $("div", { id: "share-live", class: "stack gap3" }, Empty("livemap", t("shareTrip"), t("j_shareLoading"))))));
+  loadPublicShare(token);
+  return root;
+}
+
+async function loadPublicShare(token) {
+  const el = document.getElementById("share-live");
+  if (!el) return;
+  try {
+    const d = await API.publicShare(token);
+    el.innerHTML = "";
+    if (d.ended) el.append(Banner("info", t("j_shareEnded")));
+    el.append(Card("",
+      $("strong", { text: d.routeName || "—" }),
+      $("div", { class: "t-cap ltr", text: d.serviceDate || "" }),
+      d.driverFirst ? $("div", { class: "t-cap", text: t("j_shareDriver") + " " + d.driverFirst }) : null,
+      (d.lat != null && d.lng != null)
+        ? $("div", { class: "t-cap ltr", text: Number(d.lat).toFixed(4) + ", " + Number(d.lng).toFixed(4) })
+        : $("div", { class: "t-cap", text: t("j_shareNoPos") })));
+  } catch (e) {
+    el.innerHTML = "";
+    el.append(Empty("share", t("shareTrip"), errText(e.messageKey)));
+  }
 }
 
 /* ── shared chrome ────────────────────────────────────────────────────── */

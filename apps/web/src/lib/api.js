@@ -157,6 +157,14 @@ const API = {
   journeyPosition: (id, lat, lng) => API.request("POST", `/journeys/${id}/position`, { lat, lng }),
   bookingLive: (id) => API.request("GET", `/bookings/${id}/live`),
   requestAlight: (id) => API.request("POST", `/bookings/${id}/alight`),
+  raiseSos: (body) => API.request("POST", "/support/sos", body || {}),
+  fileReport: (body) => API.request("POST", "/support/reports", body),
+  createShareLink: (bookingId) => API.request("POST", "/support/shares", { bookingId }),
+  publicShare: (token) => API.request("GET", `/support/share/${token}`),
+  myIncidents: () => API.request("GET", "/support/mine"),
+  incidentQueue: () => API.request("GET", "/support/incidents"),
+  investigateIncident: (id) => API.request("POST", `/support/incidents/${id}/investigate`),
+  decideIncident: (id, decision, reason) => API.request("POST", `/support/incidents/${id}/decide`, { decision, reason }),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {

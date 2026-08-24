@@ -131,6 +131,39 @@ ref_id uuid,
 read_at timestamp with time zone,
 created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+CREATE TABLE public.incident_events (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+incident_id uuid NOT NULL,
+type text NOT NULL,
+payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+actor_id uuid,
+occurred_at timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE public.incidents (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+kind text NOT NULL,
+category text NOT NULL,
+severity text NOT NULL,
+status text NOT NULL,
+reporter_user_id uuid NOT NULL,
+subject_user_id uuid,
+booking_id uuid,
+journey_id uuid,
+body text,
+silent boolean DEFAULT false NOT NULL,
+lat double precision,
+lng double precision,
+decision text,
+decision_reason text,
+decided_by uuid,
+decided_at timestamp with time zone,
+precautionary_recommended boolean DEFAULT false NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+CONSTRAINT incidents_kind_check CHECK ((kind = ANY (ARRAY['sos'::text, 'report'::text]))),
+CONSTRAINT incidents_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'severe'::text]))),
+CONSTRAINT incidents_status_check CHECK ((status = ANY (ARRAY['OPEN'::text, 'TRIAGE'::text, 'INVESTIGATING'::text, 'DECIDED'::text, 'FOLLOWED_UP'::text])))
+);
 CREATE TABLE public.journeys (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 route_id uuid NOT NULL,
@@ -180,6 +213,14 @@ NO MINVALUE
 NO MAXVALUE
 CACHE 1;
 ALTER SEQUENCE public.pgmigrations_id_seq OWNED BY public.pgmigrations.id;
+CREATE TABLE public.ride_share_links (
+id uuid DEFAULT gen_random_uuid() NOT NULL,
+token text NOT NULL,
+booking_id uuid NOT NULL,
+rider_user_id uuid NOT NULL,
+expires_at timestamp with time zone NOT NULL,
+created_at timestamp with time zone DEFAULT now() NOT NULL
+);
 CREATE TABLE public.route_stops (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 route_id uuid NOT NULL,
@@ -331,6 +372,10 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_key UNIQUE (user_id);
 ALTER TABLE ONLY public.in_app_notifications
 ADD CONSTRAINT in_app_notifications_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.incident_events
+ADD CONSTRAINT incident_events_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.journeys
@@ -343,6 +388,10 @@ ALTER TABLE ONLY public.payment_orders
 ADD CONSTRAINT payment_orders_provider_txn_id_key UNIQUE (provider_txn_id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.ride_share_links
+ADD CONSTRAINT ride_share_links_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.ride_share_links
+ADD CONSTRAINT ride_share_links_token_key UNIQUE (token);
 ALTER TABLE ONLY public.route_stops
 ADD CONSTRAINT route_stops_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.route_stops
@@ -387,6 +436,9 @@ CREATE INDEX audit_created_idx ON public.audit_log USING btree (created_at DESC)
 CREATE INDEX bookings_journey_idx ON public.bookings USING btree (journey_id);
 CREATE INDEX bookings_rider_idx ON public.bookings USING btree (rider_user_id, created_at DESC);
 CREATE INDEX in_app_notifications_user_idx ON public.in_app_notifications USING btree (user_id, created_at DESC);
+CREATE INDEX incident_events_incident_idx ON public.incident_events USING btree (incident_id, occurred_at);
+CREATE INDEX incidents_reporter_idx ON public.incidents USING btree (reporter_user_id, created_at DESC);
+CREATE INDEX incidents_status_idx ON public.incidents USING btree (status, created_at DESC);
 CREATE INDEX journeys_driver_idx ON public.journeys USING btree (driver_user_id, created_at DESC);
 CREATE INDEX journeys_slot_idx ON public.journeys USING btree (slot_id);
 CREATE INDEX ledger_entries_credit_idx ON public.ledger_entries USING btree (credit_account, created_at DESC);
@@ -394,6 +446,7 @@ CREATE INDEX ledger_entries_debit_idx ON public.ledger_entries USING btree (debi
 CREATE INDEX ledger_entries_ref_idx ON public.ledger_entries USING btree (ref_type, ref_id) WHERE (ref_type IS NOT NULL);
 CREATE INDEX ledger_entries_txn_idx ON public.ledger_entries USING btree (txn_id);
 CREATE INDEX payment_orders_rider_idx ON public.payment_orders USING btree (rider_user_id, created_at DESC);
+CREATE INDEX ride_share_links_token_idx ON public.ride_share_links USING btree (token);
 CREATE INDEX route_stops_route_idx ON public.route_stops USING btree (route_id, "position");
 CREATE INDEX sessions_user_idx ON public.sessions USING btree (user_id);
 CREATE INDEX slots_route_date_idx ON public.slots USING btree (route_id, service_date);
@@ -420,6 +473,20 @@ ALTER TABLE ONLY public.driver_profiles
 ADD CONSTRAINT driver_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.in_app_notifications
 ADD CONSTRAINT in_app_notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.incident_events
+ADD CONSTRAINT incident_events_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
+ALTER TABLE ONLY public.incident_events
+ADD CONSTRAINT incident_events_incident_id_fkey FOREIGN KEY (incident_id) REFERENCES public.incidents(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id);
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.users(id);
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_journey_id_fkey FOREIGN KEY (journey_id) REFERENCES public.journeys(id);
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_reporter_user_id_fkey FOREIGN KEY (reporter_user_id) REFERENCES public.users(id);
+ALTER TABLE ONLY public.incidents
+ADD CONSTRAINT incidents_subject_user_id_fkey FOREIGN KEY (subject_user_id) REFERENCES public.users(id);
 ALTER TABLE ONLY public.journeys
 ADD CONSTRAINT journeys_driver_user_id_fkey FOREIGN KEY (driver_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.journeys
@@ -432,6 +499,10 @@ ALTER TABLE ONLY public.payment_orders
 ADD CONSTRAINT payment_orders_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE SET NULL;
 ALTER TABLE ONLY public.payment_orders
 ADD CONSTRAINT payment_orders_rider_user_id_fkey FOREIGN KEY (rider_user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.ride_share_links
+ADD CONSTRAINT ride_share_links_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.ride_share_links
+ADD CONSTRAINT ride_share_links_rider_user_id_fkey FOREIGN KEY (rider_user_id) REFERENCES public.users(id);
 ALTER TABLE ONLY public.route_stops
 ADD CONSTRAINT route_stops_route_id_fkey FOREIGN KEY (route_id) REFERENCES public.routes(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.route_stops

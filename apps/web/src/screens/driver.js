@@ -189,6 +189,7 @@ async function loadDriverJourneyInto(pick, scan, list) {
       if (st === "IN_PROGRESS") {
         acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.arriveStop(jid))}));
         acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>API.completeJourney(jid))}));
+        acts.append(Btn({label:t("sos"), kind:"danger", driver:true, on:()=>openSheet("sos")}));
         acts.append(Btn({label:t("j_abortRide"), kind:"danger", on:()=>{
           const reason = window.prompt(t("j_abortWhy")) || "";
           if (reason) dutyAct(()=>API.abortJourney(jid, reason));

@@ -945,3 +945,13 @@
   languages); token guard CAUGHT my colour-literal fallbacks before push
   (fixed to token chains); break case "RouteMap loses its accessible stop
   list highlight" observed CAUGHT. pnpm verify green, all guards clean.
+
+## 2026-08-24 — B4 M4 safety & support (Path B)
+
+- New `support` module: incidents (SOS + reports), legal state machine,
+  share-my-ride tokens. Migration **0020** (even).
+- Rider/driver SOS creates an incident that cannot be dismissed without a
+  decision (CH12). Silent mode supported. Share link is public, limited
+  fields, expires, blanks position when the journey ends.
+- Support/ops ticket queue: investigate → decide with a mandatory reason;
+  reporter is notified of the outcome. No mock phone calls.
