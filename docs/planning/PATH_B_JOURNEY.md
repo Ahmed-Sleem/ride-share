@@ -428,3 +428,5 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — P3.8.1–P3.8.5 landed. Owner declined scan lockout; window 15/30.
 
 - 2026-08-24 — P3.9 live journey: start/complete/abort/position/arrive, slip, rider waiting/alight, notifications 0018.
+
+- 2026-08-24 — B2 DEC-199 A→B planner + rider live poll ≥15s/backoff/hidden.

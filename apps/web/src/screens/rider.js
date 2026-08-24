@@ -10,11 +10,139 @@ function riderHome(){                                         // R-10
     $("div",{class:"t-cap",text:t("tagline")}),
     $("div",{class:"row gap2 mt2"},
       Btn({label:t("searchRoute"), on:()=>go("routes")}),
+      Btn({label:t("j_planAction"), kind:"secondary", on:()=>go("plan")}),
       Btn({label:t("trips"), kind:"secondary", on:()=>go("trips")}))));
   const list = $("div",{id:"rider-home-routes"});
   w.append(list);
   loadRiderRoutesInto(list);
   return w;
+}
+
+function riderPlan(){                                         // DEC-199 A→B planner
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"stack gap1"},
+    $("h1",{class:"t-head",text:t("j_planTitle")}),
+    $("div",{class:"t-cap",text:t("j_planHint")})));
+  const box=$("div",{id:"rider-plan"});
+  w.append(box);
+  loadRiderPlan(box);
+  return w;
+}
+
+function stopLabel(s){
+  if(!s) return t("j_pickStop");
+  return s.stop_name_en || s.stop_name_ar || s.stop_code || t("j_pickStop");
+}
+
+async function ensureRiderIndex(){
+  if (S.riderIndex) return;
+  const routes = await API.publishedRoutes();
+  S.riderRoutes = routes;
+  S.riderIndex = buildRiderIndex(routes);
+}
+
+function loadRiderPlan(el){
+  if(!el) return;
+  renderRiderPlan(el);
+  ensureRiderIndex().then(()=> { if(el.isConnected) renderRiderPlan(el); }).catch((e)=>{
+    if(!el.isConnected) return;
+    el.append(Banner("danger", errText(e.messageKey)));
+  });
+}
+
+function renderRiderPlan(el){
+  if(!el) return;
+  el.innerHTML="";
+  const stops = collectPlannerStops(S.riderIndex || []);
+  el.append(planPickField("from", t("j_from"), S.planFrom, S.planFromQ, (v)=>{ S.planFromQ=v; renderRiderPlan(el); }));
+  el.append(planPickField("to", t("j_to"), S.planTo, S.planToQ, (v)=>{ S.planToQ=v; renderRiderPlan(el); }));
+  if(S.planFocus){
+    const q = S.planFocus === "from" ? S.planFromQ : S.planToQ;
+    const hits = searchPlannerStops(q, stops).slice(0, 12);
+    if(!hits.length) el.append(Empty("stops", t("j_pickStop"), t("noSearchResults")));
+    else el.append(Section(t("j_pickStop"), ...hits.map((s)=> Row({
+      icon:"stops",
+      title: stopLabel(s),
+      sub: s.stop_code || "",
+      bordered:true,
+      on:()=>{
+        if(S.planFocus==="from"){ S.planFrom=s; S.planFromQ=stopLabel(s); }
+        else { S.planTo=s; S.planToQ=stopLabel(s); }
+        S.planFocus=null;
+        renderRiderPlan(el);
+      }
+    }))));
+    return;
+  }
+  if(!S.planFrom || !S.planTo){
+    el.append(Empty("routes", t("j_planTitle"), t("j_planNeedBoth")));
+    return;
+  }
+  if(S.planFrom.stop_id === S.planTo.stop_id){
+    el.append(Empty("stops", t("j_planTitle"), t("j_planSame")));
+    return;
+  }
+  const plans = planJourneys(S.planFrom, S.planTo, S.riderIndex || []);
+  if(!plans.length){
+    el.append(Empty("routes", t("j_planTitle"), t("j_noPlan")));
+    return;
+  }
+  plans.forEach((p, i)=> el.append(planResultCard(p, i===0)));
+}
+
+function planPickField(which, label, chosen, query, onInput){
+  return $("div",{class:"field"},
+    $("label",{attrs:{for:"plan-"+which}, text:label}),
+    $("input",{class:"input", attrs:{id:"plan-"+which, type:"search",
+      value: query || (chosen ? stopLabel(chosen) : ""),
+      "aria-label":label, autocomplete:"off"},
+      on:{focus:()=>{ S.planFocus=which; },
+          input:(e)=>{ S.planFocus=which; onInput(e.target.value); }}}));
+}
+
+function planResultCard(p, recommended){
+  const card=$("div",{class:"routecard routecard--results"});
+  const name = p.kind==="single"
+    ? (p.route.name_en || p.route.name_ar || p.route.code)
+    : t("j_mix");
+  const walkBits = [t("j_walkBoard")+" "+formatWalkMeters(p.walkBoard)+" "+t("walk")];
+  if(p.kind==="mix") walkBits.push(t("j_transfer")+" "+formatWalkMeters(p.walkTransfer)+" "+t("walk"));
+  walkBits.push(t("j_walkAlight")+" "+formatWalkMeters(p.walkAlight)+" "+t("walk"));
+  card.append($("button",{class:"routecard__head", attrs:{type:"button"},
+    on:{click:()=>applyPlan(p)}},
+    $("div",{class:"stack grow gap1"},
+      $("div",{class:"routeline",text:name}),
+      $("div",{class:"t-cap",text:walkBits.join(" · ")})),
+    $("div",{class:"stack",style:{alignItems:"flex-end"}},
+      $("div",{class:"fare",text:money((p.fareMinor||0)/100)}),
+      recommended ? Chip({label:t("recommended"), kind:"ok"}) : $("div",{class:"t-micro",text:p.kind==="mix"?t("j_mix"):t("j_single")}))));
+  if(p.kind==="mix"){
+    p.legs.forEach((leg, n)=>{
+      card.append($("div",{class:"routecard__stop"},
+        icon("bus"),
+        $("span",{class:"t-cap",text:(n+1)+". "+(leg.route.name_en||leg.route.code)+" · "+t("boardHere")+" "+stopLabel(leg.board)})));
+    });
+  } else {
+    card.append($("div",{class:"routecard__stop"},
+      icon("stops"),
+      $("span",{class:"t-cap",text:t("boardHere")+" · "+stopLabel(p.board)})));
+  }
+  return card;
+}
+
+function applyPlan(p){
+  if(p.kind==="single"){
+    S.chosenRoute = { route:p.route, stops:p.stops };
+    S.chosenBoard = p.board.stop_id;
+    S.chosenDep = null;
+    go("departures");
+    return;
+  }
+  const first = p.legs[0];
+  S.chosenRoute = { route:first.route, stops:first.stops };
+  S.chosenBoard = first.board.stop_id;
+  S.chosenDep = null;
+  go("departures");
 }
 
 function riderRoutes(){                                       // R-11 — searchable routes + journeys
@@ -255,25 +383,44 @@ function riderLiveScreen(mode) {
 
 async function loadRiderLive(el, mode) {
   if (!el) return;
+  if (S._liveTimer) { clearTimeout(S._liveTimer); S._liveTimer = null; }
   el.innerHTML = "";
   const b = S.lastBooking || (S.tripsCache || []).find((x) => x.status === "ON_BOARD" || x.status === "CONFIRMED" || x.status === "RESERVED");
   if (!b || !b.id) { el.append(Empty("clock", t("j_waiting"), t("noTripsBody"))); return; }
-  try {
-    const live = await API.bookingLive(b.id);
-    if (live.code) el.append(QRPanel({code:String(live.code)}));
-    if (live.arriving) el.append(Banner("ok", t("j_arriving")));
-    else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
-    if (live.stop) {
-      const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
-      el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+  let delay = 15000;
+  const paint = async () => {
+    if (!el.isConnected) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      S._liveTimer = setTimeout(paint, delay);
+      return;
     }
-    if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
-      el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
-        try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
-        catch(e){ toast(errText(e.messageKey)); }
-      }}));
+    try {
+      const live = await API.bookingLive(b.id);
+      if (!el.isConnected) return;
+      el.innerHTML = "";
+      if (live.code) el.append(QRPanel({code:String(live.code)}));
+      if (live.arriving) el.append(Banner("ok", t("j_arriving")));
+      else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+      if (live.stop) {
+        const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
+        el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+      }
+      if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
+        el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
+          try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
+          catch(e){ toast(errText(e.messageKey)); }
+        }}));
+      }
+      delay = 15000;
+    } catch (e) {
+      if (!el.isConnected) return;
+      el.innerHTML = "";
+      el.append(Banner("danger", errText(e.messageKey)));
+      delay = Math.min(delay * 2, 60000);
     }
-  } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+    S._liveTimer = setTimeout(paint, delay);
+  };
+  paint();
 }
 
 function comingSoonRider(){

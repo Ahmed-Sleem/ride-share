@@ -376,6 +376,10 @@ run_break "scan client removed" src/lib/api.js \
   's|scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|scanBookingX: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|' \
   "scan API exists"
 
+run_break "planner ranking removed" src/lib/search.js \
+  's|function planJourneys(start, dest, index) {|function planJourneysX(start, dest, index) {|' \
+  "planner is exported|same-line start→end recommends the line"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

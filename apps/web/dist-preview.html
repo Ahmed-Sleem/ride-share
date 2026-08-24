@@ -1520,6 +1520,15 @@ en:{
   j_arrivedStop:"Arrived at stop", j_slip:"Schedule", j_arriving:"Your ride is arriving",
   j_waiting:"Waiting for your ride", j_alightOk:"Driver notified you are getting off next",
   j_abortWhy:"Why are you aborting?",
+  j_planTitle:"Plan a trip", j_planAction:"Start to end",
+  j_planHint:"Pick where you start and where you get off. We recommend a route that boards near the start and passes the end — you can alight anywhere on the line.",
+  j_from:"Start", j_to:"End", j_pickStop:"Pick a stop",
+  j_planNeedBoth:"Choose a start and an end to see recommended journeys.",
+  j_planSame:"Start and end are the same stop — pick two different places.",
+  j_noPlan:"No published route serves that pair yet.",
+  j_mix:"Two-leg mix", j_single:"Direct",
+  j_walkBoard:"Walk to board", j_walkAlight:"Walk after alighting",
+  j_transfer:"Transfer walk",
   bookings:{ not_found:"That code is not on this departure.",
     already_boarded:"This rider is already on board.",
     wrong_journey:"That code is for a different departure.",
@@ -1817,6 +1826,15 @@ ar:{
   j_arrivedStop:"وصلت المحطة", j_slip:"الجدول", j_arriving:"رحلتك تصل الآن",
   j_waiting:"في انتظار رحلتك", j_alightOk:"أُبلغ السائق أنك ستنزل التالية",
   j_abortWhy:"لماذا تُجهض الرحلة؟",
+  j_planTitle:"خطط رحلة", j_planAction:"من وإلى",
+  j_planHint:"اختر نقطة البداية ونقطة النزول. نقترح مسارًا يركب قرب البداية ويمر بالنهاية — والنزول حر في أي مكان على الخط.",
+  j_from:"البداية", j_to:"النهاية", j_pickStop:"اختر محطة",
+  j_planNeedBoth:"اختر بداية ونهاية لعرض الرحلات المقترحة.",
+  j_planSame:"البداية والنهاية نفس المحطة — اختر مكانين مختلفين.",
+  j_noPlan:"لا يوجد مسار منشور يخدم هذه الثنائية بعد.",
+  j_mix:"مزيج من رحلتين", j_single:"مباشر",
+  j_walkBoard:"مشي للركوب", j_walkAlight:"مشي بعد النزول",
+  j_transfer:"مشي التحويل",
   bookings:{ not_found:"هذا الكود ليس على هذا الموعد.",
     already_boarded:"هذا الراكب ركب بالفعل.",
     wrong_journey:"هذا الكود لموعد آخر.",
@@ -1879,6 +1897,7 @@ const S = {
   chosenRoute:null, chosenBoard:null, chosenDep:null, lastBooking:null, seats:1,
   tripTab:"upcoming", tripsCache:null,                 // bookings cached so tab-switch is seamless
   riderQuery:"", riderRoutes:null, riderIndex:null, riderJourneys:null,  // rider search (Fuse index)
+  planFrom:null, planTo:null, planFromQ:"", planToQ:"", planFocus:null,   /* path B DEC-199 */
   stopsQuery:"", stopsCache:null,                      // ops stops live filter
   offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety
@@ -2433,6 +2452,187 @@ function matchesQuery(query, text) {
   const t = normalizeText(text);
   if (t.includes(q)) return true;
   return q.split(" ").filter(Boolean).every((tok) => t.includes(tok));
+}
+
+/* ── A→B planner (DEC-199) ───────────────────────────────────────────
+   Pure ranking over published routes. Mirrors geo-math.ts haversine
+   (client cannot import the API module; formula is the same definition).
+   Boarding is at a fixed stop; alighting is free along the line (DEC-140),
+   so a route serves B when any later stop or segment is near B. Walking
+   has no ceiling (DEC-064/134) — distances are ranked and shown honestly.
+   2-leg mixes are independent bookings (DEC-135). */
+
+const EARTH_M = 6371000;
+const rad = (d) => (Number(d) * Math.PI) / 180;
+const TRANSFER_PENALTY_M = 400;
+
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  const a1 = Number(lat1), o1 = Number(lng1), a2 = Number(lat2), o2 = Number(lng2);
+  if (![a1, o1, a2, o2].every(Number.isFinite)) return Infinity;
+  const dLat = rad(a2 - a1), dLng = rad(o2 - o1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a1)) * Math.cos(rad(a2)) * Math.sin(dLng / 2) ** 2;
+  return EARTH_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function pointToSegmentMeters(lat, lng, lat1, lng1, lat2, lng2) {
+  const toXY = (a, o) => {
+    const x = distanceMeters(lat1, lng1, lat1, o) * (o >= lng1 ? 1 : -1);
+    const y = distanceMeters(lat1, lng1, a, lng1) * (a >= lat1 ? 1 : -1);
+    return [x, y];
+  };
+  const [px, py] = toXY(lat, lng);
+  const [ax, ay] = [0, 0];
+  const [bx, by] = toXY(lat2, lng2);
+  const abx = bx - ax, aby = by - ay;
+  const apx = px - ax, apy = py - ay;
+  const ab2 = abx * abx + aby * aby;
+  if (ab2 < 1) return distanceMeters(lat, lng, lat1, lng1);
+  let t = (apx * abx + apy * aby) / ab2;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  const cx = ax + t * abx, cy = ay + t * aby;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function orderedStops(stops) {
+  return (stops || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+}
+
+function walkToStop(point, stop) {
+  if (!point || !stop) return Infinity;
+  return distanceMeters(point.lat, point.lng, stop.lat, stop.lng);
+}
+
+/* Distance from dest to the portion of the line AFTER boarding (exclusive). */
+function alightWalkMeters(stops, boardIndex, dest) {
+  const rest = stops.slice(boardIndex + 1);
+  if (!rest.length) return Infinity;
+  let best = Infinity;
+  for (let i = 0; i < rest.length; i++) {
+    best = Math.min(best, walkToStop(dest, rest[i]));
+    const prev = i === 0 ? stops[boardIndex] : rest[i - 1];
+    if (prev && rest[i] && Number.isFinite(Number(prev.lat)) && Number.isFinite(Number(rest[i].lat))) {
+      best = Math.min(best, pointToSegmentMeters(
+        dest.lat, dest.lng, prev.lat, prev.lng, rest[i].lat, rest[i].lng));
+    }
+  }
+  return best;
+}
+
+function bestSingleLeg(start, dest, entry) {
+  const stops = orderedStops(entry.stops);
+  let best = null;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const board = stops[i];
+    const walkBoard = walkToStop(start, board);
+    const walkAlight = alightWalkMeters(stops, i, dest);
+    if (!Number.isFinite(walkBoard) || !Number.isFinite(walkAlight)) continue;
+    const score = walkBoard + walkAlight;
+    if (!best || score < best.score) {
+      best = {
+        kind: "single",
+        routeId: entry.id,
+        route: entry.route,
+        stops,
+        board,
+        walkBoard,
+        walkAlight,
+        score,
+        fareMinor: entry.route.fare_minor || 0,
+      };
+    }
+  }
+  return best;
+}
+
+function bestTransfer(stopsA, stopsB) {
+  let best = null;
+  for (let i = 1; i < stopsA.length; i++) {          // must ride at least one hop
+    for (let j = 0; j < stopsB.length - 1; j++) {    // must leave room to continue
+      const walk = walkToStop(stopsA[i], stopsB[j]);
+      if (!Number.isFinite(walk)) continue;
+      if (!best || walk < best.walk) best = { from: stopsA[i], to: stopsB[j], fromIndex: i, toIndex: j, walk };
+    }
+  }
+  return best;
+}
+
+function bestTwoLeg(start, dest, a, b) {
+  if (a.id === b.id) return null;
+  const sa = orderedStops(a.stops);
+  const sb = orderedStops(b.stops);
+  const xfer = bestTransfer(sa, sb);
+  if (!xfer) return null;
+  let best = null;
+  for (let i = 0; i < xfer.fromIndex; i++) {
+    const board = sa[i];
+    const walkBoard = walkToStop(start, board);
+    const walkAlight = alightWalkMeters(sb, xfer.toIndex, dest);
+    if (!Number.isFinite(walkBoard) || !Number.isFinite(walkAlight)) continue;
+    const score = walkBoard + xfer.walk + walkAlight + TRANSFER_PENALTY_M;
+    if (!best || score < best.score) {
+      best = {
+        kind: "mix",
+        legs: [
+          { route: a.route, routeId: a.id, board, stops: sa },
+          { route: b.route, routeId: b.id, board: xfer.to, stops: sb },
+        ],
+        transfer: xfer,
+        walkBoard,
+        walkTransfer: xfer.walk,
+        walkAlight,
+        score,
+        fareMinor: (a.route.fare_minor || 0) + (b.route.fare_minor || 0),
+      };
+    }
+  }
+  return best;
+}
+
+function planJourneys(start, dest, index) {
+  if (!start || !dest || start.stop_id === dest.stop_id) return [];
+  const singles = [];
+  const mixes = [];
+  for (const e of index || []) {
+    const s = bestSingleLeg(start, dest, e);
+    if (s) singles.push(s);
+  }
+  singles.sort((a, b) => a.score - b.score);
+  const bestSingle = singles[0] ? singles[0].score : Infinity;
+  for (let i = 0; i < (index || []).length; i++) {
+    for (let j = 0; j < index.length; j++) {
+      if (i === j) continue;
+      const m = bestTwoLeg(start, dest, index[i], index[j]);
+      if (!m) continue;
+      if (m.score < bestSingle - 50) mixes.push(m);   // only when clearly better
+    }
+  }
+  mixes.sort((a, b) => a.score - b.score);
+  return singles.concat(mixes.slice(0, 4)).sort((a, b) => a.score - b.score);
+}
+
+function collectPlannerStops(index) {
+  const map = new Map();
+  for (const e of index || []) {
+    for (const s of e.stops || []) {
+      if (s && s.stop_id && !map.has(s.stop_id)) map.set(s.stop_id, s);
+    }
+  }
+  return [...map.values()];
+}
+
+function searchPlannerStops(query, stops) {
+  const q = normalizeText(query);
+  const list = stops || [];
+  if (!q) return list;
+  return list.filter((s) => matchesQuery(q,
+    [s.stop_name_en, s.stop_name_ar, s.stop_code].filter(Boolean).join(" ")));
+}
+
+function formatWalkMeters(m) {
+  if (!Number.isFinite(m)) return "—";
+  const minutes = Math.max(1, Math.round(m / 80));
+  return String(minutes);
 }
 
 
@@ -3609,11 +3809,139 @@ function riderHome(){                                         // R-10
     $("div",{class:"t-cap",text:t("tagline")}),
     $("div",{class:"row gap2 mt2"},
       Btn({label:t("searchRoute"), on:()=>go("routes")}),
+      Btn({label:t("j_planAction"), kind:"secondary", on:()=>go("plan")}),
       Btn({label:t("trips"), kind:"secondary", on:()=>go("trips")}))));
   const list = $("div",{id:"rider-home-routes"});
   w.append(list);
   loadRiderRoutesInto(list);
   return w;
+}
+
+function riderPlan(){                                         // DEC-199 A→B planner
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"stack gap1"},
+    $("h1",{class:"t-head",text:t("j_planTitle")}),
+    $("div",{class:"t-cap",text:t("j_planHint")})));
+  const box=$("div",{id:"rider-plan"});
+  w.append(box);
+  loadRiderPlan(box);
+  return w;
+}
+
+function stopLabel(s){
+  if(!s) return t("j_pickStop");
+  return s.stop_name_en || s.stop_name_ar || s.stop_code || t("j_pickStop");
+}
+
+async function ensureRiderIndex(){
+  if (S.riderIndex) return;
+  const routes = await API.publishedRoutes();
+  S.riderRoutes = routes;
+  S.riderIndex = buildRiderIndex(routes);
+}
+
+function loadRiderPlan(el){
+  if(!el) return;
+  renderRiderPlan(el);
+  ensureRiderIndex().then(()=> { if(el.isConnected) renderRiderPlan(el); }).catch((e)=>{
+    if(!el.isConnected) return;
+    el.append(Banner("danger", errText(e.messageKey)));
+  });
+}
+
+function renderRiderPlan(el){
+  if(!el) return;
+  el.innerHTML="";
+  const stops = collectPlannerStops(S.riderIndex || []);
+  el.append(planPickField("from", t("j_from"), S.planFrom, S.planFromQ, (v)=>{ S.planFromQ=v; renderRiderPlan(el); }));
+  el.append(planPickField("to", t("j_to"), S.planTo, S.planToQ, (v)=>{ S.planToQ=v; renderRiderPlan(el); }));
+  if(S.planFocus){
+    const q = S.planFocus === "from" ? S.planFromQ : S.planToQ;
+    const hits = searchPlannerStops(q, stops).slice(0, 12);
+    if(!hits.length) el.append(Empty("stops", t("j_pickStop"), t("noSearchResults")));
+    else el.append(Section(t("j_pickStop"), ...hits.map((s)=> Row({
+      icon:"stops",
+      title: stopLabel(s),
+      sub: s.stop_code || "",
+      bordered:true,
+      on:()=>{
+        if(S.planFocus==="from"){ S.planFrom=s; S.planFromQ=stopLabel(s); }
+        else { S.planTo=s; S.planToQ=stopLabel(s); }
+        S.planFocus=null;
+        renderRiderPlan(el);
+      }
+    }))));
+    return;
+  }
+  if(!S.planFrom || !S.planTo){
+    el.append(Empty("routes", t("j_planTitle"), t("j_planNeedBoth")));
+    return;
+  }
+  if(S.planFrom.stop_id === S.planTo.stop_id){
+    el.append(Empty("stops", t("j_planTitle"), t("j_planSame")));
+    return;
+  }
+  const plans = planJourneys(S.planFrom, S.planTo, S.riderIndex || []);
+  if(!plans.length){
+    el.append(Empty("routes", t("j_planTitle"), t("j_noPlan")));
+    return;
+  }
+  plans.forEach((p, i)=> el.append(planResultCard(p, i===0)));
+}
+
+function planPickField(which, label, chosen, query, onInput){
+  return $("div",{class:"field"},
+    $("label",{attrs:{for:"plan-"+which}, text:label}),
+    $("input",{class:"input", attrs:{id:"plan-"+which, type:"search",
+      value: query || (chosen ? stopLabel(chosen) : ""),
+      "aria-label":label, autocomplete:"off"},
+      on:{focus:()=>{ S.planFocus=which; },
+          input:(e)=>{ S.planFocus=which; onInput(e.target.value); }}}));
+}
+
+function planResultCard(p, recommended){
+  const card=$("div",{class:"routecard routecard--results"});
+  const name = p.kind==="single"
+    ? (p.route.name_en || p.route.name_ar || p.route.code)
+    : t("j_mix");
+  const walkBits = [t("j_walkBoard")+" "+formatWalkMeters(p.walkBoard)+" "+t("walk")];
+  if(p.kind==="mix") walkBits.push(t("j_transfer")+" "+formatWalkMeters(p.walkTransfer)+" "+t("walk"));
+  walkBits.push(t("j_walkAlight")+" "+formatWalkMeters(p.walkAlight)+" "+t("walk"));
+  card.append($("button",{class:"routecard__head", attrs:{type:"button"},
+    on:{click:()=>applyPlan(p)}},
+    $("div",{class:"stack grow gap1"},
+      $("div",{class:"routeline",text:name}),
+      $("div",{class:"t-cap",text:walkBits.join(" · ")})),
+    $("div",{class:"stack",style:{alignItems:"flex-end"}},
+      $("div",{class:"fare",text:money((p.fareMinor||0)/100)}),
+      recommended ? Chip({label:t("recommended"), kind:"ok"}) : $("div",{class:"t-micro",text:p.kind==="mix"?t("j_mix"):t("j_single")}))));
+  if(p.kind==="mix"){
+    p.legs.forEach((leg, n)=>{
+      card.append($("div",{class:"routecard__stop"},
+        icon("bus"),
+        $("span",{class:"t-cap",text:(n+1)+". "+(leg.route.name_en||leg.route.code)+" · "+t("boardHere")+" "+stopLabel(leg.board)})));
+    });
+  } else {
+    card.append($("div",{class:"routecard__stop"},
+      icon("stops"),
+      $("span",{class:"t-cap",text:t("boardHere")+" · "+stopLabel(p.board)})));
+  }
+  return card;
+}
+
+function applyPlan(p){
+  if(p.kind==="single"){
+    S.chosenRoute = { route:p.route, stops:p.stops };
+    S.chosenBoard = p.board.stop_id;
+    S.chosenDep = null;
+    go("departures");
+    return;
+  }
+  const first = p.legs[0];
+  S.chosenRoute = { route:first.route, stops:first.stops };
+  S.chosenBoard = first.board.stop_id;
+  S.chosenDep = null;
+  go("departures");
 }
 
 function riderRoutes(){                                       // R-11 — searchable routes + journeys
@@ -3854,25 +4182,44 @@ function riderLiveScreen(mode) {
 
 async function loadRiderLive(el, mode) {
   if (!el) return;
+  if (S._liveTimer) { clearTimeout(S._liveTimer); S._liveTimer = null; }
   el.innerHTML = "";
   const b = S.lastBooking || (S.tripsCache || []).find((x) => x.status === "ON_BOARD" || x.status === "CONFIRMED" || x.status === "RESERVED");
   if (!b || !b.id) { el.append(Empty("clock", t("j_waiting"), t("noTripsBody"))); return; }
-  try {
-    const live = await API.bookingLive(b.id);
-    if (live.code) el.append(QRPanel({code:String(live.code)}));
-    if (live.arriving) el.append(Banner("ok", t("j_arriving")));
-    else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
-    if (live.stop) {
-      const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
-      el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+  let delay = 15000;
+  const paint = async () => {
+    if (!el.isConnected) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      S._liveTimer = setTimeout(paint, delay);
+      return;
     }
-    if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
-      el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
-        try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
-        catch(e){ toast(errText(e.messageKey)); }
-      }}));
+    try {
+      const live = await API.bookingLive(b.id);
+      if (!el.isConnected) return;
+      el.innerHTML = "";
+      if (live.code) el.append(QRPanel({code:String(live.code)}));
+      if (live.arriving) el.append(Banner("ok", t("j_arriving")));
+      else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+      if (live.stop) {
+        const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
+        el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
+      }
+      if (mode === "onboard" || live.bookingStatus === "ON_BOARD") {
+        el.append(Btn({label:t("imGettingOff"), block:true, on:async()=>{
+          try { await API.requestAlight(b.id); toast(t("j_alightOk")); }
+          catch(e){ toast(errText(e.messageKey)); }
+        }}));
+      }
+      delay = 15000;
+    } catch (e) {
+      if (!el.isConnected) return;
+      el.innerHTML = "";
+      el.append(Banner("danger", errText(e.messageKey)));
+      delay = Math.min(delay * 2, 60000);
     }
-  } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+    S._liveTimer = setTimeout(paint, delay);
+  };
+  paint();
 }
 
 function comingSoonRider(){
@@ -5204,6 +5551,7 @@ const PAGES = {
     {k:"safety",    ic:"safety",  fn:riderSafety,     dock:true},
     {k:"profile",   ic:"profile", fn:riderProfile,    dock:true, foot:true},
     {k:"routes",    ic:"routes",  fn:riderRoutes,     title:"searchRoute"},
+    {k:"plan",      ic:"routes",  fn:riderPlan,       title:"j_planTitle"}, /* path B */
     {k:"boarding",  ic:"stops",   fn:riderBoarding,   title:"whereBoard"},
     {k:"departures",ic:"clock",   fn:riderDepartures, title:"pickDeparture"},
     {k:"review",    ic:"check",   fn:riderReview,     title:"confirmBooking"},

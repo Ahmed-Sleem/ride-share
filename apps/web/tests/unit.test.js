@@ -1112,3 +1112,33 @@ group("PATH B — boarding scan UI + copy");
   ok("start/complete/alight clients exist",
      typeof t.w.API.startJourney === "function" && typeof t.w.API.requestAlight === "function");
 }
+
+group("PATH B — A→B planner (DEC-199)");
+{
+  const t=boot();
+  ok("planner is exported", typeof t.w.planJourneys === "function");
+  const A = { stop_id:"a", stop_name_en:"Gate North", lat:31.22, lng:29.92, position:1 };
+  const B = { stop_id:"b", stop_name_en:"Gate Mid",   lat:31.21, lng:29.93, position:2 };
+  const C = { stop_id:"c", stop_name_en:"Gate South", lat:31.20, lng:29.94, position:3 };
+  const D = { stop_id:"d", stop_name_en:"Hub East",   lat:31.21, lng:29.95, position:2 };
+  const E = { stop_id:"e", stop_name_en:"Campus",     lat:31.205, lng:29.96, position:3 };
+  const idx = t.w.buildRiderIndex([
+    { route:{ id:"r1", code:"L1", name_en:"North Line", fare_minor:1500 },
+      stops:[A,B,C] },
+    { route:{ id:"r2", code:"L2", name_en:"East Line", fare_minor:1200 },
+      stops:[{...B, position:1, stop_id:"b2", lat:B.lat, lng:B.lng}, D, E] },
+  ]);
+  const plans = t.w.planJourneys(A, C, idx);
+  ok("same-line start→end recommends the line", plans.length>0 && plans[0].kind==="single" && plans[0].routeId==="r1");
+  ok("recommended boarding is the start stop", plans[0].board.stop_id==="a");
+  ok("walk distances are finite and honest", Number.isFinite(plans[0].walkBoard) && plans[0].walkBoard < 50);
+  ok("same stop yields no plan", t.w.planJourneys(A, A, idx).length===0);
+  const destNearLine = { stop_id:"x", lat:31.202, lng:29.941 }; // near C, not a stop
+  const near = t.w.planJourneys(A, destNearLine, idx);
+  ok("line serves a destination near the corridor (alight-anywhere)", near.length>0 && near[0].routeId==="r1");
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"}});
+  t.go("rider","plan");
+  ok("plan screen renders both pickers", !!t.q("#plan-from") && !!t.q("#plan-to"));
+  ok("j_planTitle exists in both languages", !!t.w.T.en.j_planTitle && !!t.w.T.ar.j_planTitle
+     && t.w.T.ar.j_planTitle !== t.w.T.en.j_planTitle);
+}

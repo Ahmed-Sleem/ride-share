@@ -71,6 +71,6 @@
 
 ## Explicitly NOT in this slice (next)
 
-- [ ] A→B journey planner (DEC-199) — after the core flow works.
+- [x] A→B journey planner (DEC-199) — start/end recommend single-leg + 2-leg mix; alight-anywhere serve.
 - [ ] Recurring claims UI + subscriptions (M6 model exists; UI later).
 - [ ] Safety centre (M4), promotions/analytics (M5).

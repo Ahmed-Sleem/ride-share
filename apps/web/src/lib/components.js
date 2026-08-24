@@ -49,6 +49,7 @@ const S = {
   chosenRoute:null, chosenBoard:null, chosenDep:null, lastBooking:null, seats:1,
   tripTab:"upcoming", tripsCache:null,                 // bookings cached so tab-switch is seamless
   riderQuery:"", riderRoutes:null, riderIndex:null, riderJourneys:null,  // rider search (Fuse index)
+  planFrom:null, planTo:null, planFromQ:"", planToQ:"", planFocus:null,   /* path B DEC-199 */
   stopsQuery:"", stopsCache:null,                      // ops stops live filter
   offline:false, gettingOff:false, onDuty:true,
   landingDoc:null,                             // landing sub-view: terms|privacy|safety

@@ -30,6 +30,7 @@ const PAGES = {
     {k:"safety",    ic:"safety",  fn:riderSafety,     dock:true},
     {k:"profile",   ic:"profile", fn:riderProfile,    dock:true, foot:true},
     {k:"routes",    ic:"routes",  fn:riderRoutes,     title:"searchRoute"},
+    {k:"plan",      ic:"routes",  fn:riderPlan,       title:"j_planTitle"}, /* path B */
     {k:"boarding",  ic:"stops",   fn:riderBoarding,   title:"whereBoard"},
     {k:"departures",ic:"clock",   fn:riderDepartures, title:"pickDeparture"},
     {k:"review",    ic:"check",   fn:riderReview,     title:"confirmBooking"},

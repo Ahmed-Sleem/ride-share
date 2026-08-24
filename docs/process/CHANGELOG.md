@@ -902,3 +902,15 @@
   pre-P3.8 line (`QRPanel({code:b.code})`); the new screen renders
   `QRPanel({code:String(b.code)})` inside `if (b.code)`. Re-anchored and
   re-proven CAUGHT. My earlier fix (`af2b495`) was green; this restores main.
+
+## 2026-08-24 — B2 DEC-199 A→B planner (Path B)
+
+- Rider can pick start + end stops; `planJourneys` ranks published routes
+  whose boarding stop is near the start and whose line (later stops or
+  segments) passes the end (alight-anywhere, DEC-140). Walking has no
+  ceiling (DEC-064/134) — distances are shown honestly.
+- 2-leg mixes (DEC-135) only when they beat the best single-leg by a
+  clear margin. Selecting a plan opens the real departure list with the
+  recommended boarding stop pre-chosen.
+- P3.9 miss: rider live screen now polls ≥15s with error backoff and
+  pauses while the document is hidden (GUI §15).
