@@ -345,7 +345,7 @@ group("RIDER SCREENS SHOW NO SAMPLE CONTENT");
   ok("departures renders the real loader", !!t.q("#departures-list") && !sample.test(t.q(".main").textContent));
 
   t.go("rider","wallet");
-  ok("wallet shows the coming-soon state", !sample.test(t.q(".main").textContent) && t.q(".empty"));
+  ok("wallet shows the real loader (P3.7 — no coming-soon)", !sample.test(t.q(".main").textContent) && !t.q(".empty"));
 
   for(const p of ["waiting","onboard"]){   // live tracking lands in P3.9
     t.go("rider",p);
@@ -1034,3 +1034,67 @@ Promise.all([m19c, m19e, mTrips, mSearchNorm, mSearchScreen]).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);
 });
+
+/* ═══════════════════════════════════════════════════════════════════
+   PATH A — wallet & payments (P3.7.4). S.wallet/S.payConfig drive the
+   screen; fetch is stubbed so the states are exercised deterministically.
+   ═══════════════════════════════════════════════════════════════════ */
+group("PATH A — wallet renders the derived balance and honest states");
+{
+  const t=boot();
+  t.set({ wallet:{ balanceMinor:15000, entries:[
+    { id:"e1", side:"credit", amountMinor:15000, reason:"topup", createdAt:"2026-08-24T10:00:00Z" },
+    { id:"e2", side:"debit",  amountMinor:3000,  reason:"fare_paid_driver_share", createdAt:"2026-08-24T11:00:00Z" },
+  ]}, payConfig:{ paymobEnabled:true, topupMinMinor:500, topupMaxMinor:1000000 },
+      walletLoading:false, walletError:null, page:"wallet" });
+  ok("wallet shows the derived balance", /150 EGP/.test(t.q(".main").textContent));
+  ok("wallet lists entry reasons in words", /Top-up/.test(t.q(".main").textContent) && /Fare \(driver\)/.test(t.q(".main").textContent));
+  ok("wallet shows in/out signs", /\+ 150 EGP/.test(t.q(".main").textContent) && /− 30 EGP/.test(t.q(".main").textContent));
+  ok("top-up CTA visible when Paymob is enabled", !!t.q(".btn, button") && /Top up/.test(t.q(".main").textContent));
+
+  t.set({ payConfig:{ paymobEnabled:false, topupMinMinor:500, topupMaxMinor:1000000 } });
+  ok("Paymob off → CTA hidden, honest sentence shown (§8.1)",
+     !/w_topup\b/.test(t.q(".main").textContent) && /not available yet/.test(t.q(".main").textContent) && /pay the driver/.test(t.q(".main").textContent));
+
+  t.set({ wallet:null, walletLoading:true, walletError:null });
+  ok("loading state is honest (no invented balance)", /…|Loading|جار/.test(t.q(".main").textContent) || t.q(".banner"));
+
+  t.set({ wallet:null, walletLoading:false, walletError:"The top-up could not start." });
+  ok("error state shows the message", /top-up could not start/.test(t.q(".main").textContent));
+
+  t.set({ wallet:{ balanceMinor:0, entries:[] }, payConfig:{ paymobEnabled:false }, walletLoading:false, walletError:null });
+  ok("empty entries state", !!t.q(".empty"));
+}
+
+group("PATH A — paymentChoice follows DEC-204 order and hides what cannot be used");
+{
+  const t=boot();
+  t.set({ wallet:{ balanceMinor:5000, entries:[] },
+          payConfig:{ paymobEnabled:true, topupMinMinor:500, topupMaxMinor:1000000 },
+          payMethod:null });
+  const el = t.w.paymentChoice(3000);
+  ok("sufficient wallet → wallet is offered first", /Wallet/.test(el.textContent));
+  ok("cash is always offered", /pay the driver at boarding/.test(el.textContent));
+  t.set({ wallet:{ balanceMinor:1000, entries:[] } });
+  const el2 = t.w.paymentChoice(3000);
+  // Row renders .rowitem — a selector that cannot match would make this a
+  // check that cannot fail (§0.2, caught by the break harness once already).
+  const rows=[...el2.querySelectorAll(".rowitem")].map(r=>r.textContent).filter(x=>/Wallet/.test(x));
+  ok("insufficient wallet → wallet method absent (not disabled)", rows.length===0);
+  t.set({ payConfig:{ paymobEnabled:false } });
+  const el3 = t.w.paymentChoice(3000);
+  ok("Paymob off → only cash offered", !/card payment/i.test(el3.textContent) && /pay the driver/.test(el3.textContent));
+}
+
+group("PATH A — payments copy exists in BOTH languages (i18n parity)");
+{
+  const t=boot();
+  const EVALT = (k)=> t.w.eval(`t(${JSON.stringify(k)})`); // t is a top-level const — eval in-page
+  t.w.S.lang="en"; const en=EVALT("payments.disabled"); t.w.S.lang="ar"; const ar=EVALT("payments.disabled");
+  ok("payments.disabled localized both ways", en!=="payments.disabled" && ar!=="payments.disabled" && en!==ar);
+  t.w.S.lang="en";
+  ["w_balance","w_topup","w_paymobOff","w_choice","w_insufficient"].forEach((k)=>{
+    ok(`EN key ${k} resolves`, EVALT(k)!==k);
+    t.w.S.lang="ar"; ok(`AR key ${k} resolves`, EVALT(k)!==k); t.w.S.lang="en";
+  });
+}

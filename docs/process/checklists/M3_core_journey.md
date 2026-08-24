@@ -41,9 +41,11 @@
       (`POST /payments/cash-collected`, idempotent, journey-driver-checked,
       DEC-078 posting sequence); the driver's manifest button is Path B's
       P3.8 screen (feature-detected via the payments contract).
-- [~] Paymob top-up backend DONE (checkout + official-HMAC webhook, idempotent
-      by provider txn, amount re-checked; `PAYMOB_ENABLED` master flag,
-      DEC-204). The wallet UI (P3.7.4) is the remaining half.
+- [x] Paymob top-up END TO END on our side (DEC-204): checkout + official-HMAC
+      webhook + `PAYMOB_ENABLED` master flag AND the wallet UI — real derived
+      balance, history, top-up sheet (server-sourced bounds, presets, custom),
+      Paymob hidden-not-disabled when off (§8.1), paymentChoice component for
+      the review screen. Lights up with real keys with zero code changes.
 - [x] Tests: ledger append-only (DB trigger blocks UPDATE/DELETE — observed
       failing with 23514); totals reconcile (closed-system Σ=0 + 1,000-random
       property test); webhook replay 5× = one effect (break-observed); bad

@@ -362,6 +362,15 @@ run_break "super_admin offered at staff creation" src/screens/admin.js \
   's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
   "staff create offers no super_admin option"
 
+# ── Path A — wallet & payments (P3.7.4) ──────────────────────────────────
+run_break "wallet loses its honest paymob-off sentence" src/screens/wallet.js \
+  's|Banner("info", t("w_paymobOff"))|Banner("info", t("w_balance"))|' \
+  "Paymob off → CTA hidden, honest sentence shown (§8.1)"
+
+run_break "paymentChoice offers a dead insufficient-wallet row" src/screens/wallet.js \
+  's|  if(sufficient){|  if(true){|' \
+  "insufficient wallet → wallet method absent (not disabled)"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

@@ -56,9 +56,15 @@ export class PaymentsService {
       && !!this.env.PAYMOB_IFRAME_ID;
   }
 
-  async config(actor: Actor): Promise<{ paymobEnabled: boolean }> {
+  async config(actor: Actor): Promise<{
+    paymobEnabled: boolean; topupMinMinor: number; topupMaxMinor: number;
+  }> {
     assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
-    return { paymobEnabled: this.paymobEnabled() };
+    // the bounds ride along so the client NEVER hard-codes them (§0.3)
+    return {
+      paymobEnabled: this.paymobEnabled(),
+      topupMinMinor: TOPUP_MIN_MINOR, topupMaxMinor: TOPUP_MAX_MINOR,
+    };
   }
 
   /** Derived wallet balance + recent activity. Balance is READ from the

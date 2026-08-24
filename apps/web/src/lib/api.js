@@ -162,6 +162,13 @@ const API = {
       r.readAsDataURL(blob);
     });
   },
+
+  /* ===== payments client (Path A — docs/planning/PATH_A_MONEY.md §5) ===== */
+  paymentsConfig: () => API.request("GET", "/payments/config"),
+  wallet: () => API.request("GET", "/payments/wallet"),
+  topup: (amountMinor) => API.request("POST", "/payments/topup", { amountMinor }),
+  cashCollected: (bookingId) => API.request("POST", "/payments/cash-collected", { bookingId }),
+  driverEarnings: () => API.request("GET", "/payments/driver/earnings"),
 };
 
 class ApiError extends Error {

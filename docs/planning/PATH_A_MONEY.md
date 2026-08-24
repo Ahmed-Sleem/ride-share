@@ -358,3 +358,10 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
   component for B's review screen, driver earnings embed), then e2e with
   Paymob sandbox when keys arrive. Open MCQs: COMMISSION_PERCENT (G-079),
   top-up presets.
+
+- 2026-08-24 (final) — P3.7 COMPLETE on Path A's side: backend audit fixes +
+  wallet UI live (372 unit / 203 API / breaks 2×CAUGHT). Remaining for full
+  money loop: Path B's manifest "cash collected" button (contract ready),
+  booking-payment recognition when a booking pays from wallet (posts on
+  booking creation — next Path A point), real Paymob keys (owner), and the
+  G-079 commission MCQ.

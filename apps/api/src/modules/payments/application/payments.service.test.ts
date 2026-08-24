@@ -114,7 +114,10 @@ function signedWebhook(order: { id: string; merchant: string; amount: number }, 
 test('config: Paymob hidden when the flag is off — even with keys set (DEC-204)', async () => {
   const repo = new FakeRepo();
   const s = service(repo, makeEnv({ PAYMOB_ENABLED: 'false', PAYMOB_API_KEY: 'k', PAYMOB_INTEGRATION_ID: 'i', PAYMOB_IFRAME_ID: 'f' }));
-  assert.equal((await s.config(RIDER)).paymobEnabled, false);
+  const cfg = await s.config(RIDER);
+  assert.equal(cfg.paymobEnabled, false);
+  assert.equal(cfg.topupMinMinor, 500);        // bounds come from the ONE place
+  assert.equal(cfg.topupMaxMinor, 1_000_000);
 });
 
 test('config: enabled only when flag AND every key is present', async () => {

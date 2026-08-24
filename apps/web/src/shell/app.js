@@ -14,6 +14,7 @@ const SHEETS = {
   staffRemove: () => staffRemove(),
   fieldCapture: () => fieldCaptureSheet(),
   claimSlot: () => claimSlotSheet(),
+  topup: () => topupSheet(),   /* Path A (money) — wallet top-up */
 };
 
 /* ══════════════════════════════════════════════════════════════════════

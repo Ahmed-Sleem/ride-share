@@ -1428,6 +1428,27 @@ en:{
     session_invalid:"Your session expired — sign in again.",
     email_not_set:"Add an email address first.",
   },
+  /* ——— Path A: wallet/payments ——— */
+  w_balance:"Wallet balance", w_history:"Recent activity", w_topup:"Top up",
+  w_topupBody:"Add money to your wallet, then every booking is one tap.",
+  w_paymobOff:"Card top-up is not available yet — you can still book and pay the driver in cash.",
+  w_payCash:"Cash — pay the driver at boarding", w_openPay:"Continue to card payment",
+  w_amount:"Amount (EGP)", w_custom:"Custom amount", w_topupBusy:"Opening secure payment…",
+  w_topupOk:"Top-up started — finish the card payment in the tab that opens.",
+  w_topupFail:"The top-up could not start.", w_entriesEmpty:"No activity yet.",
+  w_in:"In", w_out:"Out", w_choice:"Payment method", w_useWallet:"Wallet",
+  w_walletHas:"Wallet balance", w_insufficient:"Not enough wallet balance for this fare.",
+  w_topupShort:"Top up", w_reason_topup:"Top-up", w_reason_cash_collected_commission:"Cash fare (commission)",
+  w_reason_cash_collected_driver_share:"Cash fare (driver)", w_reason_fare_paid_commission:"Fare (commission)",
+  w_reason_fare_paid_driver_share:"Fare (driver)", w_reason_refund_credit:"Refund credit",
+  payments:{ disabled:"Online top-up is not enabled yet.", bad_signature:"Payment confirmation rejected (bad signature).",
+    bad_topup_amount:"Enter an amount between 5 and 10,000 EGP.", provider_not_configured:"The payment provider is not configured yet.",
+    provider_unreachable:"Could not reach the payment provider — try again.", provider_error:"The payment provider returned an error.",
+    unknown_order:"Unknown payment order.", amount_mismatch:"Payment amount mismatch — nothing was charged.",
+    booking_not_found:"Booking not found.", not_your_journey:"This is not your journey.",
+    booking_not_payable:"This booking can no longer be paid.", rider_not_found:"Account not found.",
+    unsupported_kind:"Unsupported payment type." },
+
 },
 ar:{
   brand:BRAND.name.ar, tagline:BRAND.tagline.ar,
@@ -1689,6 +1710,27 @@ ar:{
     session_invalid:"انتهت جلستك — سجّل الدخول مرة أخرى.",
     email_not_set:"أضف بريدًا إلكترونيًا أولًا.",
   },
+  /* ——— Path A: wallet/payments ——— */
+  w_balance:"رصيد المحفظة", w_history:"آخر الحركات", w_topup:"شحن المحفظة",
+  w_topupBody:"أضف رصيدًا إلى محفظتك، وكل حجز يصبح بلمسة واحدة.",
+  w_paymobOff:"الشحن بالبطاقة غير متاح بعد — يمكنك الحجز والدفع للسائق كاشًا.",
+  w_payCash:"كاش — ادفع للسائق عند الركوب", w_openPay:"متابعة إلى الدفع بالبطاقة",
+  w_amount:"المبلغ (جنيه)", w_custom:"مبلغ مخصص", w_topupBusy:"جارٍ فتح الدفع الآمن…",
+  w_topupOk:"بدأ الشحن — أكمل الدفع بالبطاقة في التبويب الذي فُتح.",
+  w_topupFail:"تعذّر بدء الشحن.", w_entriesEmpty:"لا حركات بعد.",
+  w_in:"داخل", w_out:"خارج", w_choice:"طريقة الدفع", w_useWallet:"المحفظة",
+  w_walletHas:"رصيد المحفظة", w_insufficient:"رصيد المحفظة لا يكفي لهذه الأجرة.",
+  w_topupShort:"اشحن", w_reason_topup:"شحن محفظة", w_reason_cash_collected_commission:"أجرة كاش (عمولة)",
+  w_reason_cash_collected_driver_share:"أجرة كاش (سائق)", w_reason_fare_paid_commission:"أجرة (عمولة)",
+  w_reason_fare_paid_driver_share:"أجرة (سائق)", w_reason_refund_credit:"استرداد كرقم رصيد",
+  payments:{ disabled:"الشحن الإلكتروني غير مُفعّل بعد.", bad_signature:"تم رفض تأكيد الدفع (توقيع غير صحيح).",
+    bad_topup_amount:"أدخل مبلغًا بين ٥ و١٠٠٠٠ جنيه.", provider_not_configured:"لم يتم إعداد وسيلة الدفع بعد.",
+    provider_unreachable:"تعذّر الوصول إلى وسيلة الدفع — حاول مرة أخرى.", provider_error:"أرجعت وسيلة الدفع خطأً.",
+    unknown_order:"طلب دفع غير معروف.", amount_mismatch:"مبلغ الدفع غير مطابق — لم يتم خصم شيء.",
+    booking_not_found:"الحجز غير موجود.", not_your_journey:"هذه ليست رحلتك.",
+    booking_not_payable:"لم يعد يمكن دفع هذا الحجز.", rider_not_found:"الحساب غير موجود.",
+    unsupported_kind:"نوع دفع غير مدعوم." },
+
 }
 };
 
@@ -2466,6 +2508,13 @@ const API = {
       r.readAsDataURL(blob);
     });
   },
+
+  /* ===== payments client (Path A — docs/planning/PATH_A_MONEY.md §5) ===== */
+  paymentsConfig: () => API.request("GET", "/payments/config"),
+  wallet: () => API.request("GET", "/payments/wallet"),
+  topup: (amountMinor) => API.request("POST", "/payments/topup", { amountMinor }),
+  cashCollected: (bookingId) => API.request("POST", "/payments/cash-collected", { bookingId }),
+  driverEarnings: () => API.request("GET", "/payments/driver/earnings"),
 };
 
 class ApiError extends Error {
@@ -3817,18 +3866,186 @@ function switchEl(on){
 
 
 /* ══════════════════════════════════════════════════════════════════════
-   WALLET & PAYMENTS screens (Path A — money).
-   This file is OWNED by the money path (docs/planning/PATH_A_MONEY.md):
-   wallet balance, top-up (Paymob first, cash second — DEC-204), payment
-   method choice, transaction history. The other parallel path must not
-   edit it (see the ownership table in PATH_A_MONEY.md / PATH_B_JOURNEY.md).
-   Until the payments backend lands (P3.7) this stays an honest coming-soon
-   state — no invented balance, no fake success (§8).                       */
+   WALLET & PAYMENTS screens (Path A — money). Owned exclusively by the
+   money path (docs/planning/PATH_A_MONEY.md). Everything renders from the
+   REAL API: the balance is DERIVED by the backend from the ledger (never
+   invented client-side), and every state is honest — loading, empty, error,
+   and Paymob-off (§8.1: hidden option + one plain sentence, no dead
+   buttons). paymentChoice() is the embeddable payment-method component
+   Path B drops into the booking review screen.                     */
 function riderWallet(){                                       // R-40
   const w=$("div",{class:"main"});
-  /* Wallet and payments arrive with booking (M3) — no invented balance. */
-  w.append(Empty("wallet", t("comingSoon"), t("walletComingBody")));
+  const cfg = S.payConfig;
+
+  // fetch the session-scoped config + wallet on first paint
+  if(!cfg && !S.payConfigError){ payConfigLoad(); }
+  if(S.walletLoading === undefined && !S.walletError){ walletLoad(); }
+
+  if(S.walletError){
+    w.append(Banner("danger", S.walletError));
+  }
+  if(S.walletLoading && !S.wallet){
+    w.append(Banner("info", t("loading")));
+  }
+
+  if(S.wallet){
+    w.append(Card("",
+      $("div",{class:"t-micro",text:t("w_balance")}),
+      $("div",{class:"pricetag ltr",text:money(S.wallet.balanceMinor/100)}),
+      Divider()
+    ));
+    // Top-up: only when the backend says Paymob is live (§8.1 hide, don't
+    // disable). When off, one honest sentence explains the state.
+    if(cfg && cfg.paymobEnabled){
+      w.append($("div",{class:"pad"},
+        Btn({label:t("w_topup"), block:true, icon:"card", on:()=>openSheet("topup")})));
+    } else {
+      w.append($("div",{class:"pad"},
+        Banner("info", t("w_paymobOff")),
+        $("div",{class:"t-cap",text:t("w_payCash")})));
+    }
+    w.append($("div",{class:"t-cap",text:t("w_history")}));
+    const entries = S.wallet.entries || [];
+    if(entries.length === 0){
+      w.append(Empty("card", t("w_entriesEmpty"), ""));
+    } else {
+      const list=Card("");
+      entries.forEach((e)=>{
+        const inbound = e.side === "credit";
+        list.append(Row({
+          icon: inbound ? "card" : "trips",
+          title: t("w_reason_"+e.reason) !== ("w_reason_"+e.reason) ? t("w_reason_"+e.reason) : e.reason,
+          sub: new Date(e.createdAt).toLocaleString(S.lang === "ar" ? "ar-EG" : "en-EG"),
+          right: $("div",{class:"fare ltr",text:(inbound?"+ ":"− ")+money(e.amountMinor/100)}),
+        }));
+      });
+      w.append(list);
+    }
+  } else if(!S.walletError && !S.walletLoading){
+    w.append(Banner("info", t("loading")));
+  }
   return w;
+}
+
+/* Loads the payment config once per session (drives ALL paymob visibility). */
+async function payConfigLoad(){
+  S.payConfigError = null;
+  try{
+    S.payConfig = await API.paymentsConfig();
+  }catch(e){
+    S.payConfigError = errText(e.messageKey);   // config unreachable: keep options hidden
+    S.payConfig = null;
+  }
+  render();
+}
+
+/* Loads the derived wallet. */
+async function walletLoad(){
+  S.walletLoading = true; S.walletError = null; render();
+  try{
+    S.wallet = await API.wallet();
+  }catch(e){
+    S.walletError = errText(e.messageKey);
+  }
+  S.walletLoading = false; render();
+}
+
+/* ── Top-up sheet ───────────────────────────────────────────────────────
+   Presets + custom amount in whole EGP; bounds come from the SERVER config
+   (never a second copy §0.3). Paymob first (DEC-204). On success the
+   provider's secure iframe opens in a new tab.                             */
+const W_TOPUP_PRESETS = [50, 100, 200, 500];   // display EGP; suggestion only
+
+function topupSheet(){
+  const cfg = S.payConfig || {};
+  const min = Math.ceil((cfg.topupMinMinor || 500)/100);
+  const max = Math.floor((cfg.topupMaxMinor || 1000000)/100);
+  const body=$("div",{class:"col gap3"});
+
+  if(!cfg.paymobEnabled){
+    // Sheet opened with Paymob off (config refreshed meanwhile) — honest close.
+    return Sheet(t("w_topup"),
+      Banner("info", t("w_paymobOff")),
+      $("div",{class:"t-cap",text:t("w_payCash")}),
+      Btn({label:t("close"), block:true, on:closeSheet}));
+  }
+
+  const chips=$("div",{class:"row gap3 wrap"});
+  W_TOPUP_PRESETS.forEach((v)=>{
+    chips.append(Chip({label:String(v), pressed:S.topupAmount===v,
+      on:()=>{ S.topupAmount=v; S.topupCustom=""; openSheet("topup"); }}));
+  });
+  const custom=$("input",{id:"topup-custom", attrs:{type:"number", inputmode:"numeric",
+    min:String(min), max:String(max), "aria-label":t("w_custom"), placeholder:t("w_custom")},
+    on:{input:(e)=>{ S.topupCustom=e.target.value; S.topupAmount=null; }}});
+  if(S.topupCustom) custom.value = S.topupCustom;
+
+  body.append(
+    $("div",{class:"t-cap",text:t("w_topupBody")}),
+    chips,
+    $("label",{class:"t-micro",attrs:{for:"topup-custom"},text:t("w_custom")}),
+    custom,
+    $("div",{class:"t-micro",text:`${min} – ${max} EGP · `+t("w_amount")})
+  );
+  if(S.topupError) body.append(Banner("danger", S.topupError));
+
+  const amountEgp = S.topupCustom ? Number(S.topupCustom) : S.topupAmount;
+  const valid = Number.isInteger(amountEgp) && amountEgp>=min && amountEgp<=max;
+  body.append(Btn({label:t("w_openPay"), block:true, dis:S.topupBusy||!valid,
+    on:()=>topupSubmit(amountEgp)}));
+  return Sheet(t("w_topup"), body);
+}
+
+async function topupSubmit(amountEgp){
+  S.topupBusy=true; S.topupError=null; S.topupOk=false; render();
+  try{
+    const res = await API.topup(Math.round(amountEgp*100));
+    S.topupOk=true; closeSheet();
+    if(typeof window!=="undefined" && res && res.iframeUrl){
+      window.open(res.iframeUrl, "_blank", "noopener");
+    }
+    toast(t("w_topupOk"));
+    walletLoad();                      // order is pending; balance updates on webhook
+  }catch(e){
+    S.topupError = errText(e.messageKey);
+  }
+  S.topupBusy=false; render();
+}
+
+/* ── Payment-choice component (embedded by Path B's review screen) ────────
+   Renders the DEC-204 order: Wallet (when it can cover the fare) → card
+   (Paymob, when enabled) → Cash. Selection is S.payMethod; nothing dead is
+   shown — methods that cannot be used are absent, not disabled.          */
+function paymentChoice(fareMinor){
+  const cfg = S.payConfig || {};
+  const bal = S.wallet ? S.wallet.balanceMinor : 0;
+  const sufficient = bal >= fareMinor;
+  const methods=[];
+  if(sufficient){
+    methods.push({k:"wallet", icon:"card", title:t("w_useWallet"),
+      sub:`${t("w_walletHas")}: ${money(bal/100)}`});
+  }
+  if(cfg.paymobEnabled){
+    methods.push({k:"card", icon:"card", title:t("w_topupShort"),
+      sub:cfg.topupMinMinor?`${Math.ceil(cfg.topupMinMinor/100)}+ EGP`:""});
+  }
+  methods.push({k:"cash", icon:"trips", title:t("w_payCash")});
+  if(!S.payMethod || !methods.some(m=>m.k===S.payMethod)) S.payMethod = methods[0].k;
+
+  const el=$("div",{class:"col gap3"});
+  el.append($("div",{class:"t-cap",text:t("w_choice")}));
+  const list=Card("");
+  methods.forEach((m)=>{
+    list.append(Row({icon:m.icon, title:m.title, sub:m.sub,
+      selected:S.payMethod===m.k, chev:false,
+      on:()=>{ S.payMethod=m.k; render(); }}));
+  });
+  el.append(list);
+  if(!sufficient && cfg.paymobEnabled){
+    el.append($("button",{class:"link", attrs:{type:"button"}, text:t("w_topupShort")+" →",
+      on:()=>openSheet("topup")}));
+  }
+  return el;
 }
 
 
@@ -4652,6 +4869,7 @@ const SHEETS = {
   staffRemove: () => staffRemove(),
   fieldCapture: () => fieldCaptureSheet(),
   claimSlot: () => claimSlotSheet(),
+  topup: () => topupSheet(),   /* Path A (money) — wallet top-up */
 };
 
 /* ══════════════════════════════════════════════════════════════════════

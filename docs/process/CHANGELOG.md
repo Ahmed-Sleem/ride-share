@@ -776,3 +776,24 @@
   COMMISSION_PERCENT (default 0 — owner MCQ pending for the launch value).
 - 201 API tests green; three service breaks + the DB trigger observed failing;
   pnpm verify + db:verify green. Wallet UI (P3.7.4) next session (Path A).
+
+## 2026-08-24 — P3.7.4 wallet UI + P3.7 backend audit hardening (Path A)
+
+- Backend audit (mandatory checklist): top-up DTO bounds now import the ONE
+  definition (TOPUP_MIN/MAX — no second copy); cash-collected body validated
+  (@IsUUID DTO — unvalidated before); unused departs_at column + join dropped;
+  authority casts aligned; /payments/config now also carries the top-up bounds
+  so the client never hard-codes them; two top-up success/failure-path tests
+  added (§0.2 break-observed: pending-on-failure break caught).
+- Wallet UI: real balance (derived, backend-truth), history with localized
+  reasons and in/out signs, top-up sheet (presets + custom, server bounds,
+  Paymob-first DEC-204, opens the provider iframe), honest Paymob-off state
+  (§8.1), paymentChoice() embeddable component for Path B's review screen,
+  payments client section in api.js, EN+AR i18n (w_* keys + payments.* error
+  copy — placed at top level of en{}/ar{} after two placement corrections).
+- Tests: 372 web unit (new Path A groups; the old coming-soon assertion now
+  asserts the real loader). Break harness: 2 new cases — both observed
+  CAUGHT; on the way it exposed a false-positive test (a `.row` selector that
+  could never match — Row renders `.rowitem`) which is now a real check, and
+  a mid-harness abort leftover (policyTermsX) that was restored. 203 API
+  tests, pnpm verify + guards all green.

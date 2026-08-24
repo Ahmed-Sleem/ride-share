@@ -889,3 +889,24 @@ output) — see the engineering standard §3.3 and §4.
   REFUSES); UI half (P3.7.4) remains — tracked in the checklist as [~].
   Open: COMMISSION_PERCENT launch value (owner MCQ), Paymob sandbox keys
   (owner account, R20 §5).
+
+## 2026-08-24 — P3.7.4 wallet UI (Path A) + backend audit fixes
+
+- What: the rider-facing money surface — wallet screen, top-up flow, payment
+  choice — plus a line-by-line audit pass over the P3.7 backend.
+- Files: apps/web/src/screens/wallet.js (real implementation),
+  lib/api.js (payments client section), data/content.js (w_* + payments.*
+  EN/AR), shell/app.js (topup sheet registration), tests/unit.test.js
+  (Path A groups), tests/breaks.sh (2 cases); api: payments.service.ts
+  (config bounds), controller (DTO), repository (column drop), test updates.
+- Tests: 372 unit + 203 API green; breaks: "wallet loses its honest
+  paymob-off sentence" and "paymentChoice offers a dead insufficient-wallet
+  row" both CAUGHT (the second exposed and then validated a real selector
+  fix — .rowitem, not .row).
+- Verified: pnpm verify exit 0; §0.2 break cycle green→red→green; diff
+  reviewed file-by-file (no harness debris; the earlier mid-harness-abort
+  corruption was caught and restored by the diff review).
+- Self-check: no dead controls (Paymob hidden when off), balance never
+  invented client-side, bounds single-sourced from the server, both
+  languages complete. e2e with a real Paymob sandbox remains blocked on
+  owner keys (R20 §5) — flagged, not forgotten.
