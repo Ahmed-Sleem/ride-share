@@ -13,7 +13,9 @@
     "verify:repo": "bash scripts/verify-repo.sh",
     "migrate": "node-pg-migrate -m infra/migrations --migration-file-language sql",
     "db:types": "node scripts/gen-db-types.mjs",
-    "db:verify": "bash scripts/verify-db.sh"
+    "db:verify": "bash scripts/verify-db.sh",
+    "build": "pnpm --filter @ride-share/mobile build",
+    "start": "node apps/mobile/server.js"
   },
   "devDependencies": {
     "turbo": "catalog:",

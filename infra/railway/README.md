@@ -18,11 +18,14 @@ tables. PostGIS is deferred to M2 (DEC-184, G-061).
 
 1. **railway.com → New Project → New Service → GitHub Repo** → authorize
    Railway → choose `Ahmed-Sleem/ride-share`.
-2. Railway auto-imports one service per app it finds. **Keep `mobile`** —
-   it is the Capacitor wrap of the same web HTML (DEC-176 / P7.1). Point
-   that service at **repository root** as the build context and
-   `apps/mobile/Dockerfile` as the Dockerfile (do **not** set the service
-   root to `apps/mobile` — the monorepo prune needs the whole tree).
+2. Railway auto-imports one service per app. **Keep `mobile`.** The
+   imported service often stays on **Railpack** (not Docker) — that is
+   why it used to fail with “No start command” (the root package is a
+   workspace, not an app). The repo now has a root `start` /
+   `railpack.json` / `index.js` that boot the mobile wrap. `api` and
+   `web` keep using the Dockerfile builder and never run that entry.
+   Optional (cleaner, skips puppeteer): switch the mobile service
+   builder to Dockerfile → `apps/mobile/Dockerfile`, context = repo root.
    Variables match `web`. Keep `api` and `web`.
 3. **Add the database**: **+ New → Database → PostgreSQL** — this is the
    `Postgres` service (allowed on the free trial — it is a database plugin,
