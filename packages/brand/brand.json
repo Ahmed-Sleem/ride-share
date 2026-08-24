@@ -8,6 +8,10 @@
     "ar": "شارك الرحلة. سعر ثابت."
   },
   "description": "Shared rides on fixed routes at a fixed price.",
+  "version": {
+    "name": "0.1.0",
+    "code": 1
+  },
   "font": {
     "family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif",
     "weight": 750

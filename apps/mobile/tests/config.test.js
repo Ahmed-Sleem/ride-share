@@ -15,6 +15,17 @@ test("capacitor.config.json is generated from brand.json", () => {
   assert.match(cfg.appId, /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 });
 
+test("Play version is one source (brand.json) — P7.6", () => {
+  assert.ok(brand.version && brand.version.name && Number(brand.version.code) >= 1);
+  const build = fs.readFileSync(path.join(__dirname, "../scripts/build.js"), "utf8");
+  assert.ok(build.includes("BRAND.version"));
+  const apply = fs.readFileSync(path.join(__dirname, "../scripts/apply-android-version.sh"), "utf8");
+  assert.ok(apply.includes("brand.json"));
+  const release = fs.readFileSync(path.join(__dirname, "../scripts/make-release.sh"), "utf8");
+  assert.ok(release.includes("ANDROID_KEYSTORE_BASE64"));
+  assert.ok(!/storePassword\s*=\s*['"][^'"]{4,}['"]/.test(release));
+});
+
 test("www/index.html is the web bundle", () => {
   const html = fs.readFileSync(path.join(__dirname, "../www/index.html"), "utf8");
   assert.match(html, /<html/i);

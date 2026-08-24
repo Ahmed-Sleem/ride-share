@@ -28,7 +28,15 @@ PATTERNS=(
 #   .github/workflows/*.yml — CI wires a throwaway PostGIS service container
 #     with dummy credentials.
 # Real secrets live in .env / Railway variables, never in these files.
-files="$(git ls-files -co --exclude-standard 2>/dev/null | grep -vE '^(\.env($|\..*$)|node_modules/|dist/|build/|\.git/|\.turbo/|coverage/)' | grep -vE '(^|/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|docker-compose\.yml|infra/compose/.*|\.github/workflows/.*\.yml|.*\.log|.*\.zip|.*\.png|.*\.jpg|.*\.jpeg|.*\.gif|.*\.pdf)$' || true)"
+# P7.6 — a Play keystore in the tree is a leaked signing key.
+keystore_hits=0
+while IFS= read -r kf; do
+  [ -n "$kf" ] || continue
+  echo "  FAIL keystore must never be in git: $kf"
+  keystore_hits=$((keystore_hits+1))
+done < <(git ls-files -co --exclude-standard 2>/dev/null | grep -E '\.(jks|keystore|p12)$' || true)
+
+files="$(git ls-files -co --exclude-standard 2>/dev/null | grep -vE '^(\.env($|\..*$)|node_modules/|dist/|build/|\.git/|\.turbo/|coverage/)' | grep -vE '(^|/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|docker-compose\.yml|infra/compose/.*|\.github/workflows/.*\.yml|.*\.log|.*\.zip|.*\.png|.*\.jpg|.*\.jpeg|.*\.gif|.*\.pdf|.*\.apk|.*\.aab)$' || true)"
 
 # .env.example is allowed to contain dummy values; scan it separately only for
 # private-key headers and real-looking tokens, never the dummy assignments.
@@ -56,6 +64,7 @@ while IFS= read -r f; do
   done
 done <<< "$files"
 
+hits=$((hits+keystore_hits))
 echo
 echo "secret scan: examined $examined files, $hits hit(s)"
 [ "$hits" -eq 0 ]

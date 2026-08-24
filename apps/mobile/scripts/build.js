@@ -67,11 +67,14 @@ fs.writeFileSync(
   JSON.stringify(cfg, null, 2) + "\n"
 );
 
+const ver = BRAND.version || { name: "0.0.0", code: 0 };
 const meta = {
   service: "mobile",
   wrapped: "@ride-share/web",
   appId,
   appName: BRAND.name.en,
+  versionName: ver.name,
+  versionCode: ver.code,
   builtAt: new Date().toISOString(),
 };
 fs.writeFileSync(path.join(dist, "meta.json"), JSON.stringify(meta, null, 2) + "\n");

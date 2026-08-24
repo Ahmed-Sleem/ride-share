@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-24 — P7.6 Play signing (no keystore in git)
+
+- `packages/brand/brand.json` `version.name` / `version.code` is the only
+  version (written into Gradle after `cap add`).
+- `make-release.sh` + CI `apk-release`: signs only when
+  `ANDROID_KEYSTORE_BASE64` + passwords are set in GitHub secrets.
+  Without them the job is honest unsigned. `check-secrets.sh` fails on
+  `*.jks` / `*.keystore` / `*.p12` in the tree.
+
 ## 2026-08-24 — P7.5 push + cached leave-now alarm (Path B)
 
 - FCM send when `FCM_SERVER_KEY` is set; unset is an honest skip. Device token

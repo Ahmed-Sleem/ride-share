@@ -17,9 +17,9 @@ Owner: Path B. Tick only with a command as proof.
 
 - [x] P7.2 offline-first driver outbox — durable queue + server receipts (0022); §0.2 tests in packages/platform/src/outbox.test.js
 - [x] P7.3 camera scan via Platform.scanCode; keypad always on the journey screen (one tap). Denied/missing camera focuses the 6 digits.
-- [ ] P7.4 background location (DEC-176 gate)
-- [ ] P7.5 FCM push + local alarm (G-055)
-- [ ] P7.6 signed Play AAB from CI secrets (no keystore in git)
+- [x] P7.4 background location (DEC-176 gate) — Capacitor watch + batch; 2h device proof still owner
+- [x] P7.5 FCM push + local alarm (G-055)
+- [x] P7.6 version from brand.json; Play AAB job uses ANDROID_KEYSTORE_* secrets (never git)
 
 ## Railway `mobile` component
 

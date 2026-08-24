@@ -32,6 +32,7 @@ if [ -f "$MANIFEST" ]; then
     fi
   done
 fi
+bash "$ROOT/apps/mobile/scripts/apply-android-version.sh"
 cd android
 chmod +x gradlew
 ./gradlew --no-daemon assembleDebug

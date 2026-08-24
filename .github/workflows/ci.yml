@@ -126,3 +126,37 @@ jobs:
           name: ride-share-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  apk-release:
+    name: Android Play AAB (signed when secrets exist)
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Release bundle (unsigned unless ANDROID_KEYSTORE_* secrets are set)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: bash apps/mobile/scripts/make-release.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ride-share-release
+          path: |
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: warn
