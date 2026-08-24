@@ -1075,3 +1075,17 @@
   transform off — selector specificity raised to actually win against the
   later zoom rule. Verified with the suite's own measurement locally
   (widest=0 at 320×568 on rider/plan).
+
+## 2026-08-24 — Batched audit of Agent B's session commits (DEC-207)
+
+- Audited B's run (P7.2 outbox → P7.4 GPS → admin overview → release pipeline).
+  Ownership clean everywhere; merged verifies were green at each of my pushes.
+- Two real defects found and fixed forward (session-end batch, per DEC-207):
+  1. `df06941` CI red — the SAME 13px planner-map overflow, because B's push
+     landed between my planner feature and my containment fix; already cured
+     by `84ca1f8` (verified: my run is green on that check).
+  2. NEW "Android Play AAB" job failed on EVERY push: `make-release.sh` had
+     an indented heredoc terminator (`PY` not at column 0) → "syntax error:
+     unexpected end of file" — the script never ran once. `bash -n` catches
+     this instantly; terminator fixed, script now parses. Standing lesson
+     recorded for B: syntax-check shell scripts before pushing.

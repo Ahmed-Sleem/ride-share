@@ -70,7 +70,7 @@ block = f'''
                 1,
             )
         open(path, "w", encoding="utf-8").write(text)
-        PY
+PY
   fi
   SIGNED=1
 else
