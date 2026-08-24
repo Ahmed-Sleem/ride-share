@@ -1161,3 +1161,8 @@
 - Native shell never opens the marketing landing; splash → sign-in.
 - APK talks to the public web origin so AUTH_OTP_BYPASS matches the website.
 - Launcher icons still painted from packages/brand (same source as the favicon).
+
+## 2026-08-25 — Native live HTML + token-safe status bar
+
+- Installed APK loads the first-party Railway site on each launch (UI updates without a new APK).
+- StatusBar colour reads --ink-950/--ink-0 (check-tokens).

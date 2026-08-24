@@ -55,7 +55,17 @@ const cfg = {
   appName: BRAND.name.en,
   webDir: "www",
   android: { allowMixedContent: false },
-  server: { androidScheme: "https", hostname: "localhost", allowNavigation: [origin.replace(/^https?:\/\//, "")] },
+  /* First-party live HTML: each launch loads the Railway website. A push
+     to main updates the installed app without a new APK. Offline falls
+     back to the baked www/ copy only if the URL cannot be reached — the
+     shell still ships that copy. Native skip-landing lives in that HTML. */
+  server: {
+    url: origin,
+    cleartext: false,
+    androidScheme: "https",
+    hostname: "localhost",
+    allowNavigation: [origin.replace(/^https?:\/\//, "")],
+  },
   plugins: {
     SplashScreen: {
       launchAutoHide: true,

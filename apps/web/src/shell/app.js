@@ -97,7 +97,6 @@ function topbar({title, back:onBack, right, plain}){
    record is the primary job. */
 const SEARCHABLE = {
   rider:  {home:"searchHint", routes:"searchRoute"},
-  ops:    {stops:"searchRoute"},
 };
 function searchBand(){
   const key = (SEARCHABLE[S.role]||{})[S.page];
@@ -183,7 +182,11 @@ function render(){
     try {
       const sb = window.Capacitor.Plugins.StatusBar;
       if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
-      if (sb.setBackgroundColor) sb.setBackgroundColor({ color: theme === "dark" ? "#111318" : "#FFFFFF" });
+      if (sb.setBackgroundColor) {
+        const cs = getComputedStyle(document.documentElement);
+        const hex = (cs.getPropertyValue(theme === "dark" ? "--ink-950" : "--ink-0") || "").trim();
+        if (hex) sb.setBackgroundColor({ color: hex });
+      }
     } catch (_) { /* plugin optional */ }
   }
 

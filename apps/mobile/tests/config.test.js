@@ -13,6 +13,7 @@ test("capacitor.config.json is generated from brand.json", () => {
   assert.equal(cfg.appName, brand.name.en);
   assert.equal(cfg.webDir, "www");
   assert.match(cfg.appId, /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
+  assert.match(cfg.server && cfg.server.url || "", /^https:\/\//);
 });
 
 test("Play version is one source (brand.json) — P7.6", () => {

@@ -22,14 +22,12 @@ at runtime when the WebView injects `window.Capacitor`.
 
 - **Browser** (ride-share web URL, or the Railway `mobile` URL): always the
   latest deploy. Refresh = new UI.
-- **Installed APK**: the UI is **the HTML that was in `www/` when that APK was
-  assembled**. Shipping a product change to phones means **building a new APK**
-  (and later, a Play update). There is **no** silent live-reload of the store
-  app when you push to GitHub/Railway. That is deliberate: a store app that
-  rewrites itself from the network is a different product (and a Play policy
-  problem) until we add a signed OTA channel (not in P7.1).
-- **Debug-only** exception: Capacitor can point the WebView at a live
-  `server.url`. We do **not** ship that in release.
+- **Installed APK**: the WebView opens our **first-party** website
+  (`server.url` = the Railway web origin). A push to `main` updates the
+  screens on the next app launch — no new APK. The native shell (icon,
+  permissions, plugins) still needs a new binary when those change.
+  Offline: if the origin cannot be reached the user sees a network error;
+  there is no silent rewrite from a third-party host.
 
 ## Do website updates auto-update the APK?
 
