@@ -3,5 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "description": "Android app — Capacitor wrapping the web interface (BUILD_PLAN P7, DEC-176).",
-  "scripts": {}
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "node server.js",
+    "test": "node --test tests/server.test.js tests/config.test.js && bash tests/breaks.sh",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@ride-share/web": "workspace:*",
+    "@ride-share/brand": "workspace:*",
+    "@ride-share/platform": "workspace:*",
+    "@capacitor/core": "catalog:"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "catalog:",
+    "@capacitor/android": "catalog:"
+  }
 }

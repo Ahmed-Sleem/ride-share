@@ -36,7 +36,8 @@
 
 - `apps/web/` — the interface (single-file build from `src/`).
 - `apps/api/` — the backend (NestJS modular monolith).
-- `apps/mobile/` — Capacitor wrapper (BUILD_PLAN P7).
+- `apps/mobile/` — Capacitor wrapper of the web build (BUILD_PLAN P7.1, DEC-176).
+- `packages/platform` — the only native seam (GPS/share/storage). Screens never import `@capacitor/*`.
 - `packages/` — shared types, logic, API client, toolchain config.
 - `migrations/` — the only way the database schema changes.
 - `scripts/` — the enforcement scripts behind `pnpm verify`.

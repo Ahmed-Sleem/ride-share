@@ -24,6 +24,17 @@ coverage/
 # osrm graphs — large, regenerated
 *.osrm*
 
+# Capacitor / Android local output (P7) — never commit APKs or Gradle caches
+apps/mobile/www/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+apps/mobile/android/build/
+apps/mobile/android/local.properties
+apps/mobile/android/captures/
+*.apk
+*.aab
+*.apks
+
 # local
 .DS_Store
 .vscode/

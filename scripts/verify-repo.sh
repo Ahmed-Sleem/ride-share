@@ -20,6 +20,7 @@ checks=(
   "scripts/check-branding.sh"
   "scripts/check-authority.sh"
   "scripts/check-hide-not-disable.sh"
+  "scripts/check-platform-boundary.sh"
 )
 NODE_CHECKS=(
   "scripts/check-boundaries.mjs"

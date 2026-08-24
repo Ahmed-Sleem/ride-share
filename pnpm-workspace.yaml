@@ -34,5 +34,8 @@ catalog:
   nodemailer: 9.0.5
   "@types/nodemailer": 8.0.1
   fuse.js: 6.6.2
+  "@capacitor/core": 8.5.0
+  "@capacitor/cli": 8.5.0
+  "@capacitor/android": 8.5.0
 
 catalogMode: strict

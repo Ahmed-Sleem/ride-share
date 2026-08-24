@@ -955,3 +955,18 @@
   fields, expires, blanks position when the journey ends.
 - Support/ops ticket queue: investigate → decide with a mandatory reason;
   reporter is notified of the outcome. No mock phone calls.
+
+## 2026-08-24 — B5 P7.1 Capacitor shell (Path B)
+
+- `packages/platform` — one Platform interface (GPS / share / storage).
+  Screens never import `@capacitor/*`. Runtime uses `window.Capacitor` only
+  when the APK WebView injects it; deleting android/ leaves web working.
+- `apps/mobile` is a real package: builds the web HTML into `www/`+`dist/`,
+  serves `/healthz` + the same UI + `/v1` proxy so Railway's auto-imported
+  `mobile` service is no longer an empty crash-loop.
+- `apps/mobile/Dockerfile` pins `PROJECT=mobile` (root-context monorepo build).
+- Guard: `scripts/check-platform-boundary.sh` + §0.2 break in
+  `apps/mobile/tests/breaks.sh`.
+- Checklist: `docs/process/checklists/M7_capacitor.md`. P7.2–P7.6 remain
+  tracked, not stubbed.
+

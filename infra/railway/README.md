@@ -9,16 +9,21 @@ tables. PostGIS is deferred to M2 (DEC-184, G-061).
 
 | Service | What | Source |
 |---|---|---|
-| `api` | NestJS backend | the repo (Dockerfile) |
-| `web` | the interface | the repo (Dockerfile) |
+| `api` | NestJS backend | the repo (`infra/docker/Dockerfile.node`, `PROJECT=api`) |
+| `web` | the interface | the repo (`infra/docker/Dockerfile.node`, `PROJECT=web`) |
+| `mobile` | Capacitor wrap of the same web HTML + `/healthz` (P7.1) | the repo (`apps/mobile/Dockerfile`, PROJECT pinned to `mobile`) |
 | `Postgres` | managed PostgreSQL | **+ New → Database → PostgreSQL** |
 
 ## Exact click-path
 
 1. **railway.com → New Project → New Service → GitHub Repo** → authorize
    Railway → choose `Ahmed-Sleem/ride-share`.
-2. Railway auto-imports one service per app it finds. **Delete `mobile`**
-   (empty Phase-7 placeholder — it will fail to build). Keep `api` and `web`.
+2. Railway auto-imports one service per app it finds. **Keep `mobile`** —
+   it is the Capacitor wrap of the same web HTML (DEC-176 / P7.1). Point
+   that service at **repository root** as the build context and
+   `apps/mobile/Dockerfile` as the Dockerfile (do **not** set the service
+   root to `apps/mobile` — the monorepo prune needs the whole tree).
+   Variables match `web`. Keep `api` and `web`.
 3. **Add the database**: **+ New → Database → PostgreSQL** — this is the
    `Postgres` service (allowed on the free trial — it is a database plugin,
    not a Docker-image service).
@@ -91,6 +96,7 @@ exposes `DATABASE_URL` automatically.
 |---|---|---|---|
 | `api` | `/healthz` | 120 | private (no public domain needed) |
 | `web` | `/healthz` | 120 | **Generate Domain** (public URL) |
+| `mobile` | `/healthz` | 120 | optional public domain (same app as `web`; used by the APK's live origin if you point Capacitor `server.url` at it in debug) |
 | `Postgres` | — (managed) | — | private |
 
 ## Platform facts (R19.1 — operational risks, not inconveniences)

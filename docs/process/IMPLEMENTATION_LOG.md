@@ -947,3 +947,16 @@ output) — see the engineering standard §3.3 and §4.
   no invented positions. Surface rollout (rider route detail, review,
   driver journey, ops live map, waiting screen) = owner MCQ next; embedding
   on Path B screens goes through his files per the ownership protocol.
+
+## 2026-08-24 — B5 P7.1 Capacitor shell + Railway mobile health (Path B)
+
+- What: DEC-176 wrap of the existing web app; Railway `mobile` component
+  becomes a real `/healthz` service instead of an empty workspace package.
+- Files: packages/platform/**, apps/mobile/**, scripts/check-platform-boundary.sh,
+  apps/web/{build.js,package.json,src/lib/components.js,src/screens/rider.js,src/screens/staff.js},
+  infra/railway/README.md, docker-compose.yml, .github/workflows/ci.yml,
+  pnpm-workspace.yaml catalog pins for Capacitor 8.5.0.
+- Tests: platform unit; mobile server + config; boundary break observed;
+  web unit group "Platform is the only native seam".
+- Verified: see session `pnpm verify` output after install.
+- Self-check: no second UI; no secrets; P7.2–7.6 not pretended done.

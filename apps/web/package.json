@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ride-share/brand": "workspace:*",
+    "@ride-share/platform": "workspace:*",
     "fuse.js": "catalog:"
   }
 }

@@ -434,3 +434,4 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — B3 DEC-200: desktop compact density (~90% of touch tokens; no CSS zoom).
 
 - 2026-08-24 — B4 M4: incidents/SOS/report/share + support queue (0020).
+- 2026-08-24 — B5 P7.1 Capacitor shell + Railway-healthy mobile service; P7.2–7.6 next.

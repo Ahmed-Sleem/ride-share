@@ -648,14 +648,7 @@ async function sendSos(){
   const silent = !!(document.getElementById("sos-silent") && document.getElementById("sos-silent").checked);
   const bookingId = activeBookingId();
   const body = { silent, bookingId: bookingId || undefined };
-  const loc = () => new Promise((resolve)=>{
-    if (!navigator.geolocation) { resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      (p)=> resolve({ lat:p.coords.latitude, lng:p.coords.longitude }),
-      ()=> resolve(null),
-      { enableHighAccuracy:true, timeout:4000, maximumAge:15000 });
-  });
-  const pos = await loc();
+  const pos = await Platform.getPosition({ enableHighAccuracy:true, timeout:4000, maximumAge:15000 });
   if (pos) { body.lat = pos.lat; body.lng = pos.lng; }
   try {
     await API.raiseSos(body);
@@ -706,8 +699,8 @@ async function makeShare(id){
         $("label",{attrs:{for:"share-url"}, text:t("j_shareLink")}),
         $("input",{class:"input ltr", attrs:{id:"share-url", readonly:true, value:url, "aria-label":t("j_shareLink")}})));
     }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try { await navigator.clipboard.writeText(url); toast(t("j_shareCopied")); } catch { /* leave the field */ }
-    }
+    const shared = await Platform.share({ title: t("j_shareTitle"), url, text: t("j_shareSub") });
+    if (shared) toast(t("j_shareCopied"));
   } catch(e){ toast(errText(e.messageKey)); }
 }
+

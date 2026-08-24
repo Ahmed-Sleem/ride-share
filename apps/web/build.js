@@ -74,7 +74,13 @@ const FUSE_SRC =
   fs.readFileSync(path.join(__dirname, "node_modules", "fuse.js", "dist", "fuse.min.js"), "utf8") +
   "\n}).call(typeof window !== 'undefined' ? window : this);";
 
+const PLATFORM_SRC = fs.readFileSync(
+  path.join(__dirname, "..", "..", "packages", "platform", "src", "index.js"),
+  "utf8"
+);
+
 const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
+  PLATFORM_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 
 /* One-color line illustrations. The pack uses fill="black" / fill="none"

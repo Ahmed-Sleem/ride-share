@@ -95,3 +95,5 @@ jobs:
           test "$uid" != "0" || { echo "api image runs as root"; exit 1; }
           uid="$(docker run --rm --entrypoint sh ride-share-web -c 'id -u')"
           test "$uid" != "0" || { echo "web image runs as root"; exit 1; }
+          uid="$(docker run --rm --entrypoint sh ride-share-mobile -c 'id -u')"
+          test "$uid" != "0" || { echo "mobile image runs as root"; exit 1; }

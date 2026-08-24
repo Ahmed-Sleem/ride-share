@@ -463,15 +463,8 @@ function locateMe() {
     if (map.setView) map.setView([lat, lng], map.getZoom && map.getZoom() > 3 ? map.getZoom() : 13);
     else map.setCenter({ lat, lng });
   };
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => go(pos.coords.latitude, pos.coords.longitude),
-      () => go(ALEX_CENTER.lat, ALEX_CENTER.lng),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
-    );
-  } else {
-    go(ALEX_CENTER.lat, ALEX_CENTER.lng);
-  }
+  Platform.getPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 })
+    .then((pos) => pos ? go(pos.lat, pos.lng) : go(ALEX_CENTER.lat, ALEX_CENTER.lng));
 }
 
 /* QR — deterministic blocks + the numeric code that is the real fallback */

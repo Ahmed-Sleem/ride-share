@@ -1204,6 +1204,15 @@ group("PATH A — RouteMap renders data-bound stops with an accessible list");
   ok("no highlight → no boarding chip anywhere", !/Boarding here/.test(el3.textContent));
 }
 
+/* ===== Path B — P7.1 Platform (one codebase) ===== */
+group("PATH B — Platform is the only native seam");
+{
+  const t=boot();
+  ok("Platform is on the window (inlined from packages/platform)", typeof t.w.Platform === "object" && typeof t.w.Platform.getPosition === "function");
+  ok("kind is web inside jsdom", t.w.Platform.kind() === "web");
+  ok("bundle does not import @capacitor", !/from ['\"]@capacitor\//.test(t.html));
+}
+
 group("PATH A — RouteMap i18n parity (m_* keys)");
 {
   const t=boot();

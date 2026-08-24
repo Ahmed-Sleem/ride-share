@@ -270,17 +270,13 @@ function fieldCheck(id, label) {
 }
 
 function useMyLocation() {
-  if (!navigator.geolocation) { toast(t("locationDenied")); return; }
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const la = document.getElementById("field-lat"), lo = document.getElementById("field-lng"), acc = document.getElementById("field-acc");
-      if (la) la.value = pos.coords.latitude.toFixed(6);
-      if (lo) lo.value = pos.coords.longitude.toFixed(6);
-      if (acc) acc.textContent = `${t("accuracyLabel")}: ${Math.round(pos.coords.accuracy)} m`;
-    },
-    () => toast(t("locationDenied")),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
+  Platform.getPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }).then((pos) => {
+    if (!pos) { toast(t("locationDenied")); return; }
+    const la = document.getElementById("field-lat"), lo = document.getElementById("field-lng"), acc = document.getElementById("field-acc");
+    if (la) la.value = pos.lat.toFixed(6);
+    if (lo) lo.value = pos.lng.toFixed(6);
+    if (acc) acc.textContent = `${t("accuracyLabel")}: ${Math.round(pos.accuracy || 0)} m`;
+  });
 }
 
 function readPhotoFile(inputId, cb) {
