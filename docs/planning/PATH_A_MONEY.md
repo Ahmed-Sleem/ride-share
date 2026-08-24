@@ -390,3 +390,10 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 > fix Agent B's commits inline anymore. Let his pushes land; keep working;
 > audit his accumulated commits in a BATCHED pass at session end (or if
 > main is broken >4h, or any security/data-loss risk — those are immediate).
+
+- 2026-08-24 (phase 1a COMPLETE) — RouteMap embedded on rider boarding +
+  review, driver journey (own position as vehicle dot), ops live map (real
+  fleet via GET /journeys/live). SearchMap gained vehicles. All §0.2 +
+  fast-audit discipline held (242 API / 455 unit; 320px probe clean).
+  Remaining map roadmap: planner result-route annotation polish + geocoded
+  place search (needs a Nominatim proxy endpoint — next Path A increment).

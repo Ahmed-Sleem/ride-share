@@ -1096,3 +1096,19 @@
      unexpected end of file" — the script never ran once. `bash -n` catches
      this instantly; terminator fixed, script now parses. Standing lesson
      recorded for B: syntax-check shell scripts before pushing.
+
+## 2026-08-24 — Phase 1a maps shipped: RouteMap everywhere it matters + live fleet (Path A)
+
+- GET /journeys/live (VIEW_LIVEMAP): in-progress journeys with route, ordered
+  stops and last position — read-only, map-purpose, tagged. Authority test
+  added (ops yes / rider no).
+- Embeddings (all tagged `RouteMap (DEC-205 Path A)`): rider BOARDING (route
+  line + numbered stops, chosen stop highlighted), rider REVIEW (boarding stop
+  highlighted), DRIVER JOURNEY (the line + the driver's real last position as
+  the vehicle dot; the map is context — scan/manifest work without it), OPS
+  LIVE MAP (real fleet dots from journeys/live on live tiles; honest empty
+  state "no vehicles moving"; vehicle table stays).
+- SearchMap grew a `vehicles` prop (real positions only). i18n m_fleet/m_noLive
+  EN+AR. Tests: 242 API + 455 web unit green; the 320px overflow audit probe
+  (the exact suite measurement that caught the planner) run locally on every
+  touched page — widest=0 everywhere before push.
