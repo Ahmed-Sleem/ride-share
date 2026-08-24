@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-08-24 — M8 launch gate (Path B)
+
+- Checklist `docs/process/checklists/M8_launch.md`: live `/healthz` smoked
+  (`web` api:up, `/v1` db:up). Owner blockers listed (trademark, corridor,
+  Play keystore, legal, commission). README status + APK download path
+  brought in line with what is actually on `main`.
+
 ## 2026-08-24 — P7.6 Play signing (no keystore in git)
 
 - `packages/brand/brand.json` `version.name` / `version.code` is the only

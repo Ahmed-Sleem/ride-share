@@ -15,7 +15,14 @@ A rider boards at a fixed stop and gets off anywhere along the line.
 
 ## What works today
 
-The live app is at **https://ride-shareweb-production.up.railway.app**.
+The live app is at **https://ride-shareweb-production.up.railway.app**
+(`web` = browser; `api` = backend; `mobile` = same HTML for the APK — a
+Railway deploy does **not** update an already-installed APK).
+
+**Android debug APK:** GitHub → Actions → CI → job **Android debug APK** →
+artifact `ride-share-debug-apk`. Debug-signed only. Play signing needs
+your keystore in Actions secrets (never git). See
+[M8 launch](docs/process/checklists/M8_launch.md).
 
 - **Accounts** — riders self-register with email (+ password, + email OTP).
   Temporary-mail domains are rejected; one email = one account. Staff accounts
@@ -44,10 +51,10 @@ The live app is at **https://ride-shareweb-production.up.railway.app**.
   scroll-driven sticky panels — bilingual (EN/AR, RTL), light/dark themes,
   adaptive from 320px to 2560px.
 
-Not yet built: wallet/ledger and cash collection, the driver manifest and
-boarding-code scan, the live-journey screens, the A→B planner, and everything
-in M4–M8 — see [docs/planning/PROJECT_MAP.md](docs/planning/PROJECT_MAP.md)
-and the [M3 checklist](docs/process/checklists/M3_core_journey.md).
+Also live in code: wallet/ledger + cash tap (Path A), boarding scan +
+manifest, live journey, A→B planner, SOS/support, Capacitor APK pipeline.
+Launch is still gated — corridor survey, trademark, Play keystore, legal.
+See [M8](docs/process/checklists/M8_launch.md).
 
 ## Architecture
 
@@ -143,9 +150,10 @@ The break harnesses live in `apps/web/tests/breaks.sh` and
 | Identity, auth, accounts, staff, drivers/vehicles, landing | Done |
 | Geography — stops, mapping tool, field capture, verification | Done except the corridor survey (owner fieldwork) |
 | **Routes, slots, driver claim, rider booking (M3 P3.1–P3.6)** | **Done** |
-| **Wallet/ledger, manifest + scan, live journey (M3 P3.7–P3.9)** | **In progress** |
-| A→B planner, desktop density | Planned (DEC-199, DEC-200) |
-| Safety, commercial, subscriptions, APK, launch | Not started — M4–M8 |
+| **Wallet / scan / live journey (P3.7–P3.9)** | **Done in code** |
+| A→B planner, desktop density | Done |
+| Safety (M4), APK pipeline (M7) | Done in code |
+| Commercial / subscriptions / corridor open | Not launched — [M8](docs/process/checklists/M8_launch.md) |
 
 The product name is provisional and no trademark search has been done.
 

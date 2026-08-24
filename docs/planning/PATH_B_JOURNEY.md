@@ -440,6 +440,7 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — P7.4 Capacitor watch + batched position; owner still runs the 2h locked-screen gate.
 - 2026-08-24 — P7.5 FCM + local leave-now alarm from cached schedule (DEC-147).
 - 2026-08-24 — P7.6 Play AAB from CI secrets; version is brand.json only.
+- 2026-08-24 — M8 launch checklist + live smoke; corridor not opened.
 
 > **⚠️ OWNERSHIP UPDATE (owner decision, DEC-205, 2026-08-24):** ALL map
 > surfaces are now **Path A's** (Agent A), including inside rider.js,
