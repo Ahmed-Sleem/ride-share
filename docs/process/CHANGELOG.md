@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-24 — Debug APK from CI (Path B)
+
+- `apps/mobile/scripts/make-apk.sh` + CI job **Android debug APK**.
+  Artifact `ride-share-debug-apk` on every green `main` push. Debug key
+  only — Play signing stays P7.6 (secrets, never git).
+- README: how the wrap works, why a website deploy does **not** update
+  an installed APK, how to get the file, iPhone later (same Capacitor www).
+
 ## 2026-08-24 — Railway mobile: Railpack had no root start
 
 - Deploy logs: `using build driver railpack-v0.37.0` then
