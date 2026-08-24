@@ -51,6 +51,7 @@ The product in full.
 | `EXECUTION_PLAN.md` | How the spec + GUI become a deployed product: milestones M0–M8, Railway topology, what the owner must provide |
 | `BUILD_PLAN.md` | Phases 0–8. Every point has: what, how, test, break, done, gap risk |
 | `MASTER_PLAN.md`, `NEXT_SESSIONS_ROADMAP.md`, `READINESS_ASSESSMENT.md` | Earlier planning, kept for context |
+| `PATH_A_MONEY.md`, `PATH_B_JOURNEY.md` | The parallel-work split: two agents, two non-overlapping paths (ownership table + shared-file protocol + per-point work) |
 
 ### decisions/
 | File | Contents |

@@ -55,6 +55,7 @@ const PARTS = [
   "screens/auth.js",
   "screens/admin.js",
   "screens/rider.js",
+  "screens/wallet.js",
   "screens/driver.js",
   "screens/staff.js",
   "shell/app.js"

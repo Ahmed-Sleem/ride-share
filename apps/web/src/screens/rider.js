@@ -303,12 +303,7 @@ async function cancelRiderBooking(id) {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
-function riderWallet(){                                       // R-40
-  const w=$("div",{class:"main"});
-  /* Wallet and payments arrive with booking (M3) — no invented balance. */
-  w.append(Empty("wallet", t("comingSoon"), t("walletComingBody")));
-  return w;
-}
+/* riderWallet moved to screens/wallet.js (Path A ownership — parallel-work split). */
 
 function riderSafety(){                                       // R-60
   const w=$("div",{class:"main"});

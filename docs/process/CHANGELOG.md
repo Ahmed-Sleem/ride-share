@@ -731,3 +731,18 @@
 - Fix: the `verify-gui` job now caches `~/.cache/puppeteer` (keyed on the puppeteer pin in
   `pnpm-workspace.yaml`) and installs Chrome explicitly (`puppeteer browsers install chrome`,
   idempotent). Break-observed = the real CI failure above; proof = the next run green.
+
+## 2026-08-24 — Parallel-work split: PATH_A (money) + PATH_B (journey/UX)
+
+- Two agents now work the repo in parallel on non-overlapping paths. The full split —
+  exclusive file ownership, append-only protocols for shared files (api.js sections,
+  content.js key blocks, migration parity: A=odd, B=even), cross-path contracts
+  (payments surface vs bookings surface), git rebase protocol, monitoring duty (A
+  reviews B's commits) — lives in `docs/planning/PATH_A_MONEY.md` (Agent A:
+  P3.7 wallet/ledger/Paymob, then M5/M6 money, payouts) and
+  `docs/planning/PATH_B_JOURNEY.md` (Agent B: P3.8 scan/manifest, P3.9 live journey,
+  planner DEC-199, desktop density DEC-200, M4, M7 APK; M8 joint).
+- Groundwork: the rider wallet screen moved verbatim from `screens/rider.js` to the
+  new `screens/wallet.js` (Path A ownership) so the two agents never share a screen
+  file; build.js PARTS registers it. Build 415.9 KB, 349 unit + 14 a11y green.
+- CI fully green on `ad5e7e7` and `c092b69` (all four jobs) — G-077 proof complete.
