@@ -928,3 +928,22 @@ output) — see the engineering standard §3.3 and §4.
   line-by-line (7 intended files, no debris).
 - Self-check: the overdraw guard is proven load-bearing, not assumed; balance
   stays derived-only; reconciliation cannot write corrections by construction.
+
+## 2026-08-24 — R21: RouteMap shared primitive (Path A)
+
+- What: the single data-bound map component every screen will compose,
+  per research (docs/research/06_MAPS_UX.md) — plus removal of the
+  hardcoded demo polyline from realMapView's Google branch.
+- Files: apps/web/src/lib/map.js (new), build.js (PARTS), styles/shell.html
+  (.mapstops tokens), data/content.js (m_* EN+AR), lib/components.js
+  (violation removed), tests/unit.test.js (+40), tests/breaks.sh (+1 case).
+- Tests: 404 unit green; §0.2 break observed CAUGHT (chip key swap);
+  the colour-token guard observed failing on my first draft (hex fallbacks)
+  before being fixed — the guard works.
+- Verified: pnpm verify exit 0; 0 hex literals added; diff reviewed
+  file-by-file.
+- Self-check: one map implementation (Leaflet + Google branches share the
+  data contract), honest fallbacks, accessible alternative always present,
+  no invented positions. Surface rollout (rider route detail, review,
+  driver journey, ops live map, waiting screen) = owner MCQ next; embedding
+  on Path B screens goes through his files per the ownership protocol.

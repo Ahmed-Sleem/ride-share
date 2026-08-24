@@ -1158,3 +1158,43 @@ group("PATH B — A→B planner (DEC-199)");
   ok("j_planTitle exists in both languages", !!t.w.T.en.j_planTitle && !!t.w.T.ar.j_planTitle
      && t.w.T.ar.j_planTitle !== t.w.T.en.j_planTitle);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   PATH A — RouteMap, the one data-bound map primitive (R21). jsdom has
+   no map SDK → the honest fallback + the accessible stop list are the
+   test surface; the real-tiles branches are exercised by the CI browser
+   suite on the ops stops tool.
+   ═══════════════════════════════════════════════════════════════════ */
+group("PATH A — RouteMap renders data-bound stops with an accessible list");
+{
+  const t=boot();
+  const STOPS=[
+    { stop_id:"s1", position:1, name_en:"Smouha", name_ar:"سموحة", lat:31.21, lng:29.94 },
+    { stop_id:"s2", position:2, name_en:"Sidi Gaber", name_ar:"سيدي جابر", lat:31.23, lng:29.96 },
+    { stop_id:"s3", position:3, name_en:"Mandara", name_ar:"المنتزه", lat:31.29, lng:29.99 },
+  ];
+  const el = t.w.RouteMap ? t.w.RouteMap({ stops: STOPS, highlightStopId: "s2", h: 200 })
+                          : t.w.eval(`RouteMap({ stops: ${JSON.stringify(STOPS)}, highlightStopId: "s2", h: 200 })`);
+  const items=[...el.querySelectorAll(".mapstops__item")];
+  ok("stop list shows every stop in order", items.length===3 && /Smouha/.test(items[0].textContent) && /Mandara/.test(items[2].textContent));
+  ok("numbers are visual only (aria-hidden)", !!el.querySelector(".mapstops__n[aria-hidden=\"true\"]"));
+  ok("highlighted stop carries the boarding chip", items.some(i=>/Boarding here/.test(i.textContent) && i.className.includes("--hi")));
+
+  const el2 = t.w.RouteMap ? t.w.RouteMap({ stops: [] })
+                           : t.w.eval(`RouteMap({ stops: [] })`);
+  ok("empty/invalid stops → honest empty message, no crash", /No stops mapped/.test(el2.textContent));
+
+  const el3 = t.w.RouteMap ? t.w.RouteMap({ stops: STOPS })
+                           : t.w.eval(`RouteMap({ stops: ${JSON.stringify(STOPS)} })`);
+  ok("no highlight → no boarding chip anywhere", !/Boarding here/.test(el3.textContent));
+}
+
+group("PATH A — RouteMap i18n parity (m_* keys)");
+{
+  const t=boot();
+  const tt=(k)=> t.w.eval(`t(${JSON.stringify(k)})`);
+  ["m_stopsAria","m_boardingHere","m_routeAria","m_vehicle"].forEach((k)=>{
+    t.w.S.lang="en"; const en=tt(k); t.w.S.lang="ar"; const ar=tt(k); t.w.S.lang="en";
+    ok(`${k} resolves in both languages`, en!==k && ar!==k && en!==ar);
+  });
+}

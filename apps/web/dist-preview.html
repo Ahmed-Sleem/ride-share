@@ -690,6 +690,14 @@ select.input{cursor:pointer}
 /* map */
 .mapbox{position:relative;border-radius:var(--r-md);overflow:hidden;
   border:1px solid var(--line);background:var(--map-land);flex:none}
+/* RouteMap accessible stop list (R21) — the non-map alternative */
+.mapstops{margin:0;padding:0;list-style:none}
+.mapstops__item{align-items:center;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);
+  background:var(--surface-raised);border:1px solid var(--border-subtle)}
+.mapstops__item--hi{border-color:var(--brand);background:var(--surface-sunken)}
+.mapstops__n{flex:none;width:26px;height:26px;border-radius:var(--r-full);
+  display:grid;place-items:center;font-size:12px;font-weight:600;
+  background:var(--brand);color:var(--on-brand)}
 .mapbox .mapsvg{display:block;width:100%;height:100%;overflow:hidden}
 .mapctl{position:absolute;top:var(--s3);inset-inline-end:var(--s3);
   display:flex;flex-direction:column;gap:var(--s1)}
@@ -1532,6 +1540,9 @@ en:{
     booking_not_payable:"This booking can no longer be paid.", rider_not_found:"Account not found.",
     unsupported_kind:"Unsupported payment type.", insufficient_funds:"Wallet balance is not enough for this fare — top up or pay cash.",
     no_driver:"This journey has no driver yet.", not_your_booking:"This booking is not yours." },
+  /* RouteMap (shared map primitive, R21) */
+  m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
+  m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -1838,6 +1849,9 @@ ar:{
     booking_not_payable:"لم يعد يمكن دفع هذا الحجز.", rider_not_found:"الحساب غير موجود.",
     unsupported_kind:"نوع دفع غير مدعوم.", insufficient_funds:"رصيد المحفظة لا يكفي لهذه الأجرة — اشحن المحفظة أو ادفع كاش.",
     no_driver:"لا يوجد سائق لهذه الرحلة بعد.", not_your_booking:"هذا الحجز ليس لك." },
+  /* RouteMap (shared map primitive, R21) */
+  m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
+  m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
@@ -2318,15 +2332,8 @@ function realMapView({h, route, locate, onPick}) {
     });
     window.__rsMapInstance = map;
     if (onPick) map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
-    if (route) {
-      // token, not a literal — the design system owns every colour (§0.3)
-      const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
-      new google.maps.Polyline({
-        path: [{lat:31.2456,lng:29.9839},{lat:31.2241,lng:29.9549},{lat:31.2037,lng:29.9196}],
-        map, geodesic:true,
-        strokeColor: brand, strokeOpacity:0.9, strokeWeight:5,
-      });
-    }
+    // Route drawing lives ONLY in lib/map.js RouteMap, driven by real data
+    // (R21): the old hardcoded demo polyline was a §8 no-demo-data violation.
     new google.maps.Marker({ position: ALEX_CENTER, map, title: t("brand") });
   }, 0);
   return box;
@@ -2869,6 +2876,130 @@ async function resolveSession() {
     API.clearSession();
     return null;
   }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   RouteMap — the ONE data-bound map primitive (R21, research 06_MAPS_UX).
+   Shared library (added by Path A; every screen composes this — nobody
+   hand-rolls a second map, §0.3 / Uber's layer-discipline lesson).
+
+   Renders, for a route's ordered stops:
+     - real tiles + route polyline + numbered stop markers when the map SDK
+       is loaded (Leaflet/OpenFreeMap by default — DEC-198, no key; Google
+       when configured), with the highlighted stop (the rider's boarding
+       stop) enlarged in the brand colour and an optional live vehicle
+       marker (real journeys.progress data only — never an invented dot);
+     - the honest labelled illustration + the numbered stop LIST until then.
+   The stop list is the ACCESSIBLE alternative to the map (screen readers,
+   no-SDK, file:// previews) — the map is enhancement, never the only path.
+   Colours come only from CSS custom properties (tokens, §0.3); an unread
+   token falls back to another token, then to the map library's default. */
+
+function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
+  const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  const hi = list.find((s) => s.stop_id === highlightStopId) || null;
+
+  const wrap = $("div", { class: "col gap3" });
+  if (title) wrap.append($("div", { class: "t-cap", text: title }));
+
+  const box = $("div", { class: "mapbox mapbox--route" });
+  if (list.length >= 2 && window.__rsMapsOn && (window.L || window.google?.maps)) {
+    box.append(realRouteMap(list, hi, vehicle, h));
+  } else {
+    box.append(MapView({ h, route: list.length >= 2, stops: true, vehicle: !!vehicle, zoom: true }));
+  }
+  wrap.append(box);
+
+  /* The accessible alternative — always present, independent of the map. */
+  const ul = $("ol", { class: "stack gap1 mapstops", attrs: { "aria-label": t("m_stopsAria") } });
+  list.forEach((s, i) => {
+    ul.append($("li", {
+      class: "row gap3 mapstops__item" + (s.stop_id === highlightStopId ? " mapstops__item--hi" : ""),
+    },
+      $("span", { class: "mapstops__n", attrs: { "aria-hidden": "true" }, text: String(i + 1) }),
+      $("span", { class: "t-cap", text: L({ en: s.name_en, ar: s.name_ar }) || "—" }),
+      s.stop_id === highlightStopId
+        ? $("span", { class: "chip chip--brand", text: t("m_boardingHere") }) : null));
+  });
+  if (list.length === 0) ul.append($("li", { class: "t-cap", text: t("m_noStops") }));
+  wrap.append(ul);
+  return wrap;
+}
+
+/* Real-tiles renderer. One implementation per provider branch, both driven
+   by the SAME data; fit-bounds so the whole line is visible (the camera
+   serves the content, never a hardcoded demo — the violation R21 fixed). */
+function realRouteMap(list, hi, vehicle, h) {
+  const id = "routemap-" + Math.random().toString(36).slice(2, 9);
+  const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
+  const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
+  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  const cssVar = (n, fb) => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    return v || (fb ? cssVar(fb) : undefined);
+  };
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const pts = list.map((s) => [s.lat, s.lng]);
+
+    if (window.L) {
+      const map = L.map(el, { zoomControl: false, attributionControl: true });
+      const brand = cssVar("--brand", "--accent-route");  // may be undefined → Leaflet default
+      L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+      L.polyline(pts, { color: brand, weight: 5, opacity: 0.92 }).addTo(map);
+      list.forEach((s, i) => {
+        const isHi = hi && s.stop_id === hi.stop_id;
+        L.circleMarker([s.lat, s.lng], {
+          radius: isHi ? 9 : 6, color: brand, weight: 3,
+          fillColor: cssVar("--bg-base", "--surface-base"), fillOpacity: 1,
+        }).addTo(map)
+          .bindTooltip(`${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`, { direction: "top" });
+      });
+      if (vehicle && Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lng)) {
+        L.circleMarker([vehicle.lat, vehicle.lng], {
+          radius: 8, weight: 3, fillColor: brand, fillOpacity: 1,
+        }).addTo(map).bindTooltip(t("m_vehicle"), { direction: "top" });
+      }
+      map.fitBounds(L.latLngBounds(pts).pad(0.25), { animate: false });
+      window.__rsMapInstance = map;
+      return;
+    }
+
+    if (window.google?.maps) {
+      const map = new google.maps.Map(el, {
+        center: { lat: list[0].lat, lng: list[0].lng }, zoom: 13,
+        disableDefaultUI: true, clickableIcons: false, fullscreenControl: false,
+      });
+      const brand = cssVar("--brand", "--accent-route");
+      new google.maps.Polyline({
+        path: list.map((s) => ({ lat: s.lat, lng: s.lng })),
+        map, geodesic: true, strokeColor: brand, strokeOpacity: 0.9, strokeWeight: 5,
+      });
+      list.forEach((s, i) => {
+        const isHi = hi && s.stop_id === hi.stop_id;
+        new google.maps.Marker({
+          position: { lat: s.lat, lng: s.lng }, map,
+          title: `${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`,
+          label: String(i + 1),   // numbered like the Leaflet markers
+          ...(isHi ? { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9,
+            strokeWeight: 3, strokeColor: brand,
+            fillColor: cssVar("--bg-base", "--surface-base"), fillOpacity: 1 } } : {}),
+        });
+      });
+      if (vehicle && Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lng)) {
+        new google.maps.Marker({ position: { lat: vehicle.lat, lng: vehicle.lng }, map, title: t("m_vehicle") });
+      }
+      const b = new google.maps.LatLngBounds();
+      list.forEach((s) => b.extend({ lat: s.lat, lng: s.lng }));
+      map.fitBounds(b, 60);
+      window.__rsMapInstance = map;
+    }
+  }, 0);
+  return root;
 }
 
 

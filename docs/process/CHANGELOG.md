@@ -923,3 +923,25 @@
   rail, spacing and `--content-max` at ~90% of the touch scale (the look
   the owner preferred at 90% browser zoom). Phone 44/56 and `--f-input:16`
   stay on `:root`.
+
+## 2026-08-24 — R21 maps: research + the ONE RouteMap primitive (Path A)
+
+- Owner asked where maps appear and requested Uber/Careem/Swvl best-practice
+  research. Findings + design: docs/research/06_MAPS_UX.md (list-primary
+  route-line maps for our fixed-route model; Uber's one-primitive/layer
+  discipline; accessible alternative mandatory).
+- `apps/web/src/lib/map.js` — RouteMap({stops, highlightStopId, vehicle}):
+  data-bound route polyline + numbered stop markers on real tiles
+  (Leaflet/OpenFreeMap default, Google branch parallel), boarding stop
+  highlighted, optional live-vehicle marker (real progress data only),
+  fit-bounds camera, honest illustration fallback, and the numbered stop
+  LIST as the accessible non-map path. Registered in build.js PARTS.
+  Styles: .mapstops tokens (reuses existing .chip--brand). i18n m_* EN+AR.
+- Violation fixed on the way: the Google branch of realMapView drew a
+  HARDCODED demo polyline (§8 no-demo-data) — removed; route drawing now
+  exists only in RouteMap, data-driven.
+- Tests: 404 unit (RouteMap group: ordered list, aria-hidden numbers,
+  boarding chip, empty-data honesty, no-highlight, i18n parity both
+  languages); token guard CAUGHT my colour-literal fallbacks before push
+  (fixed to token chains); break case "RouteMap loses its accessible stop
+  list highlight" observed CAUGHT. pnpm verify green, all guards clean.

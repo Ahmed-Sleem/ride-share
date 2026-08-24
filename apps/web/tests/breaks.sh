@@ -384,6 +384,11 @@ run_break "desktop density reverts to stretched-phone tokens" src/styles/shell.h
   's|--density:compact;|--density:comfortable;|' \
   "desktop switches density to compact"
 
+# ── Path A — RouteMap, the one map primitive (R21) ───────────────────────
+run_break "RouteMap loses its accessible stop list highlight" src/lib/map.js \
+  's|text: t("m_boardingHere")|text: t("m_stopsAria")|' \
+  "highlighted stop carries the boarding chip"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

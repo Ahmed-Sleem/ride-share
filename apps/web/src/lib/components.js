@@ -449,15 +449,8 @@ function realMapView({h, route, locate, onPick}) {
     });
     window.__rsMapInstance = map;
     if (onPick) map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
-    if (route) {
-      // token, not a literal — the design system owns every colour (§0.3)
-      const brand = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim() || "violet";
-      new google.maps.Polyline({
-        path: [{lat:31.2456,lng:29.9839},{lat:31.2241,lng:29.9549},{lat:31.2037,lng:29.9196}],
-        map, geodesic:true,
-        strokeColor: brand, strokeOpacity:0.9, strokeWeight:5,
-      });
-    }
+    // Route drawing lives ONLY in lib/map.js RouteMap, driven by real data
+    // (R21): the old hardcoded demo polyline was a §8 no-demo-data violation.
     new google.maps.Marker({ position: ALEX_CENTER, map, title: t("brand") });
   }, 0);
   return box;

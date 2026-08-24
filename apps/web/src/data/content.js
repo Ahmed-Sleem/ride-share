@@ -290,6 +290,9 @@ en:{
     booking_not_payable:"This booking can no longer be paid.", rider_not_found:"Account not found.",
     unsupported_kind:"Unsupported payment type.", insufficient_funds:"Wallet balance is not enough for this fare — top up or pay cash.",
     no_driver:"This journey has no driver yet.", not_your_booking:"This booking is not yours." },
+  /* RouteMap (shared map primitive, R21) */
+  m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
+  m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -596,6 +599,9 @@ ar:{
     booking_not_payable:"لم يعد يمكن دفع هذا الحجز.", rider_not_found:"الحساب غير موجود.",
     unsupported_kind:"نوع دفع غير مدعوم.", insufficient_funds:"رصيد المحفظة لا يكفي لهذه الأجرة — اشحن المحفظة أو ادفع كاش.",
     no_driver:"لا يوجد سائق لهذه الرحلة بعد.", not_your_booking:"هذا الحجز ليس لك." },
+  /* RouteMap (shared map primitive, R21) */
+  m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
+  m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
