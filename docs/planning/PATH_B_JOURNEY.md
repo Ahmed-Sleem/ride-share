@@ -430,3 +430,5 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — P3.9 live journey: start/complete/abort/position/arrive, slip, rider waiting/alight, notifications 0018.
 
 - 2026-08-24 — B2 DEC-199 A→B planner + rider live poll ≥15s/backoff/hidden.
+
+- 2026-08-24 — B3 DEC-200: desktop compact density (~90% of touch tokens; no CSS zoom).

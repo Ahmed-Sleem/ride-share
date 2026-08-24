@@ -380,6 +380,10 @@ run_break "planner ranking removed" src/lib/search.js \
   's|function planJourneys(start, dest, index) {|function planJourneysX(start, dest, index) {|' \
   "planner is exported|same-line start→end recommends the line"
 
+run_break "desktop density reverts to stretched-phone tokens" src/styles/shell.html \
+  's|--density:compact;|--density:comfortable;|' \
+  "desktop switches density to compact"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

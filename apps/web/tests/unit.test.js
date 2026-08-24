@@ -176,6 +176,22 @@ group("ADAPTIVE — Material 3 breakpoints, nav swaps at each");
   ok("wide screens opt out of the cap", /\.main--wide \.main__inner\{max-width:none\}/.test(CSS));
 }
 
+group("DEC-200 — DESKTOP DENSITY IS TOKENISED (not browser zoom)");
+{
+  ok("density token exists", /--density:comfortable/.test(CSS));
+  ok("desktop switches density to compact",
+     /@media \(min-width:840px\)\{[\s\S]*--density:compact/.test(CSS));
+  ok("desktop type is tighter than the touch scale",
+     /@media \(min-width:840px\)\{[\s\S]*--f-body:13px/.test(CSS));
+  ok("desktop tap is mouse-sized, not 44px",
+     /@media \(min-width:840px\)\{[\s\S]*--tap:40px/.test(CSS));
+  ok("desktop reading cap is 90% of the touch cap (756)",
+     /--content-max:756px/.test(CSS));
+  ok("zoom is still not locked", !/maximum-scale/.test(SRC) && !/zoom:\s*0?\.9/.test(CSS));
+  ok("touch still declares 44/56 on the root",
+     /--tap:44px/.test(CSS) && /--tap-driver:\s*56px/.test(CSS));
+}
+
 group("SAFE AREAS AND ZOOM");
 {
   ok("bottom inset consumed", /--safe-b:env\(safe-area-inset-bottom/.test(CSS));

@@ -142,6 +142,7 @@
   --landing-max:1120px;     /* marketing-page cap — generous, still readable */
   --shell-max:1600px;       /* beyond x-large the shell stops growing  */
   --topbar-h:60px; --dock-h:64px;
+  --density:comfortable;    /* DEC-200: compact on desktop, see ≥840px */
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
   --safe-l:env(safe-area-inset-left,0px);
@@ -334,10 +335,30 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   .app.rail-collapsed .navitem__label{display:none}
 }
 
-/* large and up: roomier gutters */
+/* DEC-200 desktop density — ~90% of the touch scale (owner's 90% Chrome
+   zoom look). Do not use CSS zoom. Compact phones keep 44/56. */
+@media (min-width:840px){
+  :root{
+    --density:compact;
+    --f-display:29px; --f-title:20px; --f-head:16px; --f-lg:14px;
+    --f-body:13px; --f-cap:12px; --f-micro:10px;
+    --tap:40px; --tap-sm:32px;
+    --icon-sm:14px; --icon-md:18px; --icon-lg:20px;
+    --topbar-h:52px;
+    --rail-collapsed:72px; --rail-expanded:216px;
+    --content-max:756px;
+    --s3:10px; --s4:14px; --s5:18px; --s6:22px; --s7:28px; --s8:36px;
+    --r-md:12px; --r-lg:16px;
+  }
+  .rowitem{min-height:var(--tap);padding:var(--s2) var(--s3)}
+  .table th,.table td{padding:var(--s2) var(--s3)}
+  .routecard,.routecard__head{min-height:64px;padding:var(--s3)}
+  .card,.panel{padding:var(--s3)}
+}
 @media (min-width:1200px){
-  .main{padding:var(--s6)}
-  .topbar{padding-inline:var(--s6)}
+  :root{ --content-max:756px; }
+  .main{padding:var(--s4)}
+  .topbar{padding-inline:var(--s4)}
 }
 
 /* short viewports (landscape phone): reclaim vertical space */

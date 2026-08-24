@@ -914,3 +914,12 @@
   recommended boarding stop pre-chosen.
 - P3.9 miss: rider live screen now polls ≥15s with error backoff and
   pauses while the document is hidden (GUI §15).
+
+## 2026-08-24 — B3 DEC-200 desktop density (Path B)
+
+- Control is `:root` tokens in `apps/web/src/styles/shell.html`, not Chrome
+  zoom (zoom stays user-controlled). `--density:comfortable` on touch;
+  `@media (min-width:840px)` switches `--density:compact` — type, tap,
+  rail, spacing and `--content-max` at ~90% of the touch scale (the look
+  the owner preferred at 90% browser zoom). Phone 44/56 and `--f-input:16`
+  stay on `:root`.

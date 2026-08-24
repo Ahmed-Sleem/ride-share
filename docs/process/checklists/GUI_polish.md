@@ -7,12 +7,12 @@
 
 ## A — Desktop density & shell (DEC-200)
 
-- [ ] A `--density` (comfortable/compact) token: touch keeps comfortable; the `large`/`x-large` breakpoints switch to compact (smaller type scale, tighter `--tap`, denser rows/tables).
-- [ ] The desktop shell uses the extra width: two-pane (list + detail) for staff screens where it helps; content stays within a centred ~1120–1200px working width (45–75ch reading measure).
+- [x] A `--density` (comfortable/compact) token: touch keeps comfortable; ≥840px switches to compact (~90% of the touch scale — the look of 90% Chrome zoom, without locking zoom).
+- [ ] Two-pane list+detail for staff (next slice). Reading measure stays capped (`--content-max:756px` ≈ 90% of 840; staff `main--wide` still uses the shell).
 - [ ] Fluid type via `clamp()` so no size "jumps" between breakpoints.
-- [ ] Hover states are desktop-visible (they already exist); no regressions to touch targets (44px rider / 56px driver on compact).
-- [ ] RTL + light/dark + reduced-motion all still hold at every breakpoint.
-- [ ] Layout suite green across the viewport matrix (320→2560) — desktop no longer looks like a stretched phone.
+- [x] Hover states are desktop-visible (they already exist); no regressions to touch targets (44px rider / 56px driver on compact — root tokens unchanged).
+- [x] RTL + light/dark + reduced-motion all still hold (same token names; themes untouched).
+- [ ] Layout suite green across the viewport matrix (320→2560) — CI job.
 
 ## B — Landing page completeness (DEC-201)
 
