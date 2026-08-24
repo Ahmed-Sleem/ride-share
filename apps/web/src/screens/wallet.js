@@ -10,8 +10,12 @@ function riderWallet(){                                       // R-40
   const w=$("div",{class:"main"});
   const cfg = S.payConfig;
 
-  // fetch the session-scoped config + wallet on first paint
-  if(!cfg && !S.payConfigError){ payConfigLoad(); }
+  // fetch the session-scoped config + wallet on first paint. The loaders set
+  // their flags SYNCHRONOUSLY (so this paint already shows the honest loading
+  // state) but never render() until after their await — a render inside the
+  // running render duplicates the shell (the exact bug the trips loader
+  // documents; caught by the CI layout suite as a half-width bar).
+  if(S.payConfig===undefined && !S.payConfigError && !S.payConfigLoading){ payConfigLoad(); }
   if(S.walletLoading === undefined && !S.walletError){ walletLoad(); }
 
   if(S.walletError){
@@ -60,21 +64,23 @@ function riderWallet(){                                       // R-40
   return w;
 }
 
-/* Loads the payment config once per session (drives ALL paymob visibility). */
+/* Loads the payment config once per session (drives ALL paymob visibility).
+   In-flight guard; the single render happens AFTER the await. */
 async function payConfigLoad(){
-  S.payConfigError = null;
+  S.payConfigLoading = true; S.payConfigError = null;
   try{
     S.payConfig = await API.paymentsConfig();
   }catch(e){
     S.payConfigError = errText(e.messageKey);   // config unreachable: keep options hidden
     S.payConfig = null;
   }
-  render();
+  S.payConfigLoading = false; render();
 }
 
-/* Loads the derived wallet. */
+/* Loads the derived wallet. Flags set synchronously (no render — the caller
+   is mid-render); ONE render after the await. */
 async function walletLoad(){
-  S.walletLoading = true; S.walletError = null; render();
+  S.walletLoading = true; S.walletError = null;
   try{
     S.wallet = await API.wallet();
   }catch(e){
