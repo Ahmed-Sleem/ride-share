@@ -146,6 +146,10 @@ const API = {
   myBookings: () => API.request("GET", "/bookings/mine"),
   cancelBooking: (id) => API.request("POST", `/bookings/${id}/cancel`),
 
+  /* ===== journeys client (Path B) ===== */
+  scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),
+  journeyManifest: (id) => API.request("GET", `/journeys/${id}/manifest`),
+
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
     if (typeof fetch !== "function") return null;

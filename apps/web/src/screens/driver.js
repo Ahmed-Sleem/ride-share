@@ -141,10 +141,95 @@ async function claimSlotAction() {
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
-function driverJourney(){                                     // D-20
+function driverJourney(){                                     // D-20 / D-21 — scan + manifest
   const w=$("div",{class:"main"});
-  w.append(Empty("journey", t("nav.journey"), t("journeyComingBody")));
+  const pick = $("div",{id:"journey-pick"});
+  const scan = $("div",{id:"journey-scan"});
+  const list = $("div",{id:"journey-manifest"});
+  w.append(pick, scan, list);
+  loadDriverJourneyInto(pick, scan, list);
   return w;
+}
+
+async function loadDriverJourneyInto(pick, scan, list) {
+  if (!pick) return;
+  pick.innerHTML = ""; if (scan) scan.innerHTML = ""; if (list) list.innerHTML = "";
+  try {
+    const journeys = (await API.myJourneys()).filter((j) =>
+      j.status !== "CANCELLED" && j.status !== "COMPLETED" && j.status !== "ABORTED");
+    if (!journeys.length) {
+      pick.append(Empty("journey", t("nav.journey"), t("j_noActiveJourney"),
+        Btn({label:t("nav.work"), on:()=>go("work")})));
+      return;
+    }
+    S.scanJourneyId = S.scanJourneyId || journeys[0].id;
+    journeys.forEach((j) => pick.append(Row({
+      icon: "bus",
+      title: j.route_name_en || j.route_name_ar || j.route_code,
+      sub: `${j.service_date} · ${j.departs_at} · ${j.status}`,
+      selected: S.scanJourneyId === j.id,
+      bordered: true,
+      on: () => { S.scanJourneyId = j.id; render(); },
+    })));
+    const jid = S.scanJourneyId;
+    scan.append($("h2",{class:"t-head",text:t("j_scanTitle")}));
+    scan.append($("p",{class:"t-cap",text:t("j_scanHint")}));
+    const field = $("input",{class:"input ltr", attrs:{
+      type:"text", inputmode:"numeric", pattern:"[0-9]*", maxlength:"6",
+      autocomplete:"one-time-code", "aria-label":t("boardingCode"),
+      placeholder:"000000",
+    }});
+    if (S.scanCode) field.value = S.scanCode;
+    field.addEventListener("input", () => { S.scanCode = field.value.replace(/\D/g,"").slice(0,6); });
+    scan.append(field);
+    scan.append(Btn({label:t("j_scanAction"), block:true, driver:true, dis:S.stopBusy, on:()=>scanCodeAction(jid)}));
+    await loadManifestInto(list, jid);
+  } catch (e) { pick.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function scanCodeAction(journeyId) {
+  const code = (S.scanCode || "").replace(/\D/g,"");
+  if (code.length !== 6) { toast(t("validation.code")); return; }
+  S.stopBusy = true; render();
+  try {
+    await API.scanBooking(journeyId, code);
+    S.scanCode = "";
+    S.stopBusy = false;
+    toast(t("j_boarded"));
+    render();
+  } catch (e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+}
+
+async function loadManifestInto(el, journeyId) {
+  if (!el || !journeyId) return;
+  el.innerHTML = "";
+  el.append($("h2",{class:"t-head",text:t("j_manifest")}));
+  try {
+    const rows = await API.journeyManifest(journeyId);
+    if (!rows.length) { el.append(Empty("users", t("j_manifest"), t("j_noPassengers"))); return; }
+    rows.forEach((p) => {
+      const stop = S.lang === "ar" ? (p.stop_name_ar || p.stop_name_en) : (p.stop_name_en || p.stop_name_ar);
+      const cashBtn = (typeof API.cashCollected === "function")
+        ? Btn({label:t("cashCollected"), kind:"ghost", on:()=>cashTap(p.id)})
+        : null;
+      el.append(Row({
+        icon: p.status === "ON_BOARD" ? "check" : "seat",
+        title: p.rider_name || "—",
+        sub: `${stop} · ${p.seats} · ${p.code}`,
+        right: $("div",{class:"row gap2"},
+          Chip({label:p.status === "ON_BOARD" ? t("scanned") : t("notScanned"),
+            kind: p.status === "ON_BOARD" ? "ok" : ""}),
+          cashBtn),
+        bordered: true,
+      }));
+    });
+  } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+async function cashTap(bookingId) {
+  if (typeof API.cashCollected !== "function") return;
+  try { await API.cashCollected(bookingId); toast(t("cashCollected")); }
+  catch (e) { toast(errText(e.messageKey)); }
 }
 
 function driverEarnings(){                                    // D-30

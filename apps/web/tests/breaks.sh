@@ -371,6 +371,11 @@ run_break "paymentChoice offers a dead insufficient-wallet row" src/screens/wall
   's|  if(sufficient){|  if(true){|' \
   "insufficient wallet → wallet method absent (not disabled)"
 
+# ── Path B — boarding (P3.8) ─────────────────────────────────────────────
+run_break "scan client removed" src/lib/api.js \
+  's|scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|scanBookingX: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|' \
+  "scan API exists"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

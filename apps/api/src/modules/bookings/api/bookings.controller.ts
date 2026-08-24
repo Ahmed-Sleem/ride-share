@@ -12,6 +12,11 @@ class BookDto {
   @IsInt() @Min(1) @Max(4) seats!: number;
 }
 
+class ScanDto {
+  @IsString() @MinLength(1) journeyId!: string;
+  @IsString() @MinLength(1) code!: string;
+}
+
 type ReqWithActor = FastifyRequest & { actor?: Actor };
 
 @Controller()
@@ -34,5 +39,17 @@ export class BookingsController {
   @UseGuards(IdentityGuard)
   cancel(@Req() req: ReqWithActor, @Param('id') id: string) {
     return this.bookings.cancel(req.actor!, id);
+  }
+
+  @Post('bookings/scan')
+  @UseGuards(IdentityGuard)
+  scan(@Req() req: ReqWithActor, @Body() dto: ScanDto) {
+    return this.bookings.scan(req.actor!, dto);
+  }
+
+  @Get('journeys/:id/manifest')
+  @UseGuards(IdentityGuard)
+  manifest(@Req() req: ReqWithActor, @Param('id') id: string) {
+    return this.bookings.manifest(req.actor!, id);
   }
 }

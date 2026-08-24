@@ -494,10 +494,10 @@ group("DRIVER SCREENS ARE REAL (duty + work wired, no demo data)");
   t.go("driver","work");
   ok("driver work renders the real find-work loader", !!t.q("#work-list") && !sample.test(t.q(".main").textContent));
 
-  for(const p of ["journey","earnings"]){   // still M3-later → honest coming-soon
-    t.go("driver",p);
-    ok(`driver ${p} is honest (no sample content)`, t.q(".empty") && !sample.test(t.q(".main").textContent), p);
-  }
+  t.go("driver","journey");
+  ok("driver journey has the scan/manifest loaders", !!t.q("#journey-pick") && !!t.q("#journey-scan"));
+  t.go("driver","earnings");
+  ok("driver earnings is honest (no sample content)", t.q(".empty") && !sample.test(t.q(".main").textContent));
   t.go("driver","profile");
   ok("driver profile shows the real user", t.q(".main").textContent.includes("Mahmoud"));
   ok("driver profile has no fake vehicle", !sample.test(t.q(".main").textContent));
@@ -1094,4 +1094,19 @@ group("PATH A — payments copy exists in BOTH languages (i18n parity)");
     ok(`EN key ${k} resolves`, EVALT(k)!==k);
     t.w.S.lang="ar"; ok(`AR key ${k} resolves`, EVALT(k)!==k); t.w.S.lang="en";
   });
+}
+
+/* ===== Path B ===== */
+group("PATH B — boarding scan UI + copy");
+{
+  const t=boot();
+  t.w.S.view="app"; t.w.S.authed=true; t.w.S.role="driver"; t.w.S.user={id:"d1",role:"driver",name:"D"};
+  t.w.S.page="journey"; t.w.render();
+  ok("scan API exists", typeof t.w.API.scanBooking === "function");
+  ok("manifest API exists", typeof t.w.API.journeyManifest === "function");
+  ok("j_scanTitle EN", !!t.w.T.en.j_scanTitle);
+  ok("j_scanTitle AR", !!t.w.T.ar.j_scanTitle && t.w.T.ar.j_scanTitle !== t.w.T.en.j_scanTitle);
+  t.w.S.role="rider"; t.w.S.page="booked"; t.w.S.lastBooking={code:"123456", route_name_en:"Line"};
+  t.w.render();
+  ok("booked screen shows the 6 digits", !!t.q(".qrcode") && t.q(".qrcode").textContent.includes("123456"));
 }

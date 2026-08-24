@@ -24,11 +24,18 @@ class FakeBookings {
   async byRider(uid: string) { return [...this.rows.values()].filter((b) => b.rider_user_id === uid); }
   async countBookedSeats(jid: string) { return [...this.rows.values()].filter((b) => b.journey_id === jid && b.status !== 'CANCELLED').reduce((a, b) => a + b.seats, 0); }
   async setStatus(id: string, status: any) { const r = this.rows.get(id); if (r) this.rows.set(id, { ...r, status }); }
+  async findByCode(code: string) { return [...this.rows.values()].find((b) => b.code === code) ?? null; }
+  async manifest(jid: string) { return [...this.rows.values()].filter((b) => b.journey_id === jid && b.status !== 'CANCELLED'); }
 }
 class FakeJourneys {
   seats = 14;
   failBookable = false;
   departed = false;
+  driverId = 'd1';
+  async getById(id: string): Promise<JourneyRow> {
+    return { id, route_id: 'r1', slot_id: 's1', driver_user_id: this.driverId, vehicle_id: 'v1',
+      status: 'LOCKED', committed: true, seats_total: this.seats, created_at: new Date() };
+  }
   async getForBooking(_id: string): Promise<JourneyRow> {
     if (this.failBookable) { const e: any = new Error('conflict'); e.messageKey = 'journeys.not_bookable'; throw e; }
     if (this.departed) throw new ConflictException({ message_key: 'journeys.departed' });
@@ -39,8 +46,10 @@ class FakeJourneys {
 class FakeRoutes {
   fare = 1500;
   onRoute = true;
+  departs = new Date(Date.now() + 5 * 60_000);
   async hasStop() { return this.onRoute; }
   async getRouteFare() { return this.fare; }
+  async slotDepartureInstant() { return this.departs; }
 }
 class FakeAudit { entries: unknown[] = []; async record(...a: unknown[]) { this.entries.push(a); } }
 
@@ -49,7 +58,8 @@ function setup() {
   const journeys = new FakeJourneys();
   const routes = new FakeRoutes();
   const audit = new FakeAudit();
-  const svc = new BookingsService(repo as never, journeys as never, routes as never, audit as never);
+  const env = { BOARDING_WINDOW_BEFORE_MIN: 15, BOARDING_WINDOW_AFTER_MIN: 30 } as never;
+  const svc = new BookingsService(env, repo as never, journeys as never, routes as never, audit as never);
   return { svc, repo, journeys, routes, audit };
 }
 const rider = { id: 'r1', role: 'rider' as const };
@@ -126,4 +136,40 @@ test('a rider cannot cancel someone else\'s booking', async () => {
   const { svc } = setup();
   const b = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
   await assert.rejects(() => svc.cancel({ id: 'r2', role: 'rider' as const }, b.id), ForbiddenException);
+});
+
+test('scan boards once; second scan is refused', async () => {
+  const { svc } = setup();
+  const b = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
+  const first = await svc.scan(driver, { journeyId: 'j1', code: b.code });
+  assert.equal(first.status, 'ON_BOARD');
+  await assert.rejects(() => svc.scan(driver, { journeyId: 'j1', code: b.code }), ConflictException);
+});
+
+test('scan of another journey is refused', async () => {
+  const { svc } = setup();
+  const b = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
+  await assert.rejects(() => svc.scan(driver, { journeyId: 'j-other', code: b.code }), ConflictException);
+});
+
+test('scan outside the window is refused', async () => {
+  const { svc, routes } = setup();
+  const b = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
+  routes.departs = new Date(Date.now() + 2 * 60 * 60_000);
+  await assert.rejects(() => svc.scan(driver, { journeyId: 'j1', code: b.code }), ConflictException);
+});
+
+test('a rider cannot scan (§8.2)', async () => {
+  const { svc } = setup();
+  const b = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
+  await assert.rejects(() => svc.scan(rider, { journeyId: 'j1', code: b.code }), ForbiddenException);
+});
+
+test('manifest lists only this departure', async () => {
+  const { svc, repo } = setup();
+  const a = await svc.book(rider, { journeyId: 'j1', boardingStopId: 's1', seats: 1 });
+  repo.rows.set('other', { ...a, id: 'other', journey_id: 'j2', code: '999999' });
+  const list = await svc.manifest(driver, 'j1');
+  assert.equal(list.length, 1);
+  assert.equal(list[0]!.id, a.id);
 });

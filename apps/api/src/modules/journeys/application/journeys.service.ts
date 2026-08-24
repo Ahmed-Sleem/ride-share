@@ -106,6 +106,10 @@ export class JourneysService {
     return journey;
   }
 
+  async getById(id: string): Promise<JourneyRow | null> {
+    return this.journeys.findById(id);
+  }
+
   /** The driver's own journeys (duty board). */
   async myJourneys(actor: Actor): Promise<JourneyRow[]> {
     assertCan(actor.role as unknown as Role, Capability.CLAIM_SLOT);

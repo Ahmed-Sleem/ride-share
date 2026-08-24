@@ -2,19 +2,22 @@
    (DEC-056); seat inventory is enforced by the DB trigger, with a friendly
    pre-check for a clean error; a cancelled booking frees its seats because the
    guard only counts non-cancelled rows. */
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { BookingsRepository } from '../infra/bookings.repository.js';
 import { JourneysService } from '../../journeys/contracts/public.js';
 import { RoutesService } from '../../routes/contracts/public.js';
 import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
+import { CONFIG, type Env } from '../../../config/env.js';
 import { newBookingCode } from '../domain/booking.js';
+import { isBoardingOpen, scanOutcome } from '../domain/boarding.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import type { BookingRow } from '../contracts/types.js';
 
 @Injectable()
 export class BookingsService {
   constructor(
+    @Inject(CONFIG) private readonly env: Env,
     private readonly bookings: BookingsRepository,
     private readonly journeys: JourneysService,
     private readonly routes: RoutesService,
@@ -85,6 +88,81 @@ export class BookingsService {
     await this.bookings.setStatus(bookingId, 'CANCELLED');
     await this.audit.record(actor, 'booking.cancel', { targetType: 'booking', targetId: bookingId });
     return { ok: true };
+  }
+
+  async scan(actor: Actor, input: { journeyId: string; code: string }): Promise<BookingRow> {
+    assertCan(actor.role as unknown as Role, Capability.SCAN_BOARDING);
+    const code = String(input.code || '').replace(/\D/g, '').padStart(6, '0').slice(-6);
+    const journey = await this.journeys.getById(input.journeyId);
+    if (!journey) throw new NotFoundException({ message_key: 'journeys.not_found' });
+    if (journey.driver_user_id !== actor.id) {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'journey', targetId: input.journeyId, after: { reason: 'not_yours' },
+      });
+      throw new ForbiddenException({ message_key: 'journeys.not_yours' });
+    }
+    const booking = await this.bookings.findByCode(code);
+    if (!booking) {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'journey', targetId: input.journeyId, after: { reason: 'not_found', code },
+      });
+      throw new NotFoundException({ message_key: 'bookings.not_found' });
+    }
+    if (booking.journey_id !== input.journeyId) {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'booking', targetId: booking.id, after: { reason: 'wrong_journey' },
+      });
+      throw new ConflictException({ message_key: 'bookings.wrong_journey' });
+    }
+    const outcome = scanOutcome(booking.status);
+    if (outcome === 'already_boarded') {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'booking', targetId: booking.id, after: { reason: 'already_boarded' },
+      });
+      throw new ConflictException({ message_key: 'bookings.already_boarded' });
+    }
+    if (outcome === 'cannot_board') {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'booking', targetId: booking.id, after: { reason: 'cannot_board', status: booking.status },
+      });
+      throw new ConflictException({ message_key: 'bookings.cannot_board' });
+    }
+    const departs = await this.routes.slotDepartureInstant(journey.slot_id);
+    if (!departs || !isBoardingOpen(departs, new Date(), this.env.BOARDING_WINDOW_BEFORE_MIN, this.env.BOARDING_WINDOW_AFTER_MIN)) {
+      await this.audit.record(actor, 'booking.scan_refused', {
+        targetType: 'booking', targetId: booking.id, after: { reason: 'out_of_window' },
+      });
+      throw new ConflictException({ message_key: 'bookings.out_of_window' });
+    }
+    await this.bookings.setStatus(booking.id, 'ON_BOARD');
+    await this.audit.record(actor, 'booking.scan', { targetType: 'booking', targetId: booking.id });
+    return { ...booking, status: 'ON_BOARD' };
+  }
+
+  async manifest(actor: Actor, journeyId: string) {
+    assertCan(actor.role as unknown as Role, Capability.SCAN_BOARDING);
+    const journey = await this.journeys.getById(journeyId);
+    if (!journey) throw new NotFoundException({ message_key: 'journeys.not_found' });
+    if (journey.driver_user_id !== actor.id) {
+      throw new ForbiddenException({ message_key: 'journeys.not_yours' });
+    }
+    return this.bookings.manifest(journeyId);
+  }
+
+  async getBookingForPayment(bookingId: string) {
+    const booking = await this.bookings.findById(bookingId);
+    if (!booking) return null;
+    const journey = await this.journeys.getById(booking.journey_id);
+    if (!journey) return null;
+    return {
+      id: booking.id,
+      riderUserId: booking.rider_user_id,
+      driverUserId: journey.driver_user_id,
+      journeyId: booking.journey_id,
+      fareMinor: booking.fare_minor,
+      status: booking.status,
+      paymentMethod: null as 'wallet' | 'cash' | null,
+    };
   }
 }
 

@@ -290,6 +290,16 @@ en:{
     booking_not_payable:"This booking can no longer be paid.", rider_not_found:"Account not found.",
     unsupported_kind:"Unsupported payment type.", insufficient_funds:"Wallet balance is not enough for this fare — top up or pay cash.",
     no_driver:"This journey has no driver yet.", not_your_booking:"This booking is not yours." },
+  /* ——— Path B: journey/boarding ——— */
+  j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
+  j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
+  j_noPassengers:"No one booked this departure yet.", j_pickJourney:"Pick a departure",
+  j_noActiveJourney:"Claim a departure, then come here to board riders.",
+  bookings:{ not_found:"That code is not on this departure.",
+    already_boarded:"This rider is already on board.",
+    wrong_journey:"That code is for a different departure.",
+    cannot_board:"This booking cannot board.",
+    out_of_window:"Boarding is only open around the departure time." },
 
 },
 ar:{
@@ -573,6 +583,16 @@ ar:{
     booking_not_payable:"لم يعد يمكن دفع هذا الحجز.", rider_not_found:"الحساب غير موجود.",
     unsupported_kind:"نوع دفع غير مدعوم.", insufficient_funds:"رصيد المحفظة لا يكفي لهذه الأجرة — اشحن المحفظة أو ادفع كاش.",
     no_driver:"لا يوجد سائق لهذه الرحلة بعد.", not_your_booking:"هذا الحجز ليس لك." },
+  /* ——— Path B: journey/boarding ——— */
+  j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
+  j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
+  j_noPassengers:"لا حجوزات على هذا الموعد بعد.", j_pickJourney:"اختر موعدًا",
+  j_noActiveJourney:"احجز موعدًا ثم عد إلى هنا لإركاب الركاب.",
+  bookings:{ not_found:"هذا الكود ليس على هذا الموعد.",
+    already_boarded:"هذا الراكب ركب بالفعل.",
+    wrong_journey:"هذا الكود لموعد آخر.",
+    cannot_board:"لا يمكن إركاب هذا الحجز.",
+    out_of_window:"الركوب مفتوح فقط حول موعد القيام." },
 
 }
 };

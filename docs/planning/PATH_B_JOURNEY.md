@@ -425,3 +425,4 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 > `BROKEN-BREAK` ("edit did not change the file") or a stale expectation turns
 > CI red and blocks both paths. Prove the re-anchored case catches (mini-run
 > the single case) before pushing.
+- 2026-08-24 — P3.8.1–P3.8.5 landed. Owner declined scan lockout; window 15/30.

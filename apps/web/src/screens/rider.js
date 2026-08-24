@@ -211,16 +211,26 @@ async function confirmBookingAction() {
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
-function riderBooked(){                                       // R-15 — the real boarding code
-  const b = S.lastBooking || {};
+function riderBooked(){                                       // R-15 / R-21 — boarding code
+  const cached = (S.tripsCache || []).find((x) => x.id === (S.lastBooking && S.lastBooking.id));
+  const b = Object.assign({}, cached || {}, S.lastBooking || {});
   const w=$("div",{class:"main"});
   w.append($("div",{class:"hero"},
     $("div",{class:"logomark",style:{background:"var(--ok-bg)",color:"var(--ok)"}}, icon("check")),
     $("div",{class:"stack gap2 center"},
-      $("h1",{class:"t-title",text:t("booked")+" 🎉"}),
-      $("div",{class:"t-cap",text:t("bookedHere")}))));
+      $("h1",{class:"t-title",text:t("booked")}),
+      $("div",{class:"t-cap",text:t("bookedBody")}))));
   if (b.code) {
-    w.append(QRPanel({code:b.code}));
+    w.append(QRPanel({code:String(b.code)}));
+    const name = S.lang === "ar" ? (b.route_name_ar || b.route_name_en) : (b.route_name_en || b.route_name_ar);
+    if (name || b.departs_at) {
+      w.append(Card("",
+        name ? $("strong",{text:name}) : null,
+        $("div",{class:"t-cap ltr",text:[b.service_date, b.departs_at].filter(Boolean).join(" · ")}),
+        b.stop_name_en || b.stop_name_ar
+          ? $("div",{class:"t-cap",text:t("boardHere")+" · "+(S.lang==="ar"?(b.stop_name_ar||b.stop_name_en):(b.stop_name_en||b.stop_name_ar))})
+          : null));
+    }
     w.append(Btn({label:t("trips"), block:true, on:()=>{S.stack=[]; go("trips");}}));
   } else {
     w.append(Empty("qr", t("booked"), t("noTripsBody")));
@@ -277,6 +287,7 @@ function tripsRenderList(el){
     icon:"bus",
     title: b.route_name_en || b.route_name_ar || "—",
     sub: `${b.service_date} · ${b.departs_at} · ${b.seats} ${t("seats")} · ${b.code}`,
+    on: () => { S.lastBooking = b; go("booked"); },
     right: $("div",{class:"stack",style:{alignItems:"flex-end"}},
       $("div",{class:"fare",text:money(b.fare_minor / 100)}),
       (S.tripTab==="upcoming")

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-24 — P3.8 boarding scan + manifest (Path B)
+
+- POST /bookings/scan (SCAN_BOARDING): single-use; this driver's journey only;
+  window T−15/T+30 (env). Owner: no lockout — typing the code is the normal fallback.
+  Every attempt audited. GET /journeys/:id/manifest lists this departure only.
+- Rider booked: QR + 6 digits + summary. Driver Journey: numeric scan + list.
+  Cash tap feature-detects API.cashCollected.
+
+
 ## 2026-08-24 — Starfield placed, not hashed
 
 - Dust coordinates are composed (corner clusters, a high arc, centre kept clear)

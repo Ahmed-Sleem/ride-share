@@ -59,4 +59,29 @@ export class BookingsRepository {
   async setStatus(id: string, status: BookingStatus): Promise<void> {
     await this.pool.query('UPDATE bookings SET status = $1, updated_at = now() WHERE id = $2', [status, id]);
   }
+
+  async findByCode(code: string): Promise<BookingRow | null> {
+    const { rows } = await this.pool.query<BookingRow>(
+      `SELECT id, journey_id, rider_user_id, boarding_stop_id, seats, fare_minor, code, status, created_at
+       FROM bookings WHERE code = $1`, [code]);
+    return rows[0] ?? null;
+  }
+
+  /** Passengers on one departure — never another journey's rows. */
+  async manifest(journeyId: string): Promise<Array<BookingRow & {
+    rider_name: string; stop_name_en: string; stop_name_ar: string;
+  }>> {
+    const { rows } = await this.pool.query(
+      `SELECT b.id, b.journey_id, b.rider_user_id, b.boarding_stop_id, b.seats, b.fare_minor,
+              b.code, b.status, b.created_at,
+              split_part(u.name, ' ', 1) AS rider_name,
+              st.name_en AS stop_name_en, st.name_ar AS stop_name_ar
+       FROM bookings b
+       JOIN users u ON u.id = b.rider_user_id
+       JOIN stops st ON st.id = b.boarding_stop_id
+       WHERE b.journey_id = $1
+         AND b.status IN ('RESERVED','CONFIRMED','ON_BOARD')
+       ORDER BY st.name_en, b.created_at`, [journeyId]);
+    return rows as Array<BookingRow & { rider_name: string; stop_name_en: string; stop_name_ar: string }>;
+  }
 }

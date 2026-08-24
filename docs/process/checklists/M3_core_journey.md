@@ -54,9 +54,9 @@
 
 ## P3.8 — Boarding code + manifest
 
-- [ ] Each booking has a numeric boarding code (QR + always-visible number, DEC-049/136).
-- [ ] Driver manifest = CONFIRMED bookings per journey; scan marks ON_BOARD.
-- [ ] Tests: code uniqueness, scan state transition, offline-friendly display.
+- [x] Each booking has a numeric boarding code (QR + always-visible number, DEC-049/136).
+- [x] Driver manifest = CONFIRMED bookings per journey; scan marks ON_BOARD.
+- [x] Tests: code uniqueness, scan state transition, offline-friendly display.
 
 ## P3.9 — Live journey (minimal)
 
