@@ -379,3 +379,14 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 > `BROKEN-BREAK` ("edit did not change the file") or a stale expectation turns
 > CI red and blocks both paths. Prove the re-anchored case catches (mini-run
 > the single case) before pushing.
+
+> **SCOPE ADDITION (owner decision, DEC-205/206, 2026-08-24):** Path A owns
+> ALL map surfaces end-to-end: `lib/map.js` (RouteMap), every embedding in
+> rider.js/driver.js/staff.js (map-scoped edits only, tagged `/* RouteMap */`),
+> the planner search UX (DEC-206: Uber-style typeahead + direct map pinning),
+> and map-serving API additions (additive, read-only, tagged).
+>
+> **MONITORING PROTOCOL CHANGE (owner instruction, 2026-08-24):** do NOT
+> fix Agent B's commits inline anymore. Let his pushes land; keep working;
+> audit his accumulated commits in a BATCHED pass at session end (or if
+> main is broken >4h, or any security/data-loss risk — those are immediate).

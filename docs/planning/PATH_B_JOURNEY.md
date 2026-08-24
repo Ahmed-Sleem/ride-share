@@ -436,3 +436,11 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — B4 M4: incidents/SOS/report/share + support queue (0020).
 - 2026-08-24 — B5 P7.1 Capacitor shell + Railway-healthy mobile service; P7.2–7.6 next.
 - 2026-08-24 — P7.2 driver outbox: ordered durable queue, idempotency receipts (0022).
+
+> **⚠️ OWNERSHIP UPDATE (owner decision, DEC-205, 2026-08-24):** ALL map
+> surfaces are now **Path A's** (Agent A), including inside rider.js,
+> driver.js and staff.js — but ONLY for map purposes. Agent A owns
+> `lib/map.js` (RouteMap + planner search UX per DEC-206) and the
+> map-serving API additions. You (Agent B) must NOT embed or alter maps;
+> avoid touching lines marked `/* RouteMap … */` and the planner screen
+> files. Everything else in your files stays yours exactly as before.
