@@ -198,6 +198,21 @@
       return { unavailable: true };
     },
 
+    applyChrome(theme) {
+      const C = cap();
+      const plugins = C && C.Plugins;
+      const sb = plugins && plugins.StatusBar;
+      if (!sb) return;
+      try {
+        if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
+        if (sb.setBackgroundColor && typeof getComputedStyle === "function") {
+          const cs = getComputedStyle(g.document.documentElement);
+          const hex = (cs.getPropertyValue(theme === "dark" ? "--ink-950" : "--ink-0") || "").trim();
+          if (hex) sb.setBackgroundColor({ color: hex });
+        }
+      } catch (_) { /* plugin optional */ }
+    },
+
     async set(key, value) {
       const prefs = plugin("Preferences");
       if (prefs && typeof prefs.set === "function") {

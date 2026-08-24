@@ -178,17 +178,7 @@ function render(){
   const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
   document.documentElement.classList.toggle("native", !!native);
   document.body.classList.toggle("native", !!native);
-  if (native && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
-    try {
-      const sb = window.Capacitor.Plugins.StatusBar;
-      if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
-      if (sb.setBackgroundColor) {
-        const cs = getComputedStyle(document.documentElement);
-        const hex = (cs.getPropertyValue(theme === "dark" ? "--ink-950" : "--ink-0") || "").trim();
-        if (hex) sb.setBackgroundColor({ color: hex });
-      }
-    } catch (_) { /* plugin optional */ }
-  }
+  if (native && typeof Platform.applyChrome === "function") Platform.applyChrome(theme);
 
   const root=document.getElementById("root");
   root.innerHTML="";
