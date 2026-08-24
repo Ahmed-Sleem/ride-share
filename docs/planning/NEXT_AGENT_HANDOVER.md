@@ -533,3 +533,107 @@ of §4.5) · the break harnesses (`tests/breaks.sh`, `tests/layout-breaks.sh`).
 *End of handover. Everything above was verified against the repository at
 `3752091` on 2026-08-24. When reality and this file disagree, REALITY WINS —
 then fix this file (append a note in §9). Build to THE STANDARD.*
+
+
+---
+
+# 11. REALITY PATCH — 2026-08-25 (must read; supersedes stale lines above)
+
+The original handover was written at imagined HEAD `3752091` on 2026-08-24.
+**Verified workspace HEAD when this patch was written:** `777f8fb`
+(`docs(process): M8 launch gate + honest README + live health smoke`) plus a
+large **uncommitted** Path B / owner-settings / mobile / download tree in the
+working copy. **When this file and the tree disagree, the tree wins — then
+update §9.**
+
+## 11.1 Corrections to §3 / §4 / §6 (the original is wrong on these)
+
+| Claim in §3–§6 | Reality 2026-08-25 |
+|---|---|
+| Next migration **0021** | **0026** and **0028** already exist (even). Next **free** number is **0029**. Use the next unused integer after `ls infra/migrations`. Do not reuse 0021–0028. |
+| `config` module is a skeleton | **No.** Owner settings are live code: `apps/api/src/modules/config/{api,application,domain,infra}/` + `PlatformConfigModule` in `app.module.ts`. Table `platform_settings` (0026) + `auth_otp_bypass` (0028). |
+| `notifications` maybe missing | **Implemented.** FCM + in-app + device tokens (0024), `NotificationsModule`, CH20 caps. Extend it; do not fork. |
+| Maps on rider boarding + review + driver journey + ops fleet `GET /journeys/live` | **Was incomplete at `777f8fb`. Landed on origin as `047bae4` / `3752091` (phase 1a).** Treat as **done unless you prove a hole.** Still verify: RouteMap on boarding/review/driver journey; `GET /journeys/live` + ops fleet; no invented tracks; list always accompanies the map. **W2 (Nominatim places) is still open.** |
+| CI = 6 jobs | Jobs: Verify, Verify GUI, Verify database, Build images, Android debug APK, Android Play AAB. Count is 6 **if** you include both Android jobs. |
+| `COMMISSION_PERCENT` only env / G-079 “no UI” | **DEC-208:** Owner Settings page overwrites env (commission, notify caps, Paymob flag, **email OTP bypass**). Secrets stay in Railway. Default still **0%** until the owner types a number. |
+| You must not touch Path A files | Owner later said the **next builder owns remaining work**. Still: do not rewrite ledger/Paymob; **reuse** `payments/**`. Auditor may still fix money bugs. |
+
+## 11.2 Work already done AFTER the original handover (do not rebuild)
+
+Confirm in the tree before starting W1:
+
+- **DEC-196** one env-seeded `is_system_admin`; no second super_admin.
+- **Staff create/edit/remove** UI + API (password **≥ 12**, email or phone).
+- **Audit log** table + numbered pager (`GET /admin/audit?limit&offset`).
+- **Owner Settings** (`GET/PATCH /admin/settings`) — root only.
+- **Super-admin nav** also reaches existing ops/support surfaces (queue, stops, routes, livemap, tickets). Manager **pricing/promos/analytics** screens remain honest empty (M5 = W3).
+- **Mobile:** Capacitor wrap; native boot **skips landing** → auth; theme follows OS; launcher icons from `packages/brand` via `apps/mobile/scripts/apply-android-icons.sh`.
+- **Landing “Get the app”** (`S.landingPage === "download"`): Android APK URL + QR; iPhone soon. Web `GET /download/android.apk` if a file is staged (`apps/web/downloads/android.apk` or `ANDROID_APK_PATH`). **Never commit the APK.**
+- **P7.1–P7.6** pipeline, M8 checklist, live `/healthz` smoked 2026-08-24.
+
+Uncommitted files that belong **in git** with this handover (not the APK):
+`infra/migrations/0026_*.sql`, `0028_*.sql`, `apps/api/src/modules/config/**` (except empty README already tracked), `apps/web/src/screens/{admin,auth,landing}.js`, `shell/app.js`, `lib/api.js`, `data/content.js`, `styles/shell.html`, `apps/web/server.js`, `apps/mobile/scripts/apply-android-icons.sh`, related docs (CHANGELOG, DEC-208, M8, PATH_B).
+
+## 11.3 Extra remaining work the original file missed
+
+Add these to the attack order (after W1, beside W2):
+
+### W0 (S·hygiene) — Land the uncommitted 2026-08-25 tree
+`git status` must be clean on `main` before W1. Pull --rebase, review the settings/mobile/download diff line-by-line, `pnpm verify` + `pnpm db:verify`, push. Never `git add -A` (exclude `uploads/`, `.apk`, PATs).
+
+### W2b (M·maps) — Finish DEC-205 embedding (maps are NOT “done everywhere”)
+Embed `RouteMap` (data-bound stops, highlight boarding, optional vehicle from **real** `last_lat/lng` only — no interpolation) on:
+- rider route detail / boarding / booking review (`rider.js`);
+- driver journey (`driver.js`) when a journey is IN_PROGRESS;
+- ops live map: replace decorative `MapView({fleet:true})` with real journey positions — requires a **new** `GET /journeys/live` (or equivalent) with VIEW_LIVEMAP, returning only journeys that have a fresh fix (`POSITION_STALE_SEC`). Hide the vehicle layer when no fix (G-055 honesty).
+Accessible stop **list** always accompanies the map (`lib/map.js` already does this). Do not invent a second tile stack.
+
+### W12 (S·identity) — Staff 2FA (DEC-151) still unbuilt
+Mandatory for all staff roles. Not in original W-list. Design: TOTP or email step-up on staff password login; recovery codes hashed; audit. Hide until the first staff account can enroll. Owner MCQ if email-only vs authenticator app.
+
+### W13 (S·ops) — Route stop attachment UX
+`opsRoutes` can create a route and generate slots, but attaching **verified stops** to a draft route is easy to miss (API `POST /routes/:id/stops` exists). Make the route-detail screen list verified stops and add/reorder without a dead control. Without this, W1 e2e cannot run on a new corridor.
+
+### W14 (S·admin) — Root “has every other role’s **existing** tools”
+Do **not** implement Manager pricing here (that is W3). Do keep one nav table. Do not create a second authority matrix.
+
+## 11.4 Maps — where the owner should look today
+
+**Yes, maps exist. They are OSM / OpenFreeMap + Leaflet (DEC-198), not Google (unless `MAP_PROVIDER=google` + key).**
+
+| Where | What you see |
+|---|---|
+| **Website as rider → Plan a trip** (`j_planTitle` / planner) | **SearchMap**: type a stop, tap the map, “use my location”. Results can show **RouteMap** of the recommended line. This is the main map product. |
+| **Ops → Stops** | Click-to-place on OSM (`MapView` + `onPick`). Needs a real network (Leaflet from unpkg). |
+| **Ops → Live map** | Map chrome + vehicle **table**. Fleet dots are not a live GPS API yet (W2b). |
+| **Driver journey / rider boarding** | Mostly lists + illustration fallback until W2b. |
+| **APK** | Same HTML as web. If tiles fail, labelled illustration — honest, not a fake city. |
+
+You will **not** see a useful route line until **verified stops** exist on a **published route**. Empty network → empty/illustration map. That is correct, not a bug.
+
+Live site: https://ride-shareweb-production.up.railway.app/ → sign in as a **rider** → **Plan** (or home search). Desktop or phone browser.
+
+## 11.5 Extra owner-gated / security items missing from §7
+
+| ID | Item |
+|---|---|
+| DEC-208 / G-079 | Owner must **type** launch commission % on Settings (or leave 0). |
+| SMTP | Login codes need `SMTP_*` + `EMAIL_FROM` unless bypass is on. |
+| `FCM_SERVER_KEY` | Optional; local leave-now alarm still works. |
+| JWT rotate | If the secret was ever pasted in a ticket. |
+| `ADMIN_PASSWORD` | Change after first login; seeder does not rotate. |
+| APK staging | Put debug APK on web via `ANDROID_APK_PATH` / `apps/web/downloads/android.apk` — not git. |
+| DEC-151 | Staff 2FA (W12). |
+| G-060 / G-017 / P2.5 | Unchanged. |
+
+## 11.6 Revised attack order
+
+W0 (land working tree) → W1 (wallet book) → W2 + **W2b** (places + finish maps) → W13 (route stops UX) → W6 → W3 → W4 → W5 → W7/W8/W12 → W9 → W10/W11.
+
+## 11.7 Binding reminder (owner)
+
+It must be perfect complete, no mocks no demos, production ready, industrial standard, fully secure, no production blockers. Hide unfinished controls. Break every new check once (§0.2). One authority, one ledger, one map primitive, one copy table.
+
+---
+
+*Patch authored 2026-08-25 after a full tree walk (`infra/migrations`, `lib/map.js`, `planner.js`, `rider.js`, `staff.js`, `payments`, `modules/*`, CI workflow, DEC-208, uncommitted settings/mobile). Original §1–§10 kept as Agent A’s baseline.*

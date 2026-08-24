@@ -197,6 +197,10 @@
    ══════════════════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0;overflow:hidden}
+html.native,html.native body{overscroll-behavior:none;touch-action:manipulation}
+html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t))}
+html.native .splash{padding-top:var(--safe-t)}
+.dlqr{width:220px;height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg-base);image-rendering:pixelated}
 body{background:var(--bg-page);color:var(--text-primary);
   font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
        "Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic",sans-serif;

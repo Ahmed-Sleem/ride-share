@@ -441,6 +441,8 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
 - 2026-08-24 — P7.5 FCM + local leave-now alarm from cached schedule (DEC-147).
 - 2026-08-24 — P7.6 Play AAB from CI secrets; version is brand.json only.
 - 2026-08-24 — M8 launch checklist + live smoke; corridor not opened.
+- 2026-08-25 — Owner settings (0026, DEC-208) + audit table pager; staff-create validation; root nav to routes/stops.
+- 2026-08-25 — Handover for next builder: `docs/planning/NEXT_AGENT_HANDOVER.md` (§11 patch). No W1–W11 started this session.
 
 > **⚠️ OWNERSHIP UPDATE (owner decision, DEC-205, 2026-08-24):** ALL map
 > surfaces are now **Path A's** (Agent A), including inside rider.js,

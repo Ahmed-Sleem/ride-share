@@ -69,7 +69,12 @@ const PAGES = {
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
+    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true, title:"j_settingsTitle"}, /* path B */
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
+    {k:"stops",      ic:"stops",    fn:opsStops,      dock:true, wide:true}, /* path B — root can map */
+    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true}, /* path B — root can price */
+    {k:"livemap",    ic:"livemap",  fn:opsLiveMap,    dock:true, wide:true}, /* path B — existing ops surface */
+    {k:"tickets",    ic:"tickets",  fn:supportTickets,dock:true, wide:true}, /* path B — existing support surface */
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
     {k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}
   ]
@@ -173,6 +178,16 @@ function render(){
   const theme = resolvedTheme();
   document.documentElement.dataset.theme = theme;
   document.body.dataset.theme = theme;
+  const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+  document.documentElement.classList.toggle("native", !!native);
+  document.body.classList.toggle("native", !!native);
+  if (native && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+    try {
+      const sb = window.Capacitor.Plugins.StatusBar;
+      if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
+      if (sb.setBackgroundColor) sb.setBackgroundColor({ color: theme === "dark" ? "#111318" : "#FFFFFF" });
+    } catch (_) { /* plugin optional */ }
+  }
 
   const root=document.getElementById("root");
   root.innerHTML="";
@@ -269,7 +284,13 @@ function boot(){
     .catch(()=>null);
   Promise.all([minDelay, session]).then(([, user])=>{
     if(S.view!=="boot") return;                 // a test or a tap already left
-    if(user){ enterApp(user); } else { S.view="landing"; render(); }
+    if(user){ enterApp(user); }
+    else {
+      const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+      S.view = native ? "auth" : "landing";
+      if (native) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
+      render();
+    }
   });
 }
 
@@ -305,6 +326,14 @@ async function loadMapsConfig(){
     window.__rsMapsConfigured = true;
   } catch { /* no backend yet → illustration stays */ }
 }
+
+try {
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (S.theme === "auto") render();
+    });
+  }
+} catch (_) { /* old WebView */ }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
 window.addEventListener("online", ()=>{

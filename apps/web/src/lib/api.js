@@ -171,6 +171,8 @@ const API = {
   decideIncident: (id, decision, reason) => API.request("POST", `/support/incidents/${id}/decide`, { decision, reason }),
   registerDevice: (token, platform) => API.request("POST", "/notifications/device", { token, platform }),
   myNotifications: () => API.request("GET", "/notifications/mine"),
+  getOwnerSettings: () => API.request("GET", "/admin/settings"),
+  saveOwnerSettings: (payload) => API.request("PATCH", "/admin/settings", payload),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {

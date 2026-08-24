@@ -1,5 +1,38 @@
 # CHANGELOG
 
+## 2026-08-25 — Next-agent handover filed
+
+- Canonical remaining-work brief: `docs/planning/NEXT_AGENT_HANDOVER.md`
+  (Agent A baseline + §11 reality patch: migrations, maps scope, owner
+  settings, uncommitted tree, extra W0/W2b/W12–W14). Pointer from
+  `docs/process/checklists/00_MASTER.md`.
+
+## 2026-08-25 — Email-verify toggle + app gate + download (Path B)
+
+- Owner Settings can overwrite `AUTH_OTP_BYPASS` (0028). Same live `CONFIG`
+  object the identity service already reads — website and APK share it.
+- Native Capacitor: no marketing landing; splash → auth. System light/dark
+  (auto) + status bar. Launcher icon is painted from `packages/brand` on
+  every APK assemble (same source as the favicon).
+- Landing **Get the app**: Android APK URL + QR; iPhone honest soon banner.
+  Web serves `/download/android.apk` when the file is staged.
+
+## 2026-08-25 — Owner settings + audit table (Path B)
+
+- DEC-208: env stays the fallback; the owner Settings page writes a single
+  `platform_settings` row (migration **0026**) that overwrites live
+  `COMMISSION_PERCENT`, notify caps and `PAYMOB_ENABLED`. Secrets stay in
+  Railway. Only `is_system_admin` (DEC-196 one root) can GET/PATCH
+  `/admin/settings`. Payments/notifications keep reading `CONFIG` — the
+  same object is mutated after save, no Path A file edit.
+- Audit log is a real table (when / who / action / target / reason) with
+  numbered pager + always-visible Prev/Next.
+- Staff create: client checks 12-char password + email-or-phone; errors use
+  `errText` (the form was live; short passwords looked like “add does not
+  work”).
+- Super-admin nav now includes Settings, Stops and Routes (root can map
+  and set fares; operations still owns the daily job).
+
 ## 2026-08-24 — M8 launch gate (Path B)
 
 - Checklist `docs/process/checklists/M8_launch.md`: live `/healthz` smoked

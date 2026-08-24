@@ -220,6 +220,26 @@ NO MINVALUE
 NO MAXVALUE
 CACHE 1;
 ALTER SEQUENCE public.pgmigrations_id_seq OWNED BY public.pgmigrations.id;
+CREATE TABLE public.platform_settings (
+id smallint DEFAULT 1 NOT NULL,
+commission_percent integer,
+notify_behavioural_max_day integer,
+notify_behavioural_gap_hours integer,
+notify_promo_max_day integer,
+notify_promo_max_week integer,
+notify_non_tx_max_day integer,
+paymob_enabled boolean,
+updated_at timestamp with time zone DEFAULT now() NOT NULL,
+updated_by uuid,
+auth_otp_bypass boolean,
+CONSTRAINT platform_settings_commission_percent_check CHECK (((commission_percent IS NULL) OR ((commission_percent >= 0) AND (commission_percent <= 90)))),
+CONSTRAINT platform_settings_id_check CHECK ((id = 1)),
+CONSTRAINT platform_settings_notify_behavioural_gap_hours_check CHECK (((notify_behavioural_gap_hours IS NULL) OR ((notify_behavioural_gap_hours >= 0) AND (notify_behavioural_gap_hours <= 24)))),
+CONSTRAINT platform_settings_notify_behavioural_max_day_check CHECK (((notify_behavioural_max_day IS NULL) OR ((notify_behavioural_max_day >= 0) AND (notify_behavioural_max_day <= 20)))),
+CONSTRAINT platform_settings_notify_non_tx_max_day_check CHECK (((notify_non_tx_max_day IS NULL) OR ((notify_non_tx_max_day >= 0) AND (notify_non_tx_max_day <= 20)))),
+CONSTRAINT platform_settings_notify_promo_max_day_check CHECK (((notify_promo_max_day IS NULL) OR ((notify_promo_max_day >= 0) AND (notify_promo_max_day <= 10)))),
+CONSTRAINT platform_settings_notify_promo_max_week_check CHECK (((notify_promo_max_week IS NULL) OR ((notify_promo_max_week >= 0) AND (notify_promo_max_week <= 20))))
+);
 CREATE TABLE public.ride_share_links (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
 token text NOT NULL,
@@ -399,6 +419,8 @@ ALTER TABLE ONLY public.payment_orders
 ADD CONSTRAINT payment_orders_provider_txn_id_key UNIQUE (provider_txn_id);
 ALTER TABLE ONLY public.pgmigrations
 ADD CONSTRAINT pgmigrations_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.platform_settings
+ADD CONSTRAINT platform_settings_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.ride_share_links
 ADD CONSTRAINT ride_share_links_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.ride_share_links

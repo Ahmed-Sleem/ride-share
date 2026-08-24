@@ -103,6 +103,21 @@ async function handler(req, res) {
       maps: { provider: process.env.MAP_PROVIDER || 'osm', apiKey: process.env.GOOGLE_MAPS_API_KEY || '' },
     });
   }
+  if (url === '/download/android.apk' || url === '/download/android') {
+    const candidates = [
+      process.env.ANDROID_APK_PATH,
+      path.join(__dirname, 'downloads', 'android.apk'),
+      path.join(__dirname, '..', '..', 'uploads', 'app-debug.apk'),
+    ].filter(Boolean);
+    const file = candidates.find((p) => { try { return fs.existsSync(p) && fs.statSync(p).isFile(); } catch { return false; } });
+    if (!file) return json(res, 404, { ok: false, code: 'APK_NOT_STAGED', hint: 'Place the debug APK at apps/web/downloads/android.apk or set ANDROID_APK_PATH' });
+    res.writeHead(200, {
+      'content-type': 'application/vnd.android.package-archive',
+      'content-disposition': 'attachment; filename="ride-share.apk"',
+      'cache-control': 'no-store',
+    });
+    return fs.createReadStream(file).pipe(res);
+  }
   if (url.startsWith('/v1/')) return proxy(req, res);
   if (url === '/' || url === '/index.html') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });

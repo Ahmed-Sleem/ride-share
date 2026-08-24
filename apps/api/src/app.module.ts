@@ -24,6 +24,7 @@ import { AuditModule } from './modules/audit/audit.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js'; // Path A (money)
 import { NotificationsModule } from './modules/notifications/notifications.module.js'; // Path B
 import { SupportModule } from './modules/support/support.module.js'; // Path B M4
+import { PlatformConfigModule } from './modules/config/config.module.js'; // Path B owner settings
 import { SecurityModule } from './security/security.module.js';
 import type { Pool } from 'pg';
 
@@ -60,6 +61,7 @@ const env = loadEnv(); // throws with the missing variable's name — by design 
     PaymentsModule, // Path A (money) — appended per PATH_A_MONEY.md §5
     NotificationsModule, // Path B
     SupportModule, // Path B M4
+    PlatformConfigModule, // Path B owner settings
   ],
   providers: [
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -30,3 +30,8 @@ file is fully ticked and pushed.
 | M2 | Google Maps Platform key | map surface + geocoding | No — sandbox adapter |
 | M3 | Paymob sandbox keys | card payments | No — cash + ledger first |
 | M8 | Google Play developer account | APK store listing | M8 only |
+
+## Remaining work for the next builder
+
+Canonical remaining-work file (complete + 2026-08-25 reality patch):
+[`docs/planning/NEXT_AGENT_HANDOVER.md`](../../planning/NEXT_AGENT_HANDOVER.md).

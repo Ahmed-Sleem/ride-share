@@ -100,13 +100,19 @@ function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
 }
 
 /* ── shared card chrome ────────────────────────────────────────────────── */
+function isNativeApp() {
+  return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+}
+
 function card(title, body, showSignupToggle) {
-  return $("div",{class:"authwrap"},
+  const native = isNativeApp();
+  return $("div",{class:"authwrap"+(native?" authwrap--app":"")},
     $("div",{class:"authwrap__card"},
-      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+      native ? null : $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
         on:{click:()=>{ S.view="landing"; S.authError=null; S.authStep="choose"; S.loginMethod=null; render(); }}}, icon("back")),
       $("div",{class:"center"}, logoSVG(), null),
-      $("h1",{class:"t-title center", text:title}),
+      native ? $("p",{class:"t-cap center",text:t("j_appWelcomeSub")}) : null,
+      $("h1",{class:"t-title center", text: native ? t("j_appWelcome") : title}),
       body,
       lockoutBanner(),
       S.authError ? Banner("danger", S.authError) : null,
@@ -184,7 +190,7 @@ function forgotPassword() {
   }
   return $("div",{class:"authwrap"},
     $("div",{class:"authwrap__card"},
-      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+      isNativeApp() ? null : $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
         on:{click:()=>{ S.forgot=null; S.view="landing"; S.authError=null; render(); }}}, icon("back")),
       $("div",{class:"center"}, logoSVG(), null),
       $("h1",{class:"t-title center", text: step==="done" ? t("signIn") : t("resetTitle")}),

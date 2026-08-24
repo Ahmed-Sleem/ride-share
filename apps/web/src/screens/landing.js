@@ -14,7 +14,7 @@ function landing() {
     ? new URLSearchParams(location.search).get("share") : null;
   if (shareTok) return shareLanding(shareTok);
   if (S.landingDoc) return landingDoc();
-  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding })[S.landingPage] || riderLanding;
+  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding, download: downloadLanding })[S.landingPage] || riderLanding;
   return page();
 }
 
@@ -54,7 +54,7 @@ async function loadPublicShare(token) {
    Log in · Sign up. Compact: brand · theme · Sign up · menu (the links + Log in
    move into the dropdown). §8.1: every control does exactly what it says. */
 function landingNav() {
-  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"]];
+  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"], ["download", "navDownload"]];
   const nav = $("header", { class: "landing__nav" });
 
   nav.append($("button", {
@@ -312,6 +312,31 @@ function aboutLanding() {
         $("div", { class: "row gap3" },
           Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
           Btn({ label: t("navDrive"), kind: "outline", on: () => landingGo("drive") })))),
+    landingFooter());
+}
+
+function downloadLanding() {
+  const origin = (typeof location !== "undefined" && location.origin && location.protocol !== "file:")
+    ? location.origin : "https://ride-shareweb-production.up.railway.app";
+  const apkUrl = origin + "/download/android.apk";
+  const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(apkUrl);
+  return $("div", { class: "landing" },
+    landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      $("section", { class: "landing__section landing__pagetop" },
+        $("div", { class: "landing__kick", text: t("navDownload") }),
+        $("h1", { class: "landing__title", text: t("j_dlTitle") }),
+        $("p", { class: "landing__p", text: t("j_dlSub") }),
+        $("p", { class: "t-cap", text: t("j_dlHint") }),
+        $("div", { class: "row wrap gap4", style: { alignItems: "flex-start" } },
+          $("div", { class: "stack gap3" },
+            $("a", { class: "btn btn--primary", attrs: { href: apkUrl, download: "ride-share.apk" }, text: t("j_dlAndroid") }),
+            $("div", { class: "card card--tight" },
+              $("strong", { text: t("j_dlIos") }),
+              $("p", { class: "t-cap", text: t("j_dlIosSoon") }))),
+          $("div", { class: "stack gap2 center" },
+            $("div", { class: "t-cap", text: t("j_dlQr") }),
+            $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))))),
     landingFooter());
 }
 

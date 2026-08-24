@@ -197,6 +197,10 @@
    ══════════════════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0;overflow:hidden}
+html.native,html.native body{overscroll-behavior:none;touch-action:manipulation}
+html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t))}
+html.native .splash{padding-top:var(--safe-t)}
+.dlqr{width:220px;height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg-base);image-rendering:pixelated}
 body{background:var(--bg-page);color:var(--text-primary);
   font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
        "Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic",sans-serif;
@@ -2077,6 +2081,7 @@ en:{
     reset_invalid:"That reset code isn't valid.",
     session_invalid:"Your session expired — sign in again.",
     email_not_set:"Add an email address first.",
+    owner_only:"Only the main admin can change these settings.",
   },
   /* ——— Path A: wallet/payments ——— */
   w_balance:"Wallet balance", w_history:"Recent activity", w_topup:"Top up",
@@ -2108,7 +2113,6 @@ en:{
   p_pinnedNearest:"Pinned the closest stop", p_matches:"Matching stops",
   p_typeMore:"Type the first letters of a place, or tap the map.",
   p_routesCount:"routes", p_recommendedRoute:"Recommended route on the map",
-  m_fleet:"Live vehicles", m_noLive:"No vehicles are moving right now.",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -2166,6 +2170,35 @@ en:{
     wrong_journey:"That code is for a different departure.",
     cannot_board:"This booking cannot board.",
     out_of_window:"Boarding is only open around the departure time." },
+  j_settingsTitle:"Owner settings", j_settingsSub:"Commission, notify caps, Paymob flag — page overwrites env",
+  j_settingsHelp:"Railway env is the fallback. Tick override to write a live value. Leave it unticked to follow env. Secrets stay in Railway only.",
+  j_settingsEnv:"Env fallback", j_settingsOverride:"Override env with this value",
+  j_settingsUseEnv:"Follow env", j_settingsEffective:"Live now",
+  j_setCommission:"Commission %", j_setBehDay:"Behavioural notifies / day",
+  j_setBehGap:"Hours between behavioural notifies", j_setPromoDay:"Promo notifies / day",
+  j_setPromoWeek:"Promo notifies / week", j_setNonTx:"Non-transactional notifies / day",
+  j_setPaymob:"Paymob in the app", j_on:"On", j_off:"Off",
+  j_staffPassHint:"Temporary password must be at least 12 characters. Email or phone is required.",
+  j_adminRoutesSub:"Create routes and set the flat fare",
+  j_adminStopsSub:"Map and verify boarding stops",
+  j_auditAction:"Action", j_auditTarget:"Target", j_auditRows:"rows",
+  j_auditPager:"Audit pages",
+  config:{ bad_value:"That setting is outside the allowed range." },
+  j_setEmailVerify:"Email verification",
+  j_setEmailVerifyHelp:"On = riders and drivers get a 6-digit email code. Off = skip codes (AUTH_OTP_BYPASS). Same rule for the website and the app.",
+  j_emailVerifyOn:"Require codes",
+  j_emailVerifyOff:"Skip codes",
+  j_appWelcome:"Welcome",
+  j_appWelcomeSub:"Sign in or create an account to book a seat.",
+  navDownload:"Get the app",
+  j_dlTitle:"Get the app",
+  j_dlSub:"Install the Android app. The same account works on the website.",
+  j_dlAndroid:"Download Android APK",
+  j_dlQr:"Scan to download",
+  j_dlIos:"iPhone",
+  j_dlIosSoon:"Coming soon — stay tuned.",
+  j_dlHint:"Debug APK for closed beta. Website updates do not replace an installed APK.",
+
 
 },
 ar:{
@@ -2193,7 +2226,7 @@ ar:{
   whereBoard:"من أين ستركب؟", recommended:"الأنسب", streetPickup:"ركوب من الشارع",
   streetPickupWhy:"نمر عليك من أقرب نقطة على الطريق.",
   pickDeparture:"اختر موعد القيام", arrives:"الوصول", confirmBooking:"تأكيد الحجز",
-  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل ا�وب قبل الموعد بـ ٥ دقائق.",
+  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل اوب قبل الموعد بـ ٥ دقائق.",
   arriving:"يصل خلال", leaveNow:"اخرج الآن", sos:"استغاثة", shareRide:"شارك الرحلة",
   nextStop:"المحطة التالية", imGettingOff:"سأنزل في التالية", boardingCode:"كود الركوب",
   scanAtDoor:"اعرضه للسائق عند الباب.", rideDone:"انتهت الرحلة", rateRide:"كيف كانت؟",
@@ -2463,7 +2496,6 @@ ar:{
   p_pinnedNearest:"تم تحديد أقرب محطة", p_matches:"المحطات المطابقة",
   p_typeMore:"اكتب أولى أحرف المكان، أو اضغط على الخريطة.",
   p_routesCount:"مسارًا", p_recommendedRoute:"المسار الموصى به على الخريطة",
-  m_fleet:"المركبات المتحركة", m_noLive:"لا توجد مركبات تتحرك الآن.",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
@@ -2521,6 +2553,36 @@ ar:{
     wrong_journey:"هذا الكود لموعد آخر.",
     cannot_board:"لا يمكن إركاب هذا الحجز.",
     out_of_window:"الركوب مفتوح فقط حول موعد القيام." },
+
+  j_settingsTitle:"إعدادات المالك", j_settingsSub:"العمولة وحدود الإشعارات وPaymob",
+  j_settingsHelp:"متغيرات Railway هي الاحتياط. علّم تجاوز لكتابة قيمة حية. الأسرار تبقى في Railway فقط.",
+  j_settingsEnv:"احتياط المتغير", j_settingsOverride:"تجاوز المتغير بهذه القيمة",
+  j_settingsUseEnv:"اتبع المتغير", j_settingsEffective:"الحي الآن",
+  j_setCommission:"نسبة العمولة", j_setBehDay:"إشعارات سلوكية / يوم",
+  j_setBehGap:"ساعات بين الإشعارات السلوكية", j_setPromoDay:"إشعارات ترويج / يوم",
+  j_setPromoWeek:"إشعارات ترويج / أسبوع", j_setNonTx:"إشعارات غير معاملات / يوم",
+  j_setPaymob:"Paymob في التطبيق", j_on:"تشغيل", j_off:"إيقاف",
+  j_staffPassHint:"كلمة المرور المؤقتة 12 حرفا على الأقل. البريد أو الهاتف مطلوب.",
+  j_adminRoutesSub:"إنشاء المسارات وتحديد الأجرة الثابتة",
+  j_adminStopsSub:"رسم محطات الركوب والتحقق منها",
+  j_auditAction:"الإجراء", j_auditTarget:"الهدف", j_auditRows:"صفوف",
+  j_auditPager:"صفحات التدقيق",
+  config:{ bad_value:"هذه القيمة خارج النطاق المسموح." },
+  j_setEmailVerify:"التحقق بالبريد",
+  j_setEmailVerifyHelp:"تشغيل = يصل كود من 6 أرقام. إيقاف = تخطي الأكواد. نفس القاعدة للموقع والتطبيق.",
+  j_emailVerifyOn:"اطلب الأكواد",
+  j_emailVerifyOff:"تخطّ الأكواد",
+  j_appWelcome:"أهلاً",
+  j_appWelcomeSub:"سجّل الدخول أو أنشئ حساباً لحجز مقعد.",
+  navDownload:"حمّل التطبيق",
+  j_dlTitle:"حمّل التطبيق",
+  j_dlSub:"ثبّت تطبيق أندرويد. نفس الحساب يعمل على الموقع.",
+  j_dlAndroid:"تنزيل APK لأندرويد",
+  j_dlQr:"امسح للتنزيل",
+  j_dlIos:"آيفون",
+  j_dlIosSoon:"قريباً — ترقّب.",
+  j_dlHint:"APK تجريبي للبيتا المغلقة. تحديث الموقع لا يستبدل التطبيق المثبّت.",
+
 
 }
 };
@@ -3485,6 +3547,8 @@ const API = {
   decideIncident: (id, decision, reason) => API.request("POST", `/support/incidents/${id}/decide`, { decision, reason }),
   registerDevice: (token, platform) => API.request("POST", "/notifications/device", { token, platform }),
   myNotifications: () => API.request("GET", "/notifications/mine"),
+  getOwnerSettings: () => API.request("GET", "/admin/settings"),
+  saveOwnerSettings: (payload) => API.request("PATCH", "/admin/settings", payload),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
@@ -3509,7 +3573,6 @@ const API = {
   topup: (amountMinor) => API.request("POST", "/payments/topup", { amountMinor }),
   cashCollected: (bookingId) => API.request("POST", "/payments/cash-collected", { bookingId }),
   driverEarnings: () => API.request("GET", "/payments/driver/earnings"),
-  journeysLive: () => API.request("GET", "/journeys/live"),   /* ops fleet map (DEC-205 Path A) */
 };
 
 class ApiError extends Error {
@@ -3684,7 +3747,7 @@ function createBaseMap(el) {
 /* SearchMap — the planner's live map (DEC-206): all stops as quiet dots,
    matches LIGHT UP (brand) while typing, pins hold the chosen start/to,
    tapping picks the nearest stop (onPick). Falls back to the illustration. */
-function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
+function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
   if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
@@ -3738,20 +3801,6 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
       if (pinIds.has(s.stop_id)) mark(s, "pin");
       else if (matchIds.has(s.stop_id)) mark(s, "match");
       else mark(s, "quiet");
-    });
-    /* fleet dots: real positions only (journeys/live), brand-filled */
-    (vehicles || []).forEach((v) => {
-      if (!Number.isFinite(v.lat) || !Number.isFinite(v.lng)) return;
-      if (provider === "leaflet") {
-        L.circleMarker([v.lat, v.lng], { radius: 9, color: cssVar2("--border-strong", "--border-subtle"),
-          weight: 3, fillColor: brand, fillOpacity: 1 })
-          .addTo(map).bindTooltip(t("m_vehicle"), { direction: "top" });
-      } else {
-        new google.maps.Marker({ position: { lat: v.lat, lng: v.lng }, map, title: t("m_vehicle"),
-          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, strokeWeight: 3,
-            strokeColor: cssVar2("--border-strong", "--border-subtle"), fillColor: brand, fillOpacity: 1 } });
-      }
-      focusPts.push(provider === "leaflet" ? [v.lat, v.lng] : { lat: v.lat, lng: v.lng });
     });
 
     const fit = (arr) => {
@@ -3985,7 +4034,7 @@ function landing() {
     ? new URLSearchParams(location.search).get("share") : null;
   if (shareTok) return shareLanding(shareTok);
   if (S.landingDoc) return landingDoc();
-  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding })[S.landingPage] || riderLanding;
+  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding, download: downloadLanding })[S.landingPage] || riderLanding;
   return page();
 }
 
@@ -4025,7 +4074,7 @@ async function loadPublicShare(token) {
    Log in · Sign up. Compact: brand · theme · Sign up · menu (the links + Log in
    move into the dropdown). §8.1: every control does exactly what it says. */
 function landingNav() {
-  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"]];
+  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"], ["download", "navDownload"]];
   const nav = $("header", { class: "landing__nav" });
 
   nav.append($("button", {
@@ -4286,6 +4335,31 @@ function aboutLanding() {
     landingFooter());
 }
 
+function downloadLanding() {
+  const origin = (typeof location !== "undefined" && location.origin && location.protocol !== "file:")
+    ? location.origin : "https://ride-shareweb-production.up.railway.app";
+  const apkUrl = origin + "/download/android.apk";
+  const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(apkUrl);
+  return $("div", { class: "landing" },
+    landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      $("section", { class: "landing__section landing__pagetop" },
+        $("div", { class: "landing__kick", text: t("navDownload") }),
+        $("h1", { class: "landing__title", text: t("j_dlTitle") }),
+        $("p", { class: "landing__p", text: t("j_dlSub") }),
+        $("p", { class: "t-cap", text: t("j_dlHint") }),
+        $("div", { class: "row wrap gap4", style: { alignItems: "flex-start" } },
+          $("div", { class: "stack gap3" },
+            $("a", { class: "btn btn--primary", attrs: { href: apkUrl, download: "ride-share.apk" }, text: t("j_dlAndroid") }),
+            $("div", { class: "card card--tight" },
+              $("strong", { text: t("j_dlIos") }),
+              $("p", { class: "t-cap", text: t("j_dlIosSoon") }))),
+          $("div", { class: "stack gap2 center" },
+            $("div", { class: "t-cap", text: t("j_dlQr") }),
+            $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))))),
+    landingFooter());
+}
+
 function helpLanding() {
   return $("div", { class: "landing" },
     landingNav(),
@@ -4526,13 +4600,19 @@ function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
 }
 
 /* ── shared card chrome ────────────────────────────────────────────────── */
+function isNativeApp() {
+  return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+}
+
 function card(title, body, showSignupToggle) {
-  return $("div",{class:"authwrap"},
+  const native = isNativeApp();
+  return $("div",{class:"authwrap"+(native?" authwrap--app":"")},
     $("div",{class:"authwrap__card"},
-      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+      native ? null : $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
         on:{click:()=>{ S.view="landing"; S.authError=null; S.authStep="choose"; S.loginMethod=null; render(); }}}, icon("back")),
       $("div",{class:"center"}, logoSVG(), null),
-      $("h1",{class:"t-title center", text:title}),
+      native ? $("p",{class:"t-cap center",text:t("j_appWelcomeSub")}) : null,
+      $("h1",{class:"t-title center", text: native ? t("j_appWelcome") : title}),
       body,
       lockoutBanner(),
       S.authError ? Banner("danger", S.authError) : null,
@@ -4610,7 +4690,7 @@ function forgotPassword() {
   }
   return $("div",{class:"authwrap"},
     $("div",{class:"authwrap__card"},
-      $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
+      isNativeApp() ? null : $("button",{class:"authwrap__back", attrs:{type:"button","aria-label":t("landingBack")},
         on:{click:()=>{ S.forgot=null; S.view="landing"; S.authError=null; render(); }}}, icon("back")),
       $("div",{class:"center"}, logoSVG(), null),
       $("h1",{class:"t-title center", text: step==="done" ? t("signIn") : t("resetTitle")}),
@@ -4785,7 +4865,10 @@ function adminHome() {
     Row({icon:"users", title:t("adminStaff"), sub:t("j_adminStaffSub"), chev:true, bordered:true, on:()=>go("adminStaff")}),
     Row({icon:"flag", title:t("adminAudit"), sub:t("j_adminAuditSub"), chev:true, bordered:true, on:()=>go("adminAudit")}),
     Row({icon:"queue", title:t("adminDriverQueue"), sub:t("j_adminQueueSub"), chev:true, bordered:true, on:()=>go("queue")}),
-    Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")})));
+    Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")}),
+    Row({icon:"pricing", title:t("j_settingsTitle"), sub:t("j_settingsSub"), chev:true, bordered:true, on:()=>go("adminSettings")}),
+    Row({icon:"routes", title:t("nav.routes"), sub:t("j_adminRoutesSub"), chev:true, bordered:true, on:()=>go("routes")}),
+    Row({icon:"stops", title:t("nav.stops"), sub:t("j_adminStopsSub"), chev:true, bordered:true, on:()=>go("stops")})));
   return w;
 }
 
@@ -4820,6 +4903,7 @@ function adminStaff() {
       field("staff-phone", t("adminPhone"), "tel"),
       field("staff-email", t("adminEmail"), "email")),
     field("staff-password", t("adminPassword"), "password"),
+    $("p",{class:"t-cap",text:t("j_staffPassHint")}),
     $("div",{class:"field"},
       $("label",{text:t("adminRole")}),
       $("select",{class:"input", id:"staff-role"},
@@ -4849,11 +4933,13 @@ async function createStaff() {
     password: val("staff-password"),
     role: val("staff-role") || "operations",
   };
+  if (!payload.email && !payload.phone) { toast(errText("auth.identifier_required")); return; }
+  if (!payload.password || payload.password.length < 12) { toast(t("j_staffPassHint")); return; }
   try {
     await API.createStaff(payload);
     toast(t("save"));
     loadStaffInto(document.getElementById("staff-list"));
-  } catch(e) { toast(e.messageKey || "error.internal"); }
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 async function loadStaffInto(el) {
@@ -4943,6 +5029,25 @@ function auditWhen(iso) {
   });
 }
 
+function auditPager(el, page, pages, total) {
+  const bar = $("div",{class:"row wrap gap2", attrs:{"aria-label":t("j_auditPager")}});
+  bar.append(Btn({label:t("j_auditPrev"), kind:"secondary", dis: page<=0, on:()=>{ if(page>0){ S.auditPage = page - 1; loadAuditInto(el); }}}));
+  const windowStart = Math.max(0, page - 2);
+  const windowEnd = Math.min(pages - 1, page + 2);
+  if (windowStart > 0)
+    bar.append(Btn({label:"1", kind: page===0?"primary":"ghost", on:()=>{ S.auditPage = 0; loadAuditInto(el); }}));
+  if (windowStart > 1) bar.append($("span",{class:"t-cap",text:"…"}));
+  for (let i = windowStart; i <= windowEnd; i++) {
+    bar.append(Btn({label:String(i+1), kind: i===page?"primary":"ghost", on:()=>{ S.auditPage = i; loadAuditInto(el); }}));
+  }
+  if (windowEnd < pages - 2) bar.append($("span",{class:"t-cap",text:"…"}));
+  if (windowEnd < pages - 1)
+    bar.append(Btn({label:String(pages), kind: page===pages-1?"primary":"ghost", on:()=>{ S.auditPage = pages-1; loadAuditInto(el); }}));
+  bar.append(Btn({label:t("j_auditNext"), kind:"secondary", dis: page>=pages-1, on:()=>{ if(page<pages-1){ S.auditPage = page + 1; loadAuditInto(el); }}}));
+  bar.append($("span",{class:"t-cap ltr",text:`${total} ${t("j_auditRows")}`}));
+  return bar;
+}
+
 async function loadAuditInto(el) {
   if(!el) return;
   el.innerHTML="";
@@ -4954,23 +5059,93 @@ async function loadAuditInto(el) {
     if(!items.length){ el.append(Empty("flag", t("adminAudit"), t("adminAuditEmpty"))); return; }
     const from = page * AUDIT_PAGE + 1;
     const to = page * AUDIT_PAGE + items.length;
+    const pages = Math.max(1, Math.ceil(total / AUDIT_PAGE));
     el.append($("div",{class:"row gap2"},
       $("h2",{class:"t-head grow",text:t("adminAudit")}),
       $("div",{class:"t-cap ltr",text:`${from}–${to} ${t("j_auditPageOf")} ${total}`})));
-    items.forEach((e)=> el.append(Row({
-      icon:"flag",
-      title: auditActionLabel(e.action),
-      sub: `${t("j_auditWho")} · ${e.actor_name || e.email || "—"} · ${t("j_auditWhen")} · ${auditWhen(e.created_at)}` +
-        (e.target_type ? ` · ${e.target_type}` : "") +
-        (e.reason ? ` · ${e.reason}` : ""),
-      bordered:true })));
-    const more = (page + 1) * AUDIT_PAGE < total;
-    if (page > 0 || more) {
-      el.append($("div",{class:"row wrap gap2"},
-        page > 0 ? Btn({label:t("j_auditPrev"), kind:"secondary", on:()=>{ S.auditPage = page - 1; loadAuditInto(el); }}) : null,
-        more ? Btn({label:t("j_auditNext"), kind:"secondary", on:()=>{ S.auditPage = page + 1; loadAuditInto(el); }}) : null));
-    }
+    el.append(auditPager(el, page, pages, total));
+    const rows = items.map((e)=> $("tr",{},
+      $("td",{class:"ltr",text:auditWhen(e.created_at)}),
+      $("td",{text:e.actor_name || e.email || "—"}),
+      $("td",{},$("strong",{text:auditActionLabel(e.action)})),
+      $("td",{text:e.target_type || "—"}),
+      $("td",{text:e.reason || "—"})));
+    el.append(Table([t("j_auditWhen"), t("j_auditWho"), t("j_auditAction"), t("j_auditTarget"), t("reason")], rows));
+    el.append(auditPager(el, page, pages, total));
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function adminSettings() {
+  const w=$("div",{class:"main"});
+  const box=$("div",{id:"owner-settings"});
+  w.append(box);
+  loadOwnerSettingsInto(box);
+  return w;
+}
+
+function settingField(id, label, envVal, overrideVal) {
+  const usingPage = overrideVal != null;
+  return $("div",{class:"field"},
+    $("label",{attrs:{for:id}, text:label}),
+    $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${envVal}`}),
+    $("input",{class:"input", attrs:{id, type:"text", inputmode:"numeric", value: usingPage ? String(overrideVal) : String(envVal)}}),
+    $("label",{class:"row gap2"},
+      $("input",{attrs:{type:"checkbox", id:id+"-ovr", checked: usingPage ? "" : null}}),
+      $("span",{class:"t-cap",text:t("j_settingsOverride")})));
+}
+
+async function loadOwnerSettingsInto(el) {
+  if(!el) return;
+  el.innerHTML="";
+  try {
+    const s = await API.getOwnerSettings();
+    S.ownerSettings = s;
+    el.append($("h2",{class:"t-head",text:t("j_settingsTitle")}));
+    el.append(Banner("info", t("j_settingsHelp")));
+    el.append(Card("card--tight",
+      settingField("set-comm", t("j_setCommission"), s.env.commission_percent, s.override.commission_percent),
+      settingField("set-nbd", t("j_setBehDay"), s.env.notify_behavioural_max_day, s.override.notify_behavioural_max_day),
+      settingField("set-nbg", t("j_setBehGap"), s.env.notify_behavioural_gap_hours, s.override.notify_behavioural_gap_hours),
+      settingField("set-npd", t("j_setPromoDay"), s.env.notify_promo_max_day, s.override.notify_promo_max_day),
+      settingField("set-npw", t("j_setPromoWeek"), s.env.notify_promo_max_week, s.override.notify_promo_max_week),
+      settingField("set-nnt", t("j_setNonTx"), s.env.notify_non_tx_max_day, s.override.notify_non_tx_max_day),
+      $("div",{class:"field"},
+        $("label",{text:t("j_setPaymob")}),
+        $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${s.env.paymob_enabled ? t("j_on") : t("j_off")}`}),
+        $("select",{class:"input", attrs:{id:"set-paymob"}},
+          $("option",{attrs:{value:"env"}, text:t("j_settingsUseEnv")}),
+          $("option",{attrs:{value:"true", selected: s.override.paymob_enabled===true ? "" : null}, text:t("j_on")}),
+          $("option",{attrs:{value:"false", selected: s.override.paymob_enabled===false ? "" : null}, text:t("j_off")}))),
+      Btn({label:t("save"), block:true, on:()=>saveOwnerSettings()})));
+    el.append($("p",{class:"t-cap",text:`${t("j_settingsEffective")}: ${t("j_setCommission")} ${s.effective.commission_percent}% · Paymob ${s.effective.paymob_enabled?t("j_on"):t("j_off")}`}));
+  } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function readOverride(id) {
+  const box = document.getElementById(id+"-ovr");
+  if (!box || !box.checked) return null;
+  const n = Number(val(id));
+  return Number.isInteger(n) ? n : null;
+}
+
+async function saveOwnerSettings() {
+  const pay = val("set-paymob");
+  const otp = val("set-otp");
+  const payload = {
+    commission_percent: readOverride("set-comm"),
+    notify_behavioural_max_day: readOverride("set-nbd"),
+    notify_behavioural_gap_hours: readOverride("set-nbg"),
+    notify_promo_max_day: readOverride("set-npd"),
+    notify_promo_max_week: readOverride("set-npw"),
+    notify_non_tx_max_day: readOverride("set-nnt"),
+    paymob_enabled: pay === "env" ? null : pay === "true",
+    auth_otp_bypass: otp === "env" ? null : otp === "true",
+  };
+  try {
+    await API.saveOwnerSettings(payload);
+    toast(t("save"));
+    loadOwnerSettingsInto(document.getElementById("owner-settings"));
+  } catch(e) { toast(errText(e.messageKey)); }
 }
 
 
@@ -5217,11 +5392,6 @@ function riderBoarding(){                                     // R-12 — real b
   w.append($("div",{class:"stack gap1"},
     $("h1",{class:"t-head",text:chosen.route.name_en || chosen.route.name_ar || chosen.route.code || "—"}),
     $("div",{class:"t-cap",text:t("getOffAnywhere")})));
-  /* RouteMap (DEC-205 Path A): the route line + numbered stops, the chosen
-     boarding stop highlighted once picked — live context above the list. */
-  if ((chosen.stops||[]).length >= 2) {
-    w.append(RouteMap({ stops: chosen.stops, highlightStopId: S.chosenBoard, h: 200, title: t("m_routeAria") }));
-  }
   const stops = $("div",{id:"boarding-stops"});
   w.append(stops);
   renderBoardingStops(stops, chosen.stops);
@@ -5279,10 +5449,6 @@ async function loadDeparturesInto(el, routeId) {
 
 function riderReview(){                                       // R-14 — real fare + seats + book
   const w=$("div",{class:"main"});
-  /* RouteMap (DEC-205 Path A): the line with THIS boarding stop highlighted. */
-  if ((S.chosenRoute && S.chosenRoute.stops || []).length >= 2) {
-    w.append(RouteMap({ stops: S.chosenRoute.stops, highlightStopId: S.chosenBoard, h: 180, title: t("m_boardingHere") }));
-  }
   const route = (S.chosenRoute && S.chosenRoute.route) || {};
   const dep = S.chosenDep || {};
   const unit = (route.fare_minor || 0) / 100;
@@ -5692,8 +5858,6 @@ async function makeShare(id){
 
 
 
-
-
 /* ══════════════════════════════════════════════════════════════════════
    WALLET & PAYMENTS screens (Path A — money). Owned exclusively by the
    money path (docs/planning/PATH_A_MONEY.md). Everything renders from the
@@ -6058,20 +6222,6 @@ async function loadDriverJourneyInto(pick, scan, list) {
       on: () => { S.scanJourneyId = j.id; render(); },
     })));
     const jid = S.scanJourneyId;
-
-    /* RouteMap (DEC-205 Path A): the chosen journey's line + numbered stops,
-       the driver's own last position as the vehicle dot (real data only). */
-    try {
-      const routes = await API.publishedRoutes();
-      const sel = journeys.find((x) => x.id === jid);
-      const rw = (routes || []).find((r) => r.route && r.route.id === (sel && sel.route_id));
-      if (rw && (rw.stops || []).length >= 2) {
-        const vehicle = sel && Number.isFinite(sel.last_lat) && Number.isFinite(sel.last_lng)
-          ? { lat: sel.last_lat, lng: sel.last_lng } : null;
-        scan.append(RouteMap({ stops: rw.stops, h: 200, title: t("m_routeAria"), vehicle }));
-      }
-    } catch { /* the map is context — the scan/manifest must work without it */ }
-
     const live = $("div",{id:"journey-live"});
     scan.append(live);
     try {
@@ -6360,13 +6510,9 @@ async function reviewVehicle(id, decision) {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
-function opsLiveMap(){                                        // O-17 (+ DEC-205 Path A real fleet map)
+function opsLiveMap(){                                        // O-17
   const w=$("div",{class:"main"});
-  /* RouteMap (DEC-205 Path A): real fleet dots from journeys/live; honest
-     loading/empty/error states; the vehicle table below stays. */
-  const fleetBox=$("div",{id:"fleet-map"});
-  w.append(fleetBox);
-  loadFleetMapInto(fleetBox);
+  w.append(MapView({h:240, fleet:true, vehicle:false}));
   const tbl = $("div",{id:"veh-table"});
   w.append(tbl);
   loadVehicleTableInto(tbl);
@@ -6944,25 +7090,6 @@ function decideIncidentSheet(){
     }}));
 }
 
-/* Path A (DEC-205): the real fleet map — vehicles on live tiles when the
-   SDK is loaded, honest illustration + list otherwise. */
-async function loadFleetMapInto(el){
-  if(!el) return;
-  el.innerHTML="";
-  try{
-    const live = await API.journeysLive();
-    const vehicles = (live||[]).filter((j)=>Number.isFinite(j.last_lat)&&Number.isFinite(j.last_lng))
-      .map((j)=>({ lat:j.last_lat, lng:j.last_lng, id:j.id }));
-    const stops = [];
-    (live||[]).forEach((j)=>(j.stops||[]).forEach((s)=>{ if(!stops.some((x)=>x.stop_id===s.stop_id)) stops.push(s); }));
-    el.append(SearchMap({ h:260, stops: stops.length>=2?stops:[], vehicles,
-      matches: [], pins: [], title: t("m_fleet") }));
-    if(!vehicles.length) el.append(Empty("bus", t("m_fleet"), t("m_noLive")));
-  }catch(e){
-    el.append(Banner("danger", errText(e.messageKey)));
-  }
-}
-
 
 /* ══════════════════════════════════════════════════════════════════════
    12. SHEETS
@@ -7035,7 +7162,12 @@ const PAGES = {
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
+    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true, title:"j_settingsTitle"}, /* path B */
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
+    {k:"stops",      ic:"stops",    fn:opsStops,      dock:true, wide:true}, /* path B — root can map */
+    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true}, /* path B — root can price */
+    {k:"livemap",    ic:"livemap",  fn:opsLiveMap,    dock:true, wide:true}, /* path B — existing ops surface */
+    {k:"tickets",    ic:"tickets",  fn:supportTickets,dock:true, wide:true}, /* path B — existing support surface */
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
     {k:"profile",    ic:"profile",  fn:staffProfile,  dock:true, foot:true}
   ]
@@ -7139,6 +7271,16 @@ function render(){
   const theme = resolvedTheme();
   document.documentElement.dataset.theme = theme;
   document.body.dataset.theme = theme;
+  const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+  document.documentElement.classList.toggle("native", !!native);
+  document.body.classList.toggle("native", !!native);
+  if (native && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+    try {
+      const sb = window.Capacitor.Plugins.StatusBar;
+      if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
+      if (sb.setBackgroundColor) sb.setBackgroundColor({ color: theme === "dark" ? "#111318" : "#FFFFFF" });
+    } catch (_) { /* plugin optional */ }
+  }
 
   const root=document.getElementById("root");
   root.innerHTML="";
@@ -7235,7 +7377,13 @@ function boot(){
     .catch(()=>null);
   Promise.all([minDelay, session]).then(([, user])=>{
     if(S.view!=="boot") return;                 // a test or a tap already left
-    if(user){ enterApp(user); } else { S.view="landing"; render(); }
+    if(user){ enterApp(user); }
+    else {
+      const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+      S.view = native ? "auth" : "landing";
+      if (native) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
+      render();
+    }
   });
 }
 
@@ -7271,6 +7419,14 @@ async function loadMapsConfig(){
     window.__rsMapsConfigured = true;
   } catch { /* no backend yet → illustration stays */ }
 }
+
+try {
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (S.theme === "auto") render();
+    });
+  }
+} catch (_) { /* old WebView */ }
 
 document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
 window.addEventListener("online", ()=>{

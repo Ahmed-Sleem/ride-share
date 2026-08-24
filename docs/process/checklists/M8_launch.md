@@ -36,7 +36,7 @@ curl -sS https://ride-shareweb-production.up.railway.app/v1/healthz
 | G-017 | Egypt ride-hailing legal pack (permits, retention). | Legal team | HANDED OFF |
 | P2.5 | Launch corridor surveyed and verified in the tool. | OWNER fieldwork | OPEN |
 | P7.6 secrets | `ANDROID_KEYSTORE_*` in GitHub Actions (never git). Without them CI cannot ship a Play-signed AAB. | OWNER | OPEN |
-| G-079 | `COMMISSION_PERCENT` still 0 until you set the launch %. | OWNER MCQ | OPEN |
+| G-079 | Commission still 0 until you type the launch % on Owner Settings (or env). | OWNER | OPEN |
 | Paymob live | Card top-up stays hidden until `PAYMOB_ENABLED` + live keys. Cash still works. | OWNER | Optional for cash-only beta |
 | FCM | `FCM_SERVER_KEY` on `api`. Unset = no push; local leave-now alarm still works. | OWNER | Optional (G-055) |
 | M3 e2e | One real corridor pass: publish → claim → book → scan → complete → wallet/cash. | JOINT A+B + you | Not recorded |
