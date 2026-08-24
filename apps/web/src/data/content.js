@@ -300,6 +300,12 @@ en:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
+  /* Planner search (DEC-206, Path A) */
+  p_hint:"Type where you want to go — or tap the map to pin.",
+  p_whereTo:"Where to?", p_useMyLocation:"Use my location",
+  p_pinnedNearest:"Pinned the closest stop", p_matches:"Matching stops",
+  p_typeMore:"Type the first letters of a place, or tap the map.",
+  p_routesCount:"routes", p_recommendedRoute:"Recommended route on the map",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -646,6 +652,12 @@ ar:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
+  /* Planner search (DEC-206, Path A) */
+  p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
+  p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",
+  p_pinnedNearest:"تم تحديد أقرب محطة", p_matches:"المحطات المطابقة",
+  p_typeMore:"اكتب أولى أحرف المكان، أو اضغط على الخريطة.",
+  p_routesCount:"مسارًا", p_recommendedRoute:"المسار الموصى به على الخريطة",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",

@@ -1289,3 +1289,79 @@ Promise.all(pendingAsync).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);
 });
+
+/* ═══════════════════════════════════════════════════════════════════
+   PATH A — the Uber-style planner search (DEC-206). Local index →
+   snappy typeahead, combobox a11y, snap-to-nearest-stop pinning, and
+   the hand-off to B's recommendation engine (no duplicated logic).
+   ═══════════════════════════════════════════════════════════════════ */
+group("PATH A — planner: snappy typeahead with combobox a11y");
+{
+  const t=boot();
+  const IDX=[{ id:"r1", route:{ id:"r1", code:"C1", name_en:"Corridor 1", name_ar:"ممر ١", fare_minor:1500 },
+    stops:[
+      { stop_id:"s1", stop_code:"SMH", stop_name_en:"Smouha", stop_name_ar:"سموحة", lat:31.210, lng:29.940 },
+      { stop_id:"s2", stop_code:"SGB", stop_name_en:"Sidi Gaber", stop_name_ar:"سيدي جابر", lat:31.230, lng:29.960 },
+    ]},
+    { id:"r2", route:{ id:"r2", code:"C2", name_en:"Corridor 2", name_ar:"ممر ٢", fare_minor:1200 },
+    stops:[
+      { stop_id:"s3", stop_code:"MND", stop_name_en:"Mandara", stop_name_ar:"المنتزه", lat:31.290, lng:29.990 },
+    ]}];
+  t.w.S.riderIndex=IDX;   // the REAL index shape: {id, route, stops} (search.js)
+
+  const el=t.w.plannerSearchScreen();
+  ok("planner renders both fields + the typeahead region",
+     !!el.querySelector("#plan-from") && !!el.querySelector("#plan-to") && !!el.querySelector("#plan-typeahead"));
+  ok("inputs are comboboxes wired to the list (a11y)",
+     el.querySelector("#plan-to").getAttribute("role")==="combobox" &&
+     el.querySelector("#plan-to").getAttribute("aria-controls")==="plan-typeahead");
+  ok("map present as context (illustration fallback in jsdom)", !!el.querySelector(".mapbox"));
+
+  t.w.S.planFocus="to"; t.w.S.planToQ="smo";
+  const list=el.querySelector("#plan-typeahead");
+  t.w.plannerRenderList(list, t.w.collectPlannerStops(IDX));
+  const opts=[...list.querySelectorAll("[role=option]")];
+  ok("first letters filter snappy (EN)", opts.length===1 && /Smouha/.test(opts[0].textContent));
+
+  t.w.S.planToQ="سمو";
+  t.w.plannerRenderList(list, t.w.collectPlannerStops(IDX));
+  ok("first letters filter snappy (AR)", [...list.querySelectorAll("[role=option]")].length===1);
+
+  const active=list.querySelector(".ta-row--active");
+  ok("active option is aria-selected", active && active.getAttribute("aria-selected")==="true");
+
+  t.w.plannerPick("to", IDX[0].stops[1]);
+  ok("picking sets the destination", t.w.S.planTo && t.w.S.planTo.stop_id==="s2");
+  ok("focus closes after pick", t.w.S.planFocus===null);
+}
+
+group("PATH A — planner: map pin snaps to the nearest stop; results reuse the engine");
+{
+  const t=boot();
+  const IDX=[{ id:"r1", route:{ id:"r1", code:"C1", name_en:"Corridor 1", name_ar:"ممر ١", fare_minor:1500 },
+    stops:[
+      { stop_id:"s1", stop_code:"A", stop_name_en:"Near Stop", stop_name_ar:"قريبة", lat:31.211, lng:29.941 },
+      { stop_id:"s2", stop_code:"B", stop_name_en:"Far Stop", stop_name_ar:"بعيدة", lat:31.280, lng:29.980 },
+    ]}];
+  t.w.S.riderIndex=IDX;
+  const stops=t.w.collectPlannerStops(IDX);
+
+  const near=t.w.nearestStop(31.2105, 29.9405, stops);
+  ok("nearestStop picks the closest by distance", near && near.stop_id==="s1");
+
+  t.w.plannerSetField("from", stops[0]);
+  t.w.plannerSetField("to", stops[1]);
+  const el=t.w.plannerSearchScreen();
+  ok("both set → the SAME results engine renders (planJourneys path)",
+     !!el.querySelector("#plan-results"));
+}
+
+group("PATH A — planner i18n parity (p_*)");
+{
+  const t=boot();
+  const tt=(k)=> t.w.eval(`t(${JSON.stringify(k)})`);
+  ["p_hint","p_whereTo","p_useMyLocation","p_matches","p_recommendedRoute"].forEach((k)=>{
+    t.w.S.lang="en"; const en=tt(k); t.w.S.lang="ar"; const ar=tt(k); t.w.S.lang="en";
+    ok(`${k} in both languages`, en!==k && ar!==k && en!==ar);
+  });
+}

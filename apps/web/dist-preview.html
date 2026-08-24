@@ -1996,6 +1996,12 @@ en:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
+  /* Planner search (DEC-206, Path A) */
+  p_hint:"Type where you want to go — or tap the map to pin.",
+  p_whereTo:"Where to?", p_useMyLocation:"Use my location",
+  p_pinnedNearest:"Pinned the closest stop", p_matches:"Matching stops",
+  p_typeMore:"Type the first letters of a place, or tap the map.",
+  p_routesCount:"routes", p_recommendedRoute:"Recommended route on the map",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -2342,6 +2348,12 @@ ar:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
+  /* Planner search (DEC-206, Path A) */
+  p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
+  p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",
+  p_pinnedNearest:"تم تحديد أقرب محطة", p_matches:"المحطات المطابقة",
+  p_typeMore:"اكتب أولى أحرف المكان، أو اضغط على الخريطة.",
+  p_routesCount:"مسارًا", p_recommendedRoute:"المسار الموصى به على الخريطة",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",
@@ -3469,14 +3481,13 @@ function realRouteMap(list, hi, vehicle, h) {
   setTimeout(() => {
     const el = document.getElementById(id);
     if (!el) return;
+    const base = createBaseMap(el);                       // the ONE tiles factory
+    if (!base) return;
+    const { map } = base;
     const pts = list.map((s) => [s.lat, s.lng]);
 
-    if (window.L) {
-      const map = L.map(el, { zoomControl: false, attributionControl: true });
+    if (base.provider === "leaflet") {
       const brand = cssVar("--brand", "--accent-route");  // may be undefined → Leaflet default
-      L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
-        maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
       L.polyline(pts, { color: brand, weight: 5, opacity: 0.92 }).addTo(map);
       list.forEach((s, i) => {
         const isHi = hi && s.stop_id === hi.stop_id;
@@ -3493,14 +3504,10 @@ function realRouteMap(list, hi, vehicle, h) {
       }
       map.fitBounds(L.latLngBounds(pts).pad(0.25), { animate: false });
       window.__rsMapInstance = map;
-      return;
     }
 
-    if (window.google?.maps) {
-      const map = new google.maps.Map(el, {
-        center: { lat: list[0].lat, lng: list[0].lng }, zoom: 13,
-        disableDefaultUI: true, clickableIcons: false, fullscreenControl: false,
-      });
+    if (base.provider === "google") {
+      const map = base.map;
       const brand = cssVar("--brand", "--accent-route");
       new google.maps.Polyline({
         path: list.map((s) => ({ lat: s.lat, lng: s.lng })),
@@ -3527,6 +3534,300 @@ function realRouteMap(list, hi, vehicle, h) {
     }
   }, 0);
   return root;
+}
+
+/* The ONE base-map factory: tiles + attribution + provider detection.
+   Every real-map renderer (RouteMap, SearchMap) starts here — there is no
+   second tile implementation (§0.3). Returns null when no SDK is loaded. */
+function createBaseMap(el) {
+  if (window.L) {
+    const map = L.map(el, { zoomControl: false, attributionControl: true });
+    L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+    return { provider: "leaflet", map };
+  }
+  if (window.google?.maps) {
+    const map = new google.maps.Map(el, {
+      center: { lat: 31.2241, lng: 29.9549 }, zoom: 13,
+      disableDefaultUI: true, clickableIcons: false, fullscreenControl: false,
+    });
+    return { provider: "google", map };
+  }
+  return null;
+}
+
+/* SearchMap — the planner's live map (DEC-206): all stops as quiet dots,
+   matches LIGHT UP (brand) while typing, pins hold the chosen start/to,
+   tapping picks the nearest stop (onPick). Falls back to the illustration. */
+function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}) {
+  const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  const box = $("div", { class: "mapbox mapbox--route" });
+  if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
+    box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true }));
+    return box;
+  }
+  const id = "searchmap-" + Math.random().toString(36).slice(2, 9);
+  const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
+  const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
+  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  const cssVar2 = (n, fb) => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    return v || (fb ? cssVar2(fb) : undefined);
+  };
+  const matchIds = new Set((matches || []).map((s) => s.stop_id));
+  const pinIds = new Set((pins || []).map((s) => s.stop_id));
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const base = createBaseMap(el);
+    if (!base) return;
+    const { map, provider } = base;
+    const brand = cssVar2("--brand", "--accent-route");
+    const quiet = cssVar2("--border-strong", "--border-subtle");
+    const focusPts = [];
+
+    const mark = (s, kind) => {                    // one marker spec per provider
+      const hot = kind !== "quiet";
+      if (provider === "leaflet") {
+        L.circleMarker([s.lat, s.lng], {
+          radius: kind === "pin" ? 9 : hot ? 8 : 5,
+          color: kind === "pin" ? brand : hot ? brand : quiet,
+          weight: kind === "pin" ? 4 : 2,
+          fillColor: kind === "pin" ? brand : cssVar2("--bg-base", "--surface-base"),
+          fillOpacity: 1,
+        }).addTo(map).bindTooltip(`${hot ? "● " : ""}${stopLabelForMap(s)}`, { direction: "top" });
+      } else {
+        new google.maps.Marker({
+          position: { lat: s.lat, lng: s.lng }, map,
+          title: stopLabelForMap(s), label: kind === "pin" ? "P" : "",
+          ...(hot ? { icon: { path: google.maps.SymbolPath.CIRCLE, scale: kind === "pin" ? 9 : 7,
+            strokeWeight: 3, strokeColor: brand,
+            fillColor: cssVar2("--bg-base", "--surface-base"), fillOpacity: 1 } } : {}),
+        });
+      }
+      if (hot) focusPts.push(provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng });
+    };
+    const stopLabelForMap = (s) => L({ en: s.stop_name_en || s.name_en, ar: s.stop_name_ar || s.name_ar }) || s.stop_code || "";
+
+    pts.forEach((s) => {
+      if (pinIds.has(s.stop_id)) mark(s, "pin");
+      else if (matchIds.has(s.stop_id)) mark(s, "match");
+      else mark(s, "quiet");
+    });
+
+    const fit = (arr) => {
+      if (!arr || arr.length === 0) return;
+      if (provider === "leaflet") map.fitBounds(L.latLngBounds(arr).pad(0.25), { animate: false });
+      else { const b = new google.maps.LatLngBounds(); arr.forEach((x) => b.extend(x)); map.fitBounds(b, 60); }
+    };
+    if (focusPts.length) fit(focusPts);
+    else if (pins.length) fit(pts.map((s) => provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng }));
+
+    if (onPick) {
+      if (provider === "leaflet") map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
+      else map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
+    }
+    window.__rsMapInstance = map;
+  }, 0);
+  return root;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Planner search screen (DEC-206, Path A — the owner's Uber-style ask).
+   "The search must be snappy like Google Maps: type the first letters and
+   see a list of all close things; the map pins directly."
+
+   UX (research 06_MAPS_UX.md + Uber/Google-Maps patterns):
+   - Map on top, panel below (list-first model, map as live context).
+   - Two fields: Start (defaults to my-location's closest stop) + "Where to?".
+   - TYPEAHEAD: instant local search (searchPlannerStops, AR/EN normalized,
+     no network) from the first character; list updates IN PLACE (never a
+     full re-render per keystroke — the seamless-tabs lesson).
+   - Keyboard: ↑/↓ move, Enter picks, Esc closes — ARIA combobox semantics
+     (role, aria-expanded, aria-activedescendant) so screen readers work.
+   - The MAP reacts live: matches light up + camera fits them; a chosen
+     start/destination pins; tapping the map picks the NEAREST STOP for the
+     focused field (our model boards at stops — the pin snaps honestly).
+   - Both set → the SAME recommendation engine B built (planJourneys) feeds
+     the SAME result cards; no duplicated logic (§0.3).
+   Honest fallbacks: no map SDK → illustration + the list; no geolocation →
+   pick manually. Nothing invented, nothing dead.                        */
+
+function plannerSearchScreen(){                          // DEC-206 (Path A)
+  const w=$("div",{class:"main"});
+  w.append($("div",{class:"stack gap1"},
+    $("h1",{class:"t-head",text:t("j_planTitle")}),
+    $("div",{class:"t-cap",text:t("p_hint")})));
+
+  if(!S.riderIndex && !S.planIndexError){ ensureRiderIndex().then(()=>render()).catch(()=>{}); }
+  const stops = collectPlannerStops(S.riderIndex || []);
+
+  /* ── the map: matches light up, pins hold, tap picks the nearest stop ── */
+  const q = S.planFocus === "from" ? S.planFromQ : S.planToQ;
+  const matches = S.planFocus ? searchPlannerStops(q || "", stops).slice(0, 24) : [];
+  w.append(SearchMap({                                   /* RouteMap family (Path A) */
+    h: 300,
+    stops,
+    matches,
+    pins: [S.planFrom, S.planTo].filter(Boolean),
+    onPick: (lat, lng) => {
+      const near = nearestStop(lat, lng, stops);
+      if (!near) return;
+      plannerSetField(S.planFocus || "to", near);
+      toast(t("p_pinnedNearest") + ": " + stopLabel(near));
+      render();
+    },
+  }));
+
+  /* ── the panel: two fields + typeahead list ── */
+  const panel = Card("");
+  panel.append(plannerField("from", t("j_from"), S.planFrom, S.planFromQ));
+  panel.append(plannerField("to", t("p_whereTo"), S.planTo, S.planToQ));
+  if (typeof navigator !== "undefined" && navigator.geolocation) {
+    panel.append($("button", { class: "link", attrs: { type: "button" }, text: t("p_useMyLocation"),
+      on: () => plannerUseMyLocation(stops) }));
+  }
+  w.append(panel);
+
+  const list = $("div", { id: "plan-typeahead" });
+  w.append(list);
+  plannerRenderList(list, stops);
+
+  /* ── results: the SAME engine + cards B built (no second copy) ── */
+  const results = $("div", { class: "stack gap3", id: "plan-results" });
+  w.append(results);
+  plannerRenderResults(results);
+  return w;
+}
+
+/* One input row. id/aria per the combobox pattern; typing updates ONLY the
+   list + the map matches (in-place), selection triggers a full render. */
+function plannerField(which, label, chosen, query) {
+  const id = "plan-" + which;
+  return $("div", { class: "field" },
+    $("label", { attrs: { for: id }, text: label }),
+    $("input", {
+      class: "input", attrs: {
+        id, type: "search", autocomplete: "off",
+        role: "combobox", "aria-expanded": S.planFocus === which ? "true" : "false",
+        "aria-controls": "plan-typeahead", "aria-autocomplete": "list",
+        "aria-label": label,
+        value: query || (chosen ? stopLabel(chosen) : ""),
+        placeholder: which === "to" ? t("p_whereTo") : t("j_pickStop"),
+      },
+      on: {
+        focus: () => { S.planFocus = which; S.planActive = 0; render(); },
+        input: (e) => {
+          S.planFocus = which; S.planActive = 0;
+          if (which === "from") { S.planFromQ = e.target.value; S.planFrom = null; }
+          else { S.planToQ = e.target.value; S.planTo = null; }
+          const list = document.getElementById("plan-typeahead");
+          if (list) plannerRenderList(list, collectPlannerStops(S.riderIndex || []));
+        },
+        keydown: (e) => plannerKeydown(e, which),
+        blur: () => { setTimeout(() => { if (!S.planFocus) render(); }, 120); },
+      },
+    }));
+}
+
+/* The typeahead list — aria listbox; rows are options with ids. */
+function plannerRenderList(el, stops) {
+  if (!el) return;
+  el.innerHTML = "";
+  if (!S.planFocus) return;
+  const q = S.planFocus === "from" ? S.planFromQ : S.planToQ;
+  const hits = searchPlannerStops(q || "", stops || []).slice(0, 12);
+  el.setAttribute("role", "listbox");
+  el.setAttribute("aria-label", t("p_matches"));
+  if (!hits.length) {
+    el.append(Empty("stops", t("noSearchResults"), t("p_typeMore")));
+    return;
+  }
+  hits.forEach((s, i) => {
+    el.append($("div", {
+      class: "ta-row" + (i === (S.planActive || 0) ? " ta-row--active" : ""),
+      attrs: { role: "option", id: "plan-opt-" + i, "aria-selected": String(i === (S.planActive || 0)) },
+      on: { mousedown: (e) => { e.preventDefault(); plannerPick(which(S.planFocus), s); } },
+    },
+      icon("stops"),
+      $("div", { class: "stack" },
+        $("strong", { text: stopLabel(s) }),
+        $("span", { class: "t-micro", text: s.stop_code || "·" })),
+      $("span", { class: "t-micro", text: plannerStopRoutesCount(s) + " " + t("p_routesCount") })));
+  });
+}
+function which(f) { return f === "from" ? "from" : "to"; }
+
+function plannerStopRoutesCount(s) {
+  const n = (S.riderIndex || []).filter((e) => (e.stops || []).some((x) => x.stop_id === s.stop_id)).length;
+  return String(n);
+}
+
+/* Keyboard: ↑/↓ move the active option, Enter picks it, Esc closes. */
+function plannerKeydown(e, fld) {
+  const stops = collectPlannerStops(S.riderIndex || []);
+  const hits = () => searchPlannerStops((fld === "from" ? S.planFromQ : S.planToQ) || "", stops).slice(0, 12);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const h = hits(); if (!h.length) return;
+    S.planActive = Math.max(0, Math.min(h.length - 1, (S.planActive || 0) + (e.key === "ArrowDown" ? 1 : -1)));
+    plannerRenderList(document.getElementById("plan-typeahead"), stops);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const h = hits();
+    if (h.length) plannerPick(fld, h[S.planActive || 0]);
+  } else if (e.key === "Escape") {
+    S.planFocus = null; render();
+  }
+}
+
+function plannerPick(fld, s) { plannerSetField(fld, s); S.planFocus = null; render(); }
+function plannerSetField(fld, s) {
+  if (fld === "from") { S.planFrom = s; S.planFromQ = stopLabel(s); }
+  else { S.planTo = s; S.planToQ = stopLabel(s); }
+}
+
+/* Geolocation → the closest indexed stop (honest: our boarding is at stops). */
+function plannerUseMyLocation(stops) {
+  if (!navigator.geolocation || !stops.length) { toast(t("locateDenied")); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const near = nearestStop(pos.coords.latitude, pos.coords.longitude, stops);
+      if (near) { plannerSetField("from", near); toast(t("p_pinnedNearest") + ": " + stopLabel(near)); render(); }
+    },
+    () => toast(t("locateDenied")),
+    { timeout: 8000 });
+}
+
+/** Pure: the stop nearest to (lat,lng) — tested; exported for reuse. */
+function nearestStop(lat, lng, stops) {
+  let best = null, bestD = Infinity;
+  for (const s of stops || []) {
+    if (!Number.isFinite(s.lat) || !Number.isFinite(s.lng)) continue;
+    const d = distanceMeters(lat, lng, s.lat, s.lng);
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+
+/* Results — B's engine + cards, unchanged (§0.3 one implementation). */
+function plannerRenderResults(el) {
+  if (!el) return;
+  el.innerHTML = "";
+  if (!S.planFrom || !S.planTo) { el.append(Empty("routes", t("j_planTitle"), t("j_planNeedBoth"))); return; }
+  if (S.planFrom.stop_id === S.planTo.stop_id) { el.append(Empty("stops", t("j_planTitle"), t("j_planSame"))); return; }
+  const plans = planJourneys(S.planFrom, S.planTo, S.riderIndex || []);
+  if (!plans.length) { el.append(Empty("routes", t("j_planTitle"), t("j_noPlan"))); return; }
+  plans.forEach((p, i) => el.append(planResultCard(p, i === 0)));
+  /* The recommended plan's route, annotated on the map (RouteMap). */
+  const first = plans[0];
+  const stops = (first && first.routeStops) || (first && first.kind === "single"
+    && ((S.riderIndex || []).find((e) => e.id === (first.route && first.route.id)) || {}).stops) || [];
+  if (stops && stops.length >= 2) {
+    el.append(RouteMap({ stops, highlightStopId: S.planFrom && S.planFrom.stop_id, h: 200, title: t("p_recommendedRoute") }));
+  }
 }
 
 
@@ -4555,15 +4856,11 @@ function riderHome(){                                         // R-10
   return w;
 }
 
-function riderPlan(){                                         // DEC-199 A→B planner
-  const w=$("div",{class:"main"});
-  w.append($("div",{class:"stack gap1"},
-    $("h1",{class:"t-head",text:t("j_planTitle")}),
-    $("div",{class:"t-cap",text:t("j_planHint")})));
-  const box=$("div",{id:"rider-plan"});
-  w.append(box);
-  loadRiderPlan(box);
-  return w;
+function riderPlan(){                                         // DEC-199/206 — Path A owns the planner search UX
+  /* RouteMap/planner (Path A, DEC-206): the stop-picker input moved to the
+     Uber-style typeahead + map screen in screens/planner.js. The engine
+     (planJourneys), cards and helpers below stay THE one implementation. */
+  return plannerSearchScreen();
 }
 
 function stopLabel(s){
@@ -5241,6 +5538,7 @@ async function makeShare(id){
     if (shared) toast(t("j_shareCopied"));
   } catch(e){ toast(errText(e.messageKey)); }
 }
+
 
 
 

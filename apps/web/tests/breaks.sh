@@ -393,6 +393,11 @@ run_break "RouteMap loses its accessible stop list highlight" src/lib/map.js \
   's|text: t("m_boardingHere")|text: t("m_stopsAria")|' \
   "highlighted stop carries the boarding chip"
 
+# ── Path A — planner search (DEC-206) ────────────────────────────────────
+run_break "planner loses its combobox semantics" src/screens/planner.js \
+  's|role: "combobox", "aria-expanded"|role: "textbox", "aria-expanded"|' \
+  "inputs are comboboxes wired to the list (a11y)"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

@@ -18,15 +18,11 @@ function riderHome(){                                         // R-10
   return w;
 }
 
-function riderPlan(){                                         // DEC-199 A→B planner
-  const w=$("div",{class:"main"});
-  w.append($("div",{class:"stack gap1"},
-    $("h1",{class:"t-head",text:t("j_planTitle")}),
-    $("div",{class:"t-cap",text:t("j_planHint")})));
-  const box=$("div",{id:"rider-plan"});
-  w.append(box);
-  loadRiderPlan(box);
-  return w;
+function riderPlan(){                                         // DEC-199/206 — Path A owns the planner search UX
+  /* RouteMap/planner (Path A, DEC-206): the stop-picker input moved to the
+     Uber-style typeahead + map screen in screens/planner.js. The engine
+     (planJourneys), cards and helpers below stay THE one implementation. */
+  return plannerSearchScreen();
 }
 
 function stopLabel(s){
@@ -704,4 +700,5 @@ async function makeShare(id){
     if (shared) toast(t("j_shareCopied"));
   } catch(e){ toast(errText(e.messageKey)); }
 }
+
 

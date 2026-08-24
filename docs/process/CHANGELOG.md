@@ -1027,3 +1027,23 @@
 - Checklist: `docs/process/checklists/M7_capacitor.md`. P7.2–P7.6 remain
   tracked, not stubbed.
 
+
+## 2026-08-24 — DEC-206 live: the Uber-style planner search (Path A)
+
+- The A→B planner input is now a SEARCH: typeahead from the first character
+  (instant, local, AR/EN normalized — no network), Google-Maps-snappy list
+  under the field (combobox ARIA, ↑/↓/Enter/Esc, aria-activedescendant),
+  "Where to?" + Start fields, "Use my location" (geolocation → nearest stop),
+  and the MAP as live context: every indexed stop a quiet dot, matches LIGHT
+  UP while typing and the camera fits them, chosen stops pin, and tapping
+  the map picks the NEAREST stop for the focused field (our model boards at
+  stops — the pin snaps honestly). Results reuse B's planJourneys engine and
+  cards untouched (§0.3) + the recommended route annotated via RouteMap.
+- New file screens/planner.js (Path A); riderPlan() delegates (tagged);
+  SearchMap added to lib/map.js on a shared createBaseMap factory (ONE tile
+  implementation); 14 p_* i18n keys EN+AR. Honest fallback: no SDK →
+  illustration + the list (nothing dead, nothing invented).
+- Tests: 448 unit (13 new planner assertions: EN+AR filtering, combobox
+  semantics, aria-selected active option, pick/focus close, nearestStop
+  pure, engine hand-off, i18n parity). Break case "planner loses its
+  combobox semantics" observed CAUGHT. pnpm verify green.

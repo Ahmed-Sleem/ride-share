@@ -51,7 +51,8 @@ const PARTS = [
   "lib/components.js",
   "lib/search.js",
   "lib/api.js",
-  "lib/map.js",			/* RouteMap — the one data-bound map primitive (R21) */
+  "lib/map.js",
+  "screens/planner.js",	/* Path A: Uber-style planner search (DEC-206) */			/* RouteMap — the one data-bound map primitive (R21) */
   "screens/landing.js",
   "screens/auth.js",
   "screens/admin.js",
