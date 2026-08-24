@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-08-24 — Railway mobile: Railpack had no root start
+
+- Deploy logs: `using build driver railpack-v0.37.0` then
+  `No start command detected` (workspace root is not an app).
+- Fix: root `start` + `build` + `index.js` + `railpack.json` boot
+  `apps/mobile/server.js`. api/web stay on Docker and do not use this.
+
 ## 2026-08-24 — P3.9 live journey (Path B)
 
 - POST start/complete/abort/position/arrive + GET progress. Start from OPEN
