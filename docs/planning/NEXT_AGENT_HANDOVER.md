@@ -581,8 +581,8 @@ Add these to the attack order (after W1, beside W2):
 ### W0 (S·hygiene) — Land the uncommitted 2026-08-25 tree
 `git status` must be clean on `main` before W1. Pull --rebase, review the settings/mobile/download diff line-by-line, `pnpm verify` + `pnpm db:verify`, push. Never `git add -A` (exclude `uploads/`, `.apk`, PATs).
 
-### W2b (M·maps) — Finish DEC-205 embedding (maps are NOT “done everywhere”)
-Embed `RouteMap` (data-bound stops, highlight boarding, optional vehicle from **real** `last_lat/lng` only — no interpolation) on:
+### W2b (M·maps) — Verify DEC-205 phase 1a (`047bae4`), only fill holes
+Do **not** rebuild maps. Walk `rider.js` / `driver.js` / `staff.js` / `GET /journeys/live`. If phase 1a is complete, tick this and skip. Only then embed `RouteMap` (data-bound stops, highlight boarding, optional vehicle from **real** `last_lat/lng` only — no interpolation) on:
 - rider route detail / boarding / booking review (`rider.js`);
 - driver journey (`driver.js`) when a journey is IN_PROGRESS;
 - ops live map: replace decorative `MapView({fleet:true})` with real journey positions — requires a **new** `GET /journeys/live` (or equivalent) with VIEW_LIVEMAP, returning only journeys that have a fresh fix (`POSITION_STALE_SEC`). Hide the vehicle layer when no fix (G-055 honesty).
