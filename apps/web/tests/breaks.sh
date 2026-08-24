@@ -175,7 +175,7 @@ run_break "landing loses the drive how-to steps" src/screens/landing.js \
   "drive page has the how-to steps"
 
 run_break "landing loses its policy links" src/screens/landing.js \
-  's|      policyLink("terms"), policyLink("privacy"), policyLink("safety")),|      null),|' \
+  's|      policyLink("terms"), policyLink("privacy"), policyLink("safety")));|      null));|' \
   "landing footer links policies"
 
 run_break "policies revert to empty placeholders" src/data/content.js \
@@ -187,7 +187,7 @@ run_break "landing loses the page nav links" src/screens/landing.js \
   "top bar has Ride/Drive/About/Help links"
 
 run_break "landing loses the sticky stacking panels" src/screens/landing.js \
-  's|      stackPanel("seat",  "violet", t("panel1T"), t("panel1B")),|      null,|' \
+  's|      stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),|      null,|' \
   "rider landing has 4 stacking panels"
 
 run_break "logo path hardcoded again (second definition)" src/lib/components.js \
@@ -314,16 +314,16 @@ run_break "otp boxes collapse to five" src/lib/components.js \
   's|for (let i = 0; i < 6; i++)|for (let i = 0; i < 5; i++)|' \
   "OTP step renders six code boxes"
 
-run_break "slider doodle loses its white ink" src/styles/shell.html \
-  's|  --sticker-ink:var(--on-solid);|  --sticker-ink:var(--ink-900);|' \
-  "slider doodle is white line-work with a same-hue light accent"
+run_break "story doodle loses its white ink" src/styles/shell.html \
+  's|.stackpanel__art{width:min(260px,56vw);height:min(200px,42vw);flex:none;color:var(--on-solid)}|.stackpanel__art{width:min(260px,56vw);height:min(200px,42vw);flex:none;color:var(--ink-900)}|' \
+  "story doodle is white line-work with a same-hue light accent"
 
-run_break "slide pop animation removed" src/styles/shell.html \
-  's|@keyframes slidepop{0%{transform:scale(.82) translateY(12px)}55%{transform:scale(1.06)}100%{transform:scale(1) translateY(0)}}||' \
-  "slides pop in with a springy overshoot"
+run_break "hero loses its single-illustration marker (v3 one-color rule)" src/screens/landing.js \
+  's|  return $("div", { class: "heroart heroart--one", attrs: { "aria-hidden": "true" } },|  return $("div", { class: "heroart heroart--multi", attrs: { "aria-hidden": "true" } },|' \
+  "landing shows one intro illustration"
 
 run_break "hero drift animation removed" src/styles/shell.html \
-  's|  animation:herodrift 42s ease-in-out infinite alternate}|  /* drift removed */}|' \
+  's|  animation:herodrift 36s ease-in-out infinite alternate}|  /* drift removed */}|' \
   "hero glow drifts very slowly"
 
 run_break "signup name field dropped from the code step" src/screens/auth.js \

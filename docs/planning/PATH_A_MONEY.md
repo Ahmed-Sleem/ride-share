@@ -372,3 +372,10 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
   Path B's remaining wiring: call chargeWalletForBooking when the rider chose
   wallet; cash tap already has its endpoint. Open owner MCQs unchanged
   (G-079 commission, top-up presets).
+
+> **Operational rule (added 2026-08-24 after landing v3 went red):** when a
+> screen/style change removes or rewrites code that a break case targets, the
+> case's sed/expectation must be RE-ANCHORED IN THE SAME COMMIT — a
+> `BROKEN-BREAK` ("edit did not change the file") or a stale expectation turns
+> CI red and blocks both paths. Prove the re-anchored case catches (mini-run
+> the single case) before pushing.

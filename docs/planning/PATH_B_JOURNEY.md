@@ -418,3 +418,10 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
   (+ `pnpm db:verify` when migrations changed) before every push; the FULL
   browser suite is GitHub CI's job** (it runs the identical `verify.sh` in
   the `verify-gui` job). Treat red CI as stop-everything and fix forward.
+
+> **Operational rule (added 2026-08-24 after landing v3 went red):** when a
+> screen/style change removes or rewrites code that a break case targets, the
+> case's sed/expectation must be RE-ANCHORED IN THE SAME COMMIT — a
+> `BROKEN-BREAK` ("edit did not change the file") or a stale expectation turns
+> CI red and blocks both paths. Prove the re-anchored case catches (mini-run
+> the single case) before pushing.

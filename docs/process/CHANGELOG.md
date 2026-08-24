@@ -864,3 +864,15 @@
   repository (exactly one 900-of-1000 spend lands); deterministic interleaved
   schedule proof — WITHOUT the lock the wallet overdraws to −800 (observed),
   WITH the lock the second spend waits, reads 100, refuses. 209 API tests.
+
+## 2026-08-24 — Monitoring fix: 5 break cases re-anchored after landing v3 (Agent A)
+
+- Agent B's `754ae34` (landing v3) turned CI red — not a product bug: all
+  suites green (a11y 14, layout 7455, landing 64), but 5 break cases still
+  targeted pre-v3 code (`BROKEN-BREAK`). Re-anchored to v3's actual shapes:
+  policy links (new footer construction), stacking panels (numbered
+  signature), story-doodle ink (.stackpanel__art color), hero single-
+  illustration marker (class rename; the old slidepop case is obsolete),
+  herodrift 42s→36s. Each of the 5 observed CAUGHT in a targeted harness
+  run; the other 76 cases were green in B's own CI run. Operational rule
+  appended to BOTH path files: re-anchor break cases in the same commit.
