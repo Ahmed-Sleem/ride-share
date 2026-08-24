@@ -28,6 +28,10 @@ class FakeJourneys {
   async byDriver(driverUserId: string) { return [...this.rows.values()].filter((r) => r.driver_user_id === driverUserId); }
   async setStatus(id: string, status: any) { const r = this.rows.get(id); if (r) this.rows.set(id, { ...r, status }); }
   async cancel(id: string) { const r = this.rows.get(id); if (r) this.rows.set(id, { ...r, status: 'CANCELLED' }); }
+  async setPosition(id: string, lat: number, lng: number) {
+    const r = this.rows.get(id);
+    if (r) this.rows.set(id, { ...r, last_lat: lat, last_lng: lng, last_position_at: new Date() });
+  }
 }
 class FakeRoutes {
   slot: SlotRow | null = { id: 's1', route_id: 'r1', service_date: '2026-09-01', departs_at: '12:00', required_vehicles: 1, created_at: new Date() };
@@ -54,6 +58,7 @@ const env = () => ({
   STOP_MAX_FIX_ACCURACY_M: 20, PHOTO_STORAGE_DIR: '/tmp/rs-photos-test', PHOTO_MAX_BYTES: 8_000_000,
   ROUTE_SPEED_KMH: 20, VEHICLE_SEATS: 14, MIN_CLAIM_LEAD_MINUTES: 30,
   BOARDING_WINDOW_BEFORE_MIN: 15, BOARDING_WINDOW_AFTER_MIN: 30, MAX_SCHEDULE_SLIP_MIN: 10,
+  POSITION_STALE_SEC: 90,
 }) as unknown as Env;
 
 function setup() {
@@ -159,6 +164,30 @@ test('a rider cannot update position', async () => {
   const { svc } = setup();
   const j = await svc.claimSlot(driver, 's1', 'v1');
   await assert.rejects(() => svc.position(rider, j.id, 31.2, 29.9), ForbiddenException);
+});
+
+test('position is refused unless the journey is IN_PROGRESS (off-shift)', async () => {
+  const { svc } = setup();
+  const j = await svc.claimSlot(driver, 's1', 'v1');
+  await assert.rejects(() => svc.position(driver, j.id, { lat: 31.2, lng: 29.9 }), ConflictException);
+});
+
+test('a batch of points stores the last fix only (no interpolation)', async () => {
+  const { svc, repo } = setup();
+  const j = await svc.claimSlot(driver, 's1', 'v1');
+  await svc.openForBooking(driver, j.id);
+  await svc.start(driver, j.id);
+  const r = await svc.position(driver, j.id, {
+    points: [
+      { lat: 31.20, lng: 29.90 },
+      { lat: 31.21, lng: 29.91 },
+      { lat: 31.22, lng: 29.92 },
+    ],
+  });
+  assert.equal(r.applied, 3);
+  const row = repo.rows.get(j.id)!;
+  assert.equal(row.last_lat, 31.22);
+  assert.equal(row.last_lng, 29.92);
 });
 
 test('race: a duplicate claim (UNIQUE violation) maps to a clear refusal', async () => {

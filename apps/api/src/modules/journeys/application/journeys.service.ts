@@ -198,13 +198,32 @@ export class JourneysService {
     return { ok: true };
   }
 
-  async position(actor: Actor, journeyId: string, lat: number, lng: number): Promise<{ ok: true }> {
-    await this.ownDuty(actor, journeyId);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      throw new ConflictException({ message_key: 'journeys.bad_position' });
+  async position(
+    actor: Actor,
+    journeyId: string,
+    input: number | { lat?: number; lng?: number; points?: Array<{ lat?: number; lng?: number }> },
+    lngMaybe?: number,
+  ): Promise<{ ok: true; applied: number }> {
+    const journey = await this.ownDuty(actor, journeyId);
+    if (journey.status !== 'IN_PROGRESS') {
+      throw new ConflictException({ message_key: 'journeys.not_in_progress' });
     }
-    await this.journeys.setPosition(journeyId, lat, lng);
-    return { ok: true };
+    const pts: Array<{ lat: number; lng: number }> = [];
+    if (typeof input === 'number') {
+      if (Number.isFinite(input) && Number.isFinite(lngMaybe)) pts.push({ lat: input, lng: lngMaybe as number });
+    } else {
+      const extra = Array.isArray(input?.points) ? input.points : [];
+      for (const p of extra) {
+        if (p && Number.isFinite(p.lat) && Number.isFinite(p.lng)) pts.push({ lat: p.lat as number, lng: p.lng as number });
+      }
+      if (!pts.length && Number.isFinite(input?.lat) && Number.isFinite(input?.lng)) {
+        pts.push({ lat: input.lat as number, lng: input.lng as number });
+      }
+    }
+    const last = pts[pts.length - 1];
+    if (!last) throw new ConflictException({ message_key: 'journeys.bad_position' });
+    await this.journeys.setPosition(journeyId, last.lat, last.lng);
+    return { ok: true, applied: pts.length };
   }
 
   async arriveNext(actor: Actor, journeyId: string): Promise<{ ok: true; arrivedIndex: number }> {
@@ -248,12 +267,21 @@ export class JourneysService {
       slip = slipMinutes(plannedArrival(departs, stop.runMinutes), new Date());
     }
     const max = this.env.MAX_SCHEDULE_SLIP_MIN;
+    const lastAt = journey.last_position_at ? new Date(journey.last_position_at).getTime() : NaN;
+    const gapSeconds = Number.isFinite(lastAt) ? Math.max(0, Math.round((Date.now() - lastAt) / 1000)) : null;
+    const staleAfter = this.env.POSITION_STALE_SEC ?? 90;
     return {
       stop,
       slipMinutes: slip,
       maxSlip: max,
       exceedsSlip: exceedsMaxSlip(slip, max),
       status: journey.status,
+      lastLat: journey.last_lat ?? null,
+      lastLng: journey.last_lng ?? null,
+      lastPositionAt: journey.last_position_at ?? null,
+      gapSeconds,
+      stale: gapSeconds !== null && gapSeconds > staleAfter,
+      staleAfter,
     };
   }
 }

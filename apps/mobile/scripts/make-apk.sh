@@ -17,6 +17,21 @@ if [ ! -d android ]; then
   npx cap add android
 fi
 npx cap sync android
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [ -f "$MANIFEST" ]; then
+  for perm in \
+    android.permission.ACCESS_COARSE_LOCATION \
+    android.permission.ACCESS_FINE_LOCATION \
+    android.permission.ACCESS_BACKGROUND_LOCATION \
+    android.permission.FOREGROUND_SERVICE \
+    android.permission.FOREGROUND_SERVICE_LOCATION \
+    android.permission.POST_NOTIFICATIONS
+  do
+    if ! grep -q "$perm" "$MANIFEST"; then
+      sed -i "s|</manifest>|    <uses-permission android:name=\"$perm\" />\n</manifest>|" "$MANIFEST"
+    fi
+  done
+fi
 cd android
 chmod +x gradlew
 ./gradlew --no-daemon assembleDebug

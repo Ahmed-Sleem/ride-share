@@ -13,8 +13,9 @@ class ClaimDto {
   @IsOptional() @IsBoolean() committed?: boolean;
 }
 class PositionDto {
-  @IsNumber() lat!: number;
-  @IsNumber() lng!: number;
+  @IsOptional() @IsNumber() lat?: number;
+  @IsOptional() @IsNumber() lng?: number;
+  @IsOptional() points?: Array<{ lat?: number; lng?: number; at?: number }>;
 }
 
 type ReqWithActor = FastifyRequest & { actor?: Actor };
@@ -72,7 +73,7 @@ export class JourneysController {
   @Post('journeys/:id/position')
   @UseGuards(IdentityGuard)
   position(@Req() req: ReqWithActor, @Param('id') id: string, @Body() dto: PositionDto) {
-    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.journeys.position(req.actor!, id, dto.lat, dto.lng));
+    return this.idem.run(req.actor!.id, readIdempotencyKey(req.headers), () => this.journeys.position(req.actor!, id, dto));
   }
 
   @Post('journeys/:id/arrive')

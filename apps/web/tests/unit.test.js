@@ -1233,6 +1233,15 @@ const mAdminAudit = (async () => {
 })();
 
 /* ===== Path B — P7.2 driver outbox ===== */
+group("PATH B — journey GPS batch + stale gap (P7.4)");
+{
+  const t=boot();
+  ok("LocationTrack is on the window", typeof t.w.LocationTrack === "object" && typeof t.w.LocationTrack.start === "function");
+  ok("Platform.watchPosition exists", typeof t.w.Platform.watchPosition === "function");
+  ok("j_posStale both languages", !!t.w.T.en.j_posStale && t.w.T.ar.j_posStale !== t.w.T.en.j_posStale);
+  ok("j_trackingOn both languages", !!t.w.T.en.j_trackingOn && t.w.T.ar.j_trackingOn !== t.w.T.en.j_trackingOn);
+}
+
 group("PATH B — camera scan copy + Platform.scanCode (P7.3)");
 {
   const t=boot();

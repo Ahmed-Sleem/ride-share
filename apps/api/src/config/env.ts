@@ -61,6 +61,7 @@ export const envSchema = {
   MAX_SCHEDULE_SLIP_MIN: z.coerce.number().int().min(0).max(120).default(10),
   // Driver outbox (P7.2): a queued action older than this is held for review.
   OUTBOX_MAX_AGE_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  POSITION_STALE_SEC: z.coerce.number().int().min(15).max(3600).default(90),
 
   // ── payments (Paymob, P3.7 Path A — optional until keys arrive) ──────
   // PAYMOB_ENABLED is the master feature flag (DEC-204): the Paymob option

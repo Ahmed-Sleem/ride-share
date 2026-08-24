@@ -11,6 +11,12 @@ test("Platform.kind is web when Capacitor is absent", () => {
   assert.equal(Platform.kind(), "web");
 });
 
+test("Platform.watchPosition is a no-op without geolocation", () => {
+  const stop = Platform.watchPosition(() => { throw new Error("must not fire"); });
+  assert.equal(typeof stop, "function");
+  stop();
+});
+
 test("Platform.getPosition returns null without geolocation", async () => {
   const pos = await Platform.getPosition({ timeout: 1 });
   assert.equal(pos, null);

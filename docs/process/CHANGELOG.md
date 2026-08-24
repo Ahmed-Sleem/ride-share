@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-08-24 — P7.4 Capacitor journey GPS (Path B, DEC-176 stay)
+
+- `Platform.watchPosition` + `LocationTrack`: batch up to 8 fixes / 30s, flush leftover on stop. Tracking starts only on `IN_PROGRESS` and stops otherwise.
+- `POST /journeys/:id/position` accepts `{ points }` and stores the last fix only (no interpolated path). Off-shift (not in progress) is refused.
+- Rider live screen shows a stale-position warning when the last fix is older than `POSITION_STALE_SEC` (default 90). Gaps stay visible.
+- APK assemble injects Android location / foreground-service permissions. 2-hour locked-screen + battery proof remains an on-device owner run.
+
 ## 2026-08-24 — Admin overview + paged audit (Path B)
 
 - Super-admin home: lecture banner removed; tiles are the same `Row` primitive

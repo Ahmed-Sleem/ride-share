@@ -15,7 +15,8 @@
     "@ride-share/brand": "workspace:*",
     "@ride-share/platform": "workspace:*",
     "@capacitor/core": "catalog:",
-    "@capacitor-mlkit/barcode-scanning": "catalog:"
+    "@capacitor-mlkit/barcode-scanning": "catalog:",
+    "@capacitor/geolocation": "catalog:"
   },
   "devDependencies": {
     "@capacitor/cli": "catalog:",

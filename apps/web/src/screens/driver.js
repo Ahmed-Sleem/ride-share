@@ -184,9 +184,12 @@ async function loadDriverJourneyInto(pick, scan, list) {
         Chip({label:t("j_slip")+" "+p.slipMinutes+"'", kind:slipKind})));
       const acts = $("div",{class:"row wrap gap2"});
       const st = (journeys.find((x)=>x.id===jid)||{}).status;
+      if (st !== "IN_PROGRESS") unbindJourneyTrack(jid);
       if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
         acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>queueOrSend("start","POST",`/journeys/${jid}/start`))}));
       if (st === "IN_PROGRESS") {
+        bindJourneyTrack(jid);
+        live.append(Banner("info", t("j_trackingOn")));
         acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("arrive","POST",`/journeys/${jid}/arrive`))}));
         acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("complete","POST",`/journeys/${jid}/complete`))}));
         acts.append(Btn({label:t("sos"), kind:"danger", driver:true, on:()=>openSheet("sos")}));
@@ -258,6 +261,22 @@ async function loadManifestInto(el, journeyId) {
       }));
     });
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function sendTrackBatch(journeyId, points) {
+  return queueOrSend("position", "POST", `/journeys/${journeyId}/position`, { points });
+}
+
+function bindJourneyTrack(journeyId) {
+  if (typeof LocationTrack === "undefined") return;
+  LocationTrack.start(journeyId, sendTrackBatch);
+}
+
+function unbindJourneyTrack(journeyId) {
+  if (typeof LocationTrack === "undefined") return;
+  if (!LocationTrack.activeId()) return;
+  if (journeyId && LocationTrack.activeId() !== journeyId) return;
+  LocationTrack.stop();
 }
 
 function driverOutbox() {

@@ -1289,6 +1289,40 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
       return cap() ? "native" : "web";
     },
 
+    watchPosition(onFix) {
+      const cb = typeof onFix === "function" ? onFix : () => {};
+      const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
+      const geo = plugin("Geolocation");
+      if (geo && typeof geo.watchPosition === "function") {
+        let id = null;
+        const p = geo.watchPosition(options, (pos, err) => {
+          if (err || !pos) return;
+          const c = pos.coords || pos;
+          if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude)) return;
+          cb({ lat: c.latitude, lng: c.longitude, accuracy: c.accuracy, at: Date.now() });
+        });
+        if (p && typeof p.then === "function") p.then((v) => { id = v && (v.value || v); }).catch(() => {});
+        else id = p;
+        return () => {
+          try { if (geo.clearWatch) geo.clearWatch({ id }); } catch (_) { /* gone */ }
+        };
+      }
+      if (g.navigator && g.navigator.geolocation && typeof g.navigator.geolocation.watchPosition === "function") {
+        const id = g.navigator.geolocation.watchPosition(
+          (p) => cb({
+            lat: p.coords.latitude,
+            lng: p.coords.longitude,
+            accuracy: p.coords.accuracy,
+            at: Date.now(),
+          }),
+          () => {},
+          options
+        );
+        return () => { try { g.navigator.geolocation.clearWatch(id); } catch (_) { /* gone */ } };
+      }
+      return () => {};
+    },
+
     async getPosition(opts) {
       const options = Object.assign(
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
@@ -1564,6 +1598,99 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
 
   if (typeof module !== "undefined" && module.exports) module.exports = { Outbox, createOutbox, memoryPersist };
   g.Outbox = Outbox;
+})(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
+
+
+/* P7.4 — batched journey GPS. One session at a time. Off-shift = silent.
+   Screens never interpolate: a gap is a gap. Fixes queue until flush. */
+(function (root) {
+  const g = root || (typeof globalThis !== "undefined" ? globalThis : this);
+
+  const BATCH_MAX = 8;
+  const FLUSH_MS = 30000;
+
+  function createTrack(opts) {
+    const o = opts || {};
+    const watch = o.watch || ((cb) => {
+      if (!g.Platform || typeof g.Platform.watchPosition !== "function") return () => {};
+      return g.Platform.watchPosition(cb);
+    });
+    const now = o.now || (() => Date.now());
+    let journeyId = null;
+    let buf = [];
+    let stopWatch = null;
+    let timer = null;
+    let send = null;
+
+    function lastPoint() {
+      return buf.length ? buf[buf.length - 1] : null;
+    }
+
+    async function flush() {
+      if (!journeyId || !buf.length || typeof send !== "function") return { sent: 0 };
+      const points = buf.slice();
+      buf = [];
+      await send(journeyId, points);
+      return { sent: points.length };
+    }
+
+    function start(id, sender) {
+      if (!id) return;
+      if (journeyId === id && stopWatch) {
+        send = sender || send;
+        return;
+      }
+      stop();
+      journeyId = id;
+      send = sender;
+      stopWatch = watch((fix) => {
+        if (!journeyId) return;
+        if (!fix || !Number.isFinite(fix.lat) || !Number.isFinite(fix.lng)) return;
+        buf.push({ lat: fix.lat, lng: fix.lng, at: fix.at || now() });
+        if (buf.length >= BATCH_MAX) flush();
+      });
+      if (o.setInterval && o.clearInterval) {
+        timer = o.setInterval(flush, FLUSH_MS);
+      } else if (typeof setInterval === "function") {
+        timer = setInterval(flush, FLUSH_MS);
+      }
+    }
+
+    function stop() {
+      if (stopWatch) { try { stopWatch(); } catch (_) { /* ignore */ } }
+      stopWatch = null;
+      if (timer != null) {
+        if (o.clearInterval) o.clearInterval(timer);
+        else if (typeof clearInterval === "function") clearInterval(timer);
+      }
+      timer = null;
+      const leftover = buf.slice();
+      const id = journeyId;
+      buf = [];
+      const sender = send;
+      journeyId = null;
+      send = null;
+      if (id && leftover.length && typeof sender === "function") {
+        return sender(id, leftover);
+      }
+      return Promise.resolve({ sent: leftover.length });
+    }
+
+    return {
+      start, stop, flush,
+      activeId: () => journeyId,
+      pending: () => buf.length,
+      lastPoint,
+      BATCH_MAX, FLUSH_MS,
+    };
+  }
+
+  const LocationTrack = createTrack();
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { createTrack, LocationTrack };
+  }
+  g.LocationTrack = LocationTrack;
+  g.createLocationTrack = createTrack;
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
 
 
@@ -1912,6 +2039,8 @@ en:{
   j_outboxPending:"Waiting to send",
   j_outboxReview:"Needs review — not sent",
   j_scanCamera:"Scan QR", j_scanDenied:"Camera not allowed — type the 6 digits", j_scanUnavailable:"Camera not available — type the 6 digits",
+  j_posStale:"Last known position is old — we are not inventing a line between fixes",
+  j_trackingOn:"Sharing live position for this ride only",
   support:{ booking_not_found:"That booking was not found.", bad_category:"Pick a valid category.",
     body_required:"Describe what happened.", share_expired:"This share link has expired.",
     not_found:"Incident not found.", illegal_transition:"That step is not allowed from the current state.",
@@ -2085,8 +2214,7 @@ ar:{
   featureCashT:"ادفع كاش عند الباب", featureCashB:"لا حاجة لبطاقة. ادفع للسائق الأجرة الثابتة عند الركوب.",
   featureCodeT:"اركب بالكود", featureCodeB:"كود يُستخدم مرة واحدة يضع الراكب الصحيح في الرحلة الصحيحة.",
   panelKick:"لماذا يبدو الأمر مختلفًا",
-  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف موعد القيام وأن هناك مقعدًا.",
-  panel2T:"أجرة واحدة بلا مفاجآت", panel2B:"سعر المسار الثابت يُثبَّت لحظة الحجز. لا زيادة مفاجئة أبدًا.",
+  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف موعد القيام و الحجز. لا زيادة مفاجئة أبدًا.",
   panel3T:"اركب في ثوانٍ", panel3B:"اعرض الكود عند الباب واركب. الرقم ظاهر دائمًا على الشاشة — بلا قلق على البطارية.",
   panel4T:"انزل في أي مكان", panel4B:"انزل في أي نقطة على المسار. لست مقيدًا بمحطة لا تحتاجها.",
   driveHeroKick:"للسائقين",
@@ -2257,6 +2385,8 @@ ar:{
   j_outboxPending:"بانتظار الإرسال",
   j_outboxReview:"يحتاج مراجعة — لم يُرسل",
   j_scanCamera:"امسح QR", j_scanDenied:"الكاميرا غير مسموحة — اكتب الأرقام الستة", j_scanUnavailable:"الكاميرا غير متاحة — اكتب الأرقام الستة",
+  j_posStale:"آخر موقع معروف قديم — لا نرسم خطًا وهميًا بين النقاط",
+  j_trackingOn:"يُشارك الموقع الحي لهذه الرحلة فقط",
   support:{ booking_not_found:"هذا الحجز غير موجود.", bad_category:"اختر تصنيفًا صالحًا.",
     body_required:"صف ما حدث.", share_expired:"انتهت صلاحية رابط المشاركة.",
     not_found:"الحادثة غير موجودة.", illegal_transition:"هذه الخطوة غير مسموحة من الحالة الحالية.",
@@ -3209,6 +3339,7 @@ const API = {
   arriveStop: (id) => API.request("POST", `/journeys/${id}/arrive`),
   journeyProgress: (id) => API.request("GET", `/journeys/${id}/progress`),
   journeyPosition: (id, lat, lng) => API.request("POST", `/journeys/${id}/position`, { lat, lng }),
+  journeyPositionBatch: (id, points) => API.request("POST", `/journeys/${id}/position`, { points }),
   bookingLive: (id) => API.request("GET", `/bookings/${id}/live`),
   requestAlight: (id) => API.request("POST", `/bookings/${id}/alight`),
   raiseSos: (body) => API.request("POST", "/support/sos", body || {}),
@@ -4807,6 +4938,7 @@ async function loadRiderLive(el, mode) {
       if (live.code) el.append(QRPanel({code:String(live.code)}));
       if (live.arriving) el.append(Banner("ok", t("j_arriving")));
       else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+      if (live.stale) el.append(Banner("warn", t("j_posStale")));
       if (live.stop) {
         const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
         el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));
@@ -5488,9 +5620,12 @@ async function loadDriverJourneyInto(pick, scan, list) {
         Chip({label:t("j_slip")+" "+p.slipMinutes+"'", kind:slipKind})));
       const acts = $("div",{class:"row wrap gap2"});
       const st = (journeys.find((x)=>x.id===jid)||{}).status;
+      if (st !== "IN_PROGRESS") unbindJourneyTrack(jid);
       if (st === "OPEN_FOR_BOOKING" || st === "LOCKED")
         acts.append(Btn({label:t("j_startRide"), driver:true, on:()=>dutyAct(()=>queueOrSend("start","POST",`/journeys/${jid}/start`))}));
       if (st === "IN_PROGRESS") {
+        bindJourneyTrack(jid);
+        live.append(Banner("info", t("j_trackingOn")));
         acts.append(Btn({label:t("j_arrivedStop"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("arrive","POST",`/journeys/${jid}/arrive`))}));
         acts.append(Btn({label:t("j_completeRide"), kind:"secondary", driver:true, on:()=>dutyAct(()=>queueOrSend("complete","POST",`/journeys/${jid}/complete`))}));
         acts.append(Btn({label:t("sos"), kind:"danger", driver:true, on:()=>openSheet("sos")}));
@@ -5562,6 +5697,22 @@ async function loadManifestInto(el, journeyId) {
       }));
     });
   } catch (e) { el.append(Banner("danger", errText(e.messageKey))); }
+}
+
+function sendTrackBatch(journeyId, points) {
+  return queueOrSend("position", "POST", `/journeys/${journeyId}/position`, { points });
+}
+
+function bindJourneyTrack(journeyId) {
+  if (typeof LocationTrack === "undefined") return;
+  LocationTrack.start(journeyId, sendTrackBatch);
+}
+
+function unbindJourneyTrack(journeyId) {
+  if (typeof LocationTrack === "undefined") return;
+  if (!LocationTrack.activeId()) return;
+  if (journeyId && LocationTrack.activeId() !== journeyId) return;
+  LocationTrack.stop();
 }
 
 function driverOutbox() {

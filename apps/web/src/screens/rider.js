@@ -401,6 +401,7 @@ async function loadRiderLive(el, mode) {
       if (live.code) el.append(QRPanel({code:String(live.code)}));
       if (live.arriving) el.append(Banner("ok", t("j_arriving")));
       else el.append(Banner("info", t("j_waiting")+" · "+(live.status||"")));
+      if (live.stale) el.append(Banner("warn", t("j_posStale")));
       if (live.stop) {
         const nm = S.lang==="ar" ? live.stop.nameAr : live.stop.nameEn;
         el.append(Card("", $("div",{class:"t-micro",text:t("nextStop")}), $("strong",{text:nm})));

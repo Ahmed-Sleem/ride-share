@@ -158,6 +158,7 @@ const API = {
   arriveStop: (id) => API.request("POST", `/journeys/${id}/arrive`),
   journeyProgress: (id) => API.request("GET", `/journeys/${id}/progress`),
   journeyPosition: (id, lat, lng) => API.request("POST", `/journeys/${id}/position`, { lat, lng }),
+  journeyPositionBatch: (id, points) => API.request("POST", `/journeys/${id}/position`, { points }),
   bookingLive: (id) => API.request("GET", `/bookings/${id}/live`),
   requestAlight: (id) => API.request("POST", `/bookings/${id}/alight`),
   raiseSos: (body) => API.request("POST", "/support/sos", body || {}),

@@ -39,6 +39,40 @@
       return cap() ? "native" : "web";
     },
 
+    watchPosition(onFix) {
+      const cb = typeof onFix === "function" ? onFix : () => {};
+      const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 };
+      const geo = plugin("Geolocation");
+      if (geo && typeof geo.watchPosition === "function") {
+        let id = null;
+        const p = geo.watchPosition(options, (pos, err) => {
+          if (err || !pos) return;
+          const c = pos.coords || pos;
+          if (!Number.isFinite(c.latitude) || !Number.isFinite(c.longitude)) return;
+          cb({ lat: c.latitude, lng: c.longitude, accuracy: c.accuracy, at: Date.now() });
+        });
+        if (p && typeof p.then === "function") p.then((v) => { id = v && (v.value || v); }).catch(() => {});
+        else id = p;
+        return () => {
+          try { if (geo.clearWatch) geo.clearWatch({ id }); } catch (_) { /* gone */ }
+        };
+      }
+      if (g.navigator && g.navigator.geolocation && typeof g.navigator.geolocation.watchPosition === "function") {
+        const id = g.navigator.geolocation.watchPosition(
+          (p) => cb({
+            lat: p.coords.latitude,
+            lng: p.coords.longitude,
+            accuracy: p.coords.accuracy,
+            at: Date.now(),
+          }),
+          () => {},
+          options
+        );
+        return () => { try { g.navigator.geolocation.clearWatch(id); } catch (_) { /* gone */ } };
+      }
+      return () => {};
+    },
+
     async getPosition(opts) {
       const options = Object.assign(
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
