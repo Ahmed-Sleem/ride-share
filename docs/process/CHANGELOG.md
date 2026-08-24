@@ -885,3 +885,11 @@
   herodrift 42s→36s. Each of the 5 observed CAUGHT in a targeted harness
   run; the other 76 cases were green in B's own CI run. Operational rule
   appended to BOTH path files: re-anchor break cases in the same commit.
+
+## 2026-08-24 — Monitoring fix 2: boarding-code break case re-anchored (P3.8)
+
+- Agent B's `841e4eb` (P3.8 scan/manifest/boarding UI) went red on ONE stale
+  break case — "booked screen loses the boarding code" still sed'd the
+  pre-P3.8 line (`QRPanel({code:b.code})`); the new screen renders
+  `QRPanel({code:String(b.code)})` inside `if (b.code)`. Re-anchored and
+  re-proven CAUGHT. My earlier fix (`af2b495`) was green; this restores main.

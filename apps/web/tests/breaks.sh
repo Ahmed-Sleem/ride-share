@@ -207,7 +207,7 @@ run_break "driver work board loses its loader" src/screens/driver.js \
   "driver work board renders the find-work loader"
 
 run_break "booked screen loses the boarding code" src/screens/rider.js \
-  's|    w.append(QRPanel({code:b.code}));|    /* removed */;|' \
+  's|    w.append(QRPanel({code:String(b.code)}));|    /* removed */;|' \
   "booked shows the boarding code"
 
 run_break "own capture shows approve (two-person rule UI)" src/screens/staff.js \
