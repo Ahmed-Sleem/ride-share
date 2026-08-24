@@ -1064,3 +1064,14 @@
   semantics, aria-selected active option, pick/focus close, nearestStop
   pure, engine hand-off, i18n parity). Break case "planner loses its
   combobox semantics" observed CAUGHT. pnpm verify green.
+
+## 2026-08-24 — fix: planner map fallback escaped its box by 13px (CI-caught)
+
+- The CI layout suite caught the planner page at 320px: the illustration
+  fallback's decorative zoom transform (`.mapbox--zoom .mapsvg{scale(1.22)}`)
+  made the <svg> element's rect escape the window (the suite measures element
+  rects; only auto/scroll containment exempts). Inside the map primitives
+  (RouteMap/SearchMap) the fallback is now strictly 100%×100% with the
+  transform off — selector specificity raised to actually win against the
+  later zoom rule. Verified with the suite's own measurement locally
+  (widest=0 at 320×568 on rider/plan).
