@@ -482,7 +482,7 @@ next free G-0xx, never silently drop a discovered issue).
 
 ## 9. YOUR PROGRESS LOG (append one block per session — this file is alive)
 
-- (empty — you start here)
+- 2026-08-25 — File landed on GitHub (`ead4ce2`). W1 started: review embeds `paymentChoice`; confirm books then `POST /payments/bookings/:id/pay-wallet`; unpaid wallet is visible + retry; cash path unchanged.
 
 ## 10. QUICK REFERENCE INDEX (verified paths)
 

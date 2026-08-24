@@ -320,6 +320,11 @@ function riderReview(){                                       // R-14 — real f
        dep.service_date ? `${dep.service_date} · ${new Date(dep.departs).toISOString().slice(11,16)}` : "—"),
     KV(t("whereBoard"), (stop && (stop.stop_name_en || stop.stop_name_ar || stop.stop_code)) || "—"),
     KV(t("seats"), `${S.seats} × ${money(unit)}`)));
+  if (typeof paymentChoice === "function") {
+    if (S.payConfig === undefined && !S.payConfigError && !S.payConfigLoading) payConfigLoad();
+    if (S.walletLoading === undefined && !S.walletError) walletLoad();
+    w.append(paymentChoice((route.fare_minor || 0) * S.seats));
+  }
   w.append($("div",{class:"row gap3"},
     $("span",{class:"grow t-lg",text:t("seats")}),
     $("div",{class:"stepper"},
@@ -335,14 +340,53 @@ function riderReview(){                                       // R-14 — real f
 async function confirmBookingAction() {
   const dep = S.chosenDep;
   if (!dep || !S.chosenBoard) { toast(t("validation.failed")); return; }
+  const method = S.payMethod || "cash";
+  if (method === "card") {
+    if (typeof openSheet === "function") openSheet("topup");
+    toast(t("j_topupThenBook"));
+    return;
+  }
   S.stopBusy = true; render();
   try {
     const booking = await API.book(dep.id, S.chosenBoard, S.seats);
+    booking.payMethod = method;
+    booking.payState = method === "wallet" ? "pending_wallet" : "cash_at_door";
+    if (method === "wallet" && typeof API.payWallet === "function") {
+      try {
+        await API.payWallet(booking.id);
+        booking.payState = "paid_wallet";
+      } catch (pe) {
+        S.stopBusy = false;
+        S.lastBooking = booking;
+        S.payPendingBooking = booking;
+        toast(errText((pe && pe.messageKey) || "error.internal"));
+        if (pe && pe.messageKey === "payments.insufficient_funds" && typeof openSheet === "function") openSheet("topup");
+        go("booked");
+        return;
+      }
+    }
     S.stopBusy = false;
     S.lastBooking = booking;
-    scheduleLeaveAlarm(booking);
+    S.payPendingBooking = null;
+    try { if (typeof scheduleLeaveAlarm === "function") scheduleLeaveAlarm(booking); } catch (_) {}
     go("booked");
-  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+  } catch(e) { S.stopBusy = false; toast(errText((e && e.messageKey) || "error.internal")); render(); }
+}
+
+async function retryWalletPay() {
+  const b = S.lastBooking || S.payPendingBooking;
+  if (!b || !b.id) return;
+  try {
+    await API.payWallet(b.id);
+    b.payState = "paid_wallet";
+    S.lastBooking = b;
+    S.payPendingBooking = null;
+    toast(t("j_paidWallet"));
+    render();
+  } catch (e) {
+    toast(errText((e && e.messageKey) || "error.internal"));
+    if (e && e.messageKey === "payments.insufficient_funds" && typeof openSheet === "function") openSheet("topup");
+  }
 }
 
 function riderBooked(){                                       // R-15 / R-21 — boarding code
@@ -364,6 +408,13 @@ function riderBooked(){                                       // R-15 / R-21 —
         b.stop_name_en || b.stop_name_ar
           ? $("div",{class:"t-cap",text:t("boardHere")+" · "+(S.lang==="ar"?(b.stop_name_ar||b.stop_name_en):(b.stop_name_en||b.stop_name_ar))})
           : null));
+    }
+    if (b.payState === "paid_wallet") w.append(Banner("ok", t("j_paidWallet")));
+    else if (b.payState === "pending_wallet") {
+      w.append(Banner("warn", t("j_walletUnpaid")));
+      w.append(Btn({label:t("j_retryWallet"), block:true, on:()=>retryWalletPay()}));
+    } else if (b.payState === "cash_at_door" || !b.payState) {
+      w.append(Banner("info", t("j_payAtDoor")));
     }
     w.append(Btn({label:t("trips"), block:true, on:()=>{S.stack=[]; go("trips");}}));
   } else {

@@ -183,7 +183,7 @@ run_break "policies revert to empty placeholders" src/data/content.js \
   "terms doc has real sections (en)"
 
 run_break "landing loses the page nav links" src/screens/landing.js \
-  's|const links = \[\["rider", "navRide"\], \["drive", "navDrive"\], \["about", "navAbout"\], \["help", "navHelp"\]\];|const links = [["rider", "navRide"]];|' \
+  's|const links = \[\["rider", "navRide"\], \["drive", "navDrive"\], \["about", "navAbout"\], \["help", "navHelp"\], \["download", "navDownload"\]\];|const links = [["rider", "navRide"]];|' \
   "top bar has Ride/Drive/About/Help links"
 
 run_break "landing loses the sticky stacking panels" src/screens/landing.js \
@@ -372,6 +372,10 @@ run_break "paymentChoice offers a dead insufficient-wallet row" src/screens/wall
   "insufficient wallet → wallet method absent (not disabled)"
 
 # ── Path B — boarding (P3.8) ─────────────────────────────────────────────
+run_break "wallet book loses the pay-wallet call" src/screens/rider.js \
+  's|await API.payWallet(booking.id);|/* pay-wallet removed */;|' \
+  "wallet book calls pay-wallet"
+
 run_break "scan client removed" src/lib/api.js \
   's|scanBooking: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|scanBookingX: (journeyId, code) => API.request("POST", "/bookings/scan", { journeyId, code }),|' \
   "scan API exists"

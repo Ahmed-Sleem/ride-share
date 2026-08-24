@@ -146,6 +146,7 @@ const API = {
   upcomingJourneys: (routeId, from, to) => API.request("GET",
     `/journeys/upcoming?${routeId ? `route=${routeId}&` : ""}from=${from}&to=${to}`),
   book: (journeyId, boardingStopId, seats) => API.request("POST", "/bookings", { journeyId, boardingStopId, seats }),
+  payWallet: (bookingId) => API.request("POST", `/payments/bookings/${bookingId}/pay-wallet`),
   myBookings: () => API.request("GET", "/bookings/mine"),
   cancelBooking: (id) => API.request("POST", `/bookings/${id}/cancel`),
 

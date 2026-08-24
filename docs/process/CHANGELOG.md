@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-08-25 — W1 wallet fare on book (Path B)
+
+- Review screen embeds `paymentChoice`. Cash = previous flow. Wallet =
+  book then `POST /payments/bookings/:id/pay-wallet`. Insufficient funds
+  keeps the booking, shows an honest banner, offers top-up + retry. Card
+  option is top-up first (not a silent unpaid book).
+
 ## 2026-08-25 — Next-agent handover filed
 
 - Canonical remaining-work brief: `docs/planning/NEXT_AGENT_HANDOVER.md`

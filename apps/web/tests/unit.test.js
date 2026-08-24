@@ -906,7 +906,7 @@ group("LANDING v2 — nav pages, drive, about, help, sticky panels");
   t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
 
   // top bar: the Uber-style links + auth actions + menu (compact)
-  ok("top bar has Ride/Drive/About/Help links", ["navRide","navDrive","navAbout","navHelp"]
+  ok("top bar has Ride/Drive/About/Help links", ["navRide","navDrive","navAbout","navHelp","navDownload"]
      .every((k)=> t.q(".landing").textContent.includes(t.w.T.en[k])));
   ok("top bar has Log in and Sign up", t.q(".landing").textContent.includes(t.w.T.en.login)
      && t.q(".landing").textContent.includes(t.w.T.en.signup));
@@ -918,7 +918,7 @@ group("LANDING v2 — nav pages, drive, about, help, sticky panels");
 
   // drive → about → help navigate without a full app render
   const links = t.all(".landing__link");
-  ok("nav renders 4 links", links.length === 4, String(links.length));
+  ok("nav renders Ride/Drive/About/Help/Get-the-app", links.length === 5, String(links.length));
   links[2].click();                      // About
   ok("about page renders", t.q(".landing").textContent.includes(t.w.T.en.aboutTitle));
   t.all(".landing__link")[3].click();    // Help
@@ -963,6 +963,7 @@ group("M3 — RIDER BOOKING FLOW IS REAL");
   ok("review shows the locked fare (route fare × seats)", t.q(".pricetag").textContent.includes("15"));
   ok("review has a seat stepper", t.all(".stepper button").length === 2);
   ok("review offers confirm booking", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.confirmBooking)));
+  ok("review embeds payment choice (cash at least)", /pay the driver/.test(t.q(".main").textContent));
 
   // booked screen shows the boarding code when a booking exists
   t.w.S.lastBooking = { code:"482917", seats:1, fare_minor:1500 };
@@ -1043,7 +1044,31 @@ group("BUILD INTEGRITY");
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));
 }
 
-const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen];
+group("PATH B — W1 wallet charge after book");
+const mW1 = (async () => {
+  const t=boot();
+  t.set({role:"rider", user:{id:"u1",role:"rider",name:"Nour"},
+    chosenRoute:{ route:{ id:"r1", fare_minor:1500, name_en:"Line" }, stops:[{stop_id:"s1",stop_name_en:"A"}] },
+    chosenBoard:"s1", chosenDep:{ id:"j1", service_date:"2026-09-01", departs:"2026-09-01T12:00:00Z" },
+    seats:1, payMethod:"wallet", payConfig:{paymobEnabled:false}, wallet:{balanceMinor:5000,entries:[]},
+    walletLoading:false, page:"review"});
+  let paid=false, booked=false;
+  t.w.fetch = async (url, opts) => {
+    const u=String(url);
+    if(u.endsWith("/bookings") && opts && opts.method==="POST"){ booked=true; return { ok:true, json:async()=>({ id:"bk-1", code:"111222", fare_minor:1500 }) }; }
+    if(u.includes("/payments/bookings/bk-1/pay-wallet")){ paid=true; return { ok:true, json:async()=>({ ok:true }) }; }
+    return { ok:false, status:404, json:async()=>({ message_key:"error.internal" }) };
+  };
+  await t.w.confirmBookingAction();
+  ok("wallet book calls pay-wallet", booked && paid);
+  ok("booked state is paid_wallet", t.w.S.lastBooking && t.w.S.lastBooking.payState==="paid_wallet");
+  t.w.S.page="booked"; t.w.render();
+  ok("booked screen shows paid-from-wallet", /Paid from wallet/.test(t.q(".main").textContent));
+  ok("payWallet client exists", typeof t.w.API.payWallet === "function");
+  ok("j_paidWallet both languages", t.w.T.en.j_paidWallet && t.w.T.ar.j_paidWallet !== t.w.T.en.j_paidWallet);
+})();
+
+const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen, mW1];
 
 /* ═══════════════════════════════════════════════════════════════════
    PATH A — wallet & payments (P3.7.4). S.wallet/S.payConfig drive the

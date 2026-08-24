@@ -2184,6 +2184,12 @@ en:{
   j_auditAction:"Action", j_auditTarget:"Target", j_auditRows:"rows",
   j_auditPager:"Audit pages",
   config:{ bad_value:"That setting is outside the allowed range." },
+
+  j_paidWallet:"Paid from wallet",
+  j_payAtDoor:"Pay the driver in cash when you board",
+  j_walletUnpaid:"Seat booked — wallet payment did not go through. Top up and retry.",
+  j_retryWallet:"Retry wallet payment",
+  j_topupThenBook:"Top up first, then confirm with wallet",
   j_setEmailVerify:"Email verification",
   j_setEmailVerifyHelp:"On = riders and drivers get a 6-digit email code. Off = skip codes (AUTH_OTP_BYPASS). Same rule for the website and the app.",
   j_emailVerifyOn:"Require codes",
@@ -2568,6 +2574,12 @@ ar:{
   j_auditAction:"الإجراء", j_auditTarget:"الهدف", j_auditRows:"صفوف",
   j_auditPager:"صفحات التدقيق",
   config:{ bad_value:"هذه القيمة خارج النطاق المسموح." },
+
+  j_paidWallet:"دُفع من المحفظة",
+  j_payAtDoor:"ادفع للسائق نقداً عند الركوب",
+  j_walletUnpaid:"المقعد محجوز — لم يكتمل الدفع من المحفظة. اشحن وأعد المحاولة.",
+  j_retryWallet:"أعد دفع المحفظة",
+  j_topupThenBook:"اشحن أولاً ثم أكّد بالمحفظة",
   j_setEmailVerify:"التحقق بالبريد",
   j_setEmailVerifyHelp:"تشغيل = يصل كود من 6 أرقام. إيقاف = تخطي الأكواد. نفس القاعدة للموقع والتطبيق.",
   j_emailVerifyOn:"اطلب الأكواد",
@@ -3522,6 +3534,7 @@ const API = {
   upcomingJourneys: (routeId, from, to) => API.request("GET",
     `/journeys/upcoming?${routeId ? `route=${routeId}&` : ""}from=${from}&to=${to}`),
   book: (journeyId, boardingStopId, seats) => API.request("POST", "/bookings", { journeyId, boardingStopId, seats }),
+  payWallet: (bookingId) => API.request("POST", `/payments/bookings/${bookingId}/pay-wallet`),
   myBookings: () => API.request("GET", "/bookings/mine"),
   cancelBooking: (id) => API.request("POST", `/bookings/${id}/cancel`),
 
@@ -3573,6 +3586,7 @@ const API = {
   topup: (amountMinor) => API.request("POST", "/payments/topup", { amountMinor }),
   cashCollected: (bookingId) => API.request("POST", "/payments/cash-collected", { bookingId }),
   driverEarnings: () => API.request("GET", "/payments/driver/earnings"),
+  journeysLive: () => API.request("GET", "/journeys/live"),   /* ops fleet map (DEC-205 Path A) */
 };
 
 class ApiError extends Error {
@@ -3747,7 +3761,7 @@ function createBaseMap(el) {
 /* SearchMap — the planner's live map (DEC-206): all stops as quiet dots,
    matches LIGHT UP (brand) while typing, pins hold the chosen start/to,
    tapping picks the nearest stop (onPick). Falls back to the illustration. */
-function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}) {
+function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
   if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
@@ -3801,6 +3815,20 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}
       if (pinIds.has(s.stop_id)) mark(s, "pin");
       else if (matchIds.has(s.stop_id)) mark(s, "match");
       else mark(s, "quiet");
+    });
+    /* fleet dots: real positions only (journeys/live), brand-filled */
+    (vehicles || []).forEach((v) => {
+      if (!Number.isFinite(v.lat) || !Number.isFinite(v.lng)) return;
+      if (provider === "leaflet") {
+        L.circleMarker([v.lat, v.lng], { radius: 9, color: cssVar2("--border-strong", "--border-subtle"),
+          weight: 3, fillColor: brand, fillOpacity: 1 })
+          .addTo(map).bindTooltip(t("m_vehicle"), { direction: "top" });
+      } else {
+        new google.maps.Marker({ position: { lat: v.lat, lng: v.lng }, map, title: t("m_vehicle"),
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, strokeWeight: 3,
+            strokeColor: cssVar2("--border-strong", "--border-subtle"), fillColor: brand, fillOpacity: 1 } });
+      }
+      focusPts.push(provider === "leaflet" ? [v.lat, v.lng] : { lat: v.lat, lng: v.lng });
     });
 
     const fit = (arr) => {
@@ -5392,6 +5420,11 @@ function riderBoarding(){                                     // R-12 — real b
   w.append($("div",{class:"stack gap1"},
     $("h1",{class:"t-head",text:chosen.route.name_en || chosen.route.name_ar || chosen.route.code || "—"}),
     $("div",{class:"t-cap",text:t("getOffAnywhere")})));
+  /* RouteMap (DEC-205 Path A): the route line + numbered stops, the chosen
+     boarding stop highlighted once picked — live context above the list. */
+  if ((chosen.stops||[]).length >= 2) {
+    w.append(RouteMap({ stops: chosen.stops, highlightStopId: S.chosenBoard, h: 200, title: t("m_routeAria") }));
+  }
   const stops = $("div",{id:"boarding-stops"});
   w.append(stops);
   renderBoardingStops(stops, chosen.stops);
@@ -5449,6 +5482,10 @@ async function loadDeparturesInto(el, routeId) {
 
 function riderReview(){                                       // R-14 — real fare + seats + book
   const w=$("div",{class:"main"});
+  /* RouteMap (DEC-205 Path A): the line with THIS boarding stop highlighted. */
+  if ((S.chosenRoute && S.chosenRoute.stops || []).length >= 2) {
+    w.append(RouteMap({ stops: S.chosenRoute.stops, highlightStopId: S.chosenBoard, h: 180, title: t("m_boardingHere") }));
+  }
   const route = (S.chosenRoute && S.chosenRoute.route) || {};
   const dep = S.chosenDep || {};
   const unit = (route.fare_minor || 0) / 100;
@@ -5462,6 +5499,11 @@ function riderReview(){                                       // R-14 — real f
        dep.service_date ? `${dep.service_date} · ${new Date(dep.departs).toISOString().slice(11,16)}` : "—"),
     KV(t("whereBoard"), (stop && (stop.stop_name_en || stop.stop_name_ar || stop.stop_code)) || "—"),
     KV(t("seats"), `${S.seats} × ${money(unit)}`)));
+  if (typeof paymentChoice === "function") {
+    if (S.payConfig === undefined && !S.payConfigError && !S.payConfigLoading) payConfigLoad();
+    if (S.walletLoading === undefined && !S.walletError) walletLoad();
+    w.append(paymentChoice((route.fare_minor || 0) * S.seats));
+  }
   w.append($("div",{class:"row gap3"},
     $("span",{class:"grow t-lg",text:t("seats")}),
     $("div",{class:"stepper"},
@@ -5477,14 +5519,53 @@ function riderReview(){                                       // R-14 — real f
 async function confirmBookingAction() {
   const dep = S.chosenDep;
   if (!dep || !S.chosenBoard) { toast(t("validation.failed")); return; }
+  const method = S.payMethod || "cash";
+  if (method === "card") {
+    if (typeof openSheet === "function") openSheet("topup");
+    toast(t("j_topupThenBook"));
+    return;
+  }
   S.stopBusy = true; render();
   try {
     const booking = await API.book(dep.id, S.chosenBoard, S.seats);
+    booking.payMethod = method;
+    booking.payState = method === "wallet" ? "pending_wallet" : "cash_at_door";
+    if (method === "wallet" && typeof API.payWallet === "function") {
+      try {
+        await API.payWallet(booking.id);
+        booking.payState = "paid_wallet";
+      } catch (pe) {
+        S.stopBusy = false;
+        S.lastBooking = booking;
+        S.payPendingBooking = booking;
+        toast(errText((pe && pe.messageKey) || "error.internal"));
+        if (pe && pe.messageKey === "payments.insufficient_funds" && typeof openSheet === "function") openSheet("topup");
+        go("booked");
+        return;
+      }
+    }
     S.stopBusy = false;
     S.lastBooking = booking;
-    scheduleLeaveAlarm(booking);
+    S.payPendingBooking = null;
+    try { if (typeof scheduleLeaveAlarm === "function") scheduleLeaveAlarm(booking); } catch (_) {}
     go("booked");
-  } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
+  } catch(e) { S.stopBusy = false; toast(errText((e && e.messageKey) || "error.internal")); render(); }
+}
+
+async function retryWalletPay() {
+  const b = S.lastBooking || S.payPendingBooking;
+  if (!b || !b.id) return;
+  try {
+    await API.payWallet(b.id);
+    b.payState = "paid_wallet";
+    S.lastBooking = b;
+    S.payPendingBooking = null;
+    toast(t("j_paidWallet"));
+    render();
+  } catch (e) {
+    toast(errText((e && e.messageKey) || "error.internal"));
+    if (e && e.messageKey === "payments.insufficient_funds" && typeof openSheet === "function") openSheet("topup");
+  }
 }
 
 function riderBooked(){                                       // R-15 / R-21 — boarding code
@@ -5506,6 +5587,13 @@ function riderBooked(){                                       // R-15 / R-21 —
         b.stop_name_en || b.stop_name_ar
           ? $("div",{class:"t-cap",text:t("boardHere")+" · "+(S.lang==="ar"?(b.stop_name_ar||b.stop_name_en):(b.stop_name_en||b.stop_name_ar))})
           : null));
+    }
+    if (b.payState === "paid_wallet") w.append(Banner("ok", t("j_paidWallet")));
+    else if (b.payState === "pending_wallet") {
+      w.append(Banner("warn", t("j_walletUnpaid")));
+      w.append(Btn({label:t("j_retryWallet"), block:true, on:()=>retryWalletPay()}));
+    } else if (b.payState === "cash_at_door" || !b.payState) {
+      w.append(Banner("info", t("j_payAtDoor")));
     }
     w.append(Btn({label:t("trips"), block:true, on:()=>{S.stack=[]; go("trips");}}));
   } else {
@@ -5852,6 +5940,9 @@ async function makeShare(id){
     if (shared) toast(t("j_shareCopied"));
   } catch(e){ toast(errText(e.messageKey)); }
 }
+
+
+
 
 
 
@@ -6222,6 +6313,20 @@ async function loadDriverJourneyInto(pick, scan, list) {
       on: () => { S.scanJourneyId = j.id; render(); },
     })));
     const jid = S.scanJourneyId;
+
+    /* RouteMap (DEC-205 Path A): the chosen journey's line + numbered stops,
+       the driver's own last position as the vehicle dot (real data only). */
+    try {
+      const routes = await API.publishedRoutes();
+      const sel = journeys.find((x) => x.id === jid);
+      const rw = (routes || []).find((r) => r.route && r.route.id === (sel && sel.route_id));
+      if (rw && (rw.stops || []).length >= 2) {
+        const vehicle = sel && Number.isFinite(sel.last_lat) && Number.isFinite(sel.last_lng)
+          ? { lat: sel.last_lat, lng: sel.last_lng } : null;
+        scan.append(RouteMap({ stops: rw.stops, h: 200, title: t("m_routeAria"), vehicle }));
+      }
+    } catch { /* the map is context — the scan/manifest must work without it */ }
+
     const live = $("div",{id:"journey-live"});
     scan.append(live);
     try {
@@ -6510,9 +6615,13 @@ async function reviewVehicle(id, decision) {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
-function opsLiveMap(){                                        // O-17
+function opsLiveMap(){                                        // O-17 (+ DEC-205 Path A real fleet map)
   const w=$("div",{class:"main"});
-  w.append(MapView({h:240, fleet:true, vehicle:false}));
+  /* RouteMap (DEC-205 Path A): real fleet dots from journeys/live; honest
+     loading/empty/error states; the vehicle table below stays. */
+  const fleetBox=$("div",{id:"fleet-map"});
+  w.append(fleetBox);
+  loadFleetMapInto(fleetBox);
   const tbl = $("div",{id:"veh-table"});
   w.append(tbl);
   loadVehicleTableInto(tbl);
@@ -7088,6 +7197,25 @@ function decideIncidentSheet(){
         loadIncidentQueue(document.getElementById("incident-queue"));
       } catch(e){ toast(errText(e.messageKey)); }
     }}));
+}
+
+/* Path A (DEC-205): the real fleet map — vehicles on live tiles when the
+   SDK is loaded, honest illustration + list otherwise. */
+async function loadFleetMapInto(el){
+  if(!el) return;
+  el.innerHTML="";
+  try{
+    const live = await API.journeysLive();
+    const vehicles = (live||[]).filter((j)=>Number.isFinite(j.last_lat)&&Number.isFinite(j.last_lng))
+      .map((j)=>({ lat:j.last_lat, lng:j.last_lng, id:j.id }));
+    const stops = [];
+    (live||[]).forEach((j)=>(j.stops||[]).forEach((s)=>{ if(!stops.some((x)=>x.stop_id===s.stop_id)) stops.push(s); }));
+    el.append(SearchMap({ h:260, stops: stops.length>=2?stops:[], vehicles,
+      matches: [], pins: [], title: t("m_fleet") }));
+    if(!vehicles.length) el.append(Empty("bus", t("m_fleet"), t("m_noLive")));
+  }catch(e){
+    el.append(Banner("danger", errText(e.messageKey)));
+  }
 }
 
 
