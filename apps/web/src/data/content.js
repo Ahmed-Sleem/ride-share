@@ -288,7 +288,8 @@ en:{
     unknown_order:"Unknown payment order.", amount_mismatch:"Payment amount mismatch — nothing was charged.",
     booking_not_found:"Booking not found.", not_your_journey:"This is not your journey.",
     booking_not_payable:"This booking can no longer be paid.", rider_not_found:"Account not found.",
-    unsupported_kind:"Unsupported payment type." },
+    unsupported_kind:"Unsupported payment type.", insufficient_funds:"Wallet balance is not enough for this fare — top up or pay cash.",
+    no_driver:"This journey has no driver yet.", not_your_booking:"This booking is not yours." },
 
 },
 ar:{
@@ -570,7 +571,8 @@ ar:{
     unknown_order:"طلب دفع غير معروف.", amount_mismatch:"مبلغ الدفع غير مطابق — لم يتم خصم شيء.",
     booking_not_found:"الحجز غير موجود.", not_your_journey:"هذه ليست رحلتك.",
     booking_not_payable:"لم يعد يمكن دفع هذا الحجز.", rider_not_found:"الحساب غير موجود.",
-    unsupported_kind:"نوع دفع غير مدعوم." },
+    unsupported_kind:"نوع دفع غير مدعوم.", insufficient_funds:"رصيد المحفظة لا يكفي لهذه الأجرة — اشحن المحفظة أو ادفع كاش.",
+    no_driver:"لا يوجد سائق لهذه الرحلة بعد.", not_your_booking:"هذا الحجز ليس لك." },
 
 }
 };

@@ -308,3 +308,97 @@ test('topup checkout failure marks the order failed — nothing pending', async 
   assert.equal(repo.orders.size, 1, 'the honest failed intent is kept');
   assert.equal([...repo.orders.values()][0]!.status, 'failed');
 });
+
+// ── wallet fare payment (DEC-204 wallet leg) ─────────────────────────────
+
+test('chargeWalletForBooking posts the fare legs to driver earnings + revenue', async () => {
+  const repo = new FakeRepo();
+  repo.bookings.set('bk-20', {
+    id: 'bk-20', rider_user_id: RIDER.id, status: 'CONFIRMED', fare_minor: 5000,
+    journey_driver_id: '99999999-9999-9999-9999-999999999999', journey_status: 'OPEN_FOR_BOOKING',
+  });
+  repo.balances.set(`wallet:${RIDER.id}`, 6000);              // enough
+  const spend = async (input: { walletAccount: string; amountMinor: number; rows: LedgerRowInput[] }) => {
+    if ((repo.balances.get(input.walletAccount) ?? 0) < input.amountMinor) return 'insufficient' as const;
+    repo.balances.set(input.walletAccount, (repo.balances.get(input.walletAccount) ?? 0) - input.amountMinor);
+    repo.ledgerRows.push(...input.rows);
+    return 'posted' as const;
+  };
+  (repo as unknown as Record<string, unknown>).postRowsIfWalletCovers = spend;
+  const s = service(repo, makeEnv({ COMMISSION_PERCENT: 20 }));
+  const res = await s.chargeWalletForBooking(RIDER, 'bk-20');
+  assert.equal(res.ok, true);
+  assert.equal(repo.ledgerRows.filter((r) => r.reason.startsWith('fare_paid')).length, 2);
+  assert.ok(repo.audits.includes('payments.fare_paid_wallet'));
+});
+
+test('chargeWalletForBooking: insufficient funds refused, nothing posted', async () => {
+  const repo = new FakeRepo();
+  repo.bookings.set('bk-21', {
+    id: 'bk-21', rider_user_id: RIDER.id, status: 'CONFIRMED', fare_minor: 5000,
+    journey_driver_id: '99999999-9999-9999-9999-999999999999', journey_status: 'OPEN_FOR_BOOKING',
+  });
+  repo.balances.set(`wallet:${RIDER.id}`, 100);               // not enough
+  (repo as unknown as Record<string, unknown>).postRowsIfWalletCovers = async (input: { walletAccount: string; amountMinor: number }) =>
+    (repo.balances.get(input.walletAccount) ?? 0) < input.amountMinor ? 'insufficient' as const : 'posted' as const;
+  const s = service(repo);
+  await assert.rejects(() => s.chargeWalletForBooking(RIDER, 'bk-21'), key('payments.insufficient_funds'));
+  assert.equal(repo.ledgerRows.length, 0);
+});
+
+test('chargeWalletForBooking: not your booking / cancelled / no driver are refused', async () => {
+  const repo = new FakeRepo();
+  const spend = async () => 'posted' as const;
+  (repo as unknown as Record<string, unknown>).postRowsIfWalletCovers = spend;
+  const s = service(repo);
+  repo.bookings.set('bk-22', {
+    id: 'bk-22', rider_user_id: '88888888-8888-8888-8888-888888888888', status: 'CONFIRMED', fare_minor: 100,
+    journey_driver_id: DRIVER.id, journey_status: 'LOCKED',
+  });
+  await assert.rejects(() => s.chargeWalletForBooking(RIDER, 'bk-22'), key('payments.not_your_booking'));
+  repo.bookings.set('bk-23', {
+    id: 'bk-23', rider_user_id: RIDER.id, status: 'CANCELLED', fare_minor: 100,
+    journey_driver_id: DRIVER.id, journey_status: 'LOCKED',
+  });
+  await assert.rejects(() => s.chargeWalletForBooking(RIDER, 'bk-23'), key('payments.booking_not_payable'));
+  repo.bookings.set('bk-24', {
+    id: 'bk-24', rider_user_id: RIDER.id, status: 'CONFIRMED', fare_minor: 100,
+    journey_driver_id: null, journey_status: 'CLAIMED',
+  });
+  await assert.rejects(() => s.chargeWalletForBooking(RIDER, 'bk-24'), key('payments.no_driver'));
+});
+
+// ── reconciliation (CH06 §6.9 — report-only) ─────────────────────────────
+
+const MANAGER: Actor = { id: '55555555-5555-5555-5555-555555555555', role: 'manager' };
+
+test('reconciliation: clean ledger → every check passes', async () => {
+  const repo = new FakeRepo();
+  (repo as unknown as Record<string, unknown>).reconciliationFacts = async () => ({
+    totalNetMinor: 0, succeededOrders: 1, ordersWithPostings: 1,
+    postingsWithoutSucceededOrder: 0, viewMatchesRecompute: true,
+  });
+  const s = service(repo);
+  const res = await s.reconciliation(MANAGER);
+  assert.equal(res.ok, true);
+  assert.equal(res.checks.length, 4);
+});
+
+test('reconciliation: a discrepancy is REPORTED and audited, never corrected', async () => {
+  const repo = new FakeRepo();
+  (repo as unknown as Record<string, unknown>).reconciliationFacts = async () => ({
+    totalNetMinor: 25, succeededOrders: 2, ordersWithPostings: 1,
+    postingsWithoutSucceededOrder: 0, viewMatchesRecompute: true,
+  });
+  const s = service(repo);
+  const res = await s.reconciliation(MANAGER);
+  assert.equal(res.ok, false);
+  assert.ok(res.checks.some((c) => !c.ok));
+  assert.ok(repo.audits.includes('payments.reconciliation_discrepancy'));
+  assert.equal(repo.ledgerRows.length, 0, 'report-only: no correction rows');
+});
+
+test('reconciliation: a rider is refused (authority)', async () => {
+  const s = service(new FakeRepo());
+  await assert.rejects(() => s.reconciliation(RIDER), key('auth.forbidden'));
+});

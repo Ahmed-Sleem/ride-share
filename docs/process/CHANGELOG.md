@@ -844,3 +844,23 @@
   could never match — Row renders `.rowitem`) which is now a real check, and
   a mid-harness abort leftover (policyTermsX) that was restored. 203 API
   tests, pnpm verify + guards all green.
+
+## 2026-08-24 — Path A: wallet fare payment (atomic) + reconciliation; Agent B monitoring
+
+- Monitored Agent B's first commit (`754ae34` landing v3): ownership respected
+  (his files + shared-by-protocol; Path A blocks untouched), merged tree
+  `pnpm verify` green locally, CI running on it — no violations, no fixes needed.
+- `chargeWalletForBooking` (DEC-204 wallet leg): advisory-locked atomic spend
+  (pg_advisory_xact_lock per wallet INSIDE the transaction) so concurrent
+  spends can never overdraw the append-only ledger; idempotent per booking;
+  driver-earnings accrual via postFareFromWallet; endpoint
+  POST /payments/bookings/:id/pay-wallet; contract comment points Path B's
+  booking flow at it.
+- Reconciliation skeleton (CH06 §6.9, report-only): closed-system Σ=0,
+  every succeeded order has postings, no orphan postings, balances view ==
+  recompute; GET /payments/reconciliation for manager/super_admin
+  (VIEW_ANALYTICS); discrepancies are audited, NEVER auto-corrected.
+- Proof discipline (§0.2): empirical parallel-spend proof on the real
+  repository (exactly one 900-of-1000 spend lands); deterministic interleaved
+  schedule proof — WITHOUT the lock the wallet overdraws to −800 (observed),
+  WITH the lock the second spend waits, reads 100, refuses. 209 API tests.

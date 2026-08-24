@@ -3,7 +3,7 @@
    authentication IS the HMAC signature (verified in the service, before any
    state changes), and it is rate-limited to blunt hammering. Every other
    route requires a signed-in actor and its capability (§8.2, one resolver). */
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { IsInt, IsUUID, Max, Min } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
@@ -59,6 +59,20 @@ export class PaymentsController {
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   cashCollected(@Req() req: ReqWithActor, @Body() dto: CashCollectedDto) {
     return this.payments.cashCollected(req.actor!, dto.bookingId);
+  }
+
+  @Post('payments/bookings/:id/pay-wallet')
+  @UseGuards(IdentityGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  payFromWallet(@Req() req: ReqWithActor, @Param('id') bookingId: string) {
+    return this.payments.chargeWalletForBooking(req.actor!, bookingId);
+  }
+
+  @Get('payments/reconciliation')
+  @UseGuards(IdentityGuard)
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
+  reconciliation(@Req() req: ReqWithActor) {
+    return this.payments.reconciliation(req.actor!);
   }
 
   @Get('payments/driver/earnings')

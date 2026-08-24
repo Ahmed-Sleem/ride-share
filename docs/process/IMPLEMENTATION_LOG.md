@@ -910,3 +910,21 @@ output) — see the engineering standard §3.3 and §4.
   invented client-side, bounds single-sourced from the server, both
   languages complete. e2e with a real Paymob sandbox remains blocked on
   owner keys (R20 §5) — flagged, not forgotten.
+
+## 2026-08-24 — Path A: atomic wallet fare payment + reconciliation skeleton
+
+- What: the wallet leg of the booking payment and the report-only ledger
+  reconciliation, completing Path A's side of the money-loop contract.
+- Files: payments repository (postRowsIfWalletCovers + reconciliationFacts),
+  service (chargeWalletForBooking, reconciliation), controller (2 endpoints),
+  contracts/public.ts (Path B wiring notes), content.js (3 new keys ×2 langs).
+- Tests: 209 API green. §0.2: (1) interleaved no-lock schedule → overdraw
+  −800 OBSERVED; with-lock → second spend waits and refuses; (2) empirical
+  parallel proof on the compiled repository: exactly one spend lands, balance
+  100. Service tests: insufficient funds (no rows), not-your-booking,
+  cancelled, no-driver refusals; reconciliation clean + discrepancy
+  (reported + audited, zero correction rows) + rider refused.
+- Verified: pnpm verify exit 0; i18n parity both languages; diff reviewed
+  line-by-line (7 intended files, no debris).
+- Self-check: the overdraw guard is proven load-bearing, not assumed; balance
+  stays derived-only; reconciliation cannot write corrections by construction.

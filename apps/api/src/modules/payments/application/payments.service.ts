@@ -18,8 +18,8 @@ import { AuditService } from '../../audit/contracts/public.js';
 import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import {
-  newTxnId, postTopup, postCashCollected, postRefundCredit, assertValidPosting,
-  walletAccount, driverEarningsAccount, driverCashAccount,
+  newTxnId, postTopup, postCashCollected, postRefundCredit, postFareFromWallet,
+  assertValidPosting, walletAccount, driverEarningsAccount, driverCashAccount,
   displayBalance, type LedgerRowInput,
 } from '../domain/ledger.js';
 
@@ -205,6 +205,72 @@ export class PaymentsService {
       after: { fareMinor: booking.fare_minor, commissionPercent },
     });
     return { ok: true };
+  }
+
+  /** Pay a booking's locked fare FROM the rider's wallet (the DEC-204
+      preferred path). Atomic: the advisory-locked spend cannot overdraw;
+      idempotent per booking; only the journey's own rider may pay. Path B's
+      booking flow calls this when the rider chose "wallet". */
+  async chargeWalletForBooking(actor: Actor, bookingId: string): Promise<{ ok: true; duplicate?: boolean }> {
+    assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
+    const booking = await this.repo.bookingForCashCollected(bookingId);
+    if (!booking) throw new NotFoundException({ message_key: 'payments.booking_not_found' });
+    if (booking.rider_user_id !== actor.id) {
+      throw new ForbiddenException({ message_key: 'payments.not_your_booking' });
+    }
+    if (booking.status === 'CANCELLED' || booking.status === 'NO_SHOW') {
+      throw new ConflictException({ message_key: 'payments.booking_not_payable' });
+    }
+    if (await this.repo.txnExistsForRef('booking', bookingId, 'fare_paid_driver_share')) {
+      return { ok: true, duplicate: true };
+    }
+    if (!booking.journey_driver_id) {
+      throw new ConflictException({ message_key: 'payments.no_driver' });
+    }
+    const commissionPercent = this.env.COMMISSION_PERCENT;
+    const rows = postFareFromWallet(
+      newTxnId(), actor.id, booking.journey_driver_id, booking.fare_minor, commissionPercent, bookingId);
+    assertValidPosting(rows);
+    const spent = await this.repo.postRowsIfWalletCovers({
+      walletAccount: walletAccount(actor.id),
+      amountMinor: booking.fare_minor,
+      rows,
+    });
+    if (spent === 'insufficient') {
+      throw new ConflictException({ message_key: 'payments.insufficient_funds' });
+    }
+    await this.audit.record(actor, 'payments.fare_paid_wallet', {
+      targetType: 'booking', targetId: bookingId,
+      after: { fareMinor: booking.fare_minor, commissionPercent },
+    });
+    return { ok: true };
+  }
+
+  /** CH06 §6.9 — daily reconciliation, REPORT-ONLY: discrepancies alert,
+      never auto-correct. Manager-visible (VIEW_ANALYTICS); super_admin holds
+      every capability. */
+  async reconciliation(actor: Actor): Promise<{
+    ok: boolean; checks: { name: string; ok: boolean; detail?: unknown }[];
+  }> {
+    assertCan(actor.role as unknown as Role, Capability.VIEW_ANALYTICS);
+    const f = await this.repo.reconciliationFacts();
+    const checks = [
+      { name: 'closed_system_sums_to_zero', ok: f.totalNetMinor === 0, detail: { totalNetMinor: f.totalNetMinor } },
+      { name: 'every_succeeded_order_has_postings', ok: f.ordersWithPostings === f.succeededOrders,
+        detail: { succeededOrders: f.succeededOrders, ordersWithPostings: f.ordersWithPostings } },
+      { name: 'no_orphan_postings', ok: f.postingsWithoutSucceededOrder === 0,
+        detail: { postingsWithoutSucceededOrder: f.postingsWithoutSucceededOrder } },
+      { name: 'balances_view_matches_recompute', ok: f.viewMatchesRecompute },
+    ];
+    const ok = checks.every((c) => c.ok);
+    if (!ok) {
+      // Loud, attributed, recorded — the discrepancy itself is never touched.
+      await this.audit.record(null, 'payments.reconciliation_discrepancy', {
+        targetType: 'ledger', reason: 'reconciliation reported failures',
+        after: { checks },
+      });
+    }
+    return { ok, checks };
   }
 
   /** Driver earnings + outstanding cash liability (derived, DEC-078 §6.3). */

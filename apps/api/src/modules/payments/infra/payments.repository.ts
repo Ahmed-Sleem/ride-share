@@ -157,6 +157,85 @@ export class PaymentsRepository {
     return Number(rows[0]?.n ?? 0) > 0;
   }
 
+  /** Atomic wallet spend: takes a per-account advisory lock, re-derives the
+      balance INSIDE the transaction, inserts the rows only when it covers
+      the spend. Concurrent spends on the same wallet serialize here — the
+      ledger is append-only, so the lock (not a mutable column) is what makes
+      "balance >= amount" safe (P3.7 concurrency test proves it). */
+  async postRowsIfWalletCovers(input: {
+    walletAccount: string; amountMinor: number; rows: LedgerRowInput[];
+  }): Promise<'posted' | 'insufficient'> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [input.walletAccount]);
+      const bal = await client.query<{ balance_minor: string | null }>(
+        `SELECT COALESCE(SUM(
+            CASE WHEN credit_account = $1 THEN amount_minor
+                 WHEN debit_account  = $1 THEN -amount_minor ELSE 0 END), 0)::bigint AS balance_minor
+           FROM ledger_entries`, [input.walletAccount]);
+      const raw = Number(bal.rows[0]?.balance_minor ?? 0);
+      // wallet is credit-normal: raw net IS the spendable balance
+      if (raw < input.amountMinor) {
+        await client.query('ROLLBACK');
+        return 'insufficient';
+      }
+      for (const r of input.rows) {
+        await client.query(
+          `INSERT INTO ledger_entries (txn_id, debit_account, credit_account, amount_minor, reason, ref_type, ref_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [r.txnId, r.debit, r.credit, r.amountMinor, r.reason, r.refType ?? null, r.refId ?? null],
+        );
+      }
+      await client.query('COMMIT');
+      return 'posted';
+    } catch (e) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  /** Reconciliation reads (CH06 §6.9). Every check REPORTS — nothing here
+      ever writes a correction. */
+  async reconciliationFacts(): Promise<{
+    totalNetMinor: number;
+    succeededOrders: number;
+    ordersWithPostings: number;
+    postingsWithoutSucceededOrder: number;
+    viewMatchesRecompute: boolean;
+  }> {
+    const total = await this.totalNetMinor();
+    const orders = await this.pool.query<{ n: string }>(
+      `SELECT count(*)::int AS n FROM payment_orders WHERE status = 'succeeded'`);
+    const withPostings = await this.pool.query<{ n: string }>(
+      `SELECT count(DISTINCT le.ref_id)::int AS n FROM ledger_entries le
+         JOIN payment_orders po ON po.id = le.ref_id AND le.ref_type = 'payment_order'
+        WHERE po.status = 'succeeded' AND le.reason = 'topup'`);
+    const orphans = await this.pool.query<{ n: string }>(
+      `SELECT count(*)::int AS n FROM ledger_entries le
+        WHERE le.ref_type = 'payment_order'
+          AND NOT EXISTS (SELECT 1 FROM payment_orders po
+                            WHERE po.id = le.ref_id AND po.status = 'succeeded')`);
+    const recompute = await this.pool.query<{ ok: boolean }>(`
+      WITH recompute AS (
+        SELECT account, SUM(delta_minor)::bigint AS balance_minor FROM (
+          SELECT credit_account AS account,  amount_minor AS delta_minor FROM ledger_entries
+          UNION ALL
+          SELECT debit_account, -amount_minor FROM ledger_entries) legs GROUP BY account)
+      SELECT NOT EXISTS (
+        SELECT 1 FROM account_balances v JOIN recompute r USING (account)
+         WHERE v.balance_minor <> r.balance_minor) AS ok`);
+    return {
+      totalNetMinor: total,
+      succeededOrders: Number(orders.rows[0]?.n ?? 0),
+      ordersWithPostings: Number(withPostings.rows[0]?.n ?? 0),
+      postingsWithoutSucceededOrder: Number(orphans.rows[0]?.n ?? 0),
+      viewMatchesRecompute: recompute.rows[0]?.ok === true,
+    };
+  }
+
   /** Posts a plain posting set (refunds, manual credits) in one transaction. */
   async postRows(rows: LedgerRowInput[]): Promise<void> {
     if (rows.length === 0) return;

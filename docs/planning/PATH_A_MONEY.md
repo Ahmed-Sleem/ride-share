@@ -365,3 +365,10 @@ and a blind `git add -A && git push` would ship a real bug. Therefore:
   booking-payment recognition when a booking pays from wallet (posts on
   booking creation — next Path A point), real Paymob keys (owner), and the
   G-079 commission MCQ.
+
+- 2026-08-24 (P-A1b) — Wallet fare payment + reconciliation shipped:
+  atomic advisory-locked spend (no-lock overdraw observed per §0.2 then
+  guarded), pay-wallet endpoint, report-only reconciliation (VIEW_ANALYTICS).
+  Path B's remaining wiring: call chargeWalletForBooking when the rider chose
+  wallet; cash tap already has its endpoint. Open owner MCQs unchanged
+  (G-079 commission, top-up presets).
