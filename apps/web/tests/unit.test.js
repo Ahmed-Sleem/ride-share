@@ -1205,6 +1205,18 @@ group("PATH A — RouteMap renders data-bound stops with an accessible list");
 }
 
 /* ===== Path B — P7.2 driver outbox ===== */
+group("PATH B — camera scan copy + Platform.scanCode (P7.3)");
+{
+  const t=boot();
+  ok("Platform.scanCode exists", typeof t.w.Platform.scanCode === "function");
+  ["j_scanCamera","j_scanDenied","j_scanUnavailable"].forEach((k)=>{
+    t.w.S.lang="en"; const en=t.w.eval("t("+JSON.stringify(k)+")");
+    t.w.S.lang="ar"; const ar=t.w.eval("t("+JSON.stringify(k)+")");
+    t.w.S.lang="en";
+    ok(k+" both languages", en!==k && ar!==k && en!==ar);
+  });
+}
+
 group("PATH B — driver outbox is wired and bilingual");
 {
   const t=boot();

@@ -209,12 +209,14 @@ async function loadDriverJourneyInto(pick, scan, list) {
     const field = $("input",{class:"input ltr", attrs:{
       type:"text", inputmode:"numeric", pattern:"[0-9]*", maxlength:"6",
       autocomplete:"one-time-code", "aria-label":t("boardingCode"),
-      placeholder:"000000",
+      id:"scan-code", placeholder:"000000",
     }});
     if (S.scanCode) field.value = S.scanCode;
     field.addEventListener("input", () => { S.scanCode = field.value.replace(/\D/g,"").slice(0,6); });
     scan.append(field);
-    scan.append(Btn({label:t("j_scanAction"), block:true, driver:true, dis:S.stopBusy, on:()=>scanCodeAction(jid)}));
+    scan.append($("div",{class:"row wrap gap2"},
+      Btn({label:t("j_scanCamera"), kind:"secondary", driver:true, dis:S.stopBusy, on:()=>scanCameraAction(jid)}),
+      Btn({label:t("j_scanAction"), driver:true, dis:S.stopBusy, on:()=>scanCodeAction(jid)})));
     await loadManifestInto(list, jid);
   } catch (e) { pick.append(Banner("danger", errText(e.messageKey))); }
 }

@@ -37,5 +37,6 @@ catalog:
   "@capacitor/core": 8.5.0
   "@capacitor/cli": 8.5.0
   "@capacitor/android": 8.5.0
+  "@capacitor-mlkit/barcode-scanning": 8.1.0
 
 catalogMode: strict

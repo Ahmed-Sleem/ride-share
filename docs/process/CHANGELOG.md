@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-24 — P7.3 camera scan + APK Node 22 + schema order
+
+- Driver journey: Scan QR next to the always-visible 6-digit field. Camera
+  denied/unavailable focuses the keypad (DEC-136). Platform.scanCode never
+  imports @capacitor/*; native plugin is registered from the mobile package.
+- CI APK job uses Node 22 (Capacitor CLI 8 requires >=22).
+- schema.sql table order matches pg_dump (idempotency_receipts after
+  driver_profiles) so db:verify is green.
+
 ## 2026-08-24 — P7.2 driver outbox (Path B)
 
 - One ordered durable outbox (`packages/platform/src/outbox.js`): airplane-mode

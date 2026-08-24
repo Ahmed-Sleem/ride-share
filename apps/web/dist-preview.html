@@ -1272,6 +1272,18 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
     return (plugins && plugins[name]) || null;
   }
 
+  function sixDigits(raw) {
+    const s = String(raw || "").replace(/\D/g, "");
+    if (s.length >= 6) return s.slice(0, 6);
+    return "";
+  }
+  function extractScanText(result) {
+    if (!result) return "";
+    if (typeof result === "string") return result;
+    const first = (result.barcodes && result.barcodes[0]) || result.barcode || result;
+    return first.rawValue || first.displayValue || first.content || first.text || "";
+  }
+
   const Platform = {
     kind() {
       return cap() ? "native" : "web";
@@ -1343,6 +1355,33 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
         return r && r.value != null ? r.value : null;
       }
       try { return g.localStorage ? g.localStorage.getItem(key) : null; } catch (_) { return null; }
+    },
+
+    /* P7.3 — scan a boarding QR. Returns { code } or { denied } or null.
+       Never throws into the screen. The numeric keypad is always the fallback. */
+    async scanCode() {
+      const scan = plugin("BarcodeScanner");
+      if (scan) {
+        try {
+          if (typeof scan.requestPermissions === "function") {
+            const perm = await scan.requestPermissions();
+            const cam = perm && (perm.camera || perm.state);
+            if (cam === "denied" || cam === "prompt-with-rationale") return { denied: true };
+          }
+          const result = typeof scan.scan === "function"
+            ? await scan.scan({ formats: ["qrCode", "qr_code", 256] })
+            : null;
+          const raw = extractScanText(result);
+          const code = sixDigits(raw);
+          if (code) return { code };
+          return null;
+        } catch (e) {
+          const msg = String((e && e.message) || e || "");
+          if (/denied|permission|cancel/i.test(msg)) return { denied: true };
+          return null;
+        }
+      }
+      return null;
     },
 
     async set(key, value) {
@@ -1865,6 +1904,7 @@ en:{
   j_queued:"Saved offline — will send when you reconnect",
   j_outboxPending:"Waiting to send",
   j_outboxReview:"Needs review — not sent",
+  j_scanCamera:"Scan QR", j_scanDenied:"Camera not allowed — type the 6 digits", j_scanUnavailable:"Camera not available — type the 6 digits",
   support:{ booking_not_found:"That booking was not found.", bad_category:"Pick a valid category.",
     body_required:"Describe what happened.", share_expired:"This share link has expired.",
     not_found:"Incident not found.", illegal_transition:"That step is not allowed from the current state.",
@@ -2202,6 +2242,7 @@ ar:{
   j_queued:"حُفظ دون اتصال — سيُرسل عند عودة الشبكة",
   j_outboxPending:"بانتظار الإرسال",
   j_outboxReview:"يحتاج مراجعة — لم يُرسل",
+  j_scanCamera:"امسح QR", j_scanDenied:"الكاميرا غير مسموحة — اكتب الأرقام الستة", j_scanUnavailable:"الكاميرا غير متاحة — اكتب الأرقام الستة",
   support:{ booking_not_found:"هذا الحجز غير موجود.", bad_category:"اختر تصنيفًا صالحًا.",
     body_required:"صف ما حدث.", share_expired:"انتهت صلاحية رابط المشاركة.",
     not_found:"الحادثة غير موجودة.", illegal_transition:"هذه الخطوة غير مسموحة من الحالة الحالية.",
@@ -5431,12 +5472,14 @@ async function loadDriverJourneyInto(pick, scan, list) {
     const field = $("input",{class:"input ltr", attrs:{
       type:"text", inputmode:"numeric", pattern:"[0-9]*", maxlength:"6",
       autocomplete:"one-time-code", "aria-label":t("boardingCode"),
-      placeholder:"000000",
+      id:"scan-code", placeholder:"000000",
     }});
     if (S.scanCode) field.value = S.scanCode;
     field.addEventListener("input", () => { S.scanCode = field.value.replace(/\D/g,"").slice(0,6); });
     scan.append(field);
-    scan.append(Btn({label:t("j_scanAction"), block:true, driver:true, dis:S.stopBusy, on:()=>scanCodeAction(jid)}));
+    scan.append($("div",{class:"row wrap gap2"},
+      Btn({label:t("j_scanCamera"), kind:"secondary", driver:true, dis:S.stopBusy, on:()=>scanCameraAction(jid)}),
+      Btn({label:t("j_scanAction"), driver:true, dis:S.stopBusy, on:()=>scanCodeAction(jid)})));
     await loadManifestInto(list, jid);
   } catch (e) { pick.append(Banner("danger", errText(e.messageKey))); }
 }

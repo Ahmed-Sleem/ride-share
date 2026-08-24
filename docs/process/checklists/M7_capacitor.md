@@ -16,7 +16,7 @@ Owner: Path B. Tick only with a command as proof.
 ## Later points (not this commit — tracked, not half-built)
 
 - [x] P7.2 offline-first driver outbox — durable queue + server receipts (0022); §0.2 tests in packages/platform/src/outbox.test.js
-- [ ] P7.3 native camera scan + numeric fallback (numeric already on web)
+- [x] P7.3 camera scan via Platform.scanCode; keypad always on the journey screen (one tap). Denied/missing camera focuses the 6 digits.
 - [ ] P7.4 background location (DEC-176 gate)
 - [ ] P7.5 FCM push + local alarm (G-055)
 - [ ] P7.6 signed Play AAB from CI secrets (no keystore in git)

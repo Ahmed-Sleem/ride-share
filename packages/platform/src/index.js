@@ -22,6 +22,18 @@
     return (plugins && plugins[name]) || null;
   }
 
+  function sixDigits(raw) {
+    const s = String(raw || "").replace(/\D/g, "");
+    if (s.length >= 6) return s.slice(0, 6);
+    return "";
+  }
+  function extractScanText(result) {
+    if (!result) return "";
+    if (typeof result === "string") return result;
+    const first = (result.barcodes && result.barcodes[0]) || result.barcode || result;
+    return first.rawValue || first.displayValue || first.content || first.text || "";
+  }
+
   const Platform = {
     kind() {
       return cap() ? "native" : "web";
@@ -93,6 +105,33 @@
         return r && r.value != null ? r.value : null;
       }
       try { return g.localStorage ? g.localStorage.getItem(key) : null; } catch (_) { return null; }
+    },
+
+    /* P7.3 — scan a boarding QR. Returns { code } or { denied } or null.
+       Never throws into the screen. The numeric keypad is always the fallback. */
+    async scanCode() {
+      const scan = plugin("BarcodeScanner");
+      if (scan) {
+        try {
+          if (typeof scan.requestPermissions === "function") {
+            const perm = await scan.requestPermissions();
+            const cam = perm && (perm.camera || perm.state);
+            if (cam === "denied" || cam === "prompt-with-rationale") return { denied: true };
+          }
+          const result = typeof scan.scan === "function"
+            ? await scan.scan({ formats: ["qrCode", "qr_code", 256] })
+            : null;
+          const raw = extractScanText(result);
+          const code = sixDigits(raw);
+          if (code) return { code };
+          return null;
+        } catch (e) {
+          const msg = String((e && e.message) || e || "");
+          if (/denied|permission|cancel/i.test(msg)) return { denied: true };
+          return null;
+        }
+      }
+      return null;
     },
 
     async set(key, value) {

@@ -2,6 +2,11 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { Platform } = require("./index.js");
 
+test("Platform.scanCode is honest when no camera plugin exists", async () => {
+  const r = await Platform.scanCode();
+  assert.equal(r, null);
+});
+
 test("Platform.kind is web when Capacitor is absent", () => {
   assert.equal(Platform.kind(), "web");
 });
