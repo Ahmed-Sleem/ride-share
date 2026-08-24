@@ -135,7 +135,8 @@ body_ar text NOT NULL,
 ref_type text,
 ref_id uuid,
 read_at timestamp with time zone,
-created_at timestamp with time zone DEFAULT now() NOT NULL
+created_at timestamp with time zone DEFAULT now() NOT NULL,
+push_status text
 );
 CREATE TABLE public.incident_events (
 id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -335,6 +336,8 @@ updated_at timestamp with time zone DEFAULT now() NOT NULL,
 email_verified_at timestamp with time zone,
 is_system_admin boolean DEFAULT false NOT NULL,
 deleted_at timestamp with time zone,
+push_token text,
+push_platform text,
 CONSTRAINT users_role_check CHECK ((role = ANY (ARRAY['rider'::text, 'driver'::text, 'operations'::text, 'manager'::text, 'support'::text, 'super_admin'::text]))),
 CONSTRAINT users_status_check CHECK ((status = ANY (ARRAY['active'::text, 'suspended'::text, 'pending_verification'::text])))
 );

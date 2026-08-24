@@ -74,6 +74,14 @@ function enterApp(user) {
   S.authBusy = false; S.authError = null; S.otpBypass = false;
   S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
   render();
+  if (typeof LocalAlarm !== "undefined") {
+    LocalAlarm.restore({ onFire: (item) => { S.page = item.page || "waiting"; render(); } });
+  }
+  if (typeof Platform !== "undefined" && typeof API.registerDevice === "function") {
+    Platform.registerPush().then((r) => {
+      if (r && r.token) API.registerDevice(r.token, Platform.kind());
+    }).catch(() => {});
+  }
 }
 
 function signOut() {

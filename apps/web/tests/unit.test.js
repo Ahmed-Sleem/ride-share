@@ -1233,6 +1233,15 @@ const mAdminAudit = (async () => {
 })();
 
 /* ===== Path B — P7.2 driver outbox ===== */
+group("PATH B — local leave-now alarm (P7.5 DEC-147)");
+{
+  const t=boot();
+  ok("LocalAlarm is on the window", typeof t.w.LocalAlarm === "object" && typeof t.w.LocalAlarm.schedule === "function");
+  ok("Platform.registerPush exists", typeof t.w.Platform.registerPush === "function");
+  ok("registerDevice client exists", typeof t.w.API.registerDevice === "function");
+  ok("j_alarmLeave both languages", !!t.w.T.en.j_alarmLeave && t.w.T.ar.j_alarmLeave !== t.w.T.en.j_alarmLeave);
+}
+
 group("PATH B — journey GPS batch + stale gap (P7.4)");
 {
   const t=boot();

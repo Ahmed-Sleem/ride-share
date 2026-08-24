@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-24 — P7.5 push + cached leave-now alarm (Path B)
+
+- FCM send when `FCM_SERVER_KEY` is set; unset is an honest skip. Device token
+  on `users` (0024). CH20 caps in one domain module (transactional never capped).
+- Preview text is sanitised — no email/phone on a lock screen.
+- `LocalAlarm` fires from the cached departure (T−15m) with no network (G-055).
+  Notification permission denied still leaves the timer armed.
+
 ## 2026-08-24 — API Railpack crash: missing dist/main.js
 
 - Railway `api` was starting `node dist/main.js` with no compile (Railpack, not

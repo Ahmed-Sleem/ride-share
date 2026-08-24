@@ -331,6 +331,7 @@ async function confirmBookingAction() {
     const booking = await API.book(dep.id, S.chosenBoard, S.seats);
     S.stopBusy = false;
     S.lastBooking = booking;
+    scheduleLeaveAlarm(booking);
     go("booked");
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }

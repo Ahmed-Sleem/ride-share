@@ -169,6 +169,8 @@ const API = {
   incidentQueue: () => API.request("GET", "/support/incidents"),
   investigateIncident: (id) => API.request("POST", `/support/incidents/${id}/investigate`),
   decideIncident: (id, decision, reason) => API.request("POST", `/support/incidents/${id}/decide`, { decision, reason }),
+  registerDevice: (token, platform) => API.request("POST", "/notifications/device", { token, platform }),
+  myNotifications: () => API.request("GET", "/notifications/mine"),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {

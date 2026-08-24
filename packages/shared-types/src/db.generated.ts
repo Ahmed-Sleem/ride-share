@@ -57,6 +57,7 @@ export type DbSchema = {
     ref_id: {"type":"string","nullable":true,"pg":"uuid"},
     read_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
     created_at: {"type":"Date","nullable":false,"pg":"timestamptz"},
+    push_status: {"type":"string","nullable":true,"pg":"text"},
   };
   incident_events: {
     id: {"type":"string","nullable":false,"pg":"uuid"},
@@ -235,6 +236,8 @@ export type DbSchema = {
     email_verified_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
     is_system_admin: {"type":"boolean","nullable":false,"pg":"bool"},
     deleted_at: {"type":"Date","nullable":true,"pg":"timestamptz"},
+    push_token: {"type":"string","nullable":true,"pg":"text"},
+    push_platform: {"type":"string","nullable":true,"pg":"text"},
   };
   vehicles: {
     id: {"type":"string","nullable":false,"pg":"uuid"},

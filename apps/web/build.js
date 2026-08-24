@@ -87,9 +87,13 @@ const TRACK_SRC = fs.readFileSync(
   path.join(__dirname, "..", "..", "packages", "platform", "src", "track.js"),
   "utf8"
 );
+const ALARM_SRC = fs.readFileSync(
+  path.join(__dirname, "..", "..", "packages", "platform", "src", "alarm.js"),
+  "utf8"
+);
 
 const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
-  PLATFORM_SRC + "\n\n" + OUTBOX_SRC + "\n\n" + TRACK_SRC + "\n\n" +
+  PLATFORM_SRC + "\n\n" + OUTBOX_SRC + "\n\n" + TRACK_SRC + "\n\n" + ALARM_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 
 /* One-color line illustrations. The pack uses fill="black" / fill="none"

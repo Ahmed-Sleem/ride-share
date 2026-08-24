@@ -168,6 +168,26 @@
       return null;
     },
 
+    async registerPush() {
+      const push = plugin("PushNotifications");
+      if (push && typeof push.requestPermissions === "function") {
+        try {
+          const perm = await push.requestPermissions();
+          if (perm && perm.receive === "denied") return { denied: true };
+          if (typeof push.register === "function") await push.register();
+          return { ok: true };
+        } catch (_) { return { denied: true }; }
+      }
+      if (g.Notification && typeof Notification.requestPermission === "function") {
+        try {
+          const p = await Notification.requestPermission();
+          if (p === "denied") return { denied: true };
+          return { ok: true, token: "web" };
+        } catch (_) { return { denied: true }; }
+      }
+      return { unavailable: true };
+    },
+
     async set(key, value) {
       const prefs = plugin("Preferences");
       if (prefs && typeof prefs.set === "function") {

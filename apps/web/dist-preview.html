@@ -1418,6 +1418,26 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
       return null;
     },
 
+    async registerPush() {
+      const push = plugin("PushNotifications");
+      if (push && typeof push.requestPermissions === "function") {
+        try {
+          const perm = await push.requestPermissions();
+          if (perm && perm.receive === "denied") return { denied: true };
+          if (typeof push.register === "function") await push.register();
+          return { ok: true };
+        } catch (_) { return { denied: true }; }
+      }
+      if (g.Notification && typeof Notification.requestPermission === "function") {
+        try {
+          const p = await Notification.requestPermission();
+          if (p === "denied") return { denied: true };
+          return { ok: true, token: "web" };
+        } catch (_) { return { denied: true }; }
+      }
+      return { unavailable: true };
+    },
+
     async set(key, value) {
       const prefs = plugin("Preferences");
       if (prefs && typeof prefs.set === "function") {
@@ -1691,6 +1711,84 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
   }
   g.LocationTrack = LocationTrack;
   g.createLocationTrack = createTrack;
+})(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
+
+
+/* P7.5 — local leave-now alarm from CACHED schedule (DEC-147 / G-055).
+   Must fire with no network. Push is best-effort; this is the safety net. */
+(function (root) {
+  const g = root || (typeof globalThis !== "undefined" ? globalThis : this);
+  const KEY = "rs.alarms.v1";
+
+  function store() {
+    try {
+      if (g.Platform && typeof g.Platform.get === "function") return null;
+    } catch (_) { /* fall through */ }
+    return null;
+  }
+
+  function readList() {
+    try {
+      const raw = g.localStorage ? g.localStorage.getItem(KEY) : null;
+      return raw ? JSON.parse(raw) : [];
+    } catch (_) { return []; }
+  }
+  function writeList(list) {
+    try { if (g.localStorage) g.localStorage.setItem(KEY, JSON.stringify(list)); } catch (_) { /* opaque */ }
+  }
+
+  const timers = Object.create(null);
+
+  function fire(item, onFire) {
+    if (typeof onFire === "function") onFire(item);
+    else if (g.Notification && Notification.permission === "granted") {
+      try { new Notification(item.title, { body: item.body }); } catch (_) { /* ignore */ }
+    }
+    writeList(readList().filter((a) => a.id !== item.id));
+    delete timers[item.id];
+  }
+
+  function arm(item, onFire, nowFn) {
+    const now = (nowFn || Date.now)();
+    const wait = item.at - now;
+    if (wait <= 0) { fire(item, onFire); return; }
+    if (timers[item.id]) clearTimeout(timers[item.id]);
+    timers[item.id] = setTimeout(() => fire(item, onFire), Math.min(wait, 2147483647));
+  }
+
+  const LocalAlarm = {
+    KEY,
+    schedule(item, opts) {
+      const o = opts || {};
+      const now = (o.now || Date.now)();
+      const row = {
+        id: String(item.id || "alarm"),
+        at: Number(item.at),
+        title: String(item.title || "Leave now"),
+        body: String(item.body || ""),
+        page: item.page || "waiting",
+      };
+      if (!Number.isFinite(row.at)) return { ok: false };
+      const rest = readList().filter((a) => a.id !== row.id);
+      rest.push(row);
+      writeList(rest);
+      arm(row, o.onFire, o.now);
+      return { ok: true, at: row.at, wait: row.at - now };
+    },
+    cancel(id) {
+      if (timers[id]) { clearTimeout(timers[id]); delete timers[id]; }
+      writeList(readList().filter((a) => a.id !== id));
+    },
+    restore(opts) {
+      const o = opts || {};
+      readList().forEach((item) => arm(item, o.onFire, o.now));
+      return readList().length;
+    },
+    list: readList,
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = { LocalAlarm };
+  g.LocalAlarm = LocalAlarm;
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));
 
 
@@ -2047,6 +2145,9 @@ en:{
   j_scanCamera:"Scan QR", j_scanDenied:"Camera not allowed — type the 6 digits", j_scanUnavailable:"Camera not available — type the 6 digits",
   j_posStale:"Last known position is old — we are not inventing a line between fixes",
   j_trackingOn:"Sharing live position for this ride only",
+  j_alarmLeave:"Leave now",
+  j_alarmLeaveBody:"Time to walk to your stop",
+  j_alarmArrive:"Your ride is arriving",
   support:{ booking_not_found:"That booking was not found.", bad_category:"Pick a valid category.",
     body_required:"Describe what happened.", share_expired:"This share link has expired.",
     not_found:"Incident not found.", illegal_transition:"That step is not allowed from the current state.",
@@ -2083,8 +2184,7 @@ ar:{
   whereBoard:"من أين ستركب؟", recommended:"الأنسب", streetPickup:"ركوب من الشارع",
   streetPickupWhy:"نمر عليك من أقرب نقطة على الطريق.",
   pickDeparture:"اختر موعد القيام", arrives:"الوصول", confirmBooking:"تأكيد الحجز",
-  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل القيام، وبعدها نصف الأجرة.",
-  booked:"تم الحجز", bookedBody:"كن عند نقطة الركوب قبل الموعد بـ ٥ دقائق.",
+  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل ا�وب قبل الموعد بـ ٥ دقائق.",
   arriving:"يصل خلال", leaveNow:"اخرج الآن", sos:"استغاثة", shareRide:"شارك الرحلة",
   nextStop:"المحطة التالية", imGettingOff:"سأنزل في التالية", boardingCode:"كود الركوب",
   scanAtDoor:"اعرضه للسائق عند الباب.", rideDone:"انتهت الرحلة", rateRide:"كيف كانت؟",
@@ -2399,6 +2499,9 @@ ar:{
   j_scanCamera:"امسح QR", j_scanDenied:"الكاميرا غير مسموحة — اكتب الأرقام الستة", j_scanUnavailable:"الكاميرا غير متاحة — اكتب الأرقام الستة",
   j_posStale:"آخر موقع معروف قديم — لا نرسم خطًا وهميًا بين النقاط",
   j_trackingOn:"يُشارك الموقع الحي لهذه الرحلة فقط",
+  j_alarmLeave:"اخرج الآن",
+  j_alarmLeaveBody:"حان وقت المشي إلى محطتك",
+  j_alarmArrive:"رحلتك تصل الآن",
   support:{ booking_not_found:"هذا الحجز غير موجود.", bad_category:"اختر تصنيفًا صالحًا.",
     body_required:"صف ما حدث.", share_expired:"انتهت صلاحية رابط المشاركة.",
     not_found:"الحادثة غير موجودة.", illegal_transition:"هذه الخطوة غير مسموحة من الحالة الحالية.",
@@ -2490,6 +2593,14 @@ function enterApp(user) {
   S.authBusy = false; S.authError = null; S.otpBypass = false;
   S.authStep = "choose"; S.loginMethod = null; S.forgot = null;
   render();
+  if (typeof LocalAlarm !== "undefined") {
+    LocalAlarm.restore({ onFire: (item) => { S.page = item.page || "waiting"; render(); } });
+  }
+  if (typeof Platform !== "undefined" && typeof API.registerDevice === "function") {
+    Platform.registerPush().then((r) => {
+      if (r && r.token) API.registerDevice(r.token, Platform.kind());
+    }).catch(() => {});
+  }
 }
 
 function signOut() {
@@ -3362,6 +3473,8 @@ const API = {
   incidentQueue: () => API.request("GET", "/support/incidents"),
   investigateIncident: (id) => API.request("POST", `/support/incidents/${id}/investigate`),
   decideIncident: (id, decision, reason) => API.request("POST", `/support/incidents/${id}/decide`, { decision, reason }),
+  registerDevice: (token, platform) => API.request("POST", "/notifications/device", { token, platform }),
+  myNotifications: () => API.request("GET", "/notifications/mine"),
 
   /* Fetch a stop photo as a data URL (auth header can't ride an <img> tag). */
   stopPhoto: async (id) => {
@@ -5169,6 +5282,7 @@ async function confirmBookingAction() {
     const booking = await API.book(dep.id, S.chosenBoard, S.seats);
     S.stopBusy = false;
     S.lastBooking = booking;
+    scheduleLeaveAlarm(booking);
     go("booked");
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
