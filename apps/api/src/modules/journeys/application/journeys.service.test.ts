@@ -205,3 +205,14 @@ test('race: a duplicate claim (UNIQUE violation) maps to a clear refusal', async
       JSON.stringify((e as any).getResponse()).includes('journeys.slot_claimed')
   );
 });
+
+/* ── Path A (DEC-205): the ops live-fleet read for the map ─────────── */
+test('liveFleet: ops may read it; a rider may not (authority)', async () => {
+  const fakeRepo = { liveJourneys: async () => [{ id: 'j1', status: 'IN_PROGRESS', last_lat: 31.2, last_lng: 29.9, stops: [] }] };
+  const svc = new JourneysService({} as never, fakeRepo as never, {} as never, {} as never, {} as never);
+  const ops = { id: 'ops-1', role: 'operations' } as never;
+  const rider = { id: 'r-1', role: 'rider' } as never;
+  const fleet = await svc.liveFleet(ops);
+  assert.equal(Array.isArray(fleet) && fleet.length === 1, true);
+  await assert.rejects(() => svc.liveFleet(rider), /Forbidden/);
+});

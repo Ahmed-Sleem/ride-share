@@ -241,6 +241,11 @@ function riderBoarding(){                                     // R-12 — real b
   w.append($("div",{class:"stack gap1"},
     $("h1",{class:"t-head",text:chosen.route.name_en || chosen.route.name_ar || chosen.route.code || "—"}),
     $("div",{class:"t-cap",text:t("getOffAnywhere")})));
+  /* RouteMap (DEC-205 Path A): the route line + numbered stops, the chosen
+     boarding stop highlighted once picked — live context above the list. */
+  if ((chosen.stops||[]).length >= 2) {
+    w.append(RouteMap({ stops: chosen.stops, highlightStopId: S.chosenBoard, h: 200, title: t("m_routeAria") }));
+  }
   const stops = $("div",{id:"boarding-stops"});
   w.append(stops);
   renderBoardingStops(stops, chosen.stops);
@@ -298,6 +303,10 @@ async function loadDeparturesInto(el, routeId) {
 
 function riderReview(){                                       // R-14 — real fare + seats + book
   const w=$("div",{class:"main"});
+  /* RouteMap (DEC-205 Path A): the line with THIS boarding stop highlighted. */
+  if ((S.chosenRoute && S.chosenRoute.stops || []).length >= 2) {
+    w.append(RouteMap({ stops: S.chosenRoute.stops, highlightStopId: S.chosenBoard, h: 180, title: t("m_boardingHere") }));
+  }
   const route = (S.chosenRoute && S.chosenRoute.route) || {};
   const dep = S.chosenDep || {};
   const unit = (route.fare_minor || 0) / 100;
@@ -701,6 +710,7 @@ async function makeShare(id){
     if (shared) toast(t("j_shareCopied"));
   } catch(e){ toast(errText(e.messageKey)); }
 }
+
 
 
 

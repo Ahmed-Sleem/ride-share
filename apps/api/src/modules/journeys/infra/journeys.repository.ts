@@ -104,4 +104,35 @@ export class JourneysRepository {
     );
     return rows.map((r) => r.slot_id);
   }
+
+  /** Live fleet for the ops map (DEC-205 Path A): in-progress journeys with
+      their route, ordered stops and last known position. Read-only. */
+  async liveJourneys(): Promise<Array<{
+    id: string; status: string; driver_user_id: string;
+    last_lat: number | null; last_lng: number | null; last_position_at: Date | null;
+    arrived_stop_index: number | null;
+    route_id: string; route_code: string; route_name_en: string; route_name_ar: string;
+    slot_date: string; slot_departs: string;
+    stops: Array<{ stop_id: string; position: number; name_en: string; name_ar: string; lat: number; lng: number }>;
+  }>> {
+    const { rows } = await this.pool.query(`
+      SELECT j.id, j.status, j.driver_user_id, j.last_lat, j.last_lng, j.last_position_at,
+             j.arrived_stop_index, r.id AS route_id, r.code AS route_code,
+             r.name_en AS route_name_en, r.name_ar AS route_name_ar,
+             s.service_date::text AS slot_date, s.departs_at::text AS slot_departs
+        FROM journeys j
+        JOIN slots s ON s.id = j.slot_id
+        JOIN routes r ON r.id = j.route_id
+       WHERE j.status = 'IN_PROGRESS'
+       ORDER BY s.service_date, s.departs_at`);
+    const out = [];
+    for (const j of rows) {
+      const stops = await this.pool.query(`
+        SELECT rs.stop_id, rs.position, st.name_en, st.name_ar, st.lat, st.lng
+          FROM route_stops rs JOIN stops st ON st.id = rs.stop_id
+         WHERE rs.route_id = $1 ORDER BY rs.position`, [j.route_id]);
+      out.push({ ...j, stops: stops.rows });
+    }
+    return out;
+  }
 }

@@ -94,9 +94,13 @@ async function reviewVehicle(id, decision) {
   } catch(e) { toast(errText(e.messageKey)); }
 }
 
-function opsLiveMap(){                                        // O-17
+function opsLiveMap(){                                        // O-17 (+ DEC-205 Path A real fleet map)
   const w=$("div",{class:"main"});
-  w.append(MapView({h:240, fleet:true, vehicle:false}));
+  /* RouteMap (DEC-205 Path A): real fleet dots from journeys/live; honest
+     loading/empty/error states; the vehicle table below stays. */
+  const fleetBox=$("div",{id:"fleet-map"});
+  w.append(fleetBox);
+  loadFleetMapInto(fleetBox);
   const tbl = $("div",{id:"veh-table"});
   w.append(tbl);
   loadVehicleTableInto(tbl);
@@ -672,4 +676,23 @@ function decideIncidentSheet(){
         loadIncidentQueue(document.getElementById("incident-queue"));
       } catch(e){ toast(errText(e.messageKey)); }
     }}));
+}
+
+/* Path A (DEC-205): the real fleet map — vehicles on live tiles when the
+   SDK is loaded, honest illustration + list otherwise. */
+async function loadFleetMapInto(el){
+  if(!el) return;
+  el.innerHTML="";
+  try{
+    const live = await API.journeysLive();
+    const vehicles = (live||[]).filter((j)=>Number.isFinite(j.last_lat)&&Number.isFinite(j.last_lng))
+      .map((j)=>({ lat:j.last_lat, lng:j.last_lng, id:j.id }));
+    const stops = [];
+    (live||[]).forEach((j)=>(j.stops||[]).forEach((s)=>{ if(!stops.some((x)=>x.stop_id===s.stop_id)) stops.push(s); }));
+    el.append(SearchMap({ h:260, stops: stops.length>=2?stops:[], vehicles,
+      matches: [], pins: [], title: t("m_fleet") }));
+    if(!vehicles.length) el.append(Empty("bus", t("m_fleet"), t("m_noLive")));
+  }catch(e){
+    el.append(Banner("danger", errText(e.messageKey)));
+  }
 }

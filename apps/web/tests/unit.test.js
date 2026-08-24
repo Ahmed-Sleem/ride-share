@@ -1374,3 +1374,18 @@ group("PATH A — planner i18n parity (p_*)");
     ok(`${k} in both languages`, en!==k && ar!==k && en!==ar);
   });
 }
+
+group("PATH A — phase 1a embeddings: boarding map + fleet map honesty");
+{
+  const t=boot();
+  const ROUTE={ route:{ id:"r1", code:"C1", name_en:"Corridor 1", fare_minor:1500 }, stops:[
+    { stop_id:"s1", stop_code:"SMH", stop_name_en:"Smouha", stop_name_ar:"سموحة", lat:31.210, lng:29.940 },
+    { stop_id:"s2", stop_code:"SGB", stop_name_en:"Sidi Gaber", stop_name_ar:"سيدي جابر", lat:31.230, lng:29.960 }]};
+  t.set({ chosenRoute: ROUTE, chosenBoard: "s2", page: "boarding" });
+  ok("boarding screen renders the route map's accessible stop list",
+     t.all(".mapstops__item").length === 2);
+  ok("chosen boarding stop is highlighted on the map list",
+     t.all(".mapstops__item--hi").length === 1 && /Boarding here/.test(t.q(".main").textContent));
+  t.set({ page: "review" });
+  ok("review screen shows the boarding-highlight map", t.all(".mapstops__item--hi").length === 1);
+}

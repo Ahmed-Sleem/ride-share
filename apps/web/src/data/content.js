@@ -306,6 +306,7 @@ en:{
   p_pinnedNearest:"Pinned the closest stop", p_matches:"Matching stops",
   p_typeMore:"Type the first letters of a place, or tap the map.",
   p_routesCount:"routes", p_recommendedRoute:"Recommended route on the map",
+  m_fleet:"Live vehicles", m_noLive:"No vehicles are moving right now.",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"Board a rider", j_scanHint:"Type the 6-digit code from the rider's screen.",
   j_scanAction:"Board", j_boarded:"Boarded", j_manifest:"On this departure",
@@ -390,7 +391,7 @@ ar:{
   whereBoard:"من أين ستركب؟", recommended:"الأنسب", streetPickup:"ركوب من الشارع",
   streetPickupWhy:"نمر عليك من أقرب نقطة على الطريق.",
   pickDeparture:"اختر موعد القيام", arrives:"الوصول", confirmBooking:"تأكيد الحجز",
-  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل ا�وب قبل الموعد بـ ٥ دقائق.",
+  seats:"المقاعد", cancelTerms:"الإلغاء مجاني حتى ٣٠ دقيقة قبل ا�وب قبل الموعد بـ ٥ دقائق.",
   arriving:"يصل خلال", leaveNow:"اخرج الآن", sos:"استغاثة", shareRide:"شارك الرحلة",
   nextStop:"المحطة التالية", imGettingOff:"سأنزل في التالية", boardingCode:"كود الركوب",
   scanAtDoor:"اعرضه للسائق عند الباب.", rideDone:"انتهت الرحلة", rateRide:"كيف كانت؟",
@@ -660,6 +661,7 @@ ar:{
   p_pinnedNearest:"تم تحديد أقرب محطة", p_matches:"المحطات المطابقة",
   p_typeMore:"اكتب أولى أحرف المكان، أو اضغط على الخريطة.",
   p_routesCount:"مسارًا", p_recommendedRoute:"المسار الموصى به على الخريطة",
+  m_fleet:"المركبات المتحركة", m_noLive:"لا توجد مركبات تتحرك الآن.",
   /* ——— Path B: journey/boarding ——— */
   j_scanTitle:"أركب راكبًا", j_scanHint:"اكتب كود الركوب المكوّن من ٦ أرقام من شاشة الراكب.",
   j_scanAction:"أركب", j_boarded:"ركب", j_manifest:"في هذا الموعد",

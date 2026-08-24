@@ -140,7 +140,7 @@ function createBaseMap(el) {
 /* SearchMap — the planner's live map (DEC-206): all stops as quiet dots,
    matches LIGHT UP (brand) while typing, pins hold the chosen start/to,
    tapping picks the nearest stop (onPick). Falls back to the illustration. */
-function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}) {
+function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
   if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
@@ -194,6 +194,20 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], onPick } = {}
       if (pinIds.has(s.stop_id)) mark(s, "pin");
       else if (matchIds.has(s.stop_id)) mark(s, "match");
       else mark(s, "quiet");
+    });
+    /* fleet dots: real positions only (journeys/live), brand-filled */
+    (vehicles || []).forEach((v) => {
+      if (!Number.isFinite(v.lat) || !Number.isFinite(v.lng)) return;
+      if (provider === "leaflet") {
+        L.circleMarker([v.lat, v.lng], { radius: 9, color: cssVar2("--border-strong", "--border-subtle"),
+          weight: 3, fillColor: brand, fillOpacity: 1 })
+          .addTo(map).bindTooltip(t("m_vehicle"), { direction: "top" });
+      } else {
+        new google.maps.Marker({ position: { lat: v.lat, lng: v.lng }, map, title: t("m_vehicle"),
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, strokeWeight: 3,
+            strokeColor: cssVar2("--border-strong", "--border-subtle"), fillColor: brand, fillOpacity: 1 } });
+      }
+      focusPts.push(provider === "leaflet" ? [v.lat, v.lng] : { lat: v.lat, lng: v.lng });
     });
 
     const fit = (arr) => {

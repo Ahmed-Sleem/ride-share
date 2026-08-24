@@ -57,6 +57,13 @@ export class JourneysController {
     return this.journeys.availableWork(req.actor!, from, to);
   }
 
+  /** Ops: the live fleet for the map (DEC-205 Path A, map-purpose read). */
+  @Get('journeys/live')
+  @UseGuards(IdentityGuard)
+  live(@Req() req: ReqWithActor) {
+    return this.journeys.liveFleet(req.actor!);
+  }
+
   /** Riders: upcoming bookable departures on a route (P3.6). */
   @Get('journeys/upcoming')
   @UseGuards(IdentityGuard)

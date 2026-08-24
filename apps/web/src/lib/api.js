@@ -195,6 +195,7 @@ const API = {
   topup: (amountMinor) => API.request("POST", "/payments/topup", { amountMinor }),
   cashCollected: (bookingId) => API.request("POST", "/payments/cash-collected", { bookingId }),
   driverEarnings: () => API.request("GET", "/payments/driver/earnings"),
+  journeysLive: () => API.request("GET", "/journeys/live"),   /* ops fleet map (DEC-205 Path A) */
 };
 
 class ApiError extends Error {

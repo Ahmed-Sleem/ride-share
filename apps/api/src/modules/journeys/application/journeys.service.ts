@@ -284,6 +284,13 @@ export class JourneysService {
       staleAfter,
     };
   }
+
+  /** Ops live map (DEC-205 Path A): the in-progress fleet with positions.
+      Report-only read; VIEW_LIVEMAP is the existing ops capability. */
+  async liveFleet(actor: Actor): Promise<unknown[]> {
+    assertCan(actor.role as unknown as Role, Capability.VIEW_LIVEMAP);
+    return this.journeys.liveJourneys();
+  }
 }
 
 /** PostgreSQL UNIQUE violation (23505) → the slot is already claimed. */

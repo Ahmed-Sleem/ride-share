@@ -172,6 +172,20 @@ async function loadDriverJourneyInto(pick, scan, list) {
       on: () => { S.scanJourneyId = j.id; render(); },
     })));
     const jid = S.scanJourneyId;
+
+    /* RouteMap (DEC-205 Path A): the chosen journey's line + numbered stops,
+       the driver's own last position as the vehicle dot (real data only). */
+    try {
+      const routes = await API.publishedRoutes();
+      const sel = journeys.find((x) => x.id === jid);
+      const rw = (routes || []).find((r) => r.route && r.route.id === (sel && sel.route_id));
+      if (rw && (rw.stops || []).length >= 2) {
+        const vehicle = sel && Number.isFinite(sel.last_lat) && Number.isFinite(sel.last_lng)
+          ? { lat: sel.last_lat, lng: sel.last_lng } : null;
+        scan.append(RouteMap({ stops: rw.stops, h: 200, title: t("m_routeAria"), vehicle }));
+      }
+    } catch { /* the map is context — the scan/manifest must work without it */ }
+
     const live = $("div",{id:"journey-live"});
     scan.append(live);
     try {
