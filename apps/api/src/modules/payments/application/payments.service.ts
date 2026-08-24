@@ -15,7 +15,7 @@ import { PaymobAdapter } from '../contracts/paymob.adapter.js';
 import type { PaymentProvider } from '../contracts/provider.interface.js';
 import { CONFIG, type Env } from '../../../config/env.js';
 import { AuditService } from '../../audit/contracts/public.js';
-import { assertCan, Capability } from '../../../security/authority/authority.resolver.js';
+import { assertCan, Capability, Role } from '../../../security/authority/authority.resolver.js';
 import type { Actor } from '../../identity/contracts/types.js';
 import {
   newTxnId, postTopup, postCashCollected, postRefundCredit, assertValidPosting,
@@ -57,7 +57,7 @@ export class PaymentsService {
   }
 
   async config(actor: Actor): Promise<{ paymobEnabled: boolean }> {
-    assertCan(actor.role as never, Capability.PAYMENTS_SELF);
+    assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
     return { paymobEnabled: this.paymobEnabled() };
   }
 
@@ -66,7 +66,7 @@ export class PaymentsService {
   async wallet(actor: Actor): Promise<{
     balanceMinor: number; entries: { id: string; side: 'debit' | 'credit'; amountMinor: number; reason: string; createdAt: Date }[];
   }> {
-    assertCan(actor.role as never, Capability.PAYMENTS_SELF);
+    assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
     const account = walletAccount(actor.id);
     const balances = await this.repo.balancesFor([account]);
     const raw = balances.get(account) ?? 0;
@@ -84,7 +84,7 @@ export class PaymentsService {
   async bookingPaymentInfo(actor: Actor, fareMinor: number): Promise<{
     paymobEnabled: boolean; walletBalanceMinor: number; sufficient: boolean;
   }> {
-    assertCan(actor.role as never, Capability.PAYMENTS_SELF);
+    assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
     const account = walletAccount(actor.id);
     const balances = await this.repo.balancesFor([account]);
     const balance = displayBalance(account, balances.get(account) ?? 0);
@@ -98,7 +98,7 @@ export class PaymentsService {
   /** Create a wallet top-up intent + provider checkout. With Paymob not
       configured this is an HONEST refusal — no order rows, no fake URL. */
   async topup(actor: Actor, input: { amountMinor: number }): Promise<{ orderId: string; iframeUrl: string }> {
-    assertCan(actor.role as never, Capability.PAYMENTS_SELF);
+    assertCan(actor.role as unknown as Role, Capability.PAYMENTS_SELF);
     const amountMinor = Math.floor(input.amountMinor);
     if (!Number.isInteger(amountMinor) || amountMinor < TOPUP_MIN_MINOR || amountMinor > TOPUP_MAX_MINOR) {
       throw new ConflictException({ message_key: 'payments.bad_topup_amount' });
@@ -178,7 +178,7 @@ export class PaymentsService {
   /** Driver marks cash collected at boarding (DEC-078). Idempotent per
       booking; only the journey's own driver; boardable states only. */
   async cashCollected(actor: Actor, bookingId: string): Promise<{ ok: true; duplicate?: boolean }> {
-    assertCan(actor.role as never, Capability.SCAN_BOARDING);
+    assertCan(actor.role as unknown as Role, Capability.SCAN_BOARDING);
     const booking = await this.repo.bookingForCashCollected(bookingId);
     if (!booking) throw new NotFoundException({ message_key: 'payments.booking_not_found' });
     if (booking.journey_driver_id !== actor.id) {
@@ -205,7 +205,7 @@ export class PaymentsService {
   async driverEarnings(actor: Actor): Promise<{
     earningsMinor: number; cashLiabilityMinor: number;
   }> {
-    assertCan(actor.role as never, Capability.VIEW_OWN_EARNINGS);
+    assertCan(actor.role as unknown as Role, Capability.VIEW_OWN_EARNINGS);
     const earn = driverEarningsAccount(actor.id);
     const cash = driverCashAccount(actor.id);
     const balances = await this.repo.balancesFor([earn, cash]);

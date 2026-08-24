@@ -230,7 +230,7 @@ test('cash collected: only the journey driver, idempotent per booking', async ()
   const repo = new FakeRepo();
   repo.bookings.set('bk-1', {
     id: 'bk-1', rider_user_id: RIDER.id, status: 'CONFIRMED', fare_minor: 5000,
-    journey_driver_id: DRIVER.id, journey_status: 'OPEN_FOR_BOOKING', departs_at: new Date(),
+    journey_driver_id: DRIVER.id, journey_status: 'OPEN_FOR_BOOKING',
   });
   const s = service(repo, makeEnv({ COMMISSION_PERCENT: 20 }));
   const first = await s.cashCollected(DRIVER, 'bk-1');
@@ -245,7 +245,7 @@ test('cash collected: another driver is refused; a rider is refused', async () =
   const repo = new FakeRepo();
   repo.bookings.set('bk-2', {
     id: 'bk-2', rider_user_id: RIDER.id, status: 'CONFIRMED', fare_minor: 5000,
-    journey_driver_id: '99999999-9999-9999-9999-999999999999', journey_status: 'LOCKED', departs_at: new Date(),
+    journey_driver_id: '99999999-9999-9999-9999-999999999999', journey_status: 'LOCKED',
   });
   const s = service(repo);
   await assert.rejects(() => s.cashCollected(DRIVER, 'bk-2'), key('payments.not_your_journey'));
@@ -256,7 +256,7 @@ test('cash collected: cancelled booking is not payable', async () => {
   const repo = new FakeRepo();
   repo.bookings.set('bk-3', {
     id: 'bk-3', rider_user_id: RIDER.id, status: 'CANCELLED', fare_minor: 5000,
-    journey_driver_id: DRIVER.id, journey_status: 'LOCKED', departs_at: new Date(),
+    journey_driver_id: DRIVER.id, journey_status: 'LOCKED',
   });
   const s = service(repo);
   await assert.rejects(() => s.cashCollected(DRIVER, 'bk-3'), key('payments.booking_not_payable'));
@@ -271,4 +271,37 @@ test('issueCredit posts one refund_credit row and audits it as the system', asyn
   assert.equal(repo.ledgerRows.length, 1);
   assert.equal(repo.ledgerRows[0]!.reason, 'refund_credit');
   assert.ok(repo.audits.includes('payments.issue_credit'));
+});
+
+// ── top-up success path (live provider stubbed) ──────────────────────────
+
+test('topup success: order row FIRST, then pending + iframe URL + audit', async () => {
+  const repo = new FakeRepo();
+  const s = service(repo, makeEnv({
+    PAYMOB_ENABLED: 'true', PAYMOB_API_KEY: 'k', PAYMOB_INTEGRATION_ID: 'i', PAYMOB_IFRAME_ID: 'f',
+  }));
+  // stub the live checkout (the adapter itself is covered by its own tests)
+  (s as unknown as { provider: { createCheckout: unknown } }).provider.createCheckout = async (req: { orderId: string; amountMinor: number }) => ({
+    providerOrderId: 'paymob-9', iframeUrl: `https://accept.paymob.com/api/acceptance/iframes/f?payment_token=tok-${req.orderId}-${req.amountMinor}`,
+  });
+  const res = await s.topup(RIDER, { amountMinor: 5000 });
+  assert.match(res.iframeUrl, /payment_token=tok-/);
+  const order = repo.orders.get(res.orderId)!;
+  assert.equal(order.status, 'pending');
+  assert.equal(order.provider_order_id, 'paymob-9');
+  assert.equal(order.amount_minor, 5000);
+  assert.ok(repo.audits.includes('payments.topup_create'));
+});
+
+test('topup checkout failure marks the order failed — nothing pending', async () => {
+  const repo = new FakeRepo();
+  const s = service(repo, makeEnv({
+    PAYMOB_ENABLED: 'true', PAYMOB_API_KEY: 'k', PAYMOB_INTEGRATION_ID: 'i', PAYMOB_IFRAME_ID: 'f',
+  }));
+  (s as unknown as { provider: { createCheckout: unknown } }).provider.createCheckout = async () => {
+    throw new Error('provider down');
+  };
+  await assert.rejects(() => s.topup(RIDER, { amountMinor: 5000 }), /provider down/);
+  assert.equal(repo.orders.size, 1, 'the honest failed intent is kept');
+  assert.equal([...repo.orders.values()][0]!.status, 'failed');
 });

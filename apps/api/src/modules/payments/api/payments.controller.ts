@@ -4,15 +4,20 @@
    state changes), and it is rate-limited to blunt hammering. Every other
    route requires a signed-in actor and its capability (§8.2, one resolver). */
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { IsInt, Max, Min } from 'class-validator';
+import { IsInt, IsUUID, Max, Min } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
-import { PaymentsService } from '../application/payments.service.js';
+import { PaymentsService, TOPUP_MIN_MINOR, TOPUP_MAX_MINOR } from '../application/payments.service.js';
 import { IdentityGuard } from '../../../security/identity.guard.js';
 import type { Actor } from '../../identity/contracts/types.js';
 
 class TopupDto {
-  @IsInt() @Min(100) @Max(2_000_000) amountMinor!: number;
+  // bounds come from the ONE definition in the application layer (§0.3)
+  @IsInt() @Min(TOPUP_MIN_MINOR) @Max(TOPUP_MAX_MINOR) amountMinor!: number;
+}
+
+class CashCollectedDto {
+  @IsUUID() bookingId!: string;
 }
 
 type ReqWithActor = FastifyRequest & { actor?: Actor };
@@ -52,8 +57,8 @@ export class PaymentsController {
   @Post('payments/cash-collected')
   @UseGuards(IdentityGuard)
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  cashCollected(@Req() req: ReqWithActor, @Body('bookingId') bookingId: string) {
-    return this.payments.cashCollected(req.actor!, bookingId);
+  cashCollected(@Req() req: ReqWithActor, @Body() dto: CashCollectedDto) {
+    return this.payments.cashCollected(req.actor!, dto.bookingId);
   }
 
   @Get('payments/driver/earnings')

@@ -193,18 +193,16 @@ export class PaymentsRepository {
       this read moves behind it then). */
   async bookingForCashCollected(bookingId: string): Promise<{
     id: string; rider_user_id: string; status: string; fare_minor: number;
-    journey_driver_id: string | null; journey_status: string | null; departs_at: Date | null;
+    journey_driver_id: string | null; journey_status: string | null;
   } | null> {
     const { rows } = await this.pool.query<{
       id: string; rider_user_id: string; status: string; fare_minor: number;
-      journey_driver_id: string | null; journey_status: string | null; departs_at: Date | null;
+      journey_driver_id: string | null; journey_status: string | null;
     }>(
       `SELECT b.id, b.rider_user_id, b.status, b.fare_minor,
-              j.driver_user_id AS journey_driver_id, j.status AS journey_status,
-              s.departs_at AS departs_at
+              j.driver_user_id AS journey_driver_id, j.status AS journey_status
          FROM bookings b
          JOIN journeys j ON j.id = b.journey_id
-         JOIN slots s ON s.id = j.slot_id
         WHERE b.id = $1`, [bookingId]);
     return rows[0] ?? null;
   }
