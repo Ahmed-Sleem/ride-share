@@ -18,14 +18,14 @@ export class PlatformSettingsRepository {
     if (!rows[0]) return emptyOverrides();
     const r = rows[0];
     return {
-      commission_percent: r.commission_percent == null ? null : Number(r.commission_percent),
-      notify_behavioural_max_day: r.notify_behavioural_max_day == null ? null : Number(r.notify_behavioural_max_day),
-      notify_behavioural_gap_hours: r.notify_behavioural_gap_hours == null ? null : Number(r.notify_behavioural_gap_hours),
-      notify_promo_max_day: r.notify_promo_max_day == null ? null : Number(r.notify_promo_max_day),
-      notify_promo_max_week: r.notify_promo_max_week == null ? null : Number(r.notify_promo_max_week),
-      notify_non_tx_max_day: r.notify_non_tx_max_day == null ? null : Number(r.notify_non_tx_max_day),
-      paymob_enabled: r.paymob_enabled == null ? null : Boolean(r.paymob_enabled),
-      auth_otp_bypass: r.auth_otp_bypass == null ? null : Boolean(r.auth_otp_bypass),
+      commission_percent: (r.commission_percent === null || r.commission_percent === undefined) ? null : Number(r.commission_percent),
+      notify_behavioural_max_day: (r.notify_behavioural_max_day === null || r.notify_behavioural_max_day === undefined) ? null : Number(r.notify_behavioural_max_day),
+      notify_behavioural_gap_hours: (r.notify_behavioural_gap_hours === null || r.notify_behavioural_gap_hours === undefined) ? null : Number(r.notify_behavioural_gap_hours),
+      notify_promo_max_day: (r.notify_promo_max_day === null || r.notify_promo_max_day === undefined) ? null : Number(r.notify_promo_max_day),
+      notify_promo_max_week: (r.notify_promo_max_week === null || r.notify_promo_max_week === undefined) ? null : Number(r.notify_promo_max_week),
+      notify_non_tx_max_day: (r.notify_non_tx_max_day === null || r.notify_non_tx_max_day === undefined) ? null : Number(r.notify_non_tx_max_day),
+      paymob_enabled: (r.paymob_enabled === null || r.paymob_enabled === undefined) ? null : Boolean(r.paymob_enabled),
+      auth_otp_bypass: (r.auth_otp_bypass === null || r.auth_otp_bypass === undefined) ? null : Boolean(r.auth_otp_bypass),
       updated_at: r.updated_at ?? null,
       updated_by: r.updated_by ?? null,
     };
