@@ -48,7 +48,5 @@ if raster 192 "$RES/mipmap-xxxhdpi/ic_launcher.png"; then
   done
   echo "android launcher icons refreshed from brand.json"
 else
-  mkdir -p "$RES/drawable"
-  cp "$SVG_OUT" "$RES/drawable/ic_launcher_brand.svg"
-  echo "no rsvg/convert — left SVG at drawable/ic_launcher_brand.svg"
+  echo "no rsvg/convert — leaving Capacitor default PNGs (do not drop SVG into res/)"
 fi

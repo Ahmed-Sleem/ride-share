@@ -118,6 +118,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
       - run: pnpm install --frozen-lockfile
       - name: Wrap web + generate Android project + assembleDebug
         run: bash apps/mobile/scripts/make-apk.sh
@@ -145,6 +146,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
       - run: pnpm install --frozen-lockfile
       - name: Release bundle (unsigned unless ANDROID_KEYSTORE_* secrets are set)
         env:
