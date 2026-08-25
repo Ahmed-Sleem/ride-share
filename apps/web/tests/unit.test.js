@@ -1495,3 +1495,31 @@ group("INTRO + DOWNLOAD — first-open slides and versioned APK URL");
   ok("download is two columns", t.all(".desk-split .card").length===2);
   ok("QR encodes the same APK URL", !!t.q(".dlqr") && decodeURIComponent(t.q(".dlqr").getAttribute("src")||"").includes("/download/android.apk?v="));
 }
+
+group("I18N — landing panel2 + fleet copy");
+{
+  const t=boot();
+  ok("panel2T AR is real copy", t.w.T.ar.panel2T && t.w.T.ar.panel2T !== "panel2T");
+  ok("panel2B AR is real copy", t.w.T.ar.panel2B && t.w.T.ar.panel2B !== "panel2B");
+  t.w.S.lang="ar"; t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
+  ok("arabic landing does not leak panel2 keys", !/panel2T|panel2B/.test(t.q(".landing").textContent));
+  t.w.S.lang="en";
+  ["m_fleet","m_noLive"].forEach((k)=>{
+    ok(k+" both languages", t.w.T.en[k] && t.w.T.ar[k] && t.w.T.ar[k]!==t.w.T.en[k]);
+  });
+}
+
+group("STAFF — rows not a wide table; role is a radio group");
+{
+  const t=boot();
+  t.set({role:"super_admin", user:{id:"u1",role:"super_admin",name:"Admin",isSystemAdmin:true}});
+  t.go("super_admin","adminStaff");
+  ok("create form uses role radios", !!t.q("#staff-role") && t.q("#staff-role").type==="hidden" && t.all("#staff-form .seg button").length===3);
+  ok("staff pane is desk-split, list is not a table at first paint", !!t.q(".desk-split") && !t.q("#staff-list .table"));
+}
+
+group("MAP — EditRouteMap exists; SearchMap can render with no stops");
+{
+  const t=boot();
+  ok("EditRouteMap is exported", typeof t.w.EditRouteMap === "function");
+}

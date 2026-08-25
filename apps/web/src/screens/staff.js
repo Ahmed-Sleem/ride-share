@@ -503,6 +503,14 @@ function routeDetailView() {
     Chip({label:r.status, kind:r.status==="published"?"ok":""})));
   w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
 
+  const mapCard = Card("card--tight",
+    $("div",{class:"t-micro",text:t("j_routeStops")}),
+    EditRouteMap({h:320, stops: S.routeStopsCache || [],
+      onPick: draft ? (lat,lng)=>{
+        const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+        if(la) la.value = lat.toFixed(6);
+        if(lo) lo.value = lng.toFixed(6);
+      } : null}));
   const stopForm = draft ? Card("card--tight",
     $("div",{class:"t-micro",text:t("j_routeStops")}),
     $("div",{class:"t-cap",text:t("j_routeStopsHint")}),
@@ -516,13 +524,6 @@ function routeDetailView() {
           Banner("warn", t("stopTooClose")),
           field("stop-override", t("overrideReason"), "text", "off"))
       : null,
-    MapView({h:280, vehicle:false, route:false, stops:false, locate:true,
-      onPick:(lat,lng)=>{
-        const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
-        if(la) la.value = lat.toFixed(6);
-        if(lo) lo.value = lng.toFixed(6);
-        toast(t("placedStop"));
-      }}),
     Btn({label:t("addStop"), dis:S.stopBusy, on:()=>addStopToRouteAction(r.id)})) : null;
 
   const stops = $("div",{id:"route-stops"});
@@ -535,6 +536,7 @@ function routeDetailView() {
   const slotList = $("div",{id:"route-slots"});
   w.append($("div",{class:"desk-split"},
     $("div",{class:"stack gap4"},
+      mapCard,
       stopForm,
       draft ? Btn({label:t("publishRoute"), dis:S.stopBusy, on:()=>publishRouteAction(r.id)}) : null,
       slotsCard),
@@ -553,7 +555,7 @@ async function addStopToRouteAction(routeId) {
     nameAr: val("stop-name-ar") || undefined,
   };
   if (S.stopTooClose) payload.overrideReason = val("stop-override") || undefined;
-  S.stopBusy = true; render();
+  S.stopBusy = true;
   try {
     const created = await API.createStop(payload);
     const stopId = created && (created.id || (created.stop && created.stop.id));
@@ -563,7 +565,10 @@ async function addStopToRouteAction(routeId) {
     }
     await API.addStopToRoute(routeId, stopId);
     S.stopTooClose = null; S.stopBusy = false;
-    toast(t("placedStop")); render();
+    toast(t("placedStop"));
+    const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+    if (la) la.value = ""; if (lo) lo.value = "";
+    loadRouteStopsInto(document.getElementById("route-stops"), routeId);
   } catch(e) {
     S.stopBusy = false;
     if (e.messageKey === "geo.stop_too_close") {
@@ -578,6 +583,7 @@ async function loadRouteStopsInto(el, routeId) {
   el.innerHTML = "";
   try {
     const { route, stops } = await API.getRoute(routeId);
+    S.routeStopsCache = stops || [];
     if (!stops.length) { el.append(Empty("stops", t("nav.stops"), t("routeNoStops"))); return; }
     el.append($("h2",{class:"t-head",text:`${stops.length} ${t("stopCount")}`}));
     stops.forEach((s) => el.append(Row({

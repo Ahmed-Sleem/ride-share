@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2026-08-25 — Maps + staff list + Arabic panel2
+
+- Restore Arabic `panel2T`/`panel2B` (landing slide 2 leaked keys).
+- Staff list is rows in the column (no 560px table). Role is a radio group.
+- Route detail: always-visible Leaflet editor, tap to pin, pending pin draggable.
+- Live map shows tiles even with zero vehicles; `m_fleet` / `m_noLive` copy.
+- Intro kick uses `BRAND.name` so check-branding stays green.
+
+# CHANGELOG
+
 ## 2026-08-25 — First-open slides + offline splash + APK URL
 
 - Guest first open shows four intro slides (Prev / Next / Skip). Last slide:

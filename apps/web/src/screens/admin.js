@@ -61,11 +61,7 @@ function renderStaffForm(el) {
       Btn({label:t("j_newStaff"), kind:"secondary", size:"sm", on:()=>{ S.staffEditing=null; renderStaffForm(); }})));
     el.append(Card("card--tight",
       field("staff-edit-name", t("adminName"), "text", "name", s.name || ""),
-      $("div",{class:"field"},
-        $("label",{text:t("adminRole")}),
-        $("select",{class:"input", id:"staff-edit-role"},
-          ["operations","manager","support"].map(r=>
-            $("option",{attrs:{value:r, selected: s.role===r ? "" : null}, text:t("roleLabel."+r)})))),
+      rolePicker("staff-edit-role", s.role),
       $("div",{class:"t-cap ltr",text:s.email || s.phone || ""}),
       Btn({label:t("save"), on:()=>saveStaffEdit()})));
     return;
@@ -78,11 +74,7 @@ function renderStaffForm(el) {
       field("staff-email", t("adminEmail"), "email"),
       field("staff-password", t("adminPassword"), "password")),
     $("p",{class:"t-cap",text:t("j_staffPassHint")}),
-    $("div",{class:"field"},
-      $("label",{text:t("adminRole")}),
-      $("select",{class:"input", id:"staff-role"},
-        ["operations","manager","support"].map(r=>
-          $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
+    rolePicker("staff-role", "operations"),
     Btn({label:t("adminCreate"), on:()=>createStaff()})));
 }
 
@@ -119,27 +111,50 @@ async function loadStaffInto(el) {
     const staff = await API.listStaff();
     if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
     el.append($("h2",{class:"t-head",text:t("adminStaff")}));
-    const rows = staff.map((s) => {
+    const group = $("div",{class:"rowgroup"});
+    staff.forEach((s) => {
       const isMain = s.isSystemAdmin === true;
       const selected = S.staffEditing && S.staffEditing.id === s.id;
-      return $("tr",{
-        class: selected ? "rowitem--selected" : "",
-        on: isMain ? null : { click: () => { S.staffEditing = s; renderStaffForm(); loadStaffInto(el); } },
-      },
-        $("td",{text:s.name || "—"}),
-        $("td",{class:"ltr",text:s.email || s.phone || "—"}),
-        $("td",{text:t("roleLabel."+s.role)}),
-        $("td",{}, isMain
-          ? Chip({label:t("adminSystemAdmin"), kind:"brand"})
-          : Chip({label:s.status})));
+      const row = staffRow(s);
+      if (selected) row.classList.add("rowitem--selected");
+      if (!isMain) {
+        row.addEventListener("click", (ev) => {
+          if (ev.target && ev.target.closest && ev.target.closest(".iconbtn")) return;
+          S.staffEditing = s;
+          renderStaffForm();
+          loadStaffInto(el);
+        });
+      }
+      group.append(row);
     });
-    el.append(Table([t("adminName"), t("adminEmail"), t("adminRole"), t("adminSystemAdmin")], rows));
+    el.append(group);
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 /* One staff row. The system admin (the env-seeded main admin) is marked and
    has no edit/remove controls — it is immutable by design (DEC-196). Every
    other staff account can be edited or removed by the main admin. */
+function rolePicker(id, current) {
+  const wrap = $("div",{class:"field"});
+  wrap.append($("label",{text:t("adminRole")}));
+  const hid = $("input",{attrs:{type:"hidden", id, value: current || "operations"}});
+  const seg = $("div",{class:"seg", attrs:{role:"radiogroup", "aria-label":t("adminRole")}});
+  ["operations","manager","support"].forEach((r) => {
+    const on = (current || "operations") === r;
+    seg.append($("button",{
+      attrs:{type:"button", "aria-pressed": String(on), "data-role": r},
+      text: t("roleLabel."+r),
+      on:{click:(e)=>{
+        e.preventDefault();
+        hid.value = r;
+        [...seg.querySelectorAll("button")].forEach((b)=>b.setAttribute("aria-pressed", String(b.getAttribute("data-role")===r)));
+      }}
+    }));
+  });
+  wrap.append(hid, seg);
+  return wrap;
+}
+
 function staffRow(s) {
   const isMain = s.isSystemAdmin === true;
   return Row({
@@ -147,10 +162,9 @@ function staffRow(s) {
     title: s.name || s.phone || s.email,
     sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
     right: isMain
-      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}), Chip({label:s.status}))
+      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}))
       : $("div",{class:"row gap2"},
-          Chip({label:s.status}),
-          IconBtn({name:"pricing", label:t("adminEdit"), on:()=>{ S.staffEditing=s; S.staffEditName=s.name||""; S.staffEditRole=s.role; openSheet("staffEdit"); }}),
+          Chip({label:t("roleLabel."+s.role)}),
           IconBtn({name:"close", label:t("adminRemove"), on:()=>{ S.staffEditing=s; openSheet("staffRemove"); }})),
     bordered:true });
 }

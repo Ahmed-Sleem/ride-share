@@ -143,8 +143,8 @@ function createBaseMap(el) {
 function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
-    box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true }));
+  if (!(window.__rsMapsOn && (window.L || window.google?.maps))) {
+    box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true, onPick }));
     return box;
   }
   const id = "searchmap-" + Math.random().toString(36).slice(2, 9);
@@ -216,11 +216,84 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
       else { const b = new google.maps.LatLngBounds(); arr.forEach((x) => b.extend(x)); map.fitBounds(b, 60); }
     };
     if (focusPts.length) fit(focusPts);
-    else if (pins.length) fit(pts.map((s) => provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng }));
+    else if (pts.length) fit(pts.map((s) => provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng }));
+    else if (provider === "leaflet") map.setView([31.2241, 29.9549], 13);
 
     if (onPick) {
       if (provider === "leaflet") map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
       else map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
+    }
+    window.__rsMapInstance = map;
+  }, 0);
+  return root;
+}
+
+/* EditRouteMap — desk tool: tiles always (when SDK is on), tap to pin,
+   pending pin is draggable. Existing stops are numbered, not invented. */
+function EditRouteMap({ h = 320, stops = [], onPick } = {}) {
+  const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  if (!(window.__rsMapsOn && (window.L || window.google && window.google.maps))) {
+    return MapView({ h, vehicle: false, route: list.length >= 2, stops: false, locate: true, onPick });
+  }
+  const id = "editmap-" + Math.random().toString(36).slice(2, 9);
+  const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
+  const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
+  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const base = createBaseMap(el);
+    if (!base) return;
+    const { map, provider } = base;
+    const brand = (getComputedStyle(document.documentElement).getPropertyValue("--brand") || "").trim();
+    if (provider === "leaflet") {
+      const pts = list.map((s) => [s.lat, s.lng]);
+      if (pts.length >= 2) L.polyline(pts, { color: brand || undefined, weight: 4, opacity: 0.85 }).addTo(map);
+      list.forEach((s, i) => {
+        L.circleMarker([s.lat, s.lng], { radius: 7, color: brand || undefined, weight: 3, fillOpacity: 1 })
+          .addTo(map).bindTooltip(String(i + 1), { direction: "top" });
+      });
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.3), { animate: false });
+      else map.setView([31.2241, 29.9549], 13);
+      let pending = null;
+      if (onPick) {
+        map.on("click", (e) => {
+          const lat = e.latlng.lat, lng = e.latlng.lng;
+          if (pending) pending.setLatLng(e.latlng);
+          else {
+            pending = L.marker(e.latlng, { draggable: true }).addTo(map);
+            pending.on("dragend", () => {
+              const p = pending.getLatLng();
+              onPick(p.lat, p.lng);
+            });
+          }
+          onPick(lat, lng);
+        });
+      }
+    } else {
+      list.forEach((s, i) => {
+        new google.maps.Marker({ position: { lat: s.lat, lng: s.lng }, map, label: String(i + 1) });
+      });
+      if (list.length) {
+        const b = new google.maps.LatLngBounds();
+        list.forEach((s) => b.extend({ lat: s.lat, lng: s.lng }));
+        map.fitBounds(b, 48);
+      }
+      let pending = null;
+      if (onPick) {
+        map.addListener("click", (e) => {
+          const lat = e.latLng.lat(), lng = e.latLng.lng();
+          if (pending) pending.setPosition(e.latLng);
+          else {
+            pending = new google.maps.Marker({ position: e.latLng, map, draggable: true });
+            pending.addListener("dragend", () => {
+              const p = pending.getPosition();
+              onPick(p.lat(), p.lng());
+            });
+          }
+          onPick(lat, lng);
+        });
+      }
     }
     window.__rsMapInstance = map;
   }, 0);

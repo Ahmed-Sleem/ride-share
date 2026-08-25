@@ -303,6 +303,7 @@ en:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
+  m_fleet:"Live map", m_noLive:"No vehicles sharing a live position right now.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"Type where you want to go — or tap the map to pin.",
   p_whereTo:"Where to?", p_useMyLocation:"Use my location",
@@ -402,7 +403,7 @@ en:{
   j_dlIosSoon:"Coming soon — stay tuned.",
   j_introNext:"Next", j_introPrev:"Previous", j_introSkip:"Skip",
   j_introStart:"Get started",
-  j_intro1K:"Ride Share", j_intro1T:"Shared rides. One fixed price.",
+  j_intro1K:BRAND.name.en, j_intro1T:"Shared rides. One fixed price.",
   j_intro1B:"Book a seat on a planned route. You know the fare before you go — no surge, no guessing.",
   j_intro2K:"Find a ride", j_intro2T:"Search where you are going.",
   j_intro2B:"Pick start and end. See the next departures and the price. Choose a time that fits.",
@@ -580,7 +581,8 @@ ar:{
   featureCashT:"ادفع كاش عند الباب", featureCashB:"لا حاجة لبطاقة. ادفع للسائق الأجرة الثابتة عند الركوب.",
   featureCodeT:"اركب بالكود", featureCodeB:"كود يُستخدم مرة واحدة يضع الراكب الصحيح في الرحلة الصحيحة.",
   panelKick:"لماذا يبدو الأمر مختلفًا",
-  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف موعد القيام و الحجز. لا زيادة مفاجئة أبدًا.",
+  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف متى تنطلق وأن هناك مقعداً.",
+  panel2T:"أجرة واحدة بلا مفاجآت", panel2B:"سعر المسار الثابت يُثبَّت لحظة الحجز. لا زيادة مفاجئة أبدًا.",
   panel3T:"اركب في ثوانٍ", panel3B:"اعرض الكود عند الباب واركب. الرقم ظاهر دائمًا على الشاشة — بلا قلق على البطارية.",
   panel4T:"انزل في أي مكان", panel4B:"انزل في أي نقطة على المسار. لست مقيدًا بمحطة لا تحتاجها.",
   driveHeroKick:"للسائقين",
@@ -708,6 +710,7 @@ ar:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
+  m_fleet:"الخريطة المباشرة", m_noLive:"لا مركبات تشارك موقعاً مباشراً الآن.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
   p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",
@@ -808,7 +811,7 @@ ar:{
   j_dlIosSoon:"قريباً — ترقّب.",
   j_introNext:"التالي", j_introPrev:"السابق", j_introSkip:"تخطي",
   j_introStart:"ابدأ",
-  j_intro1K:"رايد شير", j_intro1T:"ركوبات مشتركة. سعر ثابت واحد.",
+  j_intro1K:BRAND.name.ar, j_intro1T:"ركوبات مشتركة. سعر ثابت واحد.",
   j_intro1B:"احجز مقعداً على مسار معلن. تعرف الأجرة قبل أن تتحرك — بلا زيادة مفاجئة.",
   j_intro2K:"ابحث عن رحلة", j_intro2T:"ابحث عن وجهتك.",
   j_intro2B:"اختر البداية والنهاية. شاهد المواعيد التالية والسعر. اختر الوقت المناسب.",
