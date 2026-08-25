@@ -819,6 +819,17 @@ select.input{cursor:pointer}
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
 
+.intro{width:100%;min-width:0;height:100%;display:flex;flex-direction:column;background:var(--bg-page)}
+.intro__stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:var(--s5);padding:var(--s6);max-width:480px;margin-inline:auto;width:100%}
+.intro__foot{flex:none;display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);
+  padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--bg-base)}
+.intro__foot .btn--primary{flex:1}
+.intro__dots{display:flex;gap:var(--s2);justify-content:center}
+.intro__dot{width:8px;height:8px;border-radius:var(--r-full);background:var(--line-strong)}
+.intro__dot--on{background:var(--brand);width:20px}
+html.native .intro{padding-top:var(--safe-t)}
+
 /* landing — its own scroller; light/dark + RTL via tokens. width:100% is
    REQUIRED: #root is display:flex (row), so a child without width shrinks to
    its content instead of filling the viewport. */

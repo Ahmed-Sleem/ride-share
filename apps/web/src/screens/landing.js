@@ -316,10 +316,15 @@ function aboutLanding() {
     landingFooter());
 }
 
-function downloadLanding() {
+function apkDownloadUrl() {
   const origin = (typeof location !== "undefined" && location.origin && location.protocol !== "file:")
     ? location.origin : "https://ride-shareweb-production.up.railway.app";
-  const apkUrl = origin + "/download/android.apk";
+  const code = (typeof BRAND !== "undefined" && BRAND.version && BRAND.version.code) ? BRAND.version.code : 0;
+  return origin + "/download/android.apk?v=" + code;
+}
+
+function downloadLanding() {
+  const apkUrl = apkDownloadUrl();
   const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(apkUrl);
   return $("div", { class: "landing" },
     landingNav(),
@@ -328,17 +333,61 @@ function downloadLanding() {
         $("div", { class: "landing__kick", text: t("navDownload") }),
         $("h1", { class: "landing__title", text: t("j_dlTitle") }),
         $("p", { class: "landing__p", text: t("j_dlSub") }),
-        $("p", { class: "t-cap", text: t("j_dlHint") }),
-        $("div", { class: "row wrap gap4", style: { alignItems: "flex-start" } },
-          $("div", { class: "stack gap3" },
+        $("div", { class: "desk-split" },
+          $("div", { class: "card" },
+            $("strong", { class: "t-head", text: t("j_dlAndroid") }),
             $("a", { class: "btn btn--primary", attrs: { href: apkUrl, download: "ride-share.apk" }, text: t("j_dlAndroid") }),
-            $("div", { class: "card card--tight" },
-              $("strong", { text: t("j_dlIos") }),
-              $("p", { class: "t-cap", text: t("j_dlIosSoon") }))),
-          $("div", { class: "stack gap2 center" },
-            $("div", { class: "t-cap", text: t("j_dlQr") }),
-            $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))))),
+            $("div", { class: "stack gap2 center" },
+              $("div", { class: "t-cap", text: t("j_dlQr") }),
+              $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))),
+          $("div", { class: "card" },
+            $("strong", { class: "t-head", text: t("j_dlIos") }),
+            $("p", { class: "t-cap", text: t("j_dlIosSoon") }))))),
     landingFooter());
+}
+
+function introSlides() {
+  return [
+    { ic: "bus", cls: "landing__featureico landing__featureico--coral", k: "j_intro1K", t: "j_intro1T", b: "j_intro1B" },
+    { ic: "lookup", cls: "landing__featureico landing__featureico--sky", k: "j_intro2K", t: "j_intro2T", b: "j_intro2B" },
+    { ic: "qr", cls: "landing__featureico landing__featureico--mint", k: "j_intro3K", t: "j_intro3T", b: "j_intro3B" },
+    { ic: "earnings", cls: "landing__featureico landing__featureico--coral", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B", c: "j_intro4C" },
+  ];
+}
+
+function finishIntro(mode) {
+  markIntroSeen();
+  S.view = "auth";
+  S.authMode = mode || "signup";
+  if (S.authMode === "signup") { S.signupRole = "driver"; S.authStep = "choose"; }
+  else { S.loginMethod = null; S.authStep = "choose"; }
+  render();
+}
+
+function introView() {
+  const slides = introSlides();
+  const i = Math.max(0, Math.min(slides.length - 1, S.introSlide || 0));
+  const s = slides[i];
+  const last = i === slides.length - 1;
+  const dots = $("div", { class: "intro__dots", attrs: { "aria-hidden": "true" } });
+  slides.forEach((_, n) => dots.append($("span", { class: "intro__dot" + (n === i ? " intro__dot--on" : "") })));
+  const copy = [
+    $("span", { class: "landing__kick", text: t(s.k) }),
+    $("div", { class: s.cls }, icon(s.ic)),
+    $("h1", { class: "t-title", text: t(s.t) }),
+    $("p", { class: "muted", text: t(s.b) }),
+  ];
+  if (s.c) copy.push($("p", { class: "t-lg", text: t(s.c) }));
+  copy.push(dots);
+  return $("div", { class: "intro", attrs: { "aria-label": t("j_introStart") } },
+    $("div", { class: "intro__stage" }, ...copy),
+    $("div", { class: "intro__foot" },
+      Btn({ label: t("j_introSkip"), kind: "ghost", on: () => finishIntro("signup") }),
+      Btn({ label: t("j_introPrev"), kind: "outline", dis: i === 0, on: () => { if (i > 0) { S.introSlide = i - 1; render(); } } }),
+      Btn({ label: last ? t("j_introStart") : t("j_introNext"), on: () => {
+        if (last) finishIntro("signup");
+        else { S.introSlide = i + 1; render(); }
+      } })));
 }
 
 function helpLanding() {

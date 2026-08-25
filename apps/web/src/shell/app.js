@@ -205,7 +205,9 @@ function renderUnsafe(){
 
   /* view machine: boot splash → landing → auth → the signed-in app */
   if(S.view==="boot"){ root.append(bootSplash()); return; }
+  if(S.view==="intro"){ root.append(introView()); return; }
   if(typeof isNativeApp === "function" && isNativeApp() && !S.authed){
+    if (S.view === "intro") { root.append(introView()); return; }
     if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
     root.append(auth()); return;
   }
@@ -301,9 +303,7 @@ function boot(){
     if(S.view!=="boot") return;                 // a test or a tap already left
     if(user){ enterApp(user); }
     else {
-      const native = typeof isNativeApp === "function" ? isNativeApp() : false;
-      S.view = native ? "auth" : "landing";
-      if (native) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
+      guestHome();
       render();
     }
   });
@@ -372,7 +372,7 @@ window.addEventListener("focus", () => {
 });
 
 Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
-                        uiRole, pagesFor,
+                        uiRole, pagesFor, guestHome, introSeen, markIntroSeen, introView, apkDownloadUrl,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ride Share</title>
+<style>
+:root{
+  --bg:var(--ink-100, #EEF0F4); --ink:#15181F; --muted:#5B6472;
+  --brand:#6C63FF; --brand-2:#5A4FD9; --on:#FFFFFF;
+  --s4:16px; --s5:20px; --s6:24px; --tap:44px; --r:14px;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0B0C0F; --ink:#F2F5F8; --muted:#9AA5B2; --brand:#8571FF; --brand-2:#A795FF; --on:#241F5E; }
+}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+  font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.splash,.offline{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--s4);padding:var(--s6);text-align:center}
+.offline{display:none}
+.logo{width:92px;height:92px;animation:b 1.1s var(--ease) infinite}
+.logo svg{width:100%;height:100%}
+.name{font-size:22px;font-weight:750}
+h1{margin:0;font-size:18px;font-weight:750}
+p{margin:0;max-width:28ch;color:var(--muted)}
+.btn{min-height:var(--tap);padding:0 var(--s5);border:0;border-radius:var(--r);font:650 15px/1 inherit;
+  background:linear-gradient(135deg,var(--brand),var(--brand-2));color:var(--on);cursor:pointer}
+@keyframes b{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@media (prefers-reduced-motion:reduce){.logo{animation:none}}
+</style>
+</head>
+<body>
+<div class="splash" id="splash">
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6C63FF"/><stop offset="1" stop-color="#5A4FD9"/></linearGradient></defs>
+      <path fill="url(#g)" fill-rule="evenodd" d="M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z"/>
+    </svg>
+  </div>
+  <div class="name">Ride Share</div>
+</div>
+<div class="offline" id="offline" role="alert">
+  <h1>Check your internet connection</h1>
+  <p>We need a connection to load rides and tickets.</p>
+  <button type="button" class="btn" id="retry">Retry</button>
+</div>
+<script>
+(function(){
+  var origin = "https://ride-shareweb-production.up.railway.app";
+  var splash = document.getElementById("splash");
+  var off = document.getElementById("offline");
+  function showOffline(){ splash.style.display="none"; off.style.display="flex"; }
+  function showSplash(){ splash.style.display="flex"; off.style.display="none"; }
+  function tryLive(){
+    showSplash();
+    var done = false;
+    var t = setTimeout(function(){ if(!done) showOffline(); }, 1400);
+    fetch(origin + "/healthz", { cache: "no-store" }).then(function(r){
+      if (r.ok) { done = true; clearTimeout(t); location.replace(origin + "/"); }
+      else { done = true; clearTimeout(t); showOffline(); }
+    }).catch(function(){ done = true; clearTimeout(t); showOffline(); });
+  }
+  document.getElementById("retry").addEventListener("click", tryLive);
+  setTimeout(showOffline, 1400);
+})();
+</script>
+</body>
+</html>

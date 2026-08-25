@@ -32,7 +32,8 @@ const detectLang = () => {
 const S = {
   role:"rider", lang: storeGet("rs.lang") || detectLang(), theme: storeGet("rs.theme") || "auto",
   rail: storeGet("rs.rail") ?? "collapsed",   // collapsed is the DEFAULT (owner)
-  view:"boot",                                // boot | landing | auth | app
+  view:"boot",                                // boot | intro | landing | auth | app
+  introSlide:0,
   authed:false, user:null,                    // user comes from the session
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
   signupRole:"rider",                          // rider | driver (the only signup choices)
@@ -94,6 +95,19 @@ function enterApp(user) {
 
 function isNativeApp() {
   return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+}
+
+const INTRO_KEY = "rs.intro.v1";
+function introSeen() { return storeGet(INTRO_KEY) === "1"; }
+function markIntroSeen() { storeSet(INTRO_KEY, "1"); }
+function guestHome() {
+  if (!introSeen()) {
+    S.view = "intro";
+    S.introSlide = 0;
+    return;
+  }
+  S.view = isNativeApp() ? "auth" : "landing";
+  if (isNativeApp()) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
 }
 
 function signOut() {

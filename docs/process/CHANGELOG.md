@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 2026-08-25 — First-open slides + offline splash + APK URL
+
+- Guest first open shows four intro slides (Prev / Next / Skip). Last slide:
+  rider booking vs a separate Driver Account; Get started opens driver signup.
+- Native APK ships `offline.html` (Capacitor `errorPath`): splash, then
+  connection message + Retry (splash again).
+- Get-the-app: two columns Android | iOS. APK + QR use
+  `/download/android.apk?v={BRAND.version.code}`. Debug-APK disclaimer removed.
+- Brand versionCode 2.
+
+# CHANGELOG
+
 ## 2026-08-25 — W1 wallet fare on book (Path B)
 
 - Review screen embeds `paymentChoice`. Cash = previous flow. Wallet =

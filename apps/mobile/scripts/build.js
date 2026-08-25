@@ -47,6 +47,13 @@ if (html.includes("</head>")) html = html.replace("</head>", inject + "</head>")
 else html = inject + html;
 fs.writeFileSync(path.join(www, "index.html"), html);
 fs.writeFileSync(path.join(dist, "www", "index.html"), html);
+const offlineSrc = path.join(HERE, "offline.html");
+if (fs.existsSync(offlineSrc)) {
+  const off = fs.readFileSync(offlineSrc);
+  fs.writeFileSync(path.join(www, "offline.html"), off);
+  fs.writeFileSync(path.join(dist, "www", "offline.html"), off);
+}
+
 fs.copyFileSync(path.join(HERE, "server.js"), path.join(dist, "server.js"));
 
 const appId = process.env.MOBILE_APP_ID || "eg.rideshare.app";
@@ -64,6 +71,7 @@ const cfg = {
     cleartext: false,
     androidScheme: "https",
     hostname: "localhost",
+    errorPath: "offline.html",
     allowNavigation: [origin.replace(/^https?:\/\//, "")],
   },
   plugins: {

@@ -1473,3 +1473,25 @@ group("PATH A — phase 1a embeddings: boarding map + fleet map honesty");
   t.set({ page: "review" });
   ok("review screen shows the boarding-highlight map", t.all(".mapstops__item--hi").length === 1);
 }
+
+group("INTRO + DOWNLOAD — first-open slides and versioned APK URL");
+{
+  const t=boot();
+  ["j_intro1T","j_intro4T","j_intro4C","j_offlineTitle","j_offlineRetry"].forEach((k)=>{
+    t.w.S.lang="en"; const en=t.w.eval("t("+JSON.stringify(k)+")");
+    t.w.S.lang="ar"; const ar=t.w.eval("t("+JSON.stringify(k)+")");
+    t.w.S.lang="en";
+    ok(k+" both languages", en!==k && ar!==k && en!==ar);
+  });
+  ok("last slide is Start Driving", t.w.T.en.j_intro4T==="Start Driving & Get Paid");
+  ok("last slide requires a separate Driver Account", /Driver Account/.test(t.w.T.en.j_intro4B) && /Driver Account/.test(t.w.T.en.j_intro4C));
+  t.w.S.view="intro"; t.w.S.introSlide=3; t.w.S.authed=false; t.w.render();
+  ok("intro last slide renders", !!t.q(".intro") && /Start Driving/.test(t.q(".intro").textContent));
+  ok("intro last slide has Get started", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.j_introStart)));
+  t.w.S.view="landing"; t.w.S.landingPage="download"; t.w.render();
+  const a=t.q("a.btn--primary");
+  ok("download APK href is cache-busted", !!a && /\/download\/android\.apk\?v=/.test(a.getAttribute("href")), a&&a.getAttribute("href"));
+  ok("download has no debug-APK disclaimer", !/Debug APK|closed beta/.test(t.q(".landing").textContent));
+  ok("download is two columns", t.all(".desk-split .card").length===2);
+  ok("QR encodes the same APK URL", !!t.q(".dlqr") && decodeURIComponent(t.q(".dlqr").getAttribute("src")||"").includes("/download/android.apk?v="));
+}
