@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-25 — APK local-first offline page
+
+- Capacitor no longer sets `server.url`. The WebView starts on device
+  `www/index.html` (splash → `/healthz` → live site, or our offline page).
+  Remote `errorPath` cannot load without internet, so Android showed the
+  system error page. Retry re-runs the splash + probe.
+- Brand versionCode 3 (APK URL cache-bust).
+
 ## 2026-08-25 — Maps + staff list + Arabic panel2
 
 - Restore Arabic `panel2T`/`panel2B` (landing slide 2 leaked keys).

@@ -13,7 +13,9 @@ test("capacitor.config.json is generated from brand.json", () => {
   assert.equal(cfg.appName, brand.name.en);
   assert.equal(cfg.webDir, "www");
   assert.match(cfg.appId, /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
-  assert.match(cfg.server && cfg.server.url || "", /^https:\/\//);
+  assert.ok(!cfg.server || !cfg.server.url,
+    "server.url must stay unset — remote start shows the system error page offline");
+  assert.ok((cfg.server && cfg.server.allowNavigation || []).length >= 1);
 });
 
 test("Play version is one source (brand.json) — P7.6", () => {
@@ -27,8 +29,10 @@ test("Play version is one source (brand.json) — P7.6", () => {
   assert.ok(!/storePassword\s*=\s*['"][^'"]{4,}['"]/.test(release));
 });
 
-test("www/index.html is the web bundle", () => {
+test("www/index.html is the local offline boot (not a remote shell)", () => {
   const html = fs.readFileSync(path.join(__dirname, "../www/index.html"), "utf8");
-  assert.match(html, /<html/i);
-  assert.ok(html.length > 1000);
+  assert.match(html, /Check your internet connection/);
+  assert.match(html, /id="retry"/);
+  assert.match(html, /__RS_PUBLIC_ORIGIN/);
+  assert.match(html, /healthz/);
 });

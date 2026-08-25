@@ -41,18 +41,23 @@ fs.mkdirSync(www, { recursive: true });
 fs.mkdirSync(path.join(dist, "www"), { recursive: true });
 const origin = (process.env.MOBILE_WEB_ORIGIN || process.env.PUBLIC_WEB_ORIGIN ||
   "https://ride-shareweb-production.up.railway.app").replace(/\/$/, "");
-let html = fs.readFileSync(webHtml, "utf8");
-const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};</script>`;
-if (html.includes("</head>")) html = html.replace("</head>", inject + "</head>");
-else html = inject + html;
-fs.writeFileSync(path.join(www, "index.html"), html);
-fs.writeFileSync(path.join(dist, "www", "index.html"), html);
-const offlineSrc = path.join(HERE, "offline.html");
-if (fs.existsSync(offlineSrc)) {
-  const off = fs.readFileSync(offlineSrc);
-  fs.writeFileSync(path.join(www, "offline.html"), off);
-  fs.writeFileSync(path.join(dist, "www", "offline.html"), off);
+/* Local-first: Capacitor must start on a FILE in www/, never server.url.
+   With server.url the WebView hits the remote host first; offline then
+   shows Android's default error page. errorPath is resolved against the
+   remote origin so it also fails. Boot HTML lives on the device. */
+const bootSrc = path.join(HERE, "offline.html");
+if (!fs.existsSync(bootSrc)) {
+  console.error("FAIL: apps/mobile/offline.html missing");
+  process.exit(1);
 }
+const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};</script>`;
+let boot = fs.readFileSync(bootSrc, "utf8");
+if (boot.includes("</head>")) boot = boot.replace("</head>", inject + "</head>");
+else boot = inject + boot;
+fs.writeFileSync(path.join(www, "index.html"), boot);
+fs.writeFileSync(path.join(www, "offline.html"), boot);
+fs.writeFileSync(path.join(dist, "www", "index.html"), boot);
+fs.writeFileSync(path.join(dist, "www", "offline.html"), boot);
 
 fs.copyFileSync(path.join(HERE, "server.js"), path.join(dist, "server.js"));
 
@@ -62,16 +67,13 @@ const cfg = {
   appName: BRAND.name.en,
   webDir: "www",
   android: { allowMixedContent: false },
-  /* First-party live HTML: each launch loads the Railway website. A push
-     to main updates the installed app without a new APK. Offline falls
-     back to the baked www/ copy only if the URL cannot be reached — the
-     shell still ships that copy. Native skip-landing lives in that HTML. */
+  /* Start on local www/index.html (offline splash). When /healthz is
+     reachable, the boot page navigates to the live first-party origin
+     so website deploys still update the installed app. */
   server: {
-    url: origin,
     cleartext: false,
     androidScheme: "https",
     hostname: "localhost",
-    errorPath: "offline.html",
     allowNavigation: [origin.replace(/^https?:\/\//, "")],
   },
   plugins: {
@@ -102,4 +104,4 @@ const meta = {
   builtAt: new Date().toISOString(),
 };
 fs.writeFileSync(path.join(dist, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
-console.log(`mobile: wrapped ${path.relative(ROOT, webHtml)} → www/ + dist/ (${html.length} bytes)`);
+console.log(`mobile: boot ${boot.length} bytes → www/ (live ${origin})`);

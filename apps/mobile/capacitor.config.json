@@ -5,6 +5,14 @@
   "android": {
     "allowMixedContent": false
   },
+  "server": {
+    "cleartext": false,
+    "androidScheme": "https",
+    "hostname": "localhost",
+    "allowNavigation": [
+      "ride-shareweb-production.up.railway.app"
+    ]
+  },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": true,
