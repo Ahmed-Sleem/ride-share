@@ -41,8 +41,37 @@ function staffProfile() {
 
 function adminStaff() {
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
-  w.append(Card("card--tight",
+  const formCol = $("div",{id:"staff-form", class:"stack gap3"});
+  const list = $("div",{id:"staff-list"});
+  w.append($("div",{class:"desk-split"}, formCol, list));
+  renderStaffForm(formCol);
+  loadStaffInto(list);
+  return w;
+}
+
+function renderStaffForm(el) {
+  if (!el) el = document.getElementById("staff-form");
+  if (!el) return;
+  el.innerHTML = "";
+  const editing = S.staffEditing && !S.staffEditing.isSystemAdmin;
+  if (editing) {
+    const s = S.staffEditing;
+    el.append($("div",{class:"row gap2"},
+      $("h2",{class:"t-head grow",text:t("adminEditTitle")}),
+      Btn({label:t("j_newStaff"), kind:"secondary", size:"sm", on:()=>{ S.staffEditing=null; renderStaffForm(); }})));
+    el.append(Card("card--tight",
+      field("staff-edit-name", t("adminName"), "text", "name", s.name || ""),
+      $("div",{class:"field"},
+        $("label",{text:t("adminRole")}),
+        $("select",{class:"input", id:"staff-edit-role"},
+          ["operations","manager","support"].map(r=>
+            $("option",{attrs:{value:r, selected: s.role===r ? "" : null}, text:t("roleLabel."+r)})))),
+      $("div",{class:"t-cap ltr",text:s.email || s.phone || ""}),
+      Btn({label:t("save"), on:()=>saveStaffEdit()})));
+    return;
+  }
+  el.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
+  el.append(Card("card--tight",
     $("div",{class:"grid"},
       field("staff-name", t("adminName"), "text"),
       field("staff-phone", t("adminPhone"), "tel"),
@@ -55,10 +84,6 @@ function adminStaff() {
         ["operations","manager","support"].map(r=>
           $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
     Btn({label:t("adminCreate"), on:()=>createStaff()})));
-  const list = $("div",{id:"staff-list"});
-  w.append(list);
-  loadStaffInto(list);
-  return w;
 }
 
 function adminAudit() {
@@ -94,7 +119,21 @@ async function loadStaffInto(el) {
     const staff = await API.listStaff();
     if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
     el.append($("h2",{class:"t-head",text:t("adminStaff")}));
-    staff.forEach(s=> el.append(staffRow(s)));
+    const rows = staff.map((s) => {
+      const isMain = s.isSystemAdmin === true;
+      const selected = S.staffEditing && S.staffEditing.id === s.id;
+      return $("tr",{
+        class: selected ? "rowitem--selected" : "",
+        on: isMain ? null : { click: () => { S.staffEditing = s; renderStaffForm(); loadStaffInto(el); } },
+      },
+        $("td",{text:s.name || "—"}),
+        $("td",{class:"ltr",text:s.email || s.phone || "—"}),
+        $("td",{text:t("roleLabel."+s.role)}),
+        $("td",{}, isMain
+          ? Chip({label:t("adminSystemAdmin"), kind:"brand"})
+          : Chip({label:s.status})));
+    });
+    el.append(Table([t("adminName"), t("adminEmail"), t("adminRole"), t("adminSystemAdmin")], rows));
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 

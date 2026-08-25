@@ -327,13 +327,18 @@ test('the system admin is immutable — cannot be edited or deleted by anyone', 
 });
 
 test('the system admin edits and deletes other staff accounts', async () => {
-  const { svc, users } = setup();
+  const { svc, users, sessions } = setup();
   const main = await users.create({ email: 'root@x.com', role: 'super_admin', passwordHash: hashPassword('pw-12345678'), isSystemAdmin: true });
   const actor = { id: main.id, role: 'super_admin' as const };
   const ops = await svc.createStaff(actor, { email: 'ops@x.com', password: 'pw-12345678', role: 'operations' });
+  await svc.login('ops@x.com', 'pw-12345678');
+  assert.ok(sessions.countFor(ops.id) >= 1);
   const updated = await svc.updateStaff(actor, ops.id, { name: 'Ops Lead', role: 'manager' });
   assert.equal(updated.name, 'Ops Lead');
   assert.equal(updated.role, 'manager');
+  assert.equal(sessions.countFor(ops.id), 0, 'role change revokes every session');
+  const live = await svc.liveActor(ops.id);
+  assert.equal(live && live.role, 'manager');
   await svc.deleteStaff(actor, ops.id);
   // soft-deleted staff can no longer be looked up (deleted_at hidden)
   assert.equal(users.rows.get(ops.id)!.deleted_at !== null, true);

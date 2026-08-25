@@ -464,14 +464,15 @@ async function createRouteAction() {
   }
   S.stopBusy = true; render();
   try {
-    await API.createRoute({
+    const created = await API.createRoute({
       nameEn: val("route-name-en") || undefined,
       nameAr: val("route-name-ar") || undefined,
       fareMinor: Math.round(fare * 100), // EGP → minor units (piastres)
       windowStart: winStart, windowEnd: winEnd, slotIntervalMin: interval,
     });
-    S.stopBusy = false; toast(t("save")); render();
-    loadRoutesInto(document.getElementById("routes-list"));
+    S.stopBusy = false; toast(t("save"));
+    S.opsTarget = created; S.opsView = "routeDetail";
+    render();
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
@@ -515,7 +516,7 @@ function routeDetailView() {
           Banner("warn", t("stopTooClose")),
           field("stop-override", t("overrideReason"), "text", "off"))
       : null,
-    MapView({h:220, vehicle:false, route:false, stops:false,
+    MapView({h:280, vehicle:false, route:false, stops:false, locate:true,
       onPick:(lat,lng)=>{
         const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
         if(la) la.value = lat.toFixed(6);

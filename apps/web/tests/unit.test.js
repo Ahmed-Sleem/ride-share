@@ -1070,6 +1070,21 @@ const mW1 = (async () => {
   ok("j_paidWallet both languages", t.w.T.en.j_paidWallet && t.w.T.ar.j_paidWallet !== t.w.T.en.j_paidWallet);
 })();
 
+group("ROLE NAV — operations maps to ops; other roles stay themselves");
+{
+  const t=boot();
+  ok("uiRole maps operations → ops", t.w.uiRole("operations")==="ops");
+  ok("uiRole keeps manager", t.w.uiRole("manager")==="manager");
+  ok("uiRole keeps support", t.w.uiRole("support")==="support");
+  ok("uiRole keeps super_admin", t.w.uiRole("super_admin")==="super_admin");
+  ok("ops nav still has queue and routes", (t.w.pagesFor("operations")||[]).some((p)=>p.k==="queue") && (t.w.pagesFor("ops")||[]).some((p)=>p.k==="routes"));
+  ok("manager nav is unchanged", (t.w.pagesFor("manager")||[]).some((p)=>p.k==="pricing"));
+  t.w.enterApp({id:"o1", role:"operations", name:"Ops"});
+  ok("operations login is not a blank screen", !!t.q(".nav") && t.w.S.role==="ops");
+  t.w.enterApp({id:"a1", role:"super_admin", name:"Admin"});
+  ok("super_admin login renders overview", !!t.q(".main") && t.w.S.role==="super_admin");
+}
+
 group("NATIVE APP — skip landing, same API origin hook");
 {
   const t=boot();

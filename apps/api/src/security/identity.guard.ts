@@ -13,13 +13,17 @@ import {
 import type { FastifyRequest } from 'fastify';
 import { CONFIG, type Env } from '../config/env.js';
 import { verifyAccessToken } from './token.js';
+import { IdentityService } from '../modules/identity/application/identity.service.js';
 import type { Actor } from '../modules/identity/contracts/types.js';
 
 type RequestWithActor = FastifyRequest & { actor?: Actor };
 
 @Injectable()
 export class IdentityGuard implements CanActivate {
-  constructor(@Inject(CONFIG) private readonly env: Env) {}
+  constructor(
+    @Inject(CONFIG) private readonly env: Env,
+    private readonly identity: IdentityService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<RequestWithActor>();
@@ -30,7 +34,9 @@ export class IdentityGuard implements CanActivate {
     const token = header.slice('Bearer '.length).trim();
     try {
       const claims = await verifyAccessToken(this.env.JWT_SECRET, token);
-      req.actor = { id: claims.sub, role: claims.role as Actor['role'] };
+      const live = await this.identity.liveActor(claims.sub);
+      if (!live) throw new UnauthorizedException({ message_key: 'auth.invalid_token' });
+      req.actor = live;
       return true;
     } catch {
       throw new UnauthorizedException({ message_key: 'auth.invalid_token' });

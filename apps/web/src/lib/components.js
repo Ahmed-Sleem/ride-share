@@ -62,12 +62,20 @@ const S = {
 
 /* enter the signed-in app with the session user; role comes from auth, never
    a switcher (§8 — the demo role switcher is gone). */
+/* API roles vs UI nav tables: operations staff are `operations` in the
+   database and `ops` in PAGES. One map — never a second copy. */
+function uiRole(role) {
+  if (role === "operations") return "ops";
+  if (typeof PAGES !== "undefined" && PAGES[role]) return role;
+  return role || "rider";
+}
+
 function enterApp(user) {
   S.user = user;
-  S.role = user.role;
+  S.role = uiRole(user && user.role);
   S.authed = true;
   S.view = "app";
-  S.page = DEFAULT_PAGE[S.role] || "home";
+  S.page = (typeof DEFAULT_PAGE !== "undefined" && DEFAULT_PAGE[S.role]) || "home";
   S.stack = [];
   S.sheet = null; S.opsView = null;
   // reset the auth-flow state so returning to sign-in starts clean

@@ -138,9 +138,10 @@ function riderLanding() {
         $("div", { class: "landing__herotext" },
           $("h1", { class: "landing__title", text: t("landingHero") }),
           $("p", { class: "landing__sub", text: t("landingHeroSub") }),
-          $("div", { class: "row gap3" },
+          $("div", { class: "row gap3 wrap" },
             Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
-            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
+            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }),
+            Btn({ label: t("navDownload"), kind: "secondary", on: () => landingGo("download") }))),
         heroStage("hero"))),
 
     $("section", { class: "stackpanels", attrs: { "aria-label": t("panelKick") } },

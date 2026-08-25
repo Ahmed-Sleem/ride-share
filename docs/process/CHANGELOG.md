@@ -1166,3 +1166,9 @@
 
 - Installed APK loads the first-party Railway site on each launch (UI updates without a new APK).
 - StatusBar colour reads --ink-950/--ink-0 (check-tokens).
+
+## 2026-08-25 — Ops/super-admin black screen + live role
+
+- Map API role `operations` to UI nav `ops` (black screen). Other staff navs unchanged; super_admin still has every existing tool.
+- Guard + /me use the live DB role; changing a staff role revokes their sessions.
+- Staff desk is form+table; route create opens the map pin screen; landing Get-the-app CTA; download is two columns.

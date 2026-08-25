@@ -79,7 +79,14 @@ const PAGES = {
 };
 const DEFAULT_PAGE = Object.fromEntries(
   Object.entries(PAGES).map(([r,list])=>[r, list[0].k]));
-const pageDef = () => PAGES[S.role].find(p=>p.k===S.page) || PAGES[S.role][0];
+const pagesFor = (role) => {
+  const key = (typeof uiRole === "function" ? uiRole(role) : role);
+  return (PAGES[key] || PAGES.rider);
+};
+const pageDef = () => {
+  const list = pagesFor(S.role);
+  return list.find(p=>p.k===S.page) || list[0];
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    14. CHROME
@@ -126,7 +133,7 @@ function nav(){
   el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:t("brand")})));
 
   const items=$("div",{class:"nav__items"});
-  PAGES[S.role].filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
+  pagesFor(S.role).filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
   el.append(items);
 
   // Rail footer: profile pinned to the bottom on medium and up. On compact
@@ -167,6 +174,19 @@ function navItem(p, extra){
    15. RENDER
    ══════════════════════════════════════════════════════════════════════ */
 function render(){
+  try { renderUnsafe(); }
+  catch (err) {
+    const root=document.getElementById("root");
+    if (root) {
+      root.innerHTML="";
+      root.append($("div",{class:"main"},
+        Banner("danger", t("error.internal")),
+        Btn({label:t("signOut"), kind:"secondary", on:()=>signOut()})));
+    }
+    try { console.error(err); } catch (_) { /* no console */ }
+  }
+}
+function renderUnsafe(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
   // One source of truth: the pre-paint script sets <html data-theme>, so
@@ -338,7 +358,21 @@ window.addEventListener("online", ()=>{
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
+window.addEventListener("focus", () => {
+  if (!S.authed || typeof API === "undefined" || typeof API.me !== "function") return;
+  API.me().then((me) => {
+    if (!me || !me.actor) return;
+    const next = typeof uiRole === "function" ? uiRole(me.actor.role) : me.actor.role;
+    if (S.user) {
+      S.user.role = me.actor.role;
+      try { storeSet("rs.user", JSON.stringify(S.user)); } catch (_) { /* */ }
+    }
+    if (next !== S.role) enterApp(S.user);
+  }).catch(() => {});
+});
+
 Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
+                        uiRole, pagesFor,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,

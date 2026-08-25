@@ -319,6 +319,9 @@ export class IdentityService {
     // super_admin can never be set (DEC-196) — decided in the resolver.
     assertGrantableStaffRole(role as unknown as Role);
     await this.users.updateStaff(id, input.name ?? target.name, role);
+    if (role !== target.role) {
+      await this.sessions.revokeAllForUser(id);
+    }
     const updated = await this.users.findById(id);
     await this.audit.record(actor, 'staff.update', {
       targetType: 'user', targetId: id,
@@ -345,6 +348,14 @@ export class IdentityService {
       targetType: 'user', targetId: id, after: { email: target.email, role: target.role },
     });
     return { ok: true };
+  }
+
+  /** Live actor from the users table — role changes take effect immediately,
+      not when the JWT happens to expire. Missing/deleted/suspended = null. */
+  async liveActor(userId: string): Promise<Actor | null> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') return null;
+    return { id: user.id, role: user.role };
   }
 
   async listStaff(actor: Actor): Promise<PublicUser[]> {
