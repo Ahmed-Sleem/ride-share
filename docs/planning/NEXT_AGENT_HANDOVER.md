@@ -637,3 +637,58 @@ It must be perfect complete, no mocks no demos, production ready, industrial sta
 ---
 
 *Patch authored 2026-08-25 after a full tree walk (`infra/migrations`, `lib/map.js`, `planner.js`, `rider.js`, `staff.js`, `payments`, `modules/*`, CI workflow, DEC-208, uncommitted settings/mobile). Original §1–§10 kept as Agent A’s baseline.*
+
+---
+
+# 12. DEVELOPER HANDOVER BRIEF (2026-08-26 — HEAD `a75ed25`)
+
+## 12.1 Core Rules for Any Developer Joining This Project
+1. **No Code Without Confirmed Plan**: Present atomic checklist, clarify ambiguities with MCQ, wait for confirmation before writing code.
+2. **Production-Ready & Zero Mocks**: No fake APIs, no hardcoded demo responses, no decorative dead buttons (§8, §8.1). Unfinished features must be hidden behind capabilities or tracked as gaps.
+3. **One Definition Everywhere (§0.3)**:
+   - SQL queries live *only* in `**/infra/*.repository.ts`.
+   - Authority & permissions live *only* in `apps/api/src/security/authority/authority.resolver.ts`.
+   - UI design tokens live *only* in `apps/web/src/styles/shell.html`.
+   - User-facing strings live *only* in `apps/web/src/data/content.js` (both EN and AR).
+   - Brand name and assets derive *only* from `packages/brand/brand.json`.
+4. **Test & Break Discipline (§0.2)**: Every check must be broken once, observed failing for the right reason, and restored.
+5. **Money Integrity**: Integer minor units (piastres, EGP × 100). Balances are derived from the append-only ledger (`ledger_entries`), never stored in mutable balance columns.
+6. **Secrets Discipline**: Never commit secrets, passwords, or tokens. Never output secrets in chat/logs.
+
+## 12.2 Three Railway Services & Two Distinct Surfaces
+- **Web (`apps/web`)**: Public marketing website (`https://ride-shareweb-production.up.railway.app/`). Opens directly into `landing` (Ride, Drive, About, Help, Download, Login, Signup). Injects `__RS_SURFACE = 'web'`. Never renders mobile intro slides.
+- **Mobile (`apps/mobile`)**: Dedicated Authenticated App API (`https://ride-sharemobile-production.up.railway.app/`).
+  - `/` returns JSON 403 `NOT_A_WEBSITE` (blocks browser visits and scrapers).
+  - `/healthz` is public (returns `{"ok":true,"service":"mobile","kind":"app-api","api":"up"}`).
+  - Requires HMAC proof headers (`X-RS-App-Id`, `X-RS-Ts`, `X-RS-Sign`) generated with `MOBILE_APP_SECRET`.
+  - Serves OTA update metadata (`/v1/mobile/update`) and bundle stream (`/v1/mobile/bundle`).
+  - Proxies authenticated API requests (`/v1/*`) to the private NestJS API over Railway internal network.
+- **API (`apps/api`)**: Shared NestJS backend (`http://ride-shareapi.railway.internal:3000`). Manages DB, auth, bookings, routes, payments, ledger, and safety.
+
+## 12.3 What Is Built & Verified (Current State)
+- **M0–M2**: Monorepo toolchain, 11 verification scripts, CI workflows, auth (email+password, OTP, bypass toggle), geography (stops desk tool, OSM click-to-place).
+- **M3**: Core journey, route/slot timetable, driver claim, rider booking with locked flat fare, QR + 6-digit boarding code, live journey tracking, append-only double-entry ledger (migration 0017), Paymob HMAC webhook verifier, W1 wallet payment on booking.
+- **M4**: Safety tooling (silent SOS, incident triage queue, share-my-ride link).
+- **M7**: Capacitor Android wrapper, offline outbox, batched GPS tracking, HMAC-authenticated App API gateway.
+- **Design/Admin**: Landing v3, desktop density, Owner Settings (DEC-208: commission %, OTP bypass, notification caps).
+
+## 12.4 What Remains (Attack Order)
+1. **APK Bootloader OTA Loop**: Update `apps/mobile/offline.html` to query `/v1/mobile/update`, verify SHA-256 of `/v1/mobile/bundle`, cache in local device storage, and execute with offline fallback.
+2. **W2 (Nominatim Place Search)**: Cached & throttled server-side geocoding (`GET /geo/places?q=`) integrated into A→B planner, snapping results to nearest stops.
+3. **W2b (Live Fleet Map)**: Real fleet positions on ops live map (`GET /journeys/live`).
+4. **W13 (Route Stop Attachment UX)**: Desk UI to attach/reorder stops on routes.
+5. **W6 (Automated Reconciliation)**: Daily ledger reconciliation scheduler.
+6. **W3 (Commercial / M5)**: Fare management with preview, promotions with ledger budgets, coverage board.
+7. **W4 (Recurring / M6)**: Subscriptions & recurring driver claims.
+8. **W5 (Payouts)**: Paymob driver disbursements & line-by-line statements.
+9. **W7/W8**: Push delivery & signal instrumentation, two-pane staff tables, fluid type scale.
+10. **W9**: Launch simulation & failure drills.
+11. **W12**: Staff 2FA (DEC-151).
+
+## 12.5 Daily Verification Commands
+```bash
+export PATH="$HOME/.local/bin:/usr/lib/postgresql/17/bin:$PATH"
+export DATABASE_URL="postgres:///rideshare_dev?host=/var/run/postgresql"
+pnpm verify          # repo guards + builds + typechecks + lints + all test suites
+pnpm db:verify       # migration cycle + schema dump + type generation
+```
