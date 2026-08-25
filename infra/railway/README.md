@@ -102,7 +102,7 @@ exposes `DATABASE_URL` automatically.
 |---|---|---|---|
 | `api` | `/healthz` | 120 | private (no public domain needed) |
 | `web` | `/healthz` | 120 | **Generate Domain** (public URL) |
-| `mobile` | `/healthz` | 120 | **Generate Domain** (app product: intro → auth, no landing). APK boot probes this origin. Set GitHub Actions variable `MOBILE_PUBLIC_ORIGIN` to `https://<that-host>` so CI APKs navigate here, not the website. |
+| `mobile` | `/healthz` | 120 | **Generate Domain** but this is an **API**, not a site (`/` = 403). Set `MOBILE_APP_SECRET` (≥32 chars, same value the APK HMAC-signs with) and `API_INTERNAL_URL` like `web`. GitHub variable `MOBILE_PUBLIC_ORIGIN` = that API URL. |
 | `Postgres` | — (managed) | — | private |
 
 ## Platform facts (R19.1 — operational risks, not inconveniences)

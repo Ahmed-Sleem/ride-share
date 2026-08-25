@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-08-25 — Mobile service is an app API, not a website
+
+- `/` returns JSON 403 `NOT_A_WEBSITE`. `/healthz` stays public for Railway.
+- App routes require HMAC (`X-RS-App-Id` + `X-RS-Ts` + `X-RS-Sign`). Wrong/missing
+  proof → 403 `APP_UNPROVEN`. Unset `MOBILE_APP_SECRET` → 503 (fail closed).
+- Proven `GET /v1/mobile/update` + `/v1/mobile/bundle` (sha256). `/v1/*` still
+  proxies to the private Nest API. Play Integrity is the next owner-gated layer.
+
 ## 2026-08-25 — Two live products: website vs mobile app
 
 - Website (`web`) never shows first-open intro slides — landing only.

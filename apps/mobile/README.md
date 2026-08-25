@@ -1,9 +1,10 @@
 # Mobile (Capacitor, DEC-176)
 
-One UI. The Android APK is the **same** `@ride-share/web` HTML running inside a
-native WebView. Screens never import `@capacitor/*` — they call `Platform`
-(`packages/platform`). Native plugins (GPS, share, later camera/push) attach
-at runtime when the WebView injects `window.Capacitor`.
+The Railway **`mobile` service is an app API, not a website.** `/` is JSON 403.
+The APK proves itself with HMAC headers, then calls `/v1/*` (proxied to the
+private Nest API) and OTA (`/v1/mobile/update`, `/v1/mobile/bundle`).
+
+Screens never import `@capacitor/*` — they call `Platform` (`packages/platform`).
 
 ## How it works
 
