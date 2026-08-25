@@ -36,3 +36,11 @@ test("www/index.html is the local offline boot (not a remote shell)", () => {
   assert.match(html, /__RS_PUBLIC_ORIGIN/);
   assert.match(html, /healthz/);
 });
+
+test("Railway dist serves the app HTML, not the offline splash", () => {
+  const build = fs.readFileSync(path.join(__dirname, "../scripts/build.js"), "utf8");
+  assert.match(build, /MOBILE_PUBLIC_ORIGIN/);
+  assert.match(build, /__RS_SURFACE="mobile"/);
+  assert.match(build, /dist, "www", "index.html"/);
+  assert.match(build, /LIVE app HTML/);
+});

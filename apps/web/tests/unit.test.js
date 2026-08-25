@@ -1091,11 +1091,31 @@ group("NATIVE APP — skip landing, same API origin hook");
   ok("default kind is web in jsdom", t.w.Platform.kind()==="web");
   t.w.Capacitor = { isNativePlatform: () => true, getPlatform: () => "android" };
   ok("kind is native when Capacitor reports native", t.w.Platform.kind()==="native");
+  t.w.__RS_SURFACE = "mobile";
   t.w.S.view="boot"; t.w.S.authed=false; t.w.render();
   t.w.S.view="landing"; t.w.S.authed=false; t.w.render();
-  ok("native never shows the marketing landing", !t.q(".landing") && !!t.q(".authwrap"));
-  ok("native welcome copy is on the auth card", /Welcome|أهلا/.test(t.q(".authwrap").textContent));
+  ok("mobile surface never shows the marketing landing", !t.q(".landing") && !!t.q(".authwrap"));
+  ok("mobile welcome copy is on the auth card", /Welcome|أهلا/.test(t.q(".authwrap").textContent));
   t.w.Capacitor = undefined;
+  t.w.__RS_SURFACE = "web";
+}
+
+group("SURFACES — website has no intro; mobile origin has intro");
+{
+  const t=boot();
+  t.w.__RS_SURFACE = "web";
+  try { t.w.localStorage.removeItem("rs.intro.v1"); } catch (e) {}
+  t.w.S.authed=false; t.w.guestHome(); t.w.render();
+  ok("website guest opens landing, not intro", t.w.S.view==="landing" && !!t.q(".landing") && !t.q(".intro"));
+  t.w.S.view="intro"; t.w.S.authed=false; t.w.render();
+  ok("website cannot keep the intro view", !t.q(".intro") && !!t.q(".landing"));
+  t.w.__RS_SURFACE = "mobile";
+  try { t.w.localStorage.removeItem("rs.intro.v1"); } catch (e) {}
+  t.w.S.authed=false; t.w.guestHome(); t.w.render();
+  ok("mobile guest opens intro slides", t.w.S.view==="intro" && !!t.q(".intro") && !t.q(".landing"));
+  t.w.S.view="auth"; t.w.S.authMode="signin"; t.w.render();
+  ok("mobile after intro is auth, not landing", t.w.S.view==="auth" && !!t.q(".authwrap") && !t.q(".landing"), String(t.w.S.view));
+  t.w.__RS_SURFACE = "web";
 }
 
 const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen, mW1];
@@ -1485,9 +1505,11 @@ group("INTRO + DOWNLOAD — first-open slides and versioned APK URL");
   });
   ok("last slide is Start Driving", t.w.T.en.j_intro4T==="Start Driving & Get Paid");
   ok("last slide requires a separate Driver Account", /Driver Account/.test(t.w.T.en.j_intro4B) && /Driver Account/.test(t.w.T.en.j_intro4C));
+  t.w.__RS_SURFACE = "mobile";
   t.w.S.view="intro"; t.w.S.introSlide=3; t.w.S.authed=false; t.w.render();
   ok("intro last slide renders", !!t.q(".intro") && /Start Driving/.test(t.q(".intro").textContent));
   ok("intro last slide has Get started", [...t.all(".btn")].some((b)=>b.textContent.includes(t.w.T.en.j_introStart)));
+  t.w.__RS_SURFACE = "web";
   t.w.S.view="landing"; t.w.S.landingPage="download"; t.w.render();
   const a=t.q("a.btn--primary");
   ok("download APK href is cache-busted", !!a && /\/download\/android\.apk\?v=/.test(a.getAttribute("href")), a&&a.getAttribute("href"));

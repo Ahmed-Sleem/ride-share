@@ -97,22 +97,38 @@ function isNativeApp() {
   return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
 }
 
+/* Website vs installed-app product. Railway `web` injects __RS_SURFACE="web";
+   Railway `mobile` injects "mobile". Intro slides belong only to the mobile
+   product — never the public website (phone browser included). */
+function isAppSurface() {
+  const s = (typeof window !== "undefined" && window.__RS_SURFACE) || "";
+  if (s === "mobile") return true;
+  if (s === "web") return false;
+  return isNativeApp();
+}
+
 const INTRO_KEY = "rs.intro.v1";
 function introSeen() { return storeGet(INTRO_KEY) === "1"; }
 function markIntroSeen() { storeSet(INTRO_KEY, "1"); }
 function guestHome() {
-  if (!introSeen()) {
-    S.view = "intro";
-    S.introSlide = 0;
+  if (isAppSurface()) {
+    if (!introSeen()) {
+      S.view = "intro";
+      S.introSlide = 0;
+      return;
+    }
+    S.view = "auth";
+    S.authMode = "signin";
+    S.loginMethod = null;
+    S.authStep = "choose";
     return;
   }
-  S.view = isNativeApp() ? "auth" : "landing";
-  if (isNativeApp()) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
+  S.view = "landing";
 }
 
 function signOut() {
   API.clearSession();
-  S.user = null; S.authed = false; S.view = isNativeApp() ? "auth" : "landing";
+  S.user = null; S.authed = false; S.view = isAppSurface() ? "auth" : "landing";
   S.landingPage = "rider"; S.landingMenu = false; S.landingDoc = null;
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
   S.authBusy = false; S.authError = null; S.otpBypass = false;

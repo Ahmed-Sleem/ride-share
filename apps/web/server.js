@@ -33,9 +33,19 @@ if (RAW) {
   }
 }
 
+function withSurface(html, surface) {
+  if (!html || html.includes('__RS_SURFACE')) return html;
+  const tag = '<script>window.__RS_SURFACE=' + JSON.stringify(surface) + ';</script>';
+  if (html.includes('<head>')) return html.replace('<head>', '<head>' + tag);
+  return tag + html;
+}
+
 let doc = null;
 function loadDoc() {
-  if (!doc) doc = fs.readFileSync(fs.existsSync(DIST) ? DIST : LEGACY, 'utf8');
+  if (!doc) {
+    const raw = fs.readFileSync(fs.existsSync(DIST) ? DIST : LEGACY, 'utf8');
+    doc = withSurface(raw, 'web');
+  }
   return doc;
 }
 
@@ -122,6 +132,7 @@ async function handler(req, res) {
     // default; set MAP_PROVIDER=google + GOOGLE_MAPS_API_KEY to use Google.
     return json(res, 200, {
       maps: { provider: process.env.MAP_PROVIDER || 'osm', apiKey: process.env.GOOGLE_MAPS_API_KEY || '' },
+      surface: 'web',
     }, req);
   }
   if (url === '/download/android.apk' || url === '/download/android') {

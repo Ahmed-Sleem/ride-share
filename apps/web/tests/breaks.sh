@@ -402,6 +402,10 @@ run_break "planner loses its combobox semantics" src/screens/planner.js \
   's|role: "combobox", "aria-expanded"|role: "textbox", "aria-expanded"|' \
   "inputs are comboboxes wired to the list (a11y)"
 
+run_break "website guest home shows intro slides" src/lib/components.js \
+  's|  S.view = "landing";|  S.view = "intro"; S.introSlide = 0;|' \
+  "website guest opens landing, not intro"
+
 echo
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

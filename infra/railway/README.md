@@ -102,7 +102,7 @@ exposes `DATABASE_URL` automatically.
 |---|---|---|---|
 | `api` | `/healthz` | 120 | private (no public domain needed) |
 | `web` | `/healthz` | 120 | **Generate Domain** (public URL) |
-| `mobile` | `/healthz` | 120 | optional public domain (same app as `web`; used by the APK's live origin if you point Capacitor `server.url` at it in debug) |
+| `mobile` | `/healthz` | 120 | **Generate Domain** (app product: intro → auth, no landing). APK boot probes this origin. Set GitHub Actions variable `MOBILE_PUBLIC_ORIGIN` to `https://<that-host>` so CI APKs navigate here, not the website. |
 | `Postgres` | — (managed) | — | private |
 
 ## Platform facts (R19.1 — operational risks, not inconveniences)

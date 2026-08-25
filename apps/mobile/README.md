@@ -22,12 +22,12 @@ at runtime when the WebView injects `window.Capacitor`.
 
 - **Browser** (ride-share web URL, or the Railway `mobile` URL): always the
   latest deploy. Refresh = new UI.
-- **Installed APK**: the WebView opens our **first-party** website
-  (`server.url` = the Railway web origin). A push to `main` updates the
-  screens on the next app launch — no new APK. The native shell (icon,
+- **Installed APK**: local `www/index.html` splash, then (when online)
+  `location.replace` to the Railway **`mobile`** public origin — not the
+  website. Intro slides live on that origin so they can change without a
+  new APK. Set `MOBILE_PUBLIC_ORIGIN` (GitHub Actions variable + Railway)
+  to the mobile service's Generate Domain URL. The native shell (icon,
   permissions, plugins) still needs a new binary when those change.
-  Offline: if the origin cannot be reached the user sees a network error;
-  there is no silent rewrite from a third-party host.
 
 ## Do website updates auto-update the APK?
 

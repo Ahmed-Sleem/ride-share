@@ -17,12 +17,19 @@ if (RAW) {
   catch { console.error(`[mobile] invalid API_INTERNAL_URL (treated as unset): ${RAW}`); }
 }
 
+function withSurface(html, surface) {
+  if (!html || html.includes("__RS_SURFACE")) return html;
+  const tag = "<script>window.__RS_SURFACE=" + JSON.stringify(surface) + ";</script>";
+  if (html.includes("<head>")) return html.replace("<head>", "<head>" + tag);
+  return tag + html;
+}
+
 let doc = null;
 function loadDoc() {
   if (!doc) {
     const p = fs.existsSync(DIST) ? DIST : WWW;
     if (!fs.existsSync(p)) throw new Error("mobile HTML missing — run pnpm --filter @ride-share/mobile build");
-    doc = fs.readFileSync(p, "utf8");
+    doc = withSurface(fs.readFileSync(p, "utf8"), "mobile");
   }
   return doc;
 }

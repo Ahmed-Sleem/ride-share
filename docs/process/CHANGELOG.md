@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-08-25 — Two live products: website vs mobile app
+
+- Website (`web`) never shows first-open intro slides — landing only.
+- Railway `mobile` serves the live app HTML (`__RS_SURFACE=mobile`): intro
+  then auth, never the marketing landing. Same `/v1` API proxy.
+- APK stays local-first (`offline.html`); live navigation uses
+  `MOBILE_PUBLIC_ORIGIN` (not the website). Generate Domain on `mobile`
+  and set the GitHub Actions variable of the same name.
+
 ## 2026-08-25 — APK local-first offline page
 
 - Capacitor no longer sets `server.url`. The WebView starts on device

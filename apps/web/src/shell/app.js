@@ -205,15 +205,19 @@ function renderUnsafe(){
 
   /* view machine: boot splash → landing → auth → the signed-in app */
   if(S.view==="boot"){ root.append(bootSplash()); return; }
-  if(S.view==="intro"){ root.append(introView()); return; }
-  if(typeof isNativeApp === "function" && isNativeApp() && !S.authed){
+  const appSurface = typeof isAppSurface === "function" ? isAppSurface() : false;
+  if(S.view==="intro"){
+    if (!appSurface) { guestHome(); }
+    else { root.append(introView()); return; }
+  }
+  if(appSurface && !S.authed){
     if (S.view === "intro") { root.append(introView()); return; }
     if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
     root.append(auth()); return;
   }
   if(S.view==="landing"){ root.append(landing()); return; }
   if(S.view==="auth"){ root.append(auth()); return; }
-  if(!S.authed){ S.view="landing"; root.append(landing()); return; }
+  if(!S.authed){ guestHome(); if (S.view==="intro") { root.append(introView()); return; } if (S.view==="auth") { root.append(auth()); return; } S.view="landing"; root.append(landing()); return; }
 
   const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 

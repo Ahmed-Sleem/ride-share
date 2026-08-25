@@ -121,6 +121,8 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
       - run: pnpm install --frozen-lockfile
       - name: Wrap web + generate Android project + assembleDebug
+        env:
+          MOBILE_PUBLIC_ORIGIN: ${{ vars.MOBILE_PUBLIC_ORIGIN }}
         run: bash apps/mobile/scripts/make-apk.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -154,6 +156,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MOBILE_PUBLIC_ORIGIN: ${{ vars.MOBILE_PUBLIC_ORIGIN }}
         run: bash apps/mobile/scripts/make-release.sh
       - uses: actions/upload-artifact@v4
         with:

@@ -39,7 +39,16 @@ fs.rmSync(www, { recursive: true, force: true });
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(www, { recursive: true });
 fs.mkdirSync(path.join(dist, "www"), { recursive: true });
-const origin = (process.env.MOBILE_WEB_ORIGIN || process.env.PUBLIC_WEB_ORIGIN ||
+function liveOrigin() {
+  const env = (process.env.MOBILE_PUBLIC_ORIGIN || process.env.PUBLIC_MOBILE_ORIGIN ||
+    process.env.MOBILE_WEB_ORIGIN || "").trim();
+  if (env) return env.replace(/\/$/, "");
+  const railway = (process.env.RAILWAY_PUBLIC_DOMAIN || "").trim().replace(/^https?:\/\//, "");
+  if (railway) return "https://" + railway.replace(/\/$/, "");
+  return "";
+}
+const origin = liveOrigin();
+const webOrigin = (process.env.PUBLIC_WEB_ORIGIN ||
   "https://ride-shareweb-production.up.railway.app").replace(/\/$/, "");
 /* Local-first: Capacitor must start on a FILE in www/, never server.url.
    With server.url the WebView hits the remote host first; offline then
@@ -50,13 +59,20 @@ if (!fs.existsSync(bootSrc)) {
   console.error("FAIL: apps/mobile/offline.html missing");
   process.exit(1);
 }
-const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};</script>`;
+const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";</script>`;
 let boot = fs.readFileSync(bootSrc, "utf8");
 if (boot.includes("</head>")) boot = boot.replace("</head>", inject + "</head>");
 else boot = inject + boot;
 fs.writeFileSync(path.join(www, "index.html"), boot);
 fs.writeFileSync(path.join(www, "offline.html"), boot);
-fs.writeFileSync(path.join(dist, "www", "index.html"), boot);
+/* Railway `mobile` serves the LIVE app HTML (intro → auth), not the splash.
+   The splash only lives on the device so offline never hits Android's page. */
+let appHtml = fs.readFileSync(webHtml, "utf8");
+if (!appHtml.includes("__RS_SURFACE")) {
+  const tag = '<script>window.__RS_SURFACE="mobile";</script>';
+  appHtml = appHtml.includes("<head>") ? appHtml.replace("<head>", "<head>" + tag) : tag + appHtml;
+}
+fs.writeFileSync(path.join(dist, "www", "index.html"), appHtml);
 fs.writeFileSync(path.join(dist, "www", "offline.html"), boot);
 
 fs.copyFileSync(path.join(HERE, "server.js"), path.join(dist, "server.js"));
@@ -74,7 +90,10 @@ const cfg = {
     cleartext: false,
     androidScheme: "https",
     hostname: "localhost",
-    allowNavigation: [origin.replace(/^https?:\/\//, "")],
+    allowNavigation: [...new Set([
+      origin.replace(/^https?:\/\//, ""),
+      webOrigin.replace(/^https?:\/\//, ""),
+    ].filter(Boolean))],
   },
   plugins: {
     SplashScreen: {
