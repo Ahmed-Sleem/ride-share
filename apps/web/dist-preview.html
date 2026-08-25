@@ -198,8 +198,11 @@
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;padding:0;overflow:hidden}
 html.native,html.native body{overscroll-behavior:none;touch-action:manipulation}
-html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t))}
+html.native .authwrap{padding-top:calc(var(--s6) + var(--safe-t));padding-bottom:calc(var(--s6) + var(--safe-b))}
+html.native .authwrap__card{width:min(440px,100%);box-shadow:none;border:0;background:transparent;padding:var(--s4) 0}
 html.native .splash{padding-top:var(--safe-t)}
+html.native .btn{min-height:var(--tap)}
+html.native .sheet{padding-bottom:calc(var(--s5) + var(--safe-b))}
 .dlqr{width:220px;height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg-base);image-rendering:pixelated}
 body{background:var(--bg-page);color:var(--text-primary);
   font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
@@ -433,7 +436,17 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .btn--ghost:hover:not([disabled]){background:var(--brand-soft)}
 .btn--danger{background:var(--danger);color:var(--on-solid)}
 .btn--block{width:100%;flex:1 1 auto}
+.btn--sm{min-height:var(--tap-sm);padding-inline:var(--s3);font-size:var(--f-cap);border-radius:var(--r-sm)}
 .btn--driver{min-height:var(--tap-driver);font-size:var(--f-lg);border-radius:var(--r-lg)}
+.pager{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);min-width:0;margin-top:var(--s4)}
+.setting{display:grid;gap:var(--s3);align-items:center;grid-template-columns:1fr;min-width:0}
+.setting__copy{display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.setting__edit{display:flex;flex-direction:column;gap:var(--s2);min-width:0}
+.desk-split{display:grid;gap:var(--s4);grid-template-columns:1fr;min-width:0}
+@media (min-width:840px){
+  .setting{grid-template-columns:minmax(0,1.2fr) minmax(12rem,1fr)}
+  .desk-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+}
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .btn[aria-busy="true"]{pointer-events:none}
 
@@ -805,6 +818,17 @@ select.input{cursor:pointer}
 @keyframes splashbounce{
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
+
+.intro{width:100%;min-width:0;height:100%;display:flex;flex-direction:column;background:var(--bg-page)}
+.intro__stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:var(--s5);padding:var(--s6);max-width:480px;margin-inline:auto;width:100%}
+.intro__foot{flex:none;display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);
+  padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--bg-base)}
+.intro__foot .btn--primary{flex:1}
+.intro__dots{display:flex;gap:var(--s2);justify-content:center}
+.intro__dot{width:8px;height:8px;border-radius:var(--r-full);background:var(--line-strong)}
+.intro__dot--on{background:var(--brand);width:20px}
+html.native .intro{padding-top:var(--safe-t)}
 
 /* landing — its own scroller; light/dark + RTL via tokens. width:100% is
    REQUIRED: #root is display:flex (row), so a child without width shrinks to
@@ -1246,7 +1270,7 @@ select.input{cursor:pointer}
 </svg>
 <div id="root"></div>
 <script>
-const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":1},"font":{"family":"-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","gradient":["#6C63FF","#5A4FD9"]},"browserThemeColor":{"dark":"#111318"},"email":{"fromName":"Ride Share","colors":{"primary":"#6C63FF","primaryDark":"#5A4FD9","accent":"#FF6A4D","ink":"#15181F","muted":"#6B7684","cardBg":"#FFFFFF","pageBg":"#F5F7F9","line":"#E4E8ED"}}};
+const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":3},"font":{"family":"-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","gradient":["#6C63FF","#5A4FD9"]},"browserThemeColor":{"dark":"#111318"},"email":{"fromName":"Ride Share","colors":{"primary":"#6C63FF","primaryDark":"#5A4FD9","accent":"#FF6A4D","ink":"#15181F","muted":"#6B7684","cardBg":"#FFFFFF","pageBg":"#F5F7F9","line":"#E4E8ED"}}};
 
 (function(){
 /**
@@ -1271,8 +1295,18 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
   function cap() {
     try {
       const C = g.Capacitor;
-      if (C && typeof C.isNativePlatform === "function" && C.isNativePlatform()) return C;
-      if (C && C.isNative === true) return C;
+      if (!C) return null;
+      if (typeof C.isNativePlatform === "function" && C.isNativePlatform()) return C;
+      if (C.isNative === true) return C;
+      if (typeof C.getPlatform === "function") {
+        const p = C.getPlatform();
+        if (p && p !== "web") return C;
+      }
+      if (C.platform && C.platform !== "web") return C;
+      try {
+        const proto = String((g.location && g.location.protocol) || "");
+        if (proto === "capacitor:" || proto === "ionic:") return C;
+      } catch (_) { /* no location */ }
     } catch (_) { /* browser / jsdom */ }
     return null;
   }
@@ -1448,6 +1482,21 @@ var e,t;e=this,t=function(){"use strict";function e(e,t){var n=Object.keys(e);if
         } catch (_) { return { denied: true }; }
       }
       return { unavailable: true };
+    },
+
+    applyChrome(theme) {
+      const C = cap();
+      const plugins = C && C.Plugins;
+      const sb = plugins && plugins.StatusBar;
+      if (!sb) return;
+      try {
+        if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
+        if (sb.setBackgroundColor && typeof getComputedStyle === "function") {
+          const cs = getComputedStyle(g.document.documentElement);
+          const hex = (cs.getPropertyValue(theme === "dark" ? "--ink-950" : "--ink-0") || "").trim();
+          if (hex) sb.setBackgroundColor({ color: hex });
+        }
+      } catch (_) { /* plugin optional */ }
     },
 
     async set(key, value) {
@@ -1816,7 +1865,7 @@ en:{
        queue:"Queue",livemap:"Live map",stops:"Stops",routes:"Routes",users:"Users",
        board:"Board",coverage:"Coverage",pricing:"Pricing",promos:"Promotions",analytics:"Analytics",
        lookup:"Lookup",tickets:"Tickets",lost:"Lost property",
-       admin:"Overview",adminStaff:"Staff",adminAudit:"Audit"},
+       admin:"Overview",adminStaff:"Staff",adminAudit:"Audit",adminSettings:"Settings"},
   /* auth */
   getStarted:"Get started", browse:"Browse routes first", emailHelp:"We'll email you a 6-digit code.",
   continue:"Continue", verify:"Verify",
@@ -1896,7 +1945,9 @@ en:{
   newRoute:"New route", fareLabel:"Fare (EGP)", windowStart:"Window start", windowEnd:"Window end",
   intervalLabel:"Interval (min)", publishRoute:"Publish route", generateSlots:"Generate slots",
   slotsFrom:"From (YYYY-MM-DD)", slotsTo:"To (YYYY-MM-DD)", stopCount:"stops",
-  routeNoStops:"No stops yet — add verified stops from the Stops tab.",
+  routeNoStops:"No stops on this route yet — add the start, then the end, then any in-between stops.",
+  j_routeStops:"Stops on this route",
+  j_routeStopsHint:"Start, end, and any points along the line. Tap the map, name the stop, add it.",
   slotUnclaimed:"Open", slotClaimedByYou:"Yours", claimConfirm:"Claim this slot?",
   noRoutesPublished:"No routes are live yet — they appear here once an operator publishes them.",
   boardHere:"Board here", seatsLeft:"seats left", cancelBooking:"Cancel booking",
@@ -2107,6 +2158,7 @@ en:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
+  m_fleet:"Live map", m_noLive:"No vehicles sharing a live position right now.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"Type where you want to go — or tap the map to pin.",
   p_whereTo:"Where to?", p_useMyLocation:"Use my location",
@@ -2170,15 +2222,16 @@ en:{
     wrong_journey:"That code is for a different departure.",
     cannot_board:"This booking cannot board.",
     out_of_window:"Boarding is only open around the departure time." },
-  j_settingsTitle:"Owner settings", j_settingsSub:"Commission, notify caps, Paymob flag — page overwrites env",
-  j_settingsHelp:"Railway env is the fallback. Tick override to write a live value. Leave it unticked to follow env. Secrets stay in Railway only.",
-  j_settingsEnv:"Env fallback", j_settingsOverride:"Override env with this value",
-  j_settingsUseEnv:"Follow env", j_settingsEffective:"Live now",
+  j_settingsTitle:"Settings", j_settingsSub:"Commission, notifications, payments, email codes",
+  j_settingsHelp:"Each row is one setting.",
+  j_settingsEnv:"Current default", j_settingsOverride:"Use this value",
+  j_settingsUseEnv:"Keep default", j_settingsEffective:"Live now",
   j_setCommission:"Commission %", j_setBehDay:"Behavioural notifies / day",
   j_setBehGap:"Hours between behavioural notifies", j_setPromoDay:"Promo notifies / day",
   j_setPromoWeek:"Promo notifies / week", j_setNonTx:"Non-transactional notifies / day",
   j_setPaymob:"Paymob in the app", j_on:"On", j_off:"Off",
   j_staffPassHint:"Temporary password must be at least 12 characters. Email or phone is required.",
+  j_newStaff:"New staff",
   j_adminRoutesSub:"Create routes and set the flat fare",
   j_adminStopsSub:"Map and verify boarding stops",
   j_auditAction:"Action", j_auditTarget:"Target", j_auditRows:"rows",
@@ -2191,7 +2244,7 @@ en:{
   j_retryWallet:"Retry wallet payment",
   j_topupThenBook:"Top up first, then confirm with wallet",
   j_setEmailVerify:"Email verification",
-  j_setEmailVerifyHelp:"On = riders and drivers get a 6-digit email code. Off = skip codes (AUTH_OTP_BYPASS). Same rule for the website and the app.",
+  j_setEmailVerifyHelp:"On = riders and drivers get a 6-digit email code. Off = skip codes. Same rule for the website and the app.",
   j_emailVerifyOn:"Require codes",
   j_emailVerifyOff:"Skip codes",
   j_appWelcome:"Welcome",
@@ -2203,7 +2256,20 @@ en:{
   j_dlQr:"Scan to download",
   j_dlIos:"iPhone",
   j_dlIosSoon:"Coming soon — stay tuned.",
-  j_dlHint:"Debug APK for closed beta. Website updates do not replace an installed APK.",
+  j_introNext:"Next", j_introPrev:"Previous", j_introSkip:"Skip",
+  j_introStart:"Get started",
+  j_intro1K:BRAND.name.en, j_intro1T:"Shared rides. One fixed price.",
+  j_intro1B:"Book a seat on a planned route. You know the fare before you go — no surge, no guessing.",
+  j_intro2K:"Find a ride", j_intro2T:"Search where you are going.",
+  j_intro2B:"Pick start and end. See the next departures and the price. Choose a time that fits.",
+  j_intro3K:"Travel", j_intro3T:"Show your ticket and ride.",
+  j_intro3B:"Pay in the app. Board with your code. Track the trip. That is the whole loop.",
+  j_intro4K:"Drive", j_intro4T:"Start Driving & Get Paid",
+  j_intro4B:"Your rider account is for booking seats. To drive, you will need a separate Driver Account.",
+  j_intro4C:"Create your Driver Account to start driving and earning today.",
+  j_offlineTitle:"Check your internet connection",
+  j_offlineBody:"We need a connection to load rides and tickets.",
+  j_offlineRetry:"Retry",
 
 
 },
@@ -2215,7 +2281,7 @@ ar:{
        queue:"الطلبات",livemap:"الخريطة",stops:"المحطات",routes:"المسارات",users:"المستخدمون",
        board:"اللوحة",coverage:"التغطية",pricing:"التسعير",promos:"العروض",analytics:"التحليلات",
        lookup:"بحث",tickets:"التذاكر",lost:"المفقودات",
-       admin:"نظرة عامة",adminStaff:"الموظفون",adminAudit:"التدقيق"},
+       admin:"نظرة عامة",adminStaff:"الموظفون",adminAudit:"التدقيق",adminSettings:"الإعدادات"},
   getStarted:"ابدأ", browse:"تصفح المسارات أولاً", emailHelp:"سنرسل لك كودًا من ٦ أرقام على بريدك الإلكتروني.",
   continue:"متابعة", verify:"تأكيد",
   otpTitle:"أدخل الكود", otpSent:"أُرسل إلى", resendIn:"إعادة الإرسال بعد", resend:"إعادة إرسال الكود",
@@ -2290,7 +2356,9 @@ ar:{
   newRoute:"مسار جديد", fareLabel:"الأجرة (ج.م)", windowStart:"بداية الفترة", windowEnd:"نهاية الفترة",
   intervalLabel:"الفاصل (دقيقة)", publishRoute:"نشر المسار", generateSlots:"إنشاء المواعيد",
   slotsFrom:"من (سنة-شهر-يوم)", slotsTo:"إلى (سنة-شهر-يوم)", stopCount:"محطات",
-  routeNoStops:"لا توجد محطات بعد — أضف محطات موثّقة من تبويب المحطات.",
+  routeNoStops:"لا محطات على هذا المسار بعد — أضف البداية ثم النهاية ثم أي محطات بينهما.",
+  j_routeStops:"محطات هذا المسار",
+  j_routeStopsHint:"البداية والنهاية وأي نقاط على الخط. اضغط الخريطة، سمّ المحطة، ثم أضفها.",
   slotUnclaimed:"متاح", slotClaimedByYou:"لك", claimConfirm:"حجز هذا الموعد؟",
   noRoutesPublished:"لا توجد مسارات منشورة بعد — تظهر هنا فور نشر مشغّلٍ لأحدها.",
   boardHere:"اركب من هنا", seatsLeft:"مقاعد متبقية", cancelBooking:"إلغاء الحجز",
@@ -2368,7 +2436,8 @@ ar:{
   featureCashT:"ادفع كاش عند الباب", featureCashB:"لا حاجة لبطاقة. ادفع للسائق الأجرة الثابتة عند الركوب.",
   featureCodeT:"اركب بالكود", featureCodeB:"كود يُستخدم مرة واحدة يضع الراكب الصحيح في الرحلة الصحيحة.",
   panelKick:"لماذا يبدو الأمر مختلفًا",
-  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف موعد القيام و الحجز. لا زيادة مفاجئة أبدًا.",
+  panel1T:"مقعدك قبل أن تغادر", panel1B:"مسارات منشورة ومواعيد منشورة. تعرف متى تنطلق وأن هناك مقعداً.",
+  panel2T:"أجرة واحدة بلا مفاجآت", panel2B:"سعر المسار الثابت يُثبَّت لحظة الحجز. لا زيادة مفاجئة أبدًا.",
   panel3T:"اركب في ثوانٍ", panel3B:"اعرض الكود عند الباب واركب. الرقم ظاهر دائمًا على الشاشة — بلا قلق على البطارية.",
   panel4T:"انزل في أي مكان", panel4B:"انزل في أي نقطة على المسار. لست مقيدًا بمحطة لا تحتاجها.",
   driveHeroKick:"للسائقين",
@@ -2496,6 +2565,7 @@ ar:{
   /* RouteMap (shared map primitive, R21) */
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
+  m_fleet:"الخريطة المباشرة", m_noLive:"لا مركبات تشارك موقعاً مباشراً الآن.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
   p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",
@@ -2560,15 +2630,16 @@ ar:{
     cannot_board:"لا يمكن إركاب هذا الحجز.",
     out_of_window:"الركوب مفتوح فقط حول موعد القيام." },
 
-  j_settingsTitle:"إعدادات المالك", j_settingsSub:"العمولة وحدود الإشعارات وPaymob",
-  j_settingsHelp:"متغيرات Railway هي الاحتياط. علّم تجاوز لكتابة قيمة حية. الأسرار تبقى في Railway فقط.",
-  j_settingsEnv:"احتياط المتغير", j_settingsOverride:"تجاوز المتغير بهذه القيمة",
-  j_settingsUseEnv:"اتبع المتغير", j_settingsEffective:"الحي الآن",
+  j_settingsTitle:"الإعدادات", j_settingsSub:"العمولة والإشعارات والدفع وأكواد البريد",
+  j_settingsHelp:"كل صف إعداد.",
+  j_settingsEnv:"القيمة الحالية", j_settingsOverride:"استخدم هذه القيمة",
+  j_settingsUseEnv:"أبقِ الافتراضي", j_settingsEffective:"الحي الآن",
   j_setCommission:"نسبة العمولة", j_setBehDay:"إشعارات سلوكية / يوم",
   j_setBehGap:"ساعات بين الإشعارات السلوكية", j_setPromoDay:"إشعارات ترويج / يوم",
   j_setPromoWeek:"إشعارات ترويج / أسبوع", j_setNonTx:"إشعارات غير معاملات / يوم",
   j_setPaymob:"Paymob في التطبيق", j_on:"تشغيل", j_off:"إيقاف",
   j_staffPassHint:"كلمة المرور المؤقتة 12 حرفا على الأقل. البريد أو الهاتف مطلوب.",
+  j_newStaff:"موظف جديد",
   j_adminRoutesSub:"إنشاء المسارات وتحديد الأجرة الثابتة",
   j_adminStopsSub:"رسم محطات الركوب والتحقق منها",
   j_auditAction:"الإجراء", j_auditTarget:"الهدف", j_auditRows:"صفوف",
@@ -2593,7 +2664,20 @@ ar:{
   j_dlQr:"امسح للتنزيل",
   j_dlIos:"آيفون",
   j_dlIosSoon:"قريباً — ترقّب.",
-  j_dlHint:"APK تجريبي للبيتا المغلقة. تحديث الموقع لا يستبدل التطبيق المثبّت.",
+  j_introNext:"التالي", j_introPrev:"السابق", j_introSkip:"تخطي",
+  j_introStart:"ابدأ",
+  j_intro1K:BRAND.name.ar, j_intro1T:"ركوبات مشتركة. سعر ثابت واحد.",
+  j_intro1B:"احجز مقعداً على مسار معلن. تعرف الأجرة قبل أن تتحرك — بلا زيادة مفاجئة.",
+  j_intro2K:"ابحث عن رحلة", j_intro2T:"ابحث عن وجهتك.",
+  j_intro2B:"اختر البداية والنهاية. شاهد المواعيد التالية والسعر. اختر الوقت المناسب.",
+  j_intro3K:"السفر", j_intro3T:"اعرض تذكرتك واركب.",
+  j_intro3B:"ادفع في التطبيق. اركب بالكود. تتبع الرحلة. هذه الدورة كاملة.",
+  j_intro4K:"القيادة", j_intro4T:"ابدأ القيادة واحصل على أجرك",
+  j_intro4B:"حساب الراكب لحجز المقاعد. للقيادة تحتاج حساب سائق منفصل.",
+  j_intro4C:"أنشئ حساب السائق لتبدأ القيادة والكسب اليوم.",
+  j_offlineTitle:"تحقق من اتصال الإنترنت",
+  j_offlineBody:"نحتاج اتصالاً لتحميل الرحلات والتذاكر.",
+  j_offlineRetry:"إعادة المحاولة",
 
 
 }
@@ -2635,7 +2719,8 @@ const detectLang = () => {
 const S = {
   role:"rider", lang: storeGet("rs.lang") || detectLang(), theme: storeGet("rs.theme") || "auto",
   rail: storeGet("rs.rail") ?? "collapsed",   // collapsed is the DEFAULT (owner)
-  view:"boot",                                // boot | landing | auth | app
+  view:"boot",                                // boot | intro | landing | auth | app
+  introSlide:0,
   authed:false, user:null,                    // user comes from the session
   authMode:"signin", authTab:"staff",         // signin | signup ; staff | rider
   signupRole:"rider",                          // rider | driver (the only signup choices)
@@ -2665,12 +2750,20 @@ const S = {
 
 /* enter the signed-in app with the session user; role comes from auth, never
    a switcher (§8 — the demo role switcher is gone). */
+/* API roles vs UI nav tables: operations staff are `operations` in the
+   database and `ops` in PAGES. One map — never a second copy. */
+function uiRole(role) {
+  if (role === "operations") return "ops";
+  if (typeof PAGES !== "undefined" && PAGES[role]) return role;
+  return role || "rider";
+}
+
 function enterApp(user) {
   S.user = user;
-  S.role = user.role;
+  S.role = uiRole(user && user.role);
   S.authed = true;
   S.view = "app";
-  S.page = DEFAULT_PAGE[S.role] || "home";
+  S.page = (typeof DEFAULT_PAGE !== "undefined" && DEFAULT_PAGE[S.role]) || "home";
   S.stack = [];
   S.sheet = null; S.opsView = null;
   // reset the auth-flow state so returning to sign-in starts clean
@@ -2687,9 +2780,42 @@ function enterApp(user) {
   }
 }
 
+function isNativeApp() {
+  return typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
+}
+
+/* Website vs installed-app product. Railway `web` injects __RS_SURFACE="web";
+   Railway `mobile` injects "mobile". Intro slides belong only to the mobile
+   product — never the public website (phone browser included). */
+function isAppSurface() {
+  const s = (typeof window !== "undefined" && window.__RS_SURFACE) || "";
+  if (s === "mobile") return true;
+  if (s === "web") return false;
+  return isNativeApp();
+}
+
+const INTRO_KEY = "rs.intro.v1";
+function introSeen() { return storeGet(INTRO_KEY) === "1"; }
+function markIntroSeen() { storeSet(INTRO_KEY, "1"); }
+function guestHome() {
+  if (isAppSurface()) {
+    if (!introSeen()) {
+      S.view = "intro";
+      S.introSlide = 0;
+      return;
+    }
+    S.view = "auth";
+    S.authMode = "signin";
+    S.loginMethod = null;
+    S.authStep = "choose";
+    return;
+  }
+  S.view = "landing";
+}
+
 function signOut() {
   API.clearSession();
-  S.user = null; S.authed = false; S.view = "landing";
+  S.user = null; S.authed = false; S.view = isAppSurface() ? "auth" : "landing";
   S.landingPage = "rider"; S.landingMenu = false; S.landingDoc = null;
   S.page = "home"; S.stack = []; S.sheet = null; S.opsView = null;
   S.authBusy = false; S.authError = null; S.otpBypass = false;
@@ -2830,8 +2956,8 @@ const icon = (n, cls) => {
 /* ══════════════════════════════════════════════════════════════════════
    5. COMPONENTS — pure functions: props -> element
    ══════════════════════════════════════════════════════════════════════ */
-const Btn = ({label, kind="primary", block, driver, icon:ic, on, dis}) =>
-  $("button",{class:`btn btn--${kind}${block?" btn--block":""}${driver?" btn--driver":""}`,
+const Btn = ({label, kind="primary", block, driver, icon:ic, on, dis, size}) =>
+  $("button",{class:`btn btn--${kind}${block?" btn--block":""}${driver?" btn--driver":""}${size==="sm"?" btn--sm":""}`,
     attrs:{type:"button", disabled:dis||null}, on:{click:on||(()=>{})}},
     ic?icon(ic):null, $("span",{text:label}));
 
@@ -3395,8 +3521,29 @@ function formatWalkMeters(m) {
 
    No mocks: a request that cannot reach a backend is a real error state,
    never a fabricated success.                                       */
+async function signApiRequest(method, path, ts, secret, appId) {
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const enc = new TextEncoder();
+    const msg = appId + "\n" + ts + "\n" + method + "\n" + path;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
+    return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return "";
+}
+
 const API = {
-  base: "/v1",
+  /* Same-origin /v1 on the website. The native shell injects the public
+     web origin so the APK talks to the live API (AUTH_OTP_BYPASS included). */
+  base: (typeof window !== "undefined" && window.__RS_PUBLIC_ORIGIN)
+    ? String(window.__RS_PUBLIC_ORIGIN).replace(/\/$/, "") + "/v1"
+    : "/v1",
   access: () => storeGet("rs.access"),
   refreshToken: () => storeGet("rs.refresh"),
   user: () => { try { return JSON.parse(storeGet("rs.user") || "null"); } catch { return null; } },
@@ -3420,6 +3567,22 @@ const API = {
     if (token) headers["authorization"] = "Bearer " + token;
     if (extraHeaders && typeof extraHeaders === "object") {
       for (const [k, v] of Object.entries(extraHeaders)) if (v != null) headers[k] = String(v);
+    }
+    if (typeof window !== "undefined" && window.__RS_SURFACE === "mobile" && window.__RS_APP_SECRET) {
+      try {
+        const ts = String(Date.now());
+        const appId = window.__RS_APP_ID || "eg.rideshare.app";
+        const cleanPath = path.startsWith("/") ? path : "/" + path;
+        const urlPath = "/v1" + cleanPath.split("?")[0];
+        const sign = await signApiRequest(method, urlPath, ts, window.__RS_APP_SECRET, appId);
+        if (sign) {
+          headers["x-rs-app-id"] = appId;
+          headers["x-rs-ts"] = ts;
+          headers["x-rs-sign"] = sign;
+        }
+      } catch (e) {
+        console.warn("[api] HMAC signing failed", e);
+      }
     }
     let res;
     try {
@@ -3764,8 +3927,8 @@ function createBaseMap(el) {
 function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (!(window.__rsMapsOn && (window.L || window.google?.maps)) || pts.length < 2) {
-    box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true }));
+  if (!(window.__rsMapsOn && (window.L || window.google?.maps))) {
+    box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true, onPick }));
     return box;
   }
   const id = "searchmap-" + Math.random().toString(36).slice(2, 9);
@@ -3837,11 +4000,84 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
       else { const b = new google.maps.LatLngBounds(); arr.forEach((x) => b.extend(x)); map.fitBounds(b, 60); }
     };
     if (focusPts.length) fit(focusPts);
-    else if (pins.length) fit(pts.map((s) => provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng }));
+    else if (pts.length) fit(pts.map((s) => provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng }));
+    else if (provider === "leaflet") map.setView([31.2241, 29.9549], 13);
 
     if (onPick) {
       if (provider === "leaflet") map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
       else map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
+    }
+    window.__rsMapInstance = map;
+  }, 0);
+  return root;
+}
+
+/* EditRouteMap — desk tool: tiles always (when SDK is on), tap to pin,
+   pending pin is draggable. Existing stops are numbered, not invented. */
+function EditRouteMap({ h = 320, stops = [], onPick } = {}) {
+  const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  if (!(window.__rsMapsOn && (window.L || window.google && window.google.maps))) {
+    return MapView({ h, vehicle: false, route: list.length >= 2, stops: false, locate: true, onPick });
+  }
+  const id = "editmap-" + Math.random().toString(36).slice(2, 9);
+  const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
+  const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
+  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const base = createBaseMap(el);
+    if (!base) return;
+    const { map, provider } = base;
+    const brand = (getComputedStyle(document.documentElement).getPropertyValue("--brand") || "").trim();
+    if (provider === "leaflet") {
+      const pts = list.map((s) => [s.lat, s.lng]);
+      if (pts.length >= 2) L.polyline(pts, { color: brand || undefined, weight: 4, opacity: 0.85 }).addTo(map);
+      list.forEach((s, i) => {
+        L.circleMarker([s.lat, s.lng], { radius: 7, color: brand || undefined, weight: 3, fillOpacity: 1 })
+          .addTo(map).bindTooltip(String(i + 1), { direction: "top" });
+      });
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.3), { animate: false });
+      else map.setView([31.2241, 29.9549], 13);
+      let pending = null;
+      if (onPick) {
+        map.on("click", (e) => {
+          const lat = e.latlng.lat, lng = e.latlng.lng;
+          if (pending) pending.setLatLng(e.latlng);
+          else {
+            pending = L.marker(e.latlng, { draggable: true }).addTo(map);
+            pending.on("dragend", () => {
+              const p = pending.getLatLng();
+              onPick(p.lat, p.lng);
+            });
+          }
+          onPick(lat, lng);
+        });
+      }
+    } else {
+      list.forEach((s, i) => {
+        new google.maps.Marker({ position: { lat: s.lat, lng: s.lng }, map, label: String(i + 1) });
+      });
+      if (list.length) {
+        const b = new google.maps.LatLngBounds();
+        list.forEach((s) => b.extend({ lat: s.lat, lng: s.lng }));
+        map.fitBounds(b, 48);
+      }
+      let pending = null;
+      if (onPick) {
+        map.addListener("click", (e) => {
+          const lat = e.latLng.lat(), lng = e.latLng.lng();
+          if (pending) pending.setPosition(e.latLng);
+          else {
+            pending = new google.maps.Marker({ position: e.latLng, map, draggable: true });
+            pending.addListener("dragend", () => {
+              const p = pending.getPosition();
+              onPick(p.lat(), p.lng());
+            });
+          }
+          onPick(lat, lng);
+        });
+      }
     }
     window.__rsMapInstance = map;
   }, 0);
@@ -4186,9 +4422,10 @@ function riderLanding() {
         $("div", { class: "landing__herotext" },
           $("h1", { class: "landing__title", text: t("landingHero") }),
           $("p", { class: "landing__sub", text: t("landingHeroSub") }),
-          $("div", { class: "row gap3" },
+          $("div", { class: "row gap3 wrap" },
             Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
-            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
+            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }),
+            Btn({ label: t("navDownload"), kind: "secondary", on: () => landingGo("download") }))),
         heroStage("hero"))),
 
     $("section", { class: "stackpanels", attrs: { "aria-label": t("panelKick") } },
@@ -4363,10 +4600,15 @@ function aboutLanding() {
     landingFooter());
 }
 
-function downloadLanding() {
+function apkDownloadUrl() {
   const origin = (typeof location !== "undefined" && location.origin && location.protocol !== "file:")
     ? location.origin : "https://ride-shareweb-production.up.railway.app";
-  const apkUrl = origin + "/download/android.apk";
+  const code = (typeof BRAND !== "undefined" && BRAND.version && BRAND.version.code) ? BRAND.version.code : 0;
+  return origin + "/download/android.apk?v=" + code;
+}
+
+function downloadLanding() {
+  const apkUrl = apkDownloadUrl();
   const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(apkUrl);
   return $("div", { class: "landing" },
     landingNav(),
@@ -4375,17 +4617,61 @@ function downloadLanding() {
         $("div", { class: "landing__kick", text: t("navDownload") }),
         $("h1", { class: "landing__title", text: t("j_dlTitle") }),
         $("p", { class: "landing__p", text: t("j_dlSub") }),
-        $("p", { class: "t-cap", text: t("j_dlHint") }),
-        $("div", { class: "row wrap gap4", style: { alignItems: "flex-start" } },
-          $("div", { class: "stack gap3" },
+        $("div", { class: "desk-split" },
+          $("div", { class: "card" },
+            $("strong", { class: "t-head", text: t("j_dlAndroid") }),
             $("a", { class: "btn btn--primary", attrs: { href: apkUrl, download: "ride-share.apk" }, text: t("j_dlAndroid") }),
-            $("div", { class: "card card--tight" },
-              $("strong", { text: t("j_dlIos") }),
-              $("p", { class: "t-cap", text: t("j_dlIosSoon") }))),
-          $("div", { class: "stack gap2 center" },
-            $("div", { class: "t-cap", text: t("j_dlQr") }),
-            $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))))),
+            $("div", { class: "stack gap2 center" },
+              $("div", { class: "t-cap", text: t("j_dlQr") }),
+              $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))),
+          $("div", { class: "card" },
+            $("strong", { class: "t-head", text: t("j_dlIos") }),
+            $("p", { class: "t-cap", text: t("j_dlIosSoon") }))))),
     landingFooter());
+}
+
+function introSlides() {
+  return [
+    { ic: "bus", cls: "landing__featureico landing__featureico--coral", k: "j_intro1K", t: "j_intro1T", b: "j_intro1B" },
+    { ic: "lookup", cls: "landing__featureico landing__featureico--sky", k: "j_intro2K", t: "j_intro2T", b: "j_intro2B" },
+    { ic: "qr", cls: "landing__featureico landing__featureico--mint", k: "j_intro3K", t: "j_intro3T", b: "j_intro3B" },
+    { ic: "earnings", cls: "landing__featureico landing__featureico--coral", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B", c: "j_intro4C" },
+  ];
+}
+
+function finishIntro(mode) {
+  markIntroSeen();
+  S.view = "auth";
+  S.authMode = mode || "signup";
+  if (S.authMode === "signup") { S.signupRole = "driver"; S.authStep = "choose"; }
+  else { S.loginMethod = null; S.authStep = "choose"; }
+  render();
+}
+
+function introView() {
+  const slides = introSlides();
+  const i = Math.max(0, Math.min(slides.length - 1, S.introSlide || 0));
+  const s = slides[i];
+  const last = i === slides.length - 1;
+  const dots = $("div", { class: "intro__dots", attrs: { "aria-hidden": "true" } });
+  slides.forEach((_, n) => dots.append($("span", { class: "intro__dot" + (n === i ? " intro__dot--on" : "") })));
+  const copy = [
+    $("span", { class: "landing__kick", text: t(s.k) }),
+    $("div", { class: s.cls }, icon(s.ic)),
+    $("h1", { class: "t-title", text: t(s.t) }),
+    $("p", { class: "muted", text: t(s.b) }),
+  ];
+  if (s.c) copy.push($("p", { class: "t-lg", text: t(s.c) }));
+  copy.push(dots);
+  return $("div", { class: "intro", attrs: { "aria-label": t("j_introStart") } },
+    $("div", { class: "intro__stage" }, ...copy),
+    $("div", { class: "intro__foot" },
+      Btn({ label: t("j_introSkip"), kind: "ghost", on: () => finishIntro("signup") }),
+      Btn({ label: t("j_introPrev"), kind: "outline", dis: i === 0, on: () => { if (i > 0) { S.introSlide = i - 1; render(); } } }),
+      Btn({ label: last ? t("j_introStart") : t("j_introNext"), on: () => {
+        if (last) finishIntro("signup");
+        else { S.introSlide = i + 1; render(); }
+      } })));
 }
 
 function helpLanding() {
@@ -4894,9 +5180,8 @@ function adminHome() {
     Row({icon:"flag", title:t("adminAudit"), sub:t("j_adminAuditSub"), chev:true, bordered:true, on:()=>go("adminAudit")}),
     Row({icon:"queue", title:t("adminDriverQueue"), sub:t("j_adminQueueSub"), chev:true, bordered:true, on:()=>go("queue")}),
     Row({icon:"bus", title:t("adminVehicleQueue"), sub:t("j_adminVehSub"), chev:true, bordered:true, on:()=>go("queue")}),
-    Row({icon:"pricing", title:t("j_settingsTitle"), sub:t("j_settingsSub"), chev:true, bordered:true, on:()=>go("adminSettings")}),
-    Row({icon:"routes", title:t("nav.routes"), sub:t("j_adminRoutesSub"), chev:true, bordered:true, on:()=>go("routes")}),
-    Row({icon:"stops", title:t("nav.stops"), sub:t("j_adminStopsSub"), chev:true, bordered:true, on:()=>go("stops")})));
+    Row({icon:"pricing", title:t("nav.adminSettings"), sub:t("j_settingsSub"), chev:true, bordered:true, on:()=>go("adminSettings")}),
+    Row({icon:"routes", title:t("nav.routes"), sub:t("j_adminRoutesSub"), chev:true, bordered:true, on:()=>go("routes")})));
   return w;
 }
 
@@ -4924,24 +5209,41 @@ function staffProfile() {
 
 function adminStaff() {
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
-  w.append(Card("card--tight",
-    $("div",{class:"grid grid--tight"},
-      field("staff-name", t("adminName"), "text"),
-      field("staff-phone", t("adminPhone"), "tel"),
-      field("staff-email", t("adminEmail"), "email")),
-    field("staff-password", t("adminPassword"), "password"),
-    $("p",{class:"t-cap",text:t("j_staffPassHint")}),
-    $("div",{class:"field"},
-      $("label",{text:t("adminRole")}),
-      $("select",{class:"input", id:"staff-role"},
-        ["operations","manager","support"].map(r=>
-          $("option",{attrs:{value:r}, text:t("roleLabel."+r)})))),
-    Btn({label:t("adminCreate"), block:true, on:()=>createStaff()})));
+  const formCol = $("div",{id:"staff-form", class:"stack gap3"});
   const list = $("div",{id:"staff-list"});
-  w.append(list);
+  w.append($("div",{class:"desk-split"}, formCol, list));
+  renderStaffForm(formCol);
   loadStaffInto(list);
   return w;
+}
+
+function renderStaffForm(el) {
+  if (!el) el = document.getElementById("staff-form");
+  if (!el) return;
+  el.innerHTML = "";
+  const editing = S.staffEditing && !S.staffEditing.isSystemAdmin;
+  if (editing) {
+    const s = S.staffEditing;
+    el.append($("div",{class:"row gap2"},
+      $("h2",{class:"t-head grow",text:t("adminEditTitle")}),
+      Btn({label:t("j_newStaff"), kind:"secondary", size:"sm", on:()=>{ S.staffEditing=null; renderStaffForm(); }})));
+    el.append(Card("card--tight",
+      field("staff-edit-name", t("adminName"), "text", "name", s.name || ""),
+      rolePicker("staff-edit-role", s.role),
+      $("div",{class:"t-cap ltr",text:s.email || s.phone || ""}),
+      Btn({label:t("save"), on:()=>saveStaffEdit()})));
+    return;
+  }
+  el.append($("h2",{class:"t-head",text:t("adminCreateStaff")}));
+  el.append(Card("card--tight",
+    $("div",{class:"grid"},
+      field("staff-name", t("adminName"), "text"),
+      field("staff-phone", t("adminPhone"), "tel"),
+      field("staff-email", t("adminEmail"), "email"),
+      field("staff-password", t("adminPassword"), "password")),
+    $("p",{class:"t-cap",text:t("j_staffPassHint")}),
+    rolePicker("staff-role", "operations"),
+    Btn({label:t("adminCreate"), on:()=>createStaff()})));
 }
 
 function adminAudit() {
@@ -4977,13 +5279,50 @@ async function loadStaffInto(el) {
     const staff = await API.listStaff();
     if(!staff.length){ el.append(Empty("users", t("adminStaff"), t("adminStaffEmpty"))); return; }
     el.append($("h2",{class:"t-head",text:t("adminStaff")}));
-    staff.forEach(s=> el.append(staffRow(s)));
+    const group = $("div",{class:"rowgroup"});
+    staff.forEach((s) => {
+      const isMain = s.isSystemAdmin === true;
+      const selected = S.staffEditing && S.staffEditing.id === s.id;
+      const row = staffRow(s);
+      if (selected) row.classList.add("rowitem--selected");
+      if (!isMain) {
+        row.addEventListener("click", (ev) => {
+          if (ev.target && ev.target.closest && ev.target.closest(".iconbtn")) return;
+          S.staffEditing = s;
+          renderStaffForm();
+          loadStaffInto(el);
+        });
+      }
+      group.append(row);
+    });
+    el.append(group);
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
 /* One staff row. The system admin (the env-seeded main admin) is marked and
    has no edit/remove controls — it is immutable by design (DEC-196). Every
    other staff account can be edited or removed by the main admin. */
+function rolePicker(id, current) {
+  const wrap = $("div",{class:"field"});
+  wrap.append($("label",{text:t("adminRole")}));
+  const hid = $("input",{attrs:{type:"hidden", id, value: current || "operations"}});
+  const seg = $("div",{class:"seg", attrs:{role:"radiogroup", "aria-label":t("adminRole")}});
+  ["operations","manager","support"].forEach((r) => {
+    const on = (current || "operations") === r;
+    seg.append($("button",{
+      attrs:{type:"button", "aria-pressed": String(on), "data-role": r},
+      text: t("roleLabel."+r),
+      on:{click:(e)=>{
+        e.preventDefault();
+        hid.value = r;
+        [...seg.querySelectorAll("button")].forEach((b)=>b.setAttribute("aria-pressed", String(b.getAttribute("data-role")===r)));
+      }}
+    }));
+  });
+  wrap.append(hid, seg);
+  return wrap;
+}
+
 function staffRow(s) {
   const isMain = s.isSystemAdmin === true;
   return Row({
@@ -4991,10 +5330,9 @@ function staffRow(s) {
     title: s.name || s.phone || s.email,
     sub: `${t("roleLabel."+s.role)} · ${s.phone||s.email||""}`,
     right: isMain
-      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}), Chip({label:s.status}))
+      ? $("div",{class:"row gap2"}, Chip({label:t("adminSystemAdmin"), kind:"brand"}))
       : $("div",{class:"row gap2"},
-          Chip({label:s.status}),
-          IconBtn({name:"pricing", label:t("adminEdit"), on:()=>{ S.staffEditing=s; S.staffEditName=s.name||""; S.staffEditRole=s.role; openSheet("staffEdit"); }}),
+          Chip({label:t("roleLabel."+s.role)}),
           IconBtn({name:"close", label:t("adminRemove"), on:()=>{ S.staffEditing=s; openSheet("staffRemove"); }})),
     bordered:true });
 }
@@ -5058,20 +5396,21 @@ function auditWhen(iso) {
 }
 
 function auditPager(el, page, pages, total) {
-  const bar = $("div",{class:"row wrap gap2", attrs:{"aria-label":t("j_auditPager")}});
-  bar.append(Btn({label:t("j_auditPrev"), kind:"secondary", dis: page<=0, on:()=>{ if(page>0){ S.auditPage = page - 1; loadAuditInto(el); }}}));
+  const bar = $("div",{class:"pager", attrs:{"aria-label":t("j_auditPager")}});
+  const goPage = (n) => { S.auditPage = n; loadAuditInto(el); };
+  bar.append(Btn({label:t("j_auditPrev"), kind:"secondary", size:"sm", dis: page<=0, on:()=>{ if(page>0) goPage(page - 1); }}));
   const windowStart = Math.max(0, page - 2);
   const windowEnd = Math.min(pages - 1, page + 2);
   if (windowStart > 0)
-    bar.append(Btn({label:"1", kind: page===0?"primary":"ghost", on:()=>{ S.auditPage = 0; loadAuditInto(el); }}));
+    bar.append(Btn({label:"1", kind: page===0?"primary":"ghost", size:"sm", on:()=>goPage(0)}));
   if (windowStart > 1) bar.append($("span",{class:"t-cap",text:"…"}));
   for (let i = windowStart; i <= windowEnd; i++) {
-    bar.append(Btn({label:String(i+1), kind: i===page?"primary":"ghost", on:()=>{ S.auditPage = i; loadAuditInto(el); }}));
+    bar.append(Btn({label:String(i+1), kind: i===page?"primary":"ghost", size:"sm", on:()=>goPage(i)}));
   }
   if (windowEnd < pages - 2) bar.append($("span",{class:"t-cap",text:"…"}));
   if (windowEnd < pages - 1)
-    bar.append(Btn({label:String(pages), kind: page===pages-1?"primary":"ghost", on:()=>{ S.auditPage = pages-1; loadAuditInto(el); }}));
-  bar.append(Btn({label:t("j_auditNext"), kind:"secondary", dis: page>=pages-1, on:()=>{ if(page<pages-1){ S.auditPage = page + 1; loadAuditInto(el); }}}));
+    bar.append(Btn({label:String(pages), kind: page===pages-1?"primary":"ghost", size:"sm", on:()=>goPage(pages-1)}));
+  bar.append(Btn({label:t("j_auditNext"), kind:"secondary", size:"sm", dis: page>=pages-1, on:()=>{ if(page<pages-1) goPage(page + 1); }}));
   bar.append($("span",{class:"t-cap ltr",text:`${total} ${t("j_auditRows")}`}));
   return bar;
 }
@@ -5091,7 +5430,6 @@ async function loadAuditInto(el) {
     el.append($("div",{class:"row gap2"},
       $("h2",{class:"t-head grow",text:t("adminAudit")}),
       $("div",{class:"t-cap ltr",text:`${from}–${to} ${t("j_auditPageOf")} ${total}`})));
-    el.append(auditPager(el, page, pages, total));
     const rows = items.map((e)=> $("tr",{},
       $("td",{class:"ltr",text:auditWhen(e.created_at)}),
       $("td",{text:e.actor_name || e.email || "—"}),
@@ -5111,15 +5449,48 @@ function adminSettings() {
   return w;
 }
 
-function settingField(id, label, envVal, overrideVal) {
+function settingField(id, label, help, envVal, overrideVal) {
   const usingPage = overrideVal != null;
-  return $("div",{class:"field"},
-    $("label",{attrs:{for:id}, text:label}),
-    $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${envVal}`}),
-    $("input",{class:"input", attrs:{id, type:"text", inputmode:"numeric", value: usingPage ? String(overrideVal) : String(envVal)}}),
-    $("label",{class:"row gap2"},
-      $("input",{attrs:{type:"checkbox", id:id+"-ovr", checked: usingPage ? "" : null}}),
-      $("span",{class:"t-cap",text:t("j_settingsOverride")})));
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:label}),
+      help ? $("div",{class:"t-cap",text:help}) : null,
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${envVal}`})),
+    $("div",{class:"setting__edit"},
+      $("input",{class:"input", attrs:{id, type:"text", inputmode:"numeric", value: usingPage ? String(overrideVal) : String(envVal)}}),
+      $("label",{class:"row gap2"},
+        $("input",{attrs:{type:"checkbox", id:id+"-ovr", checked: usingPage ? "" : null}}),
+        $("span",{class:"t-cap",text:t("j_settingsOverride")}))));
+}
+
+function settingToggle(id, label, help, envOn, overrideVal) {
+  const sel = overrideVal === true ? "true" : overrideVal === false ? "false" : "env";
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:label}),
+      help ? $("div",{class:"t-cap",text:help}) : null,
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${envOn ? t("j_on") : t("j_off")}`})),
+    $("div",{class:"setting__edit"},
+      $("select",{class:"input", attrs:{id}},
+        $("option",{attrs:{value:"env", selected: sel==="env" ? "" : null}, text:t("j_settingsUseEnv")}),
+        $("option",{attrs:{value:"true", selected: sel==="true" ? "" : null}, text:t("j_on")}),
+        $("option",{attrs:{value:"false", selected: sel==="false" ? "" : null}, text:t("j_off")}))));
+}
+
+function settingOtp(id, s) {
+  const ovr = s.override.auth_otp_bypass;
+  const sel = ovr === true ? "skip" : ovr === false ? "require" : "env";
+  const liveOn = !s.env.auth_otp_bypass;
+  return $("div",{class:"setting"},
+    $("div",{class:"setting__copy"},
+      $("label",{attrs:{for:id}, text:t("j_setEmailVerify")}),
+      $("div",{class:"t-cap",text:t("j_setEmailVerifyHelp")}),
+      $("div",{class:"t-cap",text:`${t("j_settingsEffective")}: ${liveOn ? t("j_emailVerifyOn") : t("j_emailVerifyOff")}`})),
+    $("div",{class:"setting__edit"},
+      $("select",{class:"input", attrs:{id}},
+        $("option",{attrs:{value:"env", selected: sel==="env" ? "" : null}, text:t("j_settingsUseEnv")}),
+        $("option",{attrs:{value:"require", selected: sel==="require" ? "" : null}, text:t("j_emailVerifyOn")}),
+        $("option",{attrs:{value:"skip", selected: sel==="skip" ? "" : null}, text:t("j_emailVerifyOff")}))));
 }
 
 async function loadOwnerSettingsInto(el) {
@@ -5128,24 +5499,19 @@ async function loadOwnerSettingsInto(el) {
   try {
     const s = await API.getOwnerSettings();
     S.ownerSettings = s;
-    el.append($("h2",{class:"t-head",text:t("j_settingsTitle")}));
-    el.append(Banner("info", t("j_settingsHelp")));
+    el.append($("h2",{class:"t-head",text:t("nav.adminSettings")}));
     el.append(Card("card--tight",
-      settingField("set-comm", t("j_setCommission"), s.env.commission_percent, s.override.commission_percent),
-      settingField("set-nbd", t("j_setBehDay"), s.env.notify_behavioural_max_day, s.override.notify_behavioural_max_day),
-      settingField("set-nbg", t("j_setBehGap"), s.env.notify_behavioural_gap_hours, s.override.notify_behavioural_gap_hours),
-      settingField("set-npd", t("j_setPromoDay"), s.env.notify_promo_max_day, s.override.notify_promo_max_day),
-      settingField("set-npw", t("j_setPromoWeek"), s.env.notify_promo_max_week, s.override.notify_promo_max_week),
-      settingField("set-nnt", t("j_setNonTx"), s.env.notify_non_tx_max_day, s.override.notify_non_tx_max_day),
-      $("div",{class:"field"},
-        $("label",{text:t("j_setPaymob")}),
-        $("div",{class:"t-cap",text:`${t("j_settingsEnv")}: ${s.env.paymob_enabled ? t("j_on") : t("j_off")}`}),
-        $("select",{class:"input", attrs:{id:"set-paymob"}},
-          $("option",{attrs:{value:"env"}, text:t("j_settingsUseEnv")}),
-          $("option",{attrs:{value:"true", selected: s.override.paymob_enabled===true ? "" : null}, text:t("j_on")}),
-          $("option",{attrs:{value:"false", selected: s.override.paymob_enabled===false ? "" : null}, text:t("j_off")}))),
-      Btn({label:t("save"), block:true, on:()=>saveOwnerSettings()})));
-    el.append($("p",{class:"t-cap",text:`${t("j_settingsEffective")}: ${t("j_setCommission")} ${s.effective.commission_percent}% · Paymob ${s.effective.paymob_enabled?t("j_on"):t("j_off")}`}));
+      settingField("set-comm", t("j_setCommission"), null, s.env.commission_percent, s.override.commission_percent),
+      settingField("set-nbd", t("j_setBehDay"), null, s.env.notify_behavioural_max_day, s.override.notify_behavioural_max_day),
+      settingField("set-nbg", t("j_setBehGap"), null, s.env.notify_behavioural_gap_hours, s.override.notify_behavioural_gap_hours),
+      settingField("set-npd", t("j_setPromoDay"), null, s.env.notify_promo_max_day, s.override.notify_promo_max_day),
+      settingField("set-npw", t("j_setPromoWeek"), null, s.env.notify_promo_max_week, s.override.notify_promo_max_week),
+      settingField("set-nnt", t("j_setNonTx"), null, s.env.notify_non_tx_max_day, s.override.notify_non_tx_max_day),
+      settingToggle("set-paymob", t("j_setPaymob"), null, s.env.paymob_enabled, s.override.paymob_enabled),
+      settingOtp("set-otp", s),
+      Btn({label:t("save"), on:()=>saveOwnerSettings()})));
+    const otpOn = !s.effective.auth_otp_bypass;
+    el.append($("p",{class:"t-cap",text:`${t("j_settingsEffective")}: ${t("j_setCommission")} ${s.effective.commission_percent}% · ${t("j_setPaymob")} ${s.effective.paymob_enabled?t("j_on"):t("j_off")} · ${t("j_setEmailVerify")} ${otpOn?t("j_emailVerifyOn"):t("j_emailVerifyOff")}`}));
   } catch(e) { el.append(Banner("danger", errText(e.messageKey))); }
 }
 
@@ -5167,7 +5533,7 @@ async function saveOwnerSettings() {
     notify_promo_max_week: readOverride("set-npw"),
     notify_non_tx_max_day: readOverride("set-nnt"),
     paymob_enabled: pay === "env" ? null : pay === "true",
-    auth_otp_bypass: otp === "env" ? null : otp === "true",
+    auth_otp_bypass: otp === "env" ? null : otp === "skip",
   };
   try {
     await API.saveOwnerSettings(payload);
@@ -6529,12 +6895,15 @@ function driverProfile(){                                     // D-40
 function opsQueue(){                                          // O-10
   if(S.opsView==="review") return opsReview();
   const w=$("div",{class:"main"});
-  w.append($("h2",{class:"t-head",text:t("adminDriverQueue")}));
+  const appsCol = $("div",{class:"stack gap3"},
+    $("h2",{class:"t-head",text:t("adminDriverQueue")}));
   const appList = $("div",{id:"app-list"});
-  w.append(appList);
-  w.append($("h2",{class:"t-head",text:t("adminVehicleQueue")}));
+  appsCol.append(appList);
+  const vehCol = $("div",{class:"stack gap3"},
+    $("h2",{class:"t-head",text:t("adminVehicleQueue")}));
   const vehList = $("div",{id:"veh-list"});
-  w.append(vehList);
+  vehCol.append(vehList);
+  w.append($("div",{class:"desk-split"}, appsCol, vehCol));
   loadApplicationsInto(appList);
   loadVehiclesInto(vehList);
   return w;
@@ -6699,7 +7068,7 @@ async function loadPendingInto(el) {
   el.innerHTML = "";
   try {
     const stops = await API.listStops("pending");
-    if (!stops.length) { el.append(Empty("stops", t("pendingReview"), t("noPendingStops"))); return; }
+    if (!stops.length) { return; }
     stops.forEach((s) => el.append(Row({
       icon: s.source === "field" ? "walk" : "stops",
       title: $("span",{class:"ltr",text:s.code}),
@@ -6952,21 +7321,23 @@ async function submitStopAction(id) {
 
 function opsRoutes(){                                         // O-23
   if (S.opsView === "routeDetail") return routeDetailView();
+  if (S.opsView === "stopReview") return stopReviewView();
   const w=$("div",{class:"main"});
-  w.append(Card("card--tight",
+  const pending = $("div",{id:"pending-list"});
+  w.append(pending);
+  loadPendingInto(pending);
+  const form = Card("card--tight",
     $("div",{class:"t-micro",text:t("newRoute")}),
-    $("div",{class:"grid grid--tight"},
+    $("div",{class:"grid"},
       field("route-name-en", t("stopNameEn"), "text", "off"),
       field("route-name-ar", t("stopNameAr"), "text", "off"),
       field("route-fare", t("fareLabel"), "number", "off"),
       field("route-interval", t("intervalLabel"), "number", "off"),
       field("route-win-start", t("windowStart"), "text", "off"),
       field("route-win-end", t("windowEnd"), "text", "off")),
-    Btn({label:t("newRoute"), block:true, dis:S.stopBusy, on:()=>createRouteAction()})));
-
-  w.append($("h2",{class:"t-head",text:t("nav.routes")}));
+    Btn({label:t("newRoute"), dis:S.stopBusy, on:()=>createRouteAction()}));
   const list = $("div",{id:"routes-list"});
-  w.append(list);
+  w.append($("div",{class:"desk-split"}, form, list));
   loadRoutesInto(list);
   return w;
 }
@@ -6980,14 +7351,15 @@ async function createRouteAction() {
   }
   S.stopBusy = true; render();
   try {
-    await API.createRoute({
+    const created = await API.createRoute({
       nameEn: val("route-name-en") || undefined,
       nameAr: val("route-name-ar") || undefined,
       fareMinor: Math.round(fare * 100), // EGP → minor units (piastres)
       windowStart: winStart, windowEnd: winEnd, slotIntervalMin: interval,
     });
-    S.stopBusy = false; toast(t("save")); render();
-    loadRoutesInto(document.getElementById("routes-list"));
+    S.stopBusy = false; toast(t("save"));
+    S.opsTarget = created; S.opsView = "routeDetail";
+    render();
   } catch(e) { S.stopBusy = false; toast(errText(e.messageKey)); render(); }
 }
 
@@ -6996,6 +7368,7 @@ async function loadRoutesInto(el) {
   el.innerHTML = "";
   try {
     const routes = await API.listRoutes();
+    el.append($("h2",{class:"t-head",text:t("nav.routes")}));
     if (!routes.length) { el.append(Empty("routes", t("nav.routes"), t("opsRoutesComing"))); return; }
     routes.forEach((r) => el.append(Row({
       icon: "routes",
@@ -7010,32 +7383,86 @@ async function loadRoutesInto(el) {
 
 function routeDetailView() {
   const r = S.opsTarget || {};
+  const draft = r.status === "draft";
   const w = $("div",{class:"main"});
   w.append($("div",{class:"row gap2"},
     $("h1",{class:"t-head grow",text:r.name_en || r.name_ar || r.code}),
     Chip({label:r.status, kind:r.status==="published"?"ok":""})));
   w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
 
-  if (r.status === "draft") {
-    w.append(Banner("info", t("routeNoStops")));
-    w.append(Btn({label:t("publishRoute"), block:true, dis:S.stopBusy, on:()=>publishRouteAction(r.id)}));
-  }
+  const mapCard = Card("card--tight",
+    $("div",{class:"t-micro",text:t("j_routeStops")}),
+    EditRouteMap({h:320, stops: S.routeStopsCache || [],
+      onPick: draft ? (lat,lng)=>{
+        const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+        if(la) la.value = lat.toFixed(6);
+        if(lo) lo.value = lng.toFixed(6);
+      } : null}));
+  const stopForm = draft ? Card("card--tight",
+    $("div",{class:"t-micro",text:t("j_routeStops")}),
+    $("div",{class:"t-cap",text:t("j_routeStopsHint")}),
+    $("div",{class:"grid"},
+      field("stop-lat", t("latLabel"), "text", "off"),
+      field("stop-lng", t("lngLabel"), "text", "off"),
+      field("stop-name-en", t("stopNameEn"), "text", "off"),
+      field("stop-name-ar", t("stopNameAr"), "text", "off")),
+    S.stopTooClose
+      ? $("div",{class:"stack gap2"},
+          Banner("warn", t("stopTooClose")),
+          field("stop-override", t("overrideReason"), "text", "off"))
+      : null,
+    Btn({label:t("addStop"), dis:S.stopBusy, on:()=>addStopToRouteAction(r.id)})) : null;
 
   const stops = $("div",{id:"route-stops"});
-  w.append(stops);
-  loadRouteStopsInto(stops, r.id);
-
-  w.append(Card("card--tight",
+  const slotsCard = Card("card--tight",
     $("div",{class:"t-micro",text:t("generateSlots")}),
-    $("div",{class:"grid grid--tight"},
+    $("div",{class:"grid"},
       field("slots-from", t("slotsFrom"), "text", "off"),
       field("slots-to", t("slotsTo"), "text", "off")),
-    Btn({label:t("generateSlots"), kind:"secondary", block:true, dis:S.stopBusy, on:()=>generateSlotsAction(r.id)})));
-
+    Btn({label:t("generateSlots"), kind:"secondary", dis:S.stopBusy, on:()=>generateSlotsAction(r.id)}));
   const slotList = $("div",{id:"route-slots"});
-  w.append(slotList);
+  w.append($("div",{class:"desk-split"},
+    $("div",{class:"stack gap4"},
+      mapCard,
+      stopForm,
+      draft ? Btn({label:t("publishRoute"), dis:S.stopBusy, on:()=>publishRouteAction(r.id)}) : null,
+      slotsCard),
+    $("div",{class:"stack gap4"}, stops, slotList)));
+  loadRouteStopsInto(stops, r.id);
   loadRouteSlotsInto(slotList, r.id);
   return w;
+}
+
+async function addStopToRouteAction(routeId) {
+  const lat = Number(val("stop-lat")), lng = Number(val("stop-lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) { toast(t("validation.failed")); return; }
+  const payload = {
+    lat, lng, source: "desk",
+    nameEn: val("stop-name-en") || undefined,
+    nameAr: val("stop-name-ar") || undefined,
+  };
+  if (S.stopTooClose) payload.overrideReason = val("stop-override") || undefined;
+  S.stopBusy = true;
+  try {
+    const created = await API.createStop(payload);
+    const stopId = created && (created.id || (created.stop && created.stop.id));
+    if (!stopId) throw Object.assign(new Error("geo.stop_create_failed"), { messageKey: "error.internal" });
+    if (created.status === "draft") {
+      try { await API.submitStop(stopId); } catch { /* attach still works */ }
+    }
+    await API.addStopToRoute(routeId, stopId);
+    S.stopTooClose = null; S.stopBusy = false;
+    toast(t("placedStop"));
+    const la=document.getElementById("stop-lat"), lo=document.getElementById("stop-lng");
+    if (la) la.value = ""; if (lo) lo.value = "";
+    loadRouteStopsInto(document.getElementById("route-stops"), routeId);
+  } catch(e) {
+    S.stopBusy = false;
+    if (e.messageKey === "geo.stop_too_close") {
+      S.stopTooClose = (e.payload && e.payload.details) || {};
+      render();
+    } else { toast(errText(e.messageKey)); render(); }
+  }
 }
 
 async function loadRouteStopsInto(el, routeId) {
@@ -7043,6 +7470,7 @@ async function loadRouteStopsInto(el, routeId) {
   el.innerHTML = "";
   try {
     const { route, stops } = await API.getRoute(routeId);
+    S.routeStopsCache = stops || [];
     if (!stops.length) { el.append(Empty("stops", t("nav.stops"), t("routeNoStops"))); return; }
     el.append($("h2",{class:"t-head",text:`${stops.length} ${t("stopCount")}`}));
     stops.forEach((s) => el.append(Row({
@@ -7267,7 +7695,6 @@ const PAGES = {
   ops:[
     {k:"queue",   ic:"queue",   fn:opsQueue,   dock:true, wide:true},
     {k:"livemap", ic:"livemap", fn:opsLiveMap, dock:true, wide:true},
-    {k:"stops",   ic:"stops",   fn:opsStops,   dock:true, wide:true},
     {k:"routes",  ic:"routes",  fn:opsRoutes,  dock:true, wide:true},
     {k:"users",   ic:"users",   fn:opsUsers,   dock:true, wide:true},
     {k:"profile", ic:"profile", fn:staffProfile, dock:true, foot:true}
@@ -7290,10 +7717,9 @@ const PAGES = {
     {k:"admin",      ic:"board",    fn:adminHome,     dock:true, wide:true, title:"adminArea"},
     {k:"adminStaff", ic:"users",    fn:adminStaff,    dock:true, wide:true},
     {k:"adminAudit", ic:"flag",     fn:adminAudit,    dock:true, wide:true},
-    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true, title:"j_settingsTitle"}, /* path B */
+    {k:"adminSettings", ic:"pricing", fn:adminSettings, dock:true, wide:true},
     {k:"queue",      ic:"queue",    fn:opsQueue,      dock:true, wide:true},
-    {k:"stops",      ic:"stops",    fn:opsStops,      dock:true, wide:true}, /* path B — root can map */
-    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true}, /* path B — root can price */
+    {k:"routes",     ic:"routes",   fn:opsRoutes,     dock:true, wide:true},
     {k:"livemap",    ic:"livemap",  fn:opsLiveMap,    dock:true, wide:true}, /* path B — existing ops surface */
     {k:"tickets",    ic:"tickets",  fn:supportTickets,dock:true, wide:true}, /* path B — existing support surface */
     {k:"board",      ic:"coverage", fn:managerBoard,  dock:true, wide:true},
@@ -7302,7 +7728,14 @@ const PAGES = {
 };
 const DEFAULT_PAGE = Object.fromEntries(
   Object.entries(PAGES).map(([r,list])=>[r, list[0].k]));
-const pageDef = () => PAGES[S.role].find(p=>p.k===S.page) || PAGES[S.role][0];
+const pagesFor = (role) => {
+  const key = (typeof uiRole === "function" ? uiRole(role) : role);
+  return (PAGES[key] || PAGES.rider);
+};
+const pageDef = () => {
+  const list = pagesFor(S.role);
+  return list.find(p=>p.k===S.page) || list[0];
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    14. CHROME
@@ -7320,7 +7753,6 @@ function topbar({title, back:onBack, right, plain}){
    record is the primary job. */
 const SEARCHABLE = {
   rider:  {home:"searchHint", routes:"searchRoute"},
-  ops:    {stops:"searchRoute"},
 };
 function searchBand(){
   const key = (SEARCHABLE[S.role]||{})[S.page];
@@ -7350,7 +7782,7 @@ function nav(){
   el.append($("div",{class:"nav__brand"}, logoSVG(), $("span",{text:t("brand")})));
 
   const items=$("div",{class:"nav__items"});
-  PAGES[S.role].filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
+  pagesFor(S.role).filter(p=>p.dock && !p.foot).forEach(p=> items.append(navItem(p)));
   el.append(items);
 
   // Rail footer: profile pinned to the bottom on medium and up. On compact
@@ -7391,6 +7823,19 @@ function navItem(p, extra){
    15. RENDER
    ══════════════════════════════════════════════════════════════════════ */
 function render(){
+  try { renderUnsafe(); }
+  catch (err) {
+    const root=document.getElementById("root");
+    if (root) {
+      root.innerHTML="";
+      root.append($("div",{class:"main"},
+        Banner("danger", t("error.internal")),
+        Btn({label:t("signOut"), kind:"secondary", on:()=>signOut()})));
+    }
+    try { console.error(err); } catch (_) { /* no console */ }
+  }
+}
+function renderUnsafe(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
   // One source of truth: the pre-paint script sets <html data-theme>, so
@@ -7402,22 +7847,26 @@ function render(){
   const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
   document.documentElement.classList.toggle("native", !!native);
   document.body.classList.toggle("native", !!native);
-  if (native && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
-    try {
-      const sb = window.Capacitor.Plugins.StatusBar;
-      if (sb.setStyle) sb.setStyle({ style: theme === "dark" ? "DARK" : "LIGHT" });
-      if (sb.setBackgroundColor) sb.setBackgroundColor({ color: theme === "dark" ? "#111318" : "#FFFFFF" });
-    } catch (_) { /* plugin optional */ }
-  }
+  if (native && typeof Platform.applyChrome === "function") Platform.applyChrome(theme);
 
   const root=document.getElementById("root");
   root.innerHTML="";
 
   /* view machine: boot splash → landing → auth → the signed-in app */
   if(S.view==="boot"){ root.append(bootSplash()); return; }
+  const appSurface = typeof isAppSurface === "function" ? isAppSurface() : false;
+  if(S.view==="intro"){
+    if (!appSurface) { guestHome(); }
+    else { root.append(introView()); return; }
+  }
+  if(appSurface && !S.authed){
+    if (S.view === "intro") { root.append(introView()); return; }
+    if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
+    root.append(auth()); return;
+  }
   if(S.view==="landing"){ root.append(landing()); return; }
   if(S.view==="auth"){ root.append(auth()); return; }
-  if(!S.authed){ S.view="landing"; root.append(landing()); return; }
+  if(!S.authed){ guestHome(); if (S.view==="intro") { root.append(introView()); return; } if (S.view==="auth") { root.append(auth()); return; } S.view="landing"; root.append(landing()); return; }
 
   const app=$("div",{class:"app"+(S.rail==="collapsed" ? " rail-collapsed" : "")});
 
@@ -7507,9 +7956,7 @@ function boot(){
     if(S.view!=="boot") return;                 // a test or a tap already left
     if(user){ enterApp(user); }
     else {
-      const native = typeof Platform !== "undefined" && Platform.kind && Platform.kind() === "native";
-      S.view = native ? "auth" : "landing";
-      if (native) { S.authMode = "signin"; S.loginMethod = null; S.authStep = "choose"; }
+      guestHome();
       render();
     }
   });
@@ -7564,7 +8011,21 @@ window.addEventListener("online", ()=>{
 
 /* Explicit surface for the verification suite. Declared with const above,
    which does not attach to window in a classic script. */
+window.addEventListener("focus", () => {
+  if (!S.authed || typeof API === "undefined" || typeof API.me !== "function") return;
+  API.me().then((me) => {
+    if (!me || !me.actor) return;
+    const next = typeof uiRole === "function" ? uiRole(me.actor.role) : me.actor.role;
+    if (S.user) {
+      S.user.role = me.actor.role;
+      try { storeSet("rs.user", JSON.stringify(S.user)); } catch (_) { /* */ }
+    }
+    if (next !== S.role) enterApp(S.user);
+  }).catch(() => {});
+});
+
 Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
+                        uiRole, pagesFor, guestHome, introSeen, markIntroSeen, introView, apkDownloadUrl,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,

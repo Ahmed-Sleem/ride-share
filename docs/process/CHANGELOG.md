@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 2026-08-26 — Instagram-style OTA bootloader & in-app HMAC signing
+
+- `offline.html` bootloader implements complete OTA update cycle:
+  queries `/v1/mobile/update` with Web Crypto HMAC proof headers,
+  verifies SHA-256 integrity of downloaded `/v1/mobile/bundle` via
+  `crypto.subtle.digest`, saves verified bundle in `localStorage`,
+  and mounts seamlessly in WebView.
+- 2.5s update timeout guard: boots cached bundle instantly if network
+  is slow/offline; shows clean offline retry view on cold boot without network.
+- `API.request` in `api.js` signs outgoing `/v1/*` requests with HMAC headers
+  when running on the mobile surface.
+- 14 mobile tests green including subtle HMAC & SHA-256 verification tests.
+
 ## 2026-08-25 — Mobile service is an app API, not a website
 
 - `/` returns JSON 403 `NOT_A_WEBSITE`. `/healthz` stays public for Railway.

@@ -22,6 +22,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
 .logo{width:92px;height:92px;animation:b 1.1s var(--ease) infinite}
 .logo svg{width:100%;height:100%}
 .name{font-size:22px;font-weight:750}
+.status{font-size:13px;color:var(--muted);min-height:1.5em}
 h1{margin:0;font-size:18px;font-weight:750}
 p{margin:0;max-width:28ch;color:var(--muted)}
 .btn{min-height:var(--tap);padding:0 var(--s5);border:0;border-radius:var(--r);font:650 15px/1 inherit;
@@ -39,6 +40,7 @@ p{margin:0;max-width:28ch;color:var(--muted)}
     </svg>
   </div>
   <div class="name">Ride Share</div>
+  <div class="status" id="status"></div>
 </div>
 <div class="offline" id="offline" role="alert">
   <h1>Check your internet connection</h1>
@@ -47,28 +49,171 @@ p{margin:0;max-width:28ch;color:var(--muted)}
 </div>
 <script>
 (function(){
-  var origin = window.__RS_PUBLIC_ORIGIN || "";
+  var origin = (window.__RS_PUBLIC_ORIGIN || "").replace(/\/$/, "");
+  var appId = window.__RS_APP_ID || "eg.rideshare.app";
+  var secret = window.__RS_APP_SECRET || "";
   var splash = document.getElementById("splash");
   var off = document.getElementById("offline");
-  var minMs = 1400;
-  function showOffline(){ splash.style.display="none"; off.style.display="flex"; }
-  function showSplash(){ splash.style.display="flex"; off.style.display="none"; }
-  function probe(){
-    return fetch(origin + "/healthz", { cache: "no-store" }).then(function(r){ return !!r.ok; }).catch(function(){ return false; });
+  var statusEl = document.getElementById("status");
+  var KEY_BUNDLE = "rs.ota.bundle.v1";
+  var KEY_SHA = "rs.ota.sha.v1";
+  var KEY_VER = "rs.ota.ver.v1";
+
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg || ""; }
+  function showOffline() { splash.style.display = "none"; off.style.display = "flex"; }
+  function showSplash() { splash.style.display = "flex"; off.style.display = "none"; }
+
+  function getCached() {
+    try {
+      var html = localStorage.getItem(KEY_BUNDLE);
+      var sha = localStorage.getItem(KEY_SHA);
+      var ver = Number(localStorage.getItem(KEY_VER)) || 0;
+      if (html && html.length > 500 && sha) return { html: html, sha: sha, ver: ver };
+    } catch (e) {}
+    return null;
   }
-  function tryLive(){
-    showSplash();
-    var started = Date.now();
-    probe().then(function(ok){
-      var wait = Math.max(0, minMs - (Date.now() - started));
-      setTimeout(function(){
-        if (ok) location.replace(origin + "/");
-        else showOffline();
-      }, wait);
+
+  function saveBundle(html, sha, ver) {
+    try {
+      localStorage.setItem(KEY_BUNDLE, html);
+      localStorage.setItem(KEY_SHA, sha);
+      localStorage.setItem(KEY_VER, String(ver || 0));
+    } catch (e) {
+      console.warn("[ota] failed to save bundle to localStorage", e);
+    }
+  }
+
+  function mountBundle(html) {
+    try {
+      document.open("text/html", "replace");
+      document.write(html);
+      document.close();
+    } catch (e) {
+      console.error("[ota] mount failed", e);
+      document.documentElement.innerHTML = html;
+    }
+  }
+
+  async function computeSha256(str) {
+    if (typeof crypto !== "undefined" && crypto.subtle) {
+      var enc = new TextEncoder();
+      var buf = await crypto.subtle.digest("SHA-256", enc.encode(str));
+      return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    return null;
+  }
+
+  async function appHeaders(method, path) {
+    var ts = String(Date.now());
+    var sign = "";
+    if (secret && typeof crypto !== "undefined" && crypto.subtle) {
+      var enc = new TextEncoder();
+      var msg = appId + "\n" + ts + "\n" + method + "\n" + path;
+      var key = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"]
+      );
+      var sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
+      sign = Array.from(new Uint8Array(sig)).map(function(b){ return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    return {
+      "x-rs-app-id": appId,
+      "x-rs-ts": ts,
+      "x-rs-sign": sign
+    };
+  }
+
+  async function fetchWithTimeout(url, opts, ms) {
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = null;
+    var signal = controller ? controller.signal : undefined;
+    var p = fetch(url, Object.assign({}, opts, { signal: signal }));
+    var timeoutPromise = new Promise(function(_, reject) {
+      timer = setTimeout(function() {
+        if (controller) controller.abort();
+        reject(new Error("TIMEOUT"));
+      }, ms);
     });
+    return Promise.race([p, timeoutPromise]).finally(function() { clearTimeout(timer); });
   }
-  document.getElementById("retry").addEventListener("click", tryLive);
-  tryLive();
+
+  async function probeHealth() {
+    try {
+      var r = await fetch(origin + "/healthz", { cache: "no-store" });
+      return !!r.ok;
+    } catch(e) { return false; }
+  }
+
+  async function boot() {
+    showSplash();
+    var cached = getCached();
+    if (!origin) {
+      if (cached) return mountBundle(cached.html);
+      return showOffline();
+    }
+
+    try {
+      // Step 1: Query update API with HMAC headers (2.5s timeout)
+      var updateHeaders = await appHeaders("GET", "/v1/mobile/update");
+      var res = await fetchWithTimeout(origin + "/v1/mobile/update", {
+        headers: updateHeaders,
+        cache: "no-store"
+      }, 2500);
+
+      if (!res.ok) {
+        if (cached) return mountBundle(cached.html);
+        return showOffline();
+      }
+
+      var meta = await res.json();
+      if (!meta || !meta.ok || !meta.sha256) {
+        if (cached) return mountBundle(cached.html);
+        return showOffline();
+      }
+
+      // Step 2: Check if cached bundle is identical
+      if (cached && cached.sha === meta.sha256) {
+        return mountBundle(cached.html);
+      }
+
+      // Step 3: Fetch fresh bundle
+      setStatus("Updating...");
+      var bundleHeaders = await appHeaders("GET", "/v1/mobile/bundle");
+      var bRes = await fetchWithTimeout(origin + "/v1/mobile/bundle", {
+        headers: bundleHeaders,
+        cache: "no-store"
+      }, 8000);
+
+      if (!bRes.ok) {
+        if (cached) return mountBundle(cached.html);
+        return showOffline();
+      }
+
+      var html = await bRes.text();
+      // Step 4: Verify SHA-256 integrity
+      var computedSha = await computeSha256(html);
+      if (computedSha && computedSha.toLowerCase() !== meta.sha256.toLowerCase()) {
+        console.warn("[ota] sha256 mismatch: expected " + meta.sha256 + ", got " + computedSha);
+        if (cached) return mountBundle(cached.html);
+        return showOffline();
+      }
+
+      // Step 5: Save verified bundle and mount
+      saveBundle(html, meta.sha256, meta.versionCode);
+      return mountBundle(html);
+
+    } catch (err) {
+      console.warn("[ota] boot error:", err);
+      if (cached) return mountBundle(cached.html);
+      showOffline();
+    }
+  }
+
+  document.getElementById("retry").addEventListener("click", boot);
+  boot();
 })();
 </script>
 </body>

@@ -7,6 +7,23 @@
 
    No mocks: a request that cannot reach a backend is a real error state,
    never a fabricated success.                                       */
+async function signApiRequest(method, path, ts, secret, appId) {
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const enc = new TextEncoder();
+    const msg = appId + "\n" + ts + "\n" + method + "\n" + path;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
+    return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return "";
+}
+
 const API = {
   /* Same-origin /v1 on the website. The native shell injects the public
      web origin so the APK talks to the live API (AUTH_OTP_BYPASS included). */
@@ -36,6 +53,22 @@ const API = {
     if (token) headers["authorization"] = "Bearer " + token;
     if (extraHeaders && typeof extraHeaders === "object") {
       for (const [k, v] of Object.entries(extraHeaders)) if (v != null) headers[k] = String(v);
+    }
+    if (typeof window !== "undefined" && window.__RS_SURFACE === "mobile" && window.__RS_APP_SECRET) {
+      try {
+        const ts = String(Date.now());
+        const appId = window.__RS_APP_ID || "eg.rideshare.app";
+        const cleanPath = path.startsWith("/") ? path : "/" + path;
+        const urlPath = "/v1" + cleanPath.split("?")[0];
+        const sign = await signApiRequest(method, urlPath, ts, window.__RS_APP_SECRET, appId);
+        if (sign) {
+          headers["x-rs-app-id"] = appId;
+          headers["x-rs-ts"] = ts;
+          headers["x-rs-sign"] = sign;
+        }
+      } catch (e) {
+        console.warn("[api] HMAC signing failed", e);
+      }
     }
     let res;
     try {

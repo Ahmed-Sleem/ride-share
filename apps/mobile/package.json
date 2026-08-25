@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node scripts/build.js",
     "start": "node server.js",
-    "test": "node --test tests/server.test.js tests/config.test.js && bash tests/breaks.sh",
+    "test": "node --test tests/server.test.js tests/config.test.js tests/boot.test.js && bash tests/breaks.sh",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android"
   },

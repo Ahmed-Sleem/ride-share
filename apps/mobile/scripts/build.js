@@ -39,6 +39,7 @@ fs.rmSync(www, { recursive: true, force: true });
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(www, { recursive: true });
 fs.mkdirSync(path.join(dist, "www"), { recursive: true });
+
 function liveOrigin() {
   const env = (process.env.MOBILE_PUBLIC_ORIGIN || process.env.PUBLIC_MOBILE_ORIGIN ||
     process.env.MOBILE_WEB_ORIGIN || "").trim();
@@ -50,42 +51,43 @@ function liveOrigin() {
 const origin = liveOrigin();
 const webOrigin = (process.env.PUBLIC_WEB_ORIGIN ||
   "https://ride-shareweb-production.up.railway.app").replace(/\/$/, "");
+const appId = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
+const secret = (process.env.MOBILE_APP_SECRET || "").trim();
+
 /* Local-first: Capacitor must start on a FILE in www/, never server.url.
    With server.url the WebView hits the remote host first; offline then
-   shows Android's default error page. errorPath is resolved against the
-   remote origin so it also fails. Boot HTML lives on the device. */
+   shows Android's default error page. Boot HTML lives on the device. */
 const bootSrc = path.join(HERE, "offline.html");
 if (!fs.existsSync(bootSrc)) {
   console.error("FAIL: apps/mobile/offline.html missing");
   process.exit(1);
 }
-const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";</script>`;
+const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
 let boot = fs.readFileSync(bootSrc, "utf8");
 if (boot.includes("</head>")) boot = boot.replace("</head>", inject + "</head>");
 else boot = inject + boot;
 fs.writeFileSync(path.join(www, "index.html"), boot);
 fs.writeFileSync(path.join(www, "offline.html"), boot);
+
 /* Railway `mobile` serves the LIVE app HTML (intro → auth), not the splash.
    The splash only lives on the device so offline never hits Android's page. */
 let appHtml = fs.readFileSync(webHtml, "utf8");
+const appTag = `<script>window.__RS_SURFACE="mobile";window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
 if (!appHtml.includes("__RS_SURFACE")) {
-  const tag = '<script>window.__RS_SURFACE="mobile";</script>';
-  appHtml = appHtml.includes("<head>") ? appHtml.replace("<head>", "<head>" + tag) : tag + appHtml;
+  appHtml = appHtml.includes("<head>") ? appHtml.replace("<head>", "<head>" + appTag) : appTag + appHtml;
+} else if (!appHtml.includes("__RS_APP_SECRET")) {
+  appHtml = appHtml.replace('window.__RS_SURFACE="mobile";', `window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};`);
 }
 fs.writeFileSync(path.join(dist, "www", "index.html"), appHtml);
 fs.writeFileSync(path.join(dist, "www", "offline.html"), boot);
 
 fs.copyFileSync(path.join(HERE, "server.js"), path.join(dist, "server.js"));
 
-const appId = process.env.MOBILE_APP_ID || "eg.rideshare.app";
 const cfg = {
   appId,
   appName: BRAND.name.en,
   webDir: "www",
   android: { allowMixedContent: false },
-  /* Start on local www/index.html (offline splash). When /healthz is
-     reachable, the boot page navigates to the live first-party origin
-     so website deploys still update the installed app. */
   server: {
     cleartext: false,
     androidScheme: "https",
