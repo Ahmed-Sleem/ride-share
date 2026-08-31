@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 2026-08-31 — GUI renewal preparation: pre-renewal archive + design study
+
+- `archive/gui-before-renewal-2026-08-31-8828381.zip`: byte-exact `git archive` of the whole GUI
+  (apps/web/**, packages/brand/**, the mobile offline shell + its tests, the design-system audit)
+  taken at `8828381`, before the visual layer is rebuilt from the owner's monochrome demos.
+  `manifest.json` records every file with its sha256 and the restore commands; `README.txt` how to
+  open the snapshot with no build and no network. `theme-backup-old.zip` is untouched.
+- Study of both sides recorded in the planning notes for the renewal: the shell's one-scroller and
+  one-brand-source contracts, the landing section/content inventory, and the demos' 16 content or
+  architecture gaps (hardcoded brand and logo, `rs-prefs` replacing `rs.theme`/`rs.lang`, dead
+  download control, third-party QR, page-level scroll, missing Drive page and intro slides).
+- Also recorded as findings for the implementation phase: AR/EN key parity has no guard
+  (`booked`, `bookedBody`, `auth.owner_only` missing in AR), `scanCameraAction` is called but never
+  defined (no lint runs on `apps/web`), `apps/web/assets/stickers/` is read by nothing, and three
+  landing break tests assert nothing (CI: 86 caught / 3 missed).
+- No production code changed in this commit: archive + documentation only.
+
 ## 2026-08-26 — Instagram-style OTA bootloader & in-app HMAC signing
 
 - `offline.html` bootloader implements complete OTA update cycle:
