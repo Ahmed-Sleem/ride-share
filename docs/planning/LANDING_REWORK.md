@@ -67,6 +67,25 @@ every claim inside the map, the poster scale and — width-aware — either the 
 clear corridor at the far edge, and the two break cases now mutate the overlay into a band instead
 of the reverse.
 
+## L2, measured before it is opened
+
+The two red jobs are **not the same fault**, and the difference is knowable from the API alone:
+
+| Commit | what it changed | `Verify (repo + api + web unit)` | `Verify GUI (full browser suite)` |
+|---|---|---|---|
+| `3857de9` | archive only, no product file | **success** | failure |
+| `c16e30d` | the renewal's phase 1 | **failure** | failure |
+| `2d5be58`, `9b8d540` | docs, then M1 | failure | failure |
+
+So the GUI job's red **predates the renewal** — it failed on a commit that touched nothing a browser
+suite could notice — while the unit/lint/typecheck job was green up to `3857de9` and broke **at the
+renewal's own push**. That is ours to fix, and `pnpm verify` = `verify-repo.sh` (green locally, twice)
+plus `pnpm -r build / typecheck / lint / test`, so the failure is in one of those four, in some
+package, and reachable here: install pnpm, `pnpm install --frozen-lockfile`, then the four commands
+one at a time until one speaks. The workflow runs' aggregate status is useless for this question —
+every run since 2026-08-25 reads `failure` because the GUI job poisons it; only the per-commit
+check-runs endpoint separates the two.
+
 ## Phases left
 
 M2 (load dwell, curtain on theme + language), M3 (top bar geometry in both directions, the glass
