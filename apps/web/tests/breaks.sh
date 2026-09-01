@@ -504,9 +504,9 @@ run_break "the store cards stack again" src/styles/shell.html \
   's@.landing__dlcards{grid-template-columns:repeat(2,minmax(0,1fr))}@.landing__dlcards{grid-template-columns:minmax(0,1fr)}@' \
   "the two stores share a row once there is room"
 
-run_break "the claims go back on top of the drawing" src/styles/shell.html \
-  's@.journey__svg{position:static;width:100%;@.journey__svg{position:absolute;inset:0;width:100%;@' \
-  "the claims sit under the drawing at every width"
+run_break "the map is put back in a band of its own height" src/styles/shell.html \
+  's@.journey__svg{position:absolute;inset:0;width:100%;height:100%;@.journey__svg{position:static;width:100%;height:520px;@' \
+  "the map covers the section it belongs to"
 
 run_break "the bar puts every control on one line" src/styles/shell.html \
   's@.landing__actions>.btn{margin-inline-start:var(--s3)}@.landing__actions>.btn{margin-inline-start:0}@' \

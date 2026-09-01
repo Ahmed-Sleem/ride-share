@@ -467,17 +467,36 @@ async function survey(view, lang, key, doc) {
     /* The map: on a phone it is a band the copy follows; on a wide screen the claims
        hold one half of the measure and the road weaves down the other half. */
     const svg = land.querySelector('.journey__svg');
-    let onMap = -1, widestCut = 0;
+    let onMap = -1, widestCut = 0, boxErr = -1, wordPx = 0, nCuts = 0, roadGap = -1;
     if (svg) {
       const mb = svg.getBoundingClientRect();
-      onMap = [...land.querySelectorAll('.journey__word, .journey__body, .journey__caption')]
-        .filter((el) => {
-          const r = el.getBoundingClientRect();
-          return r.bottom > mb.top + 1 && r.top < mb.bottom - 1 && r.right > mb.left && r.left < mb.right;
-        }).length;
-      const jb = land.querySelector('.journey').getBoundingClientRect();
+      const sb = land.querySelector('.journey').getBoundingClientRect();
+      /* The one measurement that would have caught an empty map: the <svg> box must equal the
+         section box, because the projection is measured from the section. A letterboxed drawing
+         shrinks and clips and still passes any check that only counts text. */
+      boxErr = Math.max(Math.abs(mb.height - sb.height), Math.abs(mb.width - sb.width));
+      const type = [...land.querySelectorAll('.journey__word, .journey__body, .journey__caption')];
+      onMap = type.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > mb.top + 1 && r.top < mb.bottom - 1 && r.right > mb.left && r.left < mb.right;
+      }).length;
+      nCuts = land.querySelectorAll('.journey__cut').length;
+      wordPx = Math.max(...type.filter((e) => e.classList.contains('journey__word'))
+        .map((e) => parseFloat(getComputedStyle(e).fontSize)));
       widestCut = Math.max(...[...land.querySelectorAll('.journey__cut')]
-        .map((c) => c.getBoundingClientRect().width / jb.width));
+        .map((c) => c.getBoundingClientRect().width / sb.width));
+      /* Below 900 the copy is one column and the road hugs the far edge behind it, so the
+         promise is not "half the measure" but "the corridor is left clear" — measured on the
+         end side, which is the reading side's opposite in either direction. */
+      /* Measured on the *type*, not on the article box: the cut is allowed to reach the gutter,
+         and its `padding-inline-end` is what keeps the corridor visible behind the words. The
+         far edge is the reading side's opposite, so RTL is the mirror and not a special case. */
+      const rtl = getComputedStyle(land).direction === 'rtl';
+      roadGap = Math.min(...[...land.querySelectorAll('.journey__cut')].map((c) => {
+        const el = c.querySelector('.journey__body') || c;
+        const r = el.getBoundingClientRect();
+        return Math.round(rtl ? r.left - sb.left : sb.right - r.right);
+      }));
     }
     /* Every control you can tap, measured as drawn. */
     const phone = window.matchMedia('(max-width: 899px)').matches;
@@ -501,7 +520,7 @@ async function survey(view, lang, key, doc) {
       over: de.scrollWidth - de.clientWidth, landOver: land.scrollWidth - land.clientWidth,
       escapes: escapes.slice(0, 3), clipped: clipped.slice(0, 3), offRhythm: offRhythm.slice(0, 3),
       burst: burst.slice(0, 3), clippedAway: clippedAway.slice(0, 3),
-      onMap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
+      onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
       smallPrimary: smallPrimary.slice(0, 3),
       hidden: rv.filter((el) => Number(getComputedStyle(el).opacity) < 0.05).length,
       phone,
@@ -527,12 +546,22 @@ for (const vp of BOUNDARIES) {
       ok(`${id}: the rhythm is the flow tokens`, m.offRhythm.length === 0, m.offRhythm.join(' | '));
       ok(`${id}: every block is revealed by the scroll`, m.hidden === 0, `${m.hidden} still transparent`);
       ok(`${id}: tap targets are at least 24px`, m.small.length === 0, m.small.join(' | '));
+      if (m.boxErr >= 0) {   /* only pages that carry the map own these promises */
+        ok(`${id}: the map box is the section box — no letterbox, no clipped corridor`,
+          m.boxErr <= 1, `${m.boxErr}px of disagreement`);
+        ok(`${id}: every claim is drawn on the road, not filed under it`,
+          m.onMap === 2 * m.nCuts + 1, `${m.onMap} of ${2 * m.nCuts + 1} text boxes over the drawing`);
+        ok(`${id}: the poster word keeps its scale`, m.wordPx >= 28, `${m.wordPx}px`);
+        const wide = !m.phone;   /* the same 900px boundary the sheet uses */
+        /* widestCut comes back as a percent — 52% of the measure plus a rounding allowance. */
+        ok(`${id}: ${wide ? 'a cut takes half the measure and the road weaves down the other'
+                          : 'the copy leaves the corridor clear at the far edge'}`,
+          wide ? m.widestCut <= 56 : m.roadGap >= 24,
+          `${m.widestCut}% / gap ${m.roadGap}px`);
+      }
       if (m.phone) {
         ok(`${id}: a button on a phone is at least 40px`, m.smallPrimary.length === 0, m.smallPrimary.join(' | '));
-        if (m.onMap >= 0) {   /* only pages that carry the map own this promise */
-          ok(`${id}: the map is a band the copy follows, never a backdrop`,
-            m.onMap === 0, `${m.onMap} text boxes over the drawing`);
-        }
+
         ok(`${id}: the way out of the page is reachable`, !!m.menu && m.menu.shown && m.menu.box >= 24,
           JSON.stringify(m.menu));
       } else {

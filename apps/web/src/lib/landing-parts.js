@@ -140,7 +140,12 @@ function mkJourney(cuts, opts) {
   cuts.forEach((c, i) => {
     list.append($("article", {
       class: "journey__cut",
-      attrs: { "data-journey-cut": "" },
+      /* Which side of the corridor this cut belongs to. It is written here, from the index,
+         and not by a media query, because the road weaves: a cut on the same side as the
+         segment it describes is the whole idea of the section. The sheet mirrors it with
+         logical properties, so RTL gets the mirror for free and the bus reaches each stop
+         in the order the copy is read. */
+      attrs: { "data-journey-cut": "", "data-side": i % 2 ? "right" : "left" },
     },
     $("div", { class: "journey__rule" },
       $("span", { class: "ltr", text: String(i + 1).padStart(2, "0") }),

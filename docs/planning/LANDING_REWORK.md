@@ -38,13 +38,38 @@ One phase per session, each ending with a push and a report.
 | **M3 — top bar and the intro block** | 4, 6, 7, 9, 12, 13, 16, + "Get the app" treatment | Everything the eye hits first: nav geometry (both directions), the glass sheet, the button-less hero, the de-duplicated copy, the viewport rule on every surface. |
 | **M4 — the drive view, the policy pages, the audit** | 8, 10, 11, 14, 5 | Structure and copy for the secondary surfaces, then the full production audit last, so it can certify everything above it. |
 
-## Open before M3/M4 (owner's call)
+## Decisions taken (owner, same day)
 
-1. **Arabic type** — self-host a subset Arabic face (Cairo or Tajawal, OFL, display weights only,
-   ≈45–70 KB inlined) vs stay on the system stack and fix only weight/tracking.
-2. **"Get the app" in the top bar** — filled ink pill vs outlined pill with a dot vs weight + underline
-   on hover only.
-3. **Policy pages** — centred single column (current, tuned) vs two columns with a sticky contents rail
-   at ≥900px.
-4. **The intro dwell** — how long "takes its time" means: 600 ms floor / 1 s / 1.4 s, each capped by
-   `load` + fonts so a slow network is never made slower.
+| Question | Answer | What it commits me to |
+|---|---|---|
+| Arabic display type | **Self-host Cairo**, subset, weights 400/700/900 | OFL licence, Arabic+Latin subset, base64-inlined like every other asset, ≈45–70 KB on a 988 KB file; `build.js` must validate the new family the way it validates the stack today, and the `[dir=rtl]` overrides get a real bold to act on. M3. |
+| "Get the app" in the top bar | **Outlined pill with a filled dot** | Keeps the existing underline weight language, adds `::before` dot in `--ink`; monochrome, inverts with the sheet, no new colour token. M3. |
+| Terms / Privacy / Safety | **Two columns with a sticky contents rail** at ≥900px, single centred column below | The rail is the doc's own clause list, so it must be generated from the document model and not written by hand; the shared top bar is asserted, not assumed. M4. |
+| The intro's dwell | **"min 1s but it can be more if the device is still loading"** | Floor 1000 ms, and no release before `load` + fonts settle — a slow device waits longer, a fast one still gets a full second. A watchdog releases at 6 s with whatever arrived, so a hanging third-party resource can never hold the page shut. M2. |
+
+## M1 — the map: what was wrong and what the guards now say
+
+Measured on the deployed page before the change, and on the built file after it:
+
+| | before | after |
+|---|---|---|
+| `<svg>` box vs section box | 1440×**522** vs 1440×1031 → `preserveAspectRatio` halved the drawing and clipped its lower half | equal at 1440 / 1024 / 768 / 390 (`3325px` section, `3324px` map) |
+| `.journey__word` computed size | **16 px** | **80 / 66.6 / 49.9 / 28.8 px** — the demo's `clamp(1.8rem,6.5vw,5rem)` |
+| cut layout | one 610 px column, `data-side` absent | `left/right/left/right/…`, 52 % of the measure at ≥900, corridor left clear below |
+| scroll emphasis | nothing reached the words (`--near` never written) | word opacity 0.55 → 0.87 as its cut crosses the middle; `is-passed` stops 0 → 2 → 4; the bus rides with `translate`+`rotate` |
+| horizontal overflow | 0 | 0, at all four widths |
+
+`onMap === 0` ("no type ever shares a box with the road") was the assertion defending the old
+band, so it is now the opposite contract and the harnesses were re-derived with it: the unit guard
+reads the overlay + `data-side` + the clamp + the Arabic override, `landing.test.js` asserts
+`map box == section box` (the measurement that would have caught the emptiness in the first place),
+every claim inside the map, the poster scale and — width-aware — either the half-measure rule or a
+clear corridor at the far edge, and the two break cases now mutate the overlay into a band instead
+of the reverse.
+
+## Phases left
+
+M2 (load dwell, curtain on theme + language), M3 (top bar geometry in both directions, the glass
+sheet, the button-less hero, the de-duplicated copy, Cairo, the "Get the app" pill, the intro rule
+on every surface), M4 (drive-view structure, "What you need", "Back to home", the policy pages, then
+the production audit), then **L1** (both break harnesses to completion) and **L2** (green CI).

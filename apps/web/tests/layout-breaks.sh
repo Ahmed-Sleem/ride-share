@@ -56,10 +56,12 @@ lbl "a landing section loses its reveal" src/lib/landing-parts.js \
 
 # Three more, for guarantees the adaptive matrix now measures on every marketing
 # page, in both directions, at the widths where a rule turns over.
-# The claims are a key under the drawing at every width now, so the overlay is not a
-# phone-only temptation any more: put it back and the type lands on the road anywhere.
-lbl "the map goes back behind the copy" src/styles/shell.html \
-  's@.journey__svg{position:static;width:100%;@.journey__svg{position:absolute;inset:0;width:100%;@'
+# The claims live on the road again, so the overlay temptation is at its worst on a phone,
+# where a big absolutely-positioned drawing can swallow the column. Give the <svg> a box of
+# its own and the projection (measured from the section) letterboxes: half-scale road, lower
+# half clipped. Every width owns this, which is why it is a layout case and not a unit one.
+lbl "the map is given a band of its own height" src/styles/shell.html \
+  's@.journey__svg{position:absolute;inset:0;width:100%;height:100%;@.journey__svg{position:static;width:100%;height:520px;@'
 
 lbl "the landing flow rhythm is dropped" src/styles/shell.html \
   's@^\.landing__section>\*+\*,\.landing__cta>\*+\*,\.landing__slab>\*+\*{margin-block-start:var(--flow)}@.landing__section>*+*,.landing__cta>*+*,.landing__slab>*+*{margin-block-start:0}@'

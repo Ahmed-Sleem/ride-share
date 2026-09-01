@@ -1157,8 +1157,18 @@ group("RENEWAL — one name, one curtain, one screen per surface");
   ok("the page names are centred in the bar where there is room",
      /@media \(min-width:1000px\)\{\s*\n\s*\.landing__links\{position:absolute;inset-inline-start:50%/.test(SHELL));
   ok("the auth pair is set apart from the switches", /\.landing__actions>\.btn\{margin-inline-start:var\(--s3\)\}/.test(SHELL));
-  ok("the claims sit under the drawing at every width",
-     /\.journey__svg\{position:static/.test(SHELL) && !/data-side/.test(SRC) && !/data-side/.test(SHELL));
+  /* The map and its projection are one mechanism. lib/motion.js measures the SECTION and
+     paints a viewBox of that size, so a <svg> with a box of its own silently letterboxes the
+     corridor — half-scale road, lower half clipped, the section reads as empty. */
+  ok("the map covers the section it belongs to",
+     /\.journey__svg\{position:absolute;inset:0;width:100%;height:100%/.test(SHELL));
+  ok("the claims are written on the road, side by side with the corridor",
+     /data-side": i % 2/.test(SRC) &&
+     /\.journey__cut\[data-side="right"\]\{margin-inline-start:auto/.test(SHELL));
+  ok("the cut word is the poster at the demo's scale, not a caption",
+     /\.journey__word\{margin:0;font-size:clamp\(1\.8rem,6\.5vw,5rem\)/.test(SHELL));
+  ok("the poster word drops its uppercase tracking for Arabic",
+     /\[dir="rtl"\] \.journey__word/.test(SHELL));
   ok("the two stores share a row once there is room",
      /@media \(min-width:700px\)\{\.landing__dlcards\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}\}/.test(SHELL));
 

@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## 2026-09-02 — renewal round 3 (M1): the map was letterboxed, and the poster words came back
+
+Plan of record: [planning/LANDING_REWORK.md](../planning/LANDING_REWORK.md) — the owner's sixteen
+items, each one written up with the measurement that explains it, on the **deployed** page rather
+than the local tree. This is phase M1 (the map); M2–M4 follow, one per session.
+
+**The defect.** `.journey__svg` was `position:static` with a height of its own
+(`clamp(220px,58vh,…)`), while `lib/motion.js` measures the **section** and paints a `viewBox` of
+that size. So a 1440×1031 drawing went into a 1440×**522** box: `preserveAspectRatio` scaled the
+whole corridor to half and clipped its lower half, and the section read as an empty pale field with
+small grey text in it. Nothing in the JS was wrong, which is why no suite caught it — the drawing
+was there, just crushed. Measured on the live page: section 1031 px, svg 522 px.
+
+**Fixed** (`styles/shell.html`): the map is `position:absolute;inset:0;width:100%;height:100%` over
+its section again, and the comment now says the two files are one mechanism. The claims are drawn
+**on** the road as in the demo — `.journey__word` at `clamp(1.8rem,6.5vw,5rem)` with the variable
+weight and the `--near` opacity (was: the caption step, 16 px), the seven cuts alternate at 52 % of
+the measure via `data-side` written from the cut's index in `lib/landing-parts.js` (not a media
+query, so the order a reader gets is the order the bus rides), and below 900 px the copy is one
+column with the corridor left clear at the far edge. The two-column "key" from round 2 is gone.
+
+**Reversal, recorded**: `onMap === 0` — "no line of type ever shares a box with the road" — was the
+guard defending the band. It asserted the old decision, so it was re-derived to the new contract
+rather than deleted: `landing.test.js` now asserts `map box == section box` (the measurement that
+would have caught this), every claim inside the map, the poster scale, and a width-aware
+half-measure/clear-corridor rule; `unit.test.js` gained the overlay, `data-side`, the clamp and the
+Arabic override; both break cases now mutate the overlay **into** a band, which is the regression
+that matters. The `layout-breaks.sh` anchor was re-derived in the same pass, and a check with a
+stale anchor silently passes — which is how this went unnoticed for a round.
+
+**Verified on this tree**: unit 594 / 0 (591 − 1 + 4) · landing **2,240 / 0** (was 2,172: the
+new map contract adds 68 assertions and they hold at all 26 viewports in both languages) · a11y
+14 / 0 · layout 8,185 / 0 · `scripts/verify-repo.sh` green. Chrome measurements behind the numbers
+are in [planning/LANDING_REWORK.md](../planning/LANDING_REWORK.md).
+
+**What the harness taught back**: the first run of the new assertion failed 17 times, and both
+causes were in the test — `widestCut` is returned as a percent but compared against `0.56`, and the
+RTL far-edge distance was computed with a flipped sign. Neither was a product defect, but the second
+one was a bad measurement of a real rule: the corridor clearance belongs to the *type*, not to the
+article box, which is allowed to reach the gutter because its `padding-inline-end` is what keeps the
+road visible behind the words.
+
 ## 2026-09-01 — renewal round 2: the owner's twelve edits, the page curtain, and the brand chain
 
 Plan of record: [planning/GUI_RENEWAL.md](../planning/GUI_RENEWAL.md) §9 (the twelve,

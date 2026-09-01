@@ -1149,10 +1149,14 @@ html.native .intro{padding-top:var(--safe-t)}
    the road is long, the copy is normal document flow, and the bus is a mark of
    progress rather than an animation you have to wait for. */
 .journey{position:relative;grid-column:1/-1;border-top:1px solid var(--line)}
-.journey__svg{position:static;width:100%;z-index:0;pointer-events:none;display:block;fill:none;
-  /* The drawing is a band of its own now, at every width: the claims sit under it as a
-     key, so no line of type ever shares a box with the road. */
-  height:clamp(220px,58vh,min(560px,var(--view-h,80vh)))}
+/* The map covers the section it belongs to — `inset:0`, not a band of its own height.
+   The projection in lib/motion.js is measured from the *section* box, so any other box
+   here silently letterboxes the whole drawing: a viewBox of 1440×1031 painted into a
+   1440×522 element halves the road and clips its lower half, which is how the corridor
+   came to look empty. `lib/motion.js` and this rule are one mechanism and must be read
+   together; `tests/landing.test.js` asserts the two boxes are equal at every viewport. */
+.journey__svg{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+  pointer-events:none;display:block;fill:none}
 .journey__sea{fill:var(--sea)}
 .journey__coast{fill:none;stroke:var(--coast);stroke-width:1.5}
 .journey__canal{fill:none;stroke:var(--canal);stroke-width:3;stroke-linecap:round}
@@ -1195,23 +1199,30 @@ html.native .intro{padding-top:var(--safe-t)}
   text-transform:uppercase;letter-spacing:.18em;color:var(--ink-mute);
   font-variant-numeric:tabular-nums}
 .journey__cut{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s1);
-  padding-block:var(--s4);border-bottom:1px solid var(--line)}
+  padding-block:clamp(3.5rem,9vh,7rem);max-width:min(100%,34rem)}
+/* Below 900 the copy is a single column and the road hugs the far edge behind it, so the
+   last thing a line of type touches is the gutter, not the corridor. `data-side` is written
+   by lib/landing-parts.js from the cut's index — the alternation is content, not a media query,
+   so a reader on a phone still gets the same order as one on a 30-inch display. */
+@media (max-width:899px){.journey__cut{padding-inline-end:3rem;border-bottom:1px solid var(--line)}}
+@media (min-width:900px){
+  .journey__cut{width:52%;max-width:none;padding-block:clamp(6rem,17vh,13rem)}
+  .journey__cut[data-side="right"]{margin-inline-start:auto;align-items:flex-end;text-align:end}
+  .journey__cut[data-side="right"] .journey__rule{justify-content:flex-end}
+}
 .journey__rule{display:flex;gap:var(--s2);font-size:var(--f-cap);text-transform:uppercase;
   letter-spacing:.16em;color:var(--ink-mute);font-variant-numeric:tabular-nums}
 .journey__rule span:first-child{font-weight:var(--fw-semi);color:var(--ink)}
-.journey__word{margin:0;font-size:var(--f-head);line-height:1.02;letter-spacing:-.02em;
+.journey__word{margin:0;font-size:clamp(1.8rem,6.5vw,5rem);line-height:.85;letter-spacing:-.05em;
+  margin-inline-start:-.05em;
   text-transform:uppercase;font-variation-settings:"wght" 430;
   /* --near (0…1) is written by the scrub as the word crosses the middle of the
      viewport; the opacity is the second half of the same gesture. */
   opacity:calc(.55 + var(--near,0) * .45);will-change:font-variation-settings,opacity}
 .journey__body{font-size:var(--f-body);line-height:1.5;max-width:44ch;color:var(--ink-soft);margin:0}
-/* The claims are the drawing's key, not a second poster: small, numbered, two columns
-   when there is room. Alternating them down the page had become the section's loudest
-   voice while saying what the chapter rows below it already say — so the road keeps the
-   composition and the words keep the reading. */
-@media (min-width:760px){
-  .journey__cuts{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--s7)}
-}
+/* One column, deliberately: the claims alternate down a single spine so each one can be
+   lit by the spotlight as the bus reaches it. Two columns would put two words at the same
+   height and the gesture would have no subject. */
 
 /* ── the page transition ───────────────────────────────────────────────────────
    Drawn by lib/pagefx.js: a full-bleed path that rises over the page and falls away.
