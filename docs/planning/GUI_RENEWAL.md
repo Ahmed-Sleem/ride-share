@@ -468,3 +468,18 @@ so), so their tree was self-consistent and the fold changes the artifact not at 
 stale was my *local* comparison: `build.js` prints `html.length/1024`, i.e. **characters, not bytes** — 977,778 of them for
 this file, and the Arabic copy is multi-byte in UTF-8, so the printed 954.9 KB and `ls`'s
 1,011,499 bytes are the same file. A printed number compares two builds; it does not measure one.
+
+## 13. Finishing the landing: three phases, in order
+
+The owner's instruction is to close the landing out step by step and make CI green before the
+app GUI starts. Each phase below is one session: it ends with a push and a report, not with four
+half-finished things.
+
+| Phase | What it is | Done means |
+|---|---|---|
+| **L1 — certify the landing** | Run `tests/breaks.sh` (113 cases, ~45–50 min) and `tests/layout-breaks.sh` (11, ~30–50 min) to completion on this tree, exclusively — no other harness may touch the product files while they run, since each case mutates and restores a source file. Fix whatever is missed; re-derive whatever anchor a case now catches for the wrong reason. | Both harnesses print zero misses, `git status` is clean afterwards, and the numbers in §9 replace "owed". |
+| **L2 — green CI** | `Verify (repo + api + web unit)` fails on `f11dec9` while `scripts/verify-repo.sh` is green locally, and `pnpm verify` = that script **plus** `pnpm -r build / typecheck / lint / test` across every workspace package — so the failure is in one of those four, in some package, and it predates the renewal (the job has been red for a week). `pnpm-lock.yaml` does list the renewal's dependencies, so a frozen-lockfile mismatch is not the cause. | Read the job log, name the failing step, fix it at source, and land a run where all three jobs are `success`; only then does "verified" mean something to anyone who is not me. |
+| **L3 — the last landing polish** | The open appearance calls, each one small and each one an owner decision, not a guess: `logo.gradient` (dead in the sheet, still painted into the Android launcher icon), the hard-coded tagline in `apps/api/.../notifications.ts`, `dist-preview.html` tracked vs built in CI, and the three duplicate `# CHANGELOG` H1s. | A decision recorded per item, the change made where the answer is "do it", and the docs updated in the same commit. |
+
+Phase 2 of the renewal (the app GUI) starts only when `ride-share-app.html` arrives; nothing in L1–L3
+blocks on it, and nothing in it should be guessed at in the meantime.
