@@ -17,6 +17,7 @@ while IFS= read -r f; do
   [ -n "$f" ] && [ -f "$f" ] || continue
   case "$f" in
     */tests/*|*/test.*) continue ;;               # tests may reference colours by name
+    *.bak|*.orig|*.rej|*~) continue ;;            # break-harness scratch, never product CSS
     $THEME) continue ;;                            # the theme file: tokens live here
   esac
   examined=$((examined+1))

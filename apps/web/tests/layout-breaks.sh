@@ -7,12 +7,23 @@ cd "$(dirname "$0")/.."
 P=0; F=0
 lb(){ _lb "$1" "$2" "$3" "node tests/layout.test.js"; }
 lbl(){ _lb "$1" "$2" "$3" "node tests/landing.test.js"; }
+LB_TMP="${HOME}/.vtest/layout-breaks-scratch.$$"   # not $TMPDIR: a sandbox rehydrate wipes it
+mkdir -p "$LB_TMP/orig"
+SCRATCH="$LB_TMP"
+LB_INFLIGHT=""
+lb_restore () {
+  [ -n "$LB_INFLIGHT" ] || return 0
+  cp "$LB_TMP/${LB_INFLIGHT//\//_}" "$LB_INFLIGHT" 2>/dev/null
+  LB_INFLIGHT=""
+}
+trap 'lb_restore; rm -rf "$LB_TMP"' EXIT INT TERM
 _lb(){ local n="$1" f="$2" e="$3" testcmd="$4"
-  cp "$f" "$f.bak"; sed -i "$e" "$f"
-  if cmp -s "$f" "$f.bak"; then echo "  BROKEN-BREAK  $n → edit did not change the file"; F=$((F+1)); mv "$f.bak" "$f"; return; fi
+  local bak="$LB_TMP/${f//\//_}"
+  cp "$f" "$bak"; LB_INFLIGHT="$f"; sed -i "$e" "$f"
+  if cmp -s "$f" "$bak"; then echo "  BROKEN-BREAK  $n → edit did not change the file"; F=$((F+1)); cp "$bak" "$f"; LB_INFLIGHT=""; return; fi
   node build.js >/dev/null 2>&1
   local out; out="$(eval "$testcmd" 2>&1)"
-  mv "$f.bak" "$f"; node build.js >/dev/null 2>&1
+  cp "$bak" "$f"; LB_INFLIGHT=""; rm -f "$bak"; node build.js >/dev/null 2>&1
   local n_fail; n_fail=$(echo "$out" | grep -c '^  FAIL')
   if [ "$n_fail" -gt 0 ]; then
     echo "  CAUGHT        $n  ($n_fail failures, first: $(echo "$out"|grep '^  FAIL'|head -1|sed 's/^  FAIL  //;s/ *→.*//'))"
@@ -37,11 +48,38 @@ lb "shell taller than the viewport" src/styles/shell.html \
 lb "main no longer scrolls (content pushes the shell)" src/styles/shell.html \
   's@^\.main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;@.main{flex:1;@'
 
-# The landing width regression: without width:100% the landing (a flex child of
-# #root) shrinks to its content width — the exact ~50%-viewport bug reported.
-lbl "landing loses its full width" src/styles/shell.html \
-  's@^\.landing{width:100%;min-width:0;height:100%@.landing{height:100%@' \
-  "landing fills the viewport width"
+# The landing width regression moved to tests/breaks.sh: the browser suite can
+# measure the landing as full width with the declaration gone (a grid floor hides
+# the shrink), so what guards it now is unit.test.js asserting the rule itself.
+lbl "a landing section loses its reveal" src/lib/landing-parts.js \
+  's|kid.setAttribute("data-rv", "");|kid.setAttribute("data-rvX", "");|'
+
+# Three more, for guarantees the adaptive matrix now measures on every marketing
+# page, in both directions, at the widths where a rule turns over.
+# The claims are a key under the drawing at every width now, so the overlay is not a
+# phone-only temptation any more: put it back and the type lands on the road anywhere.
+lbl "the map goes back behind the copy" src/styles/shell.html \
+  's@.journey__svg{position:static;width:100%;@.journey__svg{position:absolute;inset:0;width:100%;@'
+
+lbl "the landing flow rhythm is dropped" src/styles/shell.html \
+  's@^\.landing__section>\*+\*,\.landing__cta>\*+\*,\.landing__slab>\*+\*{margin-block-start:var(--flow)}@.landing__section>*+*,.landing__cta>*+*,.landing__slab>*+*{margin-block-start:0}@'
+
+lbl "the compact menu goes under the tap floor" src/styles/shell.html \
+  's@width:var(--tap);height:var(--tap);align-items:center@width:20px;height:20px;align-items:center@' 
+
 echo
+# Every case backs up before it mutates; this proves the product tree came back whole.
+# A leftover mutation is not a test failure — it is a corrupted build that the next suite
+# would read as truth, which has already happened here.
+drift=0
+if [ -d "$SCRATCH/orig" ]; then
+  for f in "$SCRATCH/orig"/*; do
+    [ -e "$f" ] || continue
+    rel="$(echo "$f" | sed "s#$SCRATCH/orig/##; s#_#/#g; s#/styles#/#; s#/shell#/#; s#/screens#/#; s#/lib#/#; s#/tests#/#")"
+    cmp -s "$f" "$rel" || { echo "  RESTORE FAILED  $rel"; cp "$f" "$rel" 2>/dev/null; drift=1; }
+  done
+fi
+[ "$drift" -eq 0 ] || exit 1
+
 echo "──────── layout breaks caught: $P   missed: $F ────────"
 [ "$F" -eq 0 ] || exit 1

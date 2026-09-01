@@ -26,31 +26,20 @@
 :root{
   /* ── PRIMITIVES ─────────────────────────────────────────────────────────
      Raw values. Never referenced by a component; only by semantic tokens.
-     Two-layer model per WCAG 2.2 palette guidance.
-     Violet is the product's primary colour (the act of travelling).
-     Coral is the secondary role (value & continuity). The pops below are the
-     youth palette — used for chips, cards and friendly accents, never for
-     status or semantics.                                              */
-  --violet-50:#F1EEFF; --violet-100:#E3DDFF; --violet-200:#C9BEFF;
-  --violet-300:#A795FF; --violet-400:#8571FF; --violet-500:#6C63FF;
-  --violet-600:#5A4FD9; --violet-700:#463DB0; --violet-900:#241F5E;
-  --coral-50:#FFF1EC; --coral-100:#FFDCCF; --coral-300:#FFAD93;
-  --coral-400:#FF8A6E; --coral-500:#FF6A4D; --coral-600:#E84F30; --coral-900:#5E1F12;
-  --mint-50:#E7F9F0; --mint-100:#C9F1DE; --mint-300:#7FE0BC;
-  --mint-400:#3ECF9A; --mint-500:#1FB87F; --mint-600:#179A6A; --mint-900:#0B3A28;
-  --lime-50:#F7FBE3; --lime-100:#EFF7C2; --lime-300:#E4F083;
-  --lime-400:#D6E75C; --lime-500:#C9DE3D; --lime-600:#A8BD1F; --lime-900:#39400A;
-  --sky-50:#E9F4FF; --sky-100:#CFE7FF; --sky-300:#9ACDFF;
-  --sky-400:#6CB4FF; --sky-500:#3D9AF7; --sky-600:#2A7FD6; --sky-900:#0E2B4F;
-  --pink-50:#FDEFF6; --pink-100:#FBD9E9; --pink-300:#F6A9D0;
-  --pink-400:#F184BB; --pink-500:#E85F9F; --pink-600:#C73F7F; --pink-900:#4E1532;
-  /* 700 steps — the bold-card steps of each pop hue. Each holds white text at
-     WCAG AA (≥ 4.5:1); the 300 steps are their light accents for line-work. */
-  --coral-700:#C43E22; --mint-700:#0F7A4E; --sky-700:#1E63A8;
-  --ink-0:#FFFFFF; --ink-25:#FAFBFC; --ink-50:#F5F7F9; --ink-100:#EEF0F4;
-  --ink-150:#E4E8ED; --ink-200:#DFE4EA; --ink-300:#C4CCD6; --ink-400:#98A2B0;
-  --ink-500:#6B7684; --ink-600:#5B6472; --ink-700:#3D4550; --ink-800:#232A33;
-  --ink-850:#1A1D24; --ink-900:#15181F; --ink-950:#111318; --ink-1000:#0B0C0F;
+     Two-layer model per WCAG 2.2 palette guidance, and deliberately narrow:
+     the product prints in INK on PAPER, so the palette is one neutral ramp plus
+     the four hues that CARRY MEANING (ok / warn / danger / info). Decorative
+     colour is gone by decision — where a chip once shouted in coral it now
+     differs by ink weight and hairline, so colour is never the only channel
+     (§10.4) and every screenshot survives being printed in black and white.
+     The ramp is chosen by measurement, not by eye: ink-900 on paper is 19.8:1,
+     ink-600 (secondary text) 6.69:1, ink-500 (muted text) 4.54:1 — the AA floor
+     for body copy — and the pairs are re-measured in tests/unit.test.js, so the
+     day someone edits a step and breaks one, the build says which pair.      */
+  --ink-0:#FFFFFF;   --ink-25:#FAFAFA;  --ink-50:#F5F5F5;  --ink-100:#EFEFEF;
+  --ink-150:#E6E6E6; --ink-200:#DEDEDE; --ink-300:#CFCFCF; --ink-400:#A8A8A8;
+  --ink-500:#767676; --ink-600:#5C5C5C; --ink-700:#454545; --ink-800:#2E2E2E;
+  --ink-850:#1F1F1F; --ink-900:#0A0A0A; --ink-950:#050505; --ink-1000:#000000;
   --green-500:#1E8E3E; --green-400:#3ECF6B; --green-50:#E8F5EC; --green-950:#12291B;
   --amber-500:#B26A00; --amber-400:#FFB020; --amber-50:#FDF3E2; --amber-950:#2E2410;
   --red-500:#C62828;   --red-400:#FF6B6B;   --red-50:#FCEBEA;   --red-950:#2E1717;
@@ -65,30 +54,24 @@
   --text-muted:var(--ink-500); --text-inverse:var(--ink-0);
 
   /* ── SEMANTIC: BRAND + ACCENT ───────────────────────────────────────────
-     PRIMARY  violet — the act of travelling: book, claim, confirm, go.
-     ACCENT   coral  — value and continuity: subscriptions, promotions,
-                       recommendations, the walking leg of a journey.
-     Two roles, never interchangeable. A coral button never means "go";
-     a violet surface never means "saving". This is what keeps an accent
-     colour meaningful rather than decorative.                            */
-  --brand:var(--violet-500); --brand-hover:var(--violet-600);
-  --brand-2:var(--violet-600);           /* second stop of the brand gradient */
-  --brand-soft:var(--violet-50); --brand-border:var(--violet-100);
+     PRIMARY  the ink the product prints with — the act of travelling: book,
+              claim, confirm, go.
+     ACCENT   the same ink one step lighter. The two roles still exist and
+              still never interchange (an accent button never means "go"), but
+              in a monochrome system the difference is weight and edge, not hue.
+     No gradient, no second stop: one flat fill everywhere means a button is
+     one declaration and it prints identically on paper.                     */
+  --brand:var(--ink-900); --brand-hover:var(--ink-800);
+  --brand-soft:var(--ink-50); --brand-border:var(--ink-200);
   --on-brand:var(--ink-0);
-  --accent:var(--coral-500); --accent-hover:var(--coral-600);
-  --accent-soft:var(--coral-50); --accent-border:var(--coral-100);
-  --on-accent:var(--ink-0); --accent-text:var(--coral-600);
+  --accent:var(--ink-700); --accent-hover:var(--ink-600);
+  --accent-soft:var(--ink-100); --accent-border:var(--ink-300);
+  --on-accent:var(--ink-0); --accent-text:var(--ink-900);
 
-  /* ── POPS — the youth palette. Decorative fills for chips, cards and
-     friendly accents. Each has a soft bg and a readable text twin.       */
-  --pop-mint:var(--mint-500);  --pop-mint-bg:var(--mint-50);  --pop-mint-text:var(--mint-600);
-  --pop-lime:var(--lime-500);  --pop-lime-bg:var(--lime-50);  --pop-lime-text:var(--lime-600);
-  --pop-sky:var(--sky-500);    --pop-sky-bg:var(--sky-50);    --pop-sky-text:var(--sky-600);
-  --pop-pink:var(--pink-500);  --pop-pink-bg:var(--pink-50);  --pop-pink-text:var(--pink-600);
-  --pop-coral:var(--coral-400);--pop-coral-bg:var(--coral-50);--pop-coral-text:var(--coral-600);
-
-  /* route line stays blue: it is a map convention, not brand expression */
-  --route:var(--blue-500); --walk:var(--violet-400);
+  /* Route and walking legs of a journey: a map convention, not brand
+     expression. They stay distinguishable without colour because the walk leg
+     is dashed (see RouteMap) — colour would have been the second channel. */
+  --route:var(--ink-900); --walk:var(--ink-400);
   --accent-route:var(--route); --accent-walk:var(--walk);
 
   /* ── SEMANTIC: STATUS ───────────────────────────────────────────────── */
@@ -99,18 +82,22 @@
   --offline:var(--ink-600);
 
   /* ── SEMANTIC: LINES + FOCUS ────────────────────────────────────────── */
-  --line:var(--ink-200); --line-strong:var(--ink-300);
-  --focus:var(--accent); --focus-width:2px; --focus-offset:2px;
-  --scrim:rgba(12,18,26,.5);
+  --line:var(--ink-200); --line-strong:var(--ink-400);
+  --focus:var(--brand); --focus-width:2px; --focus-offset:2px;
+  --scrim:rgba(10,10,10,.55);
 
   /* ── MAP ────────────────────────────────────────────────────────────── */
-  --map-land:var(--ink-100); --map-water:#C6DCEB; --map-park:#D9E9D2;
+  --map-land:var(--ink-100); --map-water:var(--ink-200); --map-park:var(--ink-50);
   --map-road:var(--ink-0); --map-road-minor:var(--ink-50); --map-building:var(--ink-150);
+  /* Real tiles are not ours to repaint, so they are pulled into the same
+     monochrome register here — one token, both map engines, and the vector
+     overlay above (route, stops, vehicle) keeps full contrast on top of it. */
+  --map-tile-filter:grayscale(1) contrast(1.02) brightness(1.02);
 
   /* ── FIXED (never themed — reason recorded) ─────────────────────────────
      A boarding code must scan in dark mode; a knob needs contrast on both
      track colours; white on a saturated fill is white in both themes.    */
-  --qr-paper:#FFFFFF; --qr-ink:#151A21; --knob:#FFFFFF; --on-solid:#FFFFFF;
+  --qr-paper:#FFFFFF; --qr-ink:#0A0A0A; --knob:#FFFFFF; --on-solid:#FFFFFF;
 
   /* ── RADII ──────────────────────────────────────────────────────────── */
   --r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-full:999px;
@@ -129,6 +116,11 @@
   --f-body:15px; --f-cap:13px; --f-micro:11px; --f-input:16px;
   --lh-tight:1.2; --lh-snug:1.35; --lh-body:1.5;
   --fw-normal:400; --fw-med:550; --fw-semi:650; --fw-bold:750;
+  /* The poster prints heavier than the app's boldest step. The brand face is a
+     variable font, so 850/900 are real instances of it — nothing here invites a
+     synthetic bold. --fw-black is the masthead's weight; --fw-heavy is for a
+     large run of copy that must still read as ink at size. */
+  --fw-heavy:850; --fw-black:900;
 
   /* ── CONTROL SIZES ──────────────────────────────────────────────────────
      44px is the WCAG 2.2 / platform minimum touch target.
@@ -139,7 +131,8 @@
   /* ── LAYOUT ─────────────────────────────────────────────────────────── */
   --rail-collapsed:80px; --rail-expanded:248px;
   --content-max:840px;      /* reading measure for single-pane content */
-  --landing-max:1120px;     /* marketing-page cap — generous, still readable */
+  --landing-max:1360px;     /* marketing column — the demo's measure (1440) less its
+                             inner padding, so the poster fills the page and still breathes */
   --shell-max:1600px;       /* beyond x-large the shell stops growing  */
   --topbar-h:60px; --dock-h:64px;
   --density:comfortable;    /* DEC-200: compact on desktop, see ≥840px */
@@ -149,9 +142,9 @@
   --safe-r:env(safe-area-inset-right,0px);
 
   /* ── ELEVATION ──────────────────────────────────────────────────────── */
-  --sh-1:0 1px 2px rgba(16,24,40,.05);
-  --sh-2:0 2px 4px rgba(16,24,40,.04),0 10px 20px -6px rgba(16,24,40,.09);
-  --sh-3:0 4px 10px rgba(16,24,40,.06),0 24px 44px -14px rgba(16,24,40,.18);
+  --sh-1:0 1px 2px rgba(10,10,10,.05);
+  --sh-2:0 2px 4px rgba(10,10,10,.04),0 10px 20px -6px rgba(10,10,10,.09);
+  --sh-3:0 4px 10px rgba(10,10,10,.06),0 24px 44px -14px rgba(10,10,10,.18);
 
   /* ── LAYERS (named, so no arbitrary z-index appears in a component) ─── */
   --z-base:0; --z-sticky:10; --z-nav:30; --z-scrim:55; --z-sheet:60; --z-toast:80;
@@ -159,34 +152,99 @@
   /* ── MOTION ─────────────────────────────────────────────────────────── */
   --ease:cubic-bezier(.2,.7,.3,1); --fast:140ms; --med:240ms;
   --slow:420ms; --bounce:cubic-bezier(.34,1.56,.64,1);
+  /* The marketing surface needs longer, softer curves than an app control: a
+     poster reveals, it does not snap. Durations live here for the same reason
+     as everything else — the landing must not carry a literal. */
+  --ease-glide:cubic-bezier(.16,1,.3,1);
+  --ease-swing:cubic-bezier(.76,0,.24,1);
+  --rev:640ms; --marquee:42s; --pulse:1.5s;
+  /* Panel entrances are one motion, not one per panel: how long, and which
+     curve. The reduced-motion gate at the top of this file already shortens
+     every animation, so an entrance written with these tokens needs no gate. */
+  --panel-in-dur:280ms; --panel-in-ease:cubic-bezier(.2,.8,.2,1);
+  --panel-in-step:28ms;     /* how far behind the previous row the next one arrives */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MONOCHROME MARKETING LAYER — the printed-poster vocabulary.
+   These exist because the marketing surface speaks words the app does not: a
+   sheet of paper, a stage, a hairline grid, a frosted panel, a road map drawn
+   in grey. Each one is an ALIAS of an app token where an app token already
+   means the same thing (ink, paper, lines) so a theme change moves the app and
+   the landing together, and a genuine new value where nothing did (grid line,
+   glass, the map's sea/coast/road greys). The type steps below the app's scale
+   are the poster's sizes: `--f-hero` is measured against BOTH viewport axes so
+   three lines always fit exactly one screen and never crop.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --ink:var(--text-primary); --paper:var(--bg-base);
+  --ink-soft:var(--text-secondary); --ink-mute:var(--text-muted);
+  --line-hair:var(--ink-200);
+  --glass:rgba(255,255,255,.62); --glass-solid:rgba(255,255,255,.96);
+  /* The frosted recipe, once: the bar and the menu that drops from it are the same
+     material, so they share the token instead of restating a number. */
+  --glass-blur:blur(20px) saturate(180%);
+  --glass-line:rgba(10,10,10,.08);
+  --stage:var(--ink-900); --stage-line:rgba(255,255,255,.16);
+  --grid-line:rgba(10,10,10,.05);
+  --sea:#e9eef3; --coast:#c2ced7; --canal:#d5e0e8;
+  --rd-0:#262626; --rd-1:#4a4a4a; --rd-2:#929292; --rd-3:#c6c6c6;
+  --f-hero:clamp(2.4rem,min(17vw,15.5vh),13rem);
+  /* The intro promises exactly one screen, so its type is measured against both axes
+     like the masthead's: a phone on its side gets a smaller poster, not a scroll. */
+  --f-intro:clamp(1.45rem,min(7vw,6.2vh),2.6rem); --f-introgap:clamp(.75rem,2.2vh,1.75rem);
+  --f-word:clamp(1.8rem,6.5vw,5rem);
+  --f-poster:clamp(1.8rem,5.6vw,4.75rem);
+  --f-end:clamp(1.6rem,4.6vw,4rem);
+  --f-panel:clamp(1.2rem,2.3vw,1.75rem);
+  --f-lede:clamp(1.05rem,2.1vw,1.5rem);
+  --flow:var(--s6);           /* the space between two blocks of a section — one value, every section */
+  --gutter:clamp(1.25rem,4vw,3.5rem);
+  /* Above the sticky content of the page, below the app's own chrome, so a
+     toast or a sheet is never trapped under the marketing header. */
+  --z-landing-nav:20;
+  --z-pagefx:95;                  /* the curtain covers the surface, then is gone */
+  /* The page transition, in four beats: rise, fill, release, fall. The path itself is
+     drawn by lib/pagefx.js from these numbers, so the sheet owns the pacing. */
+  --fx-rise:220ms; --fx-fill:90ms; --fx-release:110ms; --fx-fall:520ms;
+  --fx-ink:var(--ink-900);           /* the curtain must read against the sheet it covers,
+                                       which in the dark theme means the other end of the ramp */
+}
+[data-theme="dark"]{
+  --fx-ink:var(--ink-50);
+  --glass:rgba(10,10,10,.62); --glass-solid:rgba(10,10,10,.96);
+  --glass-line:rgba(242,242,242,.1);
+  --stage:var(--ink-0); --stage-line:rgba(10,10,10,.16);
+  --grid-line:rgba(242,242,242,.05);
+  --sea:#16202a; --coast:#24323f; --canal:#1d2b36;
+  --rd-0:#cfcfcf; --rd-1:#b0b0b0; --rd-2:#6a6a6a; --rd-3:#3a3a3a;
 }
 
 [data-theme="dark"]{
-  --bg-base:var(--ink-950); --bg-raised:var(--ink-850); --bg-sunken:var(--ink-1000);
-  --bg-inset:var(--ink-800); --bg-page:var(--ink-1000);
-  --text-primary:#F2F5F8; --text-secondary:#9AA5B2; --text-muted:#7C8794;
+  --bg-base:var(--ink-900); --bg-raised:#141414; --bg-sunken:var(--ink-1000);
+  --bg-inset:#1F1F1F; --bg-page:var(--ink-950);
+  /* Dark is the same poster printed the other way round: paper becomes the
+     deepest ink step, and the ink becomes near-white paper (17.7:1 on it;
+     secondary 10.0:1, muted 6.1:1 — measured, see the primitives comment). */
+  --text-primary:#F2F2F2; --text-secondary:#B8B8B8; --text-muted:#8F8F8F;
   --text-inverse:var(--ink-950);
-  --brand:var(--violet-400); --brand-hover:var(--violet-300); --brand-2:var(--violet-300);
-  --brand-soft:#241B4E; --brand-border:#3A2E78; --on-brand:var(--violet-900);
-  --accent:var(--coral-400); --accent-hover:var(--coral-300);
-  --accent-soft:#3A1C12; --accent-border:#5C2D1D;
-  --on-accent:var(--coral-900); --accent-text:var(--coral-300);
-  --pop-mint:var(--mint-400); --pop-mint-bg:var(--mint-900); --pop-mint-text:var(--mint-300);
-  --pop-lime:var(--lime-400); --pop-lime-bg:var(--lime-900); --pop-lime-text:var(--lime-300);
-  --pop-sky:var(--sky-400);  --pop-sky-bg:var(--sky-900);  --pop-sky-text:var(--sky-300);
-  --pop-pink:var(--pink-400);--pop-pink-bg:var(--pink-900);--pop-pink-text:var(--pink-300);
-  --pop-coral:var(--coral-400);--pop-coral-bg:var(--coral-900);--pop-coral-text:var(--coral-300);
-  --route:var(--blue-400); --walk:var(--violet-300);
+  --brand:var(--ink-0); --brand-hover:#E6E6E6;
+  --brand-soft:var(--ink-850); --brand-border:var(--ink-700); --on-brand:var(--ink-900);
+  --accent:#CFCFCF; --accent-hover:var(--ink-0);
+  --accent-soft:var(--ink-850); --accent-border:var(--ink-600);
+  --on-accent:var(--ink-900); --accent-text:var(--ink-0);
+  --route:var(--ink-0); --walk:#8F8F8F;
   --accent-route:var(--route); --accent-walk:var(--walk);
   --ok:var(--green-400); --ok-bg:var(--green-950);
   --warn:var(--amber-400); --warn-bg:var(--amber-950);
   --danger:var(--red-400); --danger-bg:var(--red-950);
   --info:var(--blue-400); --info-bg:var(--blue-950);
-  --offline:#9AA5B2;
-  --line:#252B33; --line-strong:#333B45;
-  --focus:var(--accent); --scrim:rgba(0,0,0,.66);
-  --map-land:#15181F; --map-water:#16303F; --map-park:#1B2A1E;
-  --map-road:#2A313A; --map-road-minor:#222831; --map-building:#232932;
+  --offline:#B8B8B8;
+  --line:#262626; --line-strong:#454545;
+  --focus:var(--brand); --scrim:rgba(0,0,0,.66);
+  --map-land:#111111; --map-water:#1F1F1F; --map-park:#0D0D0D;
+  --map-road:#2E2E2E; --map-road-minor:#1A1A1A; --map-building:#242424;
+  --map-tile-filter:grayscale(1) invert(1) contrast(0.92) brightness(0.95);
   --sh-1:0 1px 2px rgba(0,0,0,.4);
   --sh-2:0 2px 4px rgba(0,0,0,.3),0 10px 20px -6px rgba(0,0,0,.45);
   --sh-3:0 4px 10px rgba(0,0,0,.35),0 24px 44px -14px rgba(0,0,0,.6);
@@ -420,12 +478,9 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
              border-color var(--fast) var(--ease);border:1px solid transparent}
 .btn svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
   stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.btn--primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  color:var(--on-brand);
-  box-shadow:0 2px 10px -2px color-mix(in srgb,var(--brand) 55%,transparent)}
-.btn--primary:hover:not([disabled]){
-  background:linear-gradient(135deg,var(--brand-hover),var(--brand));
-  transform:translateY(-1px)}
+.btn--primary{background:var(--brand);color:var(--on-brand)}
+.btn--primary:hover:not([disabled]){background:var(--brand-hover);
+  transform:translateY(-2px)}
 .btn--accent{background:var(--accent);color:var(--on-accent)}
 .btn--accent:hover:not([disabled]){background:var(--accent-hover)}
 .btn--secondary{background:var(--bg-sunken);color:var(--text-primary)}
@@ -526,11 +581,6 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .chip--warn{background:var(--warn-bg);color:var(--warn)}
 .chip--danger{background:var(--danger-bg);color:var(--danger)}
 .chip--info{background:var(--info-bg);color:var(--info)}
-.chip--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
-.chip--lime{background:var(--pop-lime-bg);color:var(--pop-lime-text)}
-.chip--sky{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
-.chip--pink{background:var(--pop-pink-bg);color:var(--pop-pink-text)}
-.chip--coral{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
 .chip--outline{background:none;border-color:var(--line-strong)}
 button.chip{cursor:pointer;transition:background var(--fast) var(--ease),
   color var(--fast) var(--ease),border-color var(--fast) var(--ease)}
@@ -717,9 +767,9 @@ select.input{cursor:pointer}
 
 /* RouteMap accessible stop list (R21) — the non-map alternative */
 .mapstops{margin:0;padding:0;list-style:none}
-.mapstops__item{align-items:center;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-md);
-  background:var(--surface-raised);border:1px solid var(--border-subtle)}
-.mapstops__item--hi{border-color:var(--brand);background:var(--surface-sunken)}
+.mapstops__item{align-items:center;padding:var(--s2) var(--s3);border-radius:var(--r-md);
+  background:var(--bg-raised);border:1px solid var(--line)}
+.mapstops__item--hi{border-color:var(--brand);background:var(--bg-inset)}
 .mapstops__n{flex:none;width:26px;height:26px;border-radius:var(--r-full);
   display:grid;place-items:center;font-size:12px;font-weight:600;
   background:var(--brand);color:var(--on-brand)}
@@ -796,7 +846,7 @@ select.input{cursor:pointer}
   overflow-y:auto;min-height:0}
 .logomark{width:72px;height:72px;border-radius:var(--r-lg);flex:none;
   display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--brand),var(--accent));color:var(--on-solid)}
+  background:var(--brand);color:var(--on-brand)}
 .logomark svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
 .authfoot{flex:none;display:flex;flex-direction:column;gap:var(--s3);
@@ -810,376 +860,508 @@ select.input{cursor:pointer}
    ══════════════════════════════════════════════════════════════════════ */
 
 /* boot splash — bouncy logo; the bounce collapses under reduced motion */
+/* The one thing the boot screen may do is move: it covers a blank document
+   while the session resolves, so a logo that lifts is the difference between
+   "loading" and "broken". On the poster's paper, in the poster's ink. */
 .splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:var(--s4);background:var(--bg-page);z-index:var(--z-toast)}
-.splash__logo{width:92px;height:92px;animation:splashbounce 1.1s var(--ease) infinite}
+  justify-content:center;gap:var(--s4);background:var(--paper);color:var(--ink);
+  z-index:var(--z-toast)}
+.splash__logo{width:92px;height:92px;color:var(--ink);animation:splashbounce 1.1s var(--ease) infinite}
 .splash__logo svg{width:100%;height:100%}
 .splash__name{font-size:var(--f-title);font-weight:var(--brand-font-weight);font-family:var(--brand-font);color:var(--text-primary)}
 @keyframes splashbounce{
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
 
-.intro{width:100%;min-width:0;height:100%;display:flex;flex-direction:column;background:var(--bg-page)}
+.intro{width:100%;min-width:0;height:100%;display:flex;flex-direction:column;
+  background:var(--paper);color:var(--ink)}
 .intro__stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;gap:var(--s5);padding:var(--s6);max-width:480px;margin-inline:auto;width:100%}
+  text-align:center;gap:var(--f-introgap);padding:var(--f-introgap) var(--s6);
+  max-width:480px;margin-inline:auto;width:100%}
 .intro__foot{flex:none;display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);
-  padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--bg-base)}
+  padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--paper)}
+.intro__kick{font-size:var(--f-cap);font-weight:650;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-mute);margin:0}
+.intro__t{font-size:var(--f-intro);line-height:1;letter-spacing:-.04em;font-weight:var(--fw-bold);
+  margin:0;max-width:20ch;text-wrap:balance}
+.intro__b{color:var(--ink-soft);font-size:var(--f-lg);line-height:1.6;margin:0;max-width:46ch}
+.intro__c{font-size:var(--f-body);color:var(--ink-mute);margin:0;max-width:46ch}
 .intro__foot .btn--primary{flex:1}
+.intro__ic{width:56px;height:56px;display:grid;place-items:center;border-radius:var(--r-sm);
+  background:var(--bg-inset);color:var(--ink)}
+.intro__ic svg{width:26px;height:26px}
 .intro__dots{display:flex;gap:var(--s2);justify-content:center}
 .intro__dot{width:8px;height:8px;border-radius:var(--r-full);background:var(--line-strong)}
 .intro__dot--on{background:var(--brand);width:20px}
 html.native .intro{padding-top:var(--safe-t)}
 
-/* landing — its own scroller; light/dark + RTL via tokens. width:100% is
-   REQUIRED: #root is display:flex (row), so a child without width shrinks to
-   its content instead of filling the viewport. */
+/* ══════════════════════════════════════════════════════════════════════
+   THE LANDING — the poster. One scroller, one ink, one type family.
+
+   The composition, in the order the reader meets it: a fixed frosted head; a
+   masthead exactly one viewport tall, printed on paper over twelve hairline
+   columns; a running band of glyphs; the journey — four value propositions
+   that are stops on one road the bus rides as you scroll; the inverted slab
+   with the three steps; the chapter list; the closer. Then the sub-pages
+   (drive, about, help, download, policies) reuse the same scaffolding, so the
+   whole site is one typeset document rather than a poster with appendices.
+
+   Two rules hold it together. Every section is a child of the page grid, which
+   is what gives the poster its edge-to-edge hairlines and its capped measure;
+   and every size, colour and duration is a token, so dark mode, RTL and the
+   compact breakpoint are free rather than re-derived. The scroll machinery —
+   reveals, the weight scrub, the bus — lives in src/lib/motion.js and reads
+   only the custom properties set here: CSS owns the look, JS owns the numbers
+   that come from geometry.
+   ══════════════════════════════════════════════════════════════════════ */
+/* width:100% is load-bearing: #root is display:flex in a row, so a child with no
+   width shrinks to its content instead of filling the viewport (the regression
+   tests/landing.test.js measures at seven sizes). The landing scrolls, not the
+   document — html/body stay overflow:hidden for the whole app. */
 .landing{width:100%;min-width:0;height:100%;overflow-y:auto;overflow-x:hidden;
-  background:var(--bg-page);-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  scroll-timeline-name:--land;scroll-timeline-axis:block}
-.landing__nav{position:sticky;top:0;z-index:var(--z-sticky);display:flex;align-items:center;
-  justify-content:space-between;gap:var(--s3);
-  padding-inline:clamp(var(--s4), calc((100% - var(--landing-max))/2 + var(--s4)), var(--s6));
-  padding-block:var(--s3);
-  background:color-mix(in srgb,var(--bg-page) 86%,transparent);
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line)}
-.landing__brand{display:flex;align-items:center;gap:var(--s2);min-width:0;
-  font-weight:var(--brand-font-weight);font-family:var(--brand-font);
-  font-size:var(--f-head);color:var(--text-primary)}
-.landing__brand svg{width:26px;height:26px;flex:none}
-.landing__brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.landing__body{width:100%;max-width:var(--landing-max);margin-inline:auto;
-  display:flex;flex-direction:column;gap:var(--s9);padding-bottom:var(--s9)}
-/* hero is FULL-BLEED: the glow spans the whole viewport in both themes */
-.landing__hero{--hy:0;position:relative;width:100%;min-width:0;padding:var(--s8) var(--s6) var(--s6);
-  display:flex;justify-content:center;overflow:clip;
-  background:
-    radial-gradient(46% 50% at 16% 18%,color-mix(in srgb,var(--brand) 16%,transparent),transparent 72%),
-    radial-gradient(42% 46% at 86% 22%,color-mix(in srgb,var(--accent) 12%,transparent),transparent 70%),
-    var(--bg-page);
-  background-size:180% 180%,170% 170%,100% 100%;
-  animation:herodrift 36s ease-in-out infinite alternate}
-[data-theme="dark"] .landing__hero{background:
-  radial-gradient(46% 50% at 16% 18%,color-mix(in srgb,var(--brand) 12%,transparent),transparent 74%),
-  radial-gradient(42% 46% at 86% 22%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 72%),
-  var(--bg-page);
-  background-size:180% 180%,170% 170%,100% 100%}
-/* the soft glows drift very slowly behind the hero (killed under reduced motion) */
-@keyframes herodrift{from{background-position:0% 0%,100% 0%}to{background-position:100% 22%,0% 34%}}
-.landing__heroinner{width:100%;max-width:var(--landing-max);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:var(--s6);min-height:min(78dvh,680px)}
-.landing__herotext{display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--s4);
-  min-width:0}
-.heroart{position:relative;width:min(380px,78vw);aspect-ratio:1;flex:none;
-  transform:translate3d(0,calc(var(--hy)*48px),0)}
-.heroart--one{display:grid;place-items:center}
-.heroart__s--solo{width:92%;height:92%;color:var(--text-primary);
-  animation:herobreathe 5.4s var(--ease) infinite}
-@keyframes herobreathe{
-  0%,100%{transform:translateY(0) scale(1)}
-  50%{transform:translateY(-8px) scale(1.025)}
-}
-@media (min-width:840px){
-  .landing__heroinner{flex-direction:row;align-items:center;gap:var(--s8)}
-  .landing__herotext{flex:1 1 52%;align-items:flex-start;text-align:start}
-  .heroart{flex:0 1 280px}
-}
-.landing__title{font-size:clamp(var(--f-title),5.2vw,48px);font-weight:var(--fw-bold);
-  line-height:var(--lh-tight);letter-spacing:-.03em;max-width:18ch;margin:0}
-.landing__sub{font-size:var(--f-lg);color:var(--text-secondary);max-width:56ch;margin:0;line-height:var(--lh-body)}
-@keyframes stickerfloat{
-  0%,100%{transform:translateY(0) rotate(-2deg)}
-  50%{transform:translateY(-14px) rotate(3deg)}
-}
-.landing__section{padding:0 var(--s6)}
-.landing__section--afterstory{padding-top:var(--s9)}
-.landing__h2{font-size:var(--f-title);font-weight:var(--fw-bold);margin:0 0 var(--s5)}
-.landing__h3{font-size:var(--f-head);font-weight:var(--fw-bold);margin:var(--s2) 0 0}
-.landing__p{color:var(--text-secondary);margin:var(--s1) 0 0;line-height:var(--lh-body)}
-.landing__grid{display:grid;gap:var(--s4);
-  grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
-.landing__feature{position:relative;overflow:hidden;background:var(--bg-raised);
-  border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s5);
-  display:flex;flex-direction:column;
-  transition:transform var(--slow) var(--bounce),border-color var(--med) var(--ease),
-             box-shadow var(--med) var(--ease)}
-.landing__feature:hover{transform:translateY(-8px) scale(1.02);border-color:var(--accent);box-shadow:var(--sh-2)}
-.landing__feature::after{content:"";position:absolute;inset:0;border-radius:inherit;
-  background:linear-gradient(105deg,transparent 40%,color-mix(in srgb,var(--ink-0) 22%,transparent) 50%,transparent 60%);
-  transform:translateX(-130%);transition:transform var(--med) var(--ease);pointer-events:none}
-.landing__feature:hover::after{transform:translateX(130%)}
-[dir="rtl"] .landing__feature::after{transform:translateX(130%)}
-[dir="rtl"] .landing__feature:hover::after{transform:translateX(-130%)}
-.landing__featureico{width:44px;height:44px;border-radius:var(--r-md);display:grid;
-  place-items:center;flex:none;transition:transform var(--slow) var(--bounce)}
-.landing__feature:hover .landing__featureico{transform:scale(1.18) rotate(-6deg)}
-.landing__featureico svg{width:22px;height:22px;fill:none;stroke:currentColor;
-  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.landing__featureico--mint{background:var(--pop-mint-bg);color:var(--pop-mint-text)}
-.landing__featureico--sky{background:var(--pop-sky-bg);color:var(--pop-sky-text)}
-.landing__featureico--pink{background:var(--pop-pink-bg);color:var(--pop-pink-text)}
-.landing__featureico--lime{background:var(--pop-lime-bg);color:var(--pop-lime-text)}
-.landing__featureico--coral{background:var(--pop-coral-bg);color:var(--pop-coral-text)}
-.landing__steps{display:grid;gap:var(--s3);
-  grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr))}
-.landing__step{position:relative;background:var(--bg-raised);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:var(--s4);min-width:0;overflow:hidden;
-  transition:transform var(--fast) var(--ease),
-  border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
-.landing__step:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:var(--sh-2)}
-.landing__stepbody{display:flex;flex-direction:row;align-items:center;gap:var(--s4);min-width:0;
-  padding-top:var(--s2)}
-.landing__steptext{flex:1;min-width:0}
-/* stickers: theme-aware ink + per-card accent (set on the parent) */
-.sticker{display:grid;place-items:center;color:var(--text-primary);
-  --sticker-ink:currentColor;--sticker-accent:var(--brand)}
-.sticker svg{width:100%;height:100%;display:block;fill:currentColor}
-/* bigger illustration in the how-it-works cards */
-.landing__stepart{width:72px;height:72px;flex:none;color:var(--text-primary)}
-.landing__step .landing__h3{font-size:var(--f-body);margin:0}
-.landing__step .landing__stepart{--sticker-accent:var(--accent)}
-/* dark mode: brighter 300-level accents so the doodles glow on dark surfaces
-   (light mode keeps the coral accent — unchanged) */
-[data-theme="dark"] .landing__step--violet .landing__stepart{--sticker-accent:var(--violet-300)}
-[data-theme="dark"] .landing__step--sky .landing__stepart{--sticker-accent:var(--sky-300)}
-[data-theme="dark"] .landing__step--mint .landing__stepart{--sticker-accent:var(--mint-300)}
-/* number stays on the PHYSICAL right in both languages (owner request) */
-.landing__stepnum{position:absolute;top:var(--s3);right:var(--s3);
-  font-size:var(--f-title);font-weight:var(--fw-bold);color:var(--accent-text);opacity:.9}
-[dir="rtl"] .landing__stepbody{padding-top:var(--s5)} /* clear the number in RTL */
-/* cursor-following floating tooltip for the step detail */
-.landing__stepdesc{display:none;margin:var(--s1) 0 0}
-.step-tip{position:fixed;left:0;top:0;z-index:var(--z-toast);pointer-events:none;opacity:0;
-  width:240px;box-sizing:border-box;
-  transform:translate3d(-999px,-999px,0);
-  transition:opacity var(--med) var(--ease);
-  background:var(--bg-base);border:1px solid var(--line);border-radius:var(--r-md);
-  padding:var(--s3) var(--s4);box-shadow:var(--sh-3);color:var(--text-primary)}
-.step-tip--on{opacity:1}
-@media (hover:none), (max-width:839.98px){
-  .step-tip{display:none}
-  .landing__stepdesc{display:block}
-}
-.step-tip__num{display:inline-block;font-size:var(--f-cap);font-weight:var(--fw-bold);
-  color:var(--on-accent);background:var(--accent);border-radius:var(--r-full);
-  width:22px;height:22px;line-height:22px;text-align:center;margin-bottom:var(--s1)}
-.step-tip strong{display:block;color:var(--accent-text);font-size:var(--f-cap);margin-bottom:2px}
-.step-tip__body{display:block;color:var(--text-primary);font-size:var(--f-cap);line-height:var(--lh-snug)}
-.landing__cta{display:flex;flex-direction:column;align-items:center;gap:var(--s4);
-  text-align:center;padding:var(--s7) var(--s6)}
-.landing__foot{padding:var(--s5) var(--s6) calc(var(--s5) + var(--safe-b));
-  border-top:1px solid var(--line);text-align:center;color:var(--text-muted);
-  display:flex;flex-direction:column;align-items:center;gap:var(--s2)}
-/* the vector credit: smaller than the tagline, on its own line, a real link */
-.landing__credits{font-size:var(--f-micro);color:var(--text-muted);text-decoration:none;
-  transition:color var(--fast) var(--ease)}
-/* policies row in the footer — same quiet link style, separated by dots */
-.landing__policies{display:flex;align-items:center;gap:var(--s3)}
-.landing__policylink{font-size:var(--f-micro);color:var(--text-muted);text-decoration:none;
-  transition:color var(--fast) var(--ease);cursor:pointer}
-.landing__policylink:hover{color:var(--accent-text);text-decoration:underline}
-.landing__policylink + .landing__policylink::before{content:"·";margin-inline-end:var(--s3);color:var(--text-muted)}
-/* the policy document page — narrow reading measure, comfortable top space */
-.landing__doc{max-width:720px;margin-inline:auto;padding-block:var(--s8);display:flex;flex-direction:column;gap:var(--s4);align-items:flex-start}
-.landing__docsec{display:flex;flex-direction:column;gap:var(--s1);width:100%}
-.landing__docsec .landing__h3{margin:0}
-.landing__doc .btn--ghost{margin-inline-start:calc(-1 * var(--s3))}
-.landing__credits:hover{color:var(--accent-text);text-decoration:underline}
-.landing__credits:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px}
+  background:var(--paper);color:var(--ink);scroll-behavior:smooth;
+  font-size:var(--f-lg);-webkit-font-smoothing:antialiased}
+/* One grid for the whole page: gutter · measure · gutter. A section that must
+   print to both edges takes the full span and reintroduces the gutter itself. */
+/* The gutters are floors, not walls: minmax(--gutter,1fr) lets them take the surplus, so
+   the column centres itself and a band that asks for 1/-1 reaches the viewport edge. A
+   fixed gutter plus a capped middle track is what pinned the whole poster to the left with
+   dead space on the right — at any width above --landing-max + 2*--gutter. */
+.landing__body{display:grid;
+  grid-template-columns:minmax(var(--gutter),1fr) minmax(0,var(--landing-max)) minmax(var(--gutter),1fr);
+  align-content:start;position:relative}
+.landing__body>*{grid-column:2;min-width:0}
+.landing__section{grid-column:2;min-width:0;padding-block:clamp(4rem,12vh,9rem);
+  border-top:1px solid var(--line)}
+.landing__section--bleed{grid-column:1/-1;padding-inline:var(--gutter)}
+.landing__section--first{border-top:0;padding-block-start:clamp(6rem,16vh,10rem)}
+.landing__body--page>.landing__section{border-top:0}
 
-/* ── landing v2: page nav, sticky panels, drive/about/help ──────────────── */
-/* the brand is now a real <button> — reset the native chrome, keep the wordmark */
-.landing__brand{border:0;background:none;padding:0;cursor:pointer;text-align:start}
-.landing__links{display:none;align-items:center;gap:var(--s1);flex:1;justify-content:center;min-width:0}
-.landing__link{border:0;background:none;padding:8px 14px;border-radius:var(--r-full);
-  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
-  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
-.landing__link:hover{color:var(--text-primary);background:var(--bg-sunken)}
-.landing__link--on{color:var(--brand);background:var(--brand-soft)}
-.landing__actions{display:flex;align-items:center;gap:var(--s2);flex:none}
-.landing__login{border:0;background:none;padding:8px 12px;border-radius:var(--r-full);
-  font-size:var(--f-cap);font-weight:var(--fw-semi);color:var(--text-secondary);
-  cursor:pointer;transition:color var(--fast) var(--ease),background var(--fast) var(--ease)}
-.landing__login:hover{color:var(--text-primary);background:var(--bg-sunken)}
-.landing__menu{display:grid;place-items:center;width:var(--tap-sm);height:var(--tap-sm);
-  border-radius:var(--r-full);border:0;background:none;color:var(--text-primary);
-  cursor:pointer;flex:none}
-.landing__menu:hover{background:var(--bg-sunken)}
-.landing__menu svg{width:var(--icon-md);height:var(--icon-md);fill:none;stroke:currentColor;
-  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.landing__menu-panel{position:absolute;top:calc(100% + var(--s2));inset-inline:var(--s3);
-  display:flex;flex-direction:column;gap:var(--s1);background:var(--bg-base);
-  border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-3);
-  padding:var(--s3);z-index:var(--z-sticky)}
-.landing__menulink{border:0;background:none;text-align:start;padding:10px 12px;
-  border-radius:var(--r-sm);font-size:var(--f-body);font-weight:var(--fw-semi);
-  color:var(--text-primary);cursor:pointer}
-.landing__menulink:hover{background:var(--bg-sunken)}
-/* eyebrow kicker above a page title */
-.landing__kick{font-size:var(--f-cap);font-weight:var(--fw-bold);letter-spacing:.04em;
-  text-transform:uppercase;color:var(--accent-text)}
-.landing__body--page{padding-top:var(--s8)}
-.landing__pagetop{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s4)}
-.landing__pagetop .landing__title{max-width:24ch}
-.landing__cta-sub{max-width:44ch;margin:var(--s1) auto 0}
-/* FAQ — native <details>, one interaction pattern, keyboard + a11y free */
-.landing__faq{display:flex;flex-direction:column;gap:var(--s3);max-width:720px}
-.landing__faqitem{background:var(--bg-raised);border:1px solid var(--line);
-  border-radius:var(--r-md);padding:var(--s3) var(--s4)}
-.landing__faqitem summary{cursor:pointer;font-weight:var(--fw-semi);font-size:var(--f-body);
-  color:var(--text-primary);list-style:none;display:flex;align-items:center;
-  justify-content:space-between;gap:var(--s3)}
+/* ── voice: kick, title, lede, body copy ──────────────────────────────────
+   The kick's tracking is the poster's bullet; the titles are tight because at
+   these sizes loose tracking reads as a headline from a newspaper. */
+.landing__kick{font-size:var(--f-cap);font-weight:650;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--ink-mute);margin:0}
+.landing__title{font-size:var(--f-poster);line-height:.98;
+  letter-spacing:-.04em;font-weight:var(--fw-bold);max-width:20ch;margin:0;text-wrap:balance}
+.landing__h3{font-size:var(--f-head);line-height:var(--lh-tight);font-weight:var(--fw-bold);
+  letter-spacing:-.01em;margin:0}
+.landing__lede{color:var(--ink-soft);max-width:56ch;font-size:var(--f-lg);margin:0;line-height:1.6}
+.landing__p{color:var(--ink-soft);font-size:var(--f-body);line-height:1.6;margin:0;max-width:60ch}
+.landing__hero-foot{margin-block-start:clamp(2rem,6vh,4rem)}
+.landing__note{font-size:var(--f-cap);color:var(--ink-mute);margin:0}
+.landing__hl{background-image:linear-gradient(var(--ink),var(--ink));background-repeat:no-repeat;
+  background-position:0 92%;background-size:100% 2px;padding-bottom:.08em}
+.landing__acts{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
+/* The demo's bare button: no fill, no border, underline on hover. It must
+   restate the ink colour, because the shared .btn is an ink block with paper
+   text and a transparent variant that inherits that would print white on white. */
+.landing .btn--bare{background:transparent;border-color:transparent;color:var(--ink);
+  padding-inline:.4rem}
+.landing .btn--bare:hover:not([disabled]){text-decoration:underline;text-underline-offset:4px;
+  transform:none}
+
+/* ── the head: fixed, frosted, one hairline ─────────────────────────────
+   Frosted glass deliberately replaces blend-mode tricks: a panel that inverts
+   against what is behind it cannot also be a translucent panel. */
+.landing__nav{position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  padding:var(--s2) var(--gutter);background:var(--glass);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--glass-line);color:var(--ink)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .landing__nav{background:var(--glass-solid)}
+}
+.landing__brand{display:inline-flex;align-items:center;min-block-size:var(--tap);gap:.6rem;border:0;background:none;
+  padding:0;cursor:pointer;color:inherit;font:inherit;font-weight:var(--fw-semi);
+  letter-spacing:-.02em;text-decoration:none;font-size:var(--f-lg)}
+.landing__brand svg{width:19px;height:19px;flex:none}
+.landing__links{display:flex;gap:clamp(1rem,2.4vw,2.2rem);font-size:var(--f-cap);
+  letter-spacing:-.005em;margin-inline-start:auto;min-width:0}
+.landing__link{display:inline-flex;align-items:center;min-block-size:var(--tap);
+  /* The word in the bar is the target: Arabic's shortest label ("عنّا") is 14 px
+     of glyph, which is a tap area a thumb misses. Padding on the link, not on the
+     row, so the spacing between labels stays the bar's own and every name gets a
+     hit box at least as wide as it is tall. */
+  flex:none;padding-block:0;padding-inline:var(--s2);border:0;background:none;cursor:pointer;font:inherit;color:var(--ink);
+  opacity:.72;transition:opacity var(--med) var(--ease)}
+/* Centred in the bar, not merely between its ends: only wide has room to put the page
+   names on the axis the whole poster is built around, and below that the row keeps its
+   own company. `inset-inline` so RTL centres from the correct edge; the transform is
+   geometry, not direction. */
+@media (min-width:1000px){
+  .landing__links{position:absolute;inset-inline-start:50%;transform:translateX(-50%)}
+}
+.landing__link:hover,.landing__link:focus-visible{opacity:1}
+.landing__link--on{opacity:1;font-weight:var(--fw-semi);text-decoration:underline;
+  text-underline-offset:6px;text-decoration-thickness:1.5px}
+.landing__actions{display:flex;align-items:center;gap:var(--s2)}
+/* The switches on one side, the two ways in on the other: half a step apart they read
+   as one crowd of small controls, and the bar is the place a reader decides. */
+.landing__actions>.btn{margin-inline-start:var(--s3)}
+.landing__tgl{display:inline-flex;align-items:center}
+/* At 320 px the row is: the mark, the language, the theme, the button and the menu.
+   A wordmark will not fit beside all of them, so the mark stands alone and keeps the
+   link's accessible name; nothing a reader can act on is taken away. */
+@media (max-width:379px){
+  .landing__nav{gap:var(--s1)}
+  .landing__brand>span{display:none}
+  /* With the wordmark gone the mark alone is the home button: it gets a square tap
+     area, not a 19 px sliver, so the tap floor the links obey holds here too. */
+  .landing__brand{gap:0;min-inline-size:var(--tap);justify-content:center}
+  .landing__actions{gap:var(--s1)}
+  .landing__nav .btn{padding:.45rem .7rem}
+}
+.landing__langbtn{border:0;background:none;cursor:pointer;font:inherit;color:var(--ink);
+  font-size:var(--f-cap);font-weight:var(--fw-semi);letter-spacing:.01em;
+  padding:.2rem .4rem;white-space:nowrap}
+.landing__langbtn:hover{text-decoration:underline;text-underline-offset:4px}
+/* Three dots and nothing else. The tap target stays --tap-sm even though the
+   chrome is gone: an invisible 44px square is still a 44px square to a thumb. */
+.landing__menu{display:none;border:0;background:transparent;color:var(--ink);
+  width:var(--tap);height:var(--tap);align-items:center;justify-content:center;
+  cursor:pointer;flex:none;opacity:.8;transition:opacity var(--med) var(--ease)}
+.landing__menu svg{width:22px;height:22px;fill:currentColor;stroke:none}
+.landing__menu:hover,.landing__menu:focus-visible{opacity:1;outline-offset:-2px}
+/* The panel is the bar continued: the same frost, the same hairline, and an
+   entrance rather than a pop. It animates on mount because a re-render replaces the
+   node — a transition on a node that has never been painted would be skipped. */
+.landing__menu-panel{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;
+  gap:1px;background:var(--glass-solid);
+  /* The same blur as the bar, on a surface a shade closer to opaque: over the
+     poster's own display type a 62% wash turns the words behind it into noise. */
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border-bottom:1px solid var(--glass-line);box-shadow:var(--sh-3);
+  padding:var(--s3) var(--gutter) var(--s4);transform-origin:top center;
+  animation:landing-menu-in var(--panel-in-dur) var(--panel-in-ease) both}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .landing__menu-panel{background:var(--glass-solid)}
+}
+@keyframes landing-menu-in{
+  from{opacity:0;transform:translateY(calc(-1 * var(--s2))) scale(.985)}
+  to{opacity:1;transform:none}
+}
+/* The rows arrive on the same curve, one step behind the next: the panel reads as
+   one object opening, not seven controls appearing. */
+@keyframes landing-menu-row{
+  from{opacity:0;transform:translateY(calc(-1 * var(--s2)))}
+  to{opacity:1;transform:none}
+}
+.landing__menu-panel .landing__menulink{animation:landing-menu-row var(--panel-in-dur) var(--panel-in-ease) both}
+.landing__menu-panel .landing__menulink:nth-child(2){animation-delay:calc(var(--panel-in-step) * 1)}
+.landing__menu-panel .landing__menulink:nth-child(3){animation-delay:calc(var(--panel-in-step) * 2)}
+.landing__menu-panel .landing__menulink:nth-child(4){animation-delay:calc(var(--panel-in-step) * 3)}
+.landing__menu-panel .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
+.landing__menu-panel .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
+.landing__menu-panel .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
+.landing__menulink{display:block;text-align:start;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:var(--f-title);font-weight:var(--fw-bold);letter-spacing:-.02em;
+  color:var(--ink);padding:.55rem 0}
+.landing__menulink:hover{color:var(--ink-soft)}
+/* The theme switch, not a mystery icon: a switch you can read is a control, an
+   icon is a riddle. `role="switch"` + `aria-checked` carries the state to AT. */
+.landingsw{position:relative;flex:none;width:46px;height:25px;padding:0;cursor:pointer;
+  background:transparent;border:1px solid var(--ink);border-radius:var(--r-full);
+  transition:background var(--med) var(--ease)}
+.landingsw__track{position:absolute;inset:0}
+.landingsw__ic{position:absolute;top:50%;width:12px;height:12px;transform:translateY(-50%);
+  color:var(--ink)}
+.landingsw__ic--sun{left:5px}
+.landingsw__ic--moon{right:5px}
+.landingsw__knob{position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;
+  background:var(--ink);transition:transform var(--med) var(--ease)}
+.landingsw[aria-checked="true"] .landingsw__knob{transform:translateX(21px)}
+.landing__nav .btn{padding:.5rem .95rem}
+@media (max-width:1000px){
+  .landing__links{display:none}
+  .landing__menu{display:inline-flex}
+}
+@media (max-width:700px){
+  /* The bar drops its own "Log in" here because the panel's first rows are Log in
+     and Sign up. This rule used to name `.btn--ghost`, a class the markup stopped
+     producing, so the control stayed in the row and at 320 px it pushed the menu —
+     the phone's only way into the site — off the screen. */
+  .landing__nav .btn--bare{display:none}
+}
+
+/* ── the masthead: exactly one viewport, three printed lines ───────────── */
+.landing__hero{position:relative;grid-column:1/-1;width:100%;overflow:hidden;
+  display:grid;grid-template-rows:auto 1fr auto;gap:var(--s3);
+  padding:clamp(4.5rem,9vh,7.5rem) var(--gutter) var(--s5);
+  /* One screen at least, and a screen exactly whenever the copy fits in it: the
+     measured height is a floor, never a crop — `overflow:hidden` here holds the
+     decorative grid, so a fixed height would cut the paragraph off instead. */
+  min-height:var(--view-h,100dvh);
+  max-width:none;border-bottom:1px solid var(--line);isolation:isolate}
+.landing__hero-inner{position:relative;z-index:1;display:contents}
+/* The Swiss rule field: twelve hairlines, honest, visible. Drawn as cells so the
+   columns are the grid, not a background image that would need its own gutters. */
+.landing__hero-grid{position:absolute;inset:0;z-index:0;pointer-events:none;
+  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));
+  max-width:var(--landing-max);margin-inline:auto;padding-inline:var(--gutter)}
+.landing__hero-grid i{border-inline-start:1px solid var(--grid-line)}
+.landing__hero-grid i:last-child{border-inline-end:1px solid var(--grid-line)}
+.landing__head-top{position:relative;z-index:1;display:flex;justify-content:space-between;
+  gap:var(--s2);font-size:var(--f-cap);text-transform:uppercase;letter-spacing:.16em;
+  color:var(--ink-mute);font-variant-numeric:tabular-nums;
+  border-bottom:1px solid var(--line);padding-bottom:var(--s1)}
+.landing__display{position:relative;z-index:1;margin:0;display:grid;align-content:center;
+  line-height:.82;letter-spacing:-.055em;text-transform:uppercase;
+  font-weight:var(--fw-bold);color:var(--ink);
+  font-size:var(--f-hero);margin-inline-start:-.055em}
+.landing__displayline{display:block;overflow:hidden;min-width:0}
+.landing__displayline>span{display:block;font-variation-settings:"wght" 420;
+  will-change:font-variation-settings}
+.landing__displayline--out>span{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.landing__hero-foot{position:relative;z-index:1;display:grid;gap:var(--s3);
+  border-top:1px solid var(--line);padding-top:var(--s2)}
+.landing__hero-cta{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:flex-end;align-self:start}
+@media (min-width:900px){.landing__hero-foot{grid-template-columns:minmax(0,34rem) auto;align-items:end}}
+/* Short viewports: give the head height back so the three lines still fit one
+   screen whole. The poster yields, it does not crop. */
+@media (max-height:760px){
+  .landing__hero{padding-block:5.5rem var(--s3);gap:var(--s2)}
+  .landing__lede{font-size:var(--f-body)}
+}
+@media (max-width:700px){.landing__hero-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .landing__displayline--out>span{-webkit-text-stroke-width:1px}}
+
+/* ── the running band ─────────────────────────────────────────────────── */
+.landing__marquee{grid-column:1/-1;border-block:1px solid var(--line);overflow:hidden;
+  padding-block:.7rem;background:var(--paper)}
+.landing__marquee-in{display:flex;align-items:center;width:max-content}
+.landing__marquee-ic{flex:none;width:var(--icon-md);height:var(--icon-md);
+  margin-inline-end:1.75rem;color:var(--ink-mute)}
+@media (prefers-reduced-motion:no-preference){
+  /* One row rendered twice and shifted by exactly -50%: the loop is invisible
+     because the second half is identical to the first. MARQUEE_REPEATS in
+     data/journey.js keeps the count even for that reason. Hovering stops it —
+     a band you cannot read is decoration, a band you can read is a claim. */
+  .landing__marquee-in{animation:landingslide var(--marquee) linear infinite}
+  .landing__marquee:hover .landing__marquee-in{animation-play-state:paused}
+}
+@keyframes landingslide{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+
+/* ── the journey: one route, ridden down the page ─────────────────────
+   The map is absolutely positioned over the whole section and the copy flows
+   above it: as the reader scrolls, the bus rides the real corridor and each cut
+   becomes a stop it passes. The section is not sticky and does not scroll-jack:
+   the road is long, the copy is normal document flow, and the bus is a mark of
+   progress rather than an animation you have to wait for. */
+.journey{position:relative;grid-column:1/-1;border-top:1px solid var(--line)}
+.journey__svg{position:static;width:100%;z-index:0;pointer-events:none;display:block;fill:none;
+  /* The drawing is a band of its own now, at every width: the claims sit under it as a
+     key, so no line of type ever shares a box with the road. */
+  height:clamp(220px,58vh,min(560px,var(--view-h,80vh)))}
+.journey__sea{fill:var(--sea)}
+.journey__coast{fill:none;stroke:var(--coast);stroke-width:1.5}
+.journey__canal{fill:none;stroke:var(--canal);stroke-width:3;stroke-linecap:round}
+.journey__road-0{fill:none;stroke:var(--rd-0);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.journey__road-1{fill:none;stroke:var(--rd-1);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.journey__road-2{fill:none;stroke:var(--rd-2);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.journey__road-3{fill:none;stroke:var(--rd-3);stroke-width:1;stroke-linecap:round;stroke-linejoin:round}
+.journey__mark{fill:var(--ink)}
+.journey__mark-label{fill:var(--ink-soft);font-size:var(--f-micro);letter-spacing:.12em;
+  text-transform:uppercase;font-weight:600}
+.journey__shade{pointer-events:none}
+.journey__casing{fill:none;stroke:var(--paper);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.journey__line{fill:none;stroke:var(--ink-mute);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.journey__done{fill:none;stroke:var(--ink);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.journey__stops circle{transition:fill var(--slow) var(--ease),stroke var(--slow) var(--ease)}
+.journey__stop-halo{fill:var(--paper);stroke:var(--line);stroke-width:1}
+.journey__stop{fill:var(--paper);stroke:var(--ink-mute);stroke-width:1.5}
+.journey__stop.is-passed{fill:var(--ink);stroke:var(--ink)}
+.journey__bus{will-change:transform}
+.journey__bus-body{fill:var(--ink)}
+.journey__bus-glass{fill:var(--paper)}
+.journey__dest-halo{fill:var(--paper);stroke:var(--line);stroke-width:1.5}
+.journey__dest-ring{fill:none;stroke:var(--ink);stroke-width:2}
+.journey__dest-dot{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.journey__dest-pulse{fill:none;stroke:var(--ink);stroke-width:2;opacity:0;
+  transform-box:fill-box;transform-origin:center}
+.journey__dest-flag path:first-child{fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round}
+.journey__dest-flag path:last-child{fill:var(--ink)}
+.journey__dest.is-arrived .journey__dest-dot{fill:var(--ink)}
+.journey__dest.is-arrived .journey__dest-pulse{animation:journeyping var(--pulse) var(--ease-glide) infinite}
+@keyframes journeyping{from{transform:scale(.55);opacity:.9}to{transform:scale(1.9);opacity:0}}
+.journey__confetti-0{fill:var(--ink)}
+.journey__confetti-1{fill:var(--paper);stroke:var(--ink);stroke-width:1}
+.journey__confetti-2{fill:var(--line-strong)}
+.journey__confetti-3{fill:var(--ink-soft)}
+.journey__confetti-4{fill:var(--bg-raised)}
+.journey__cuts{position:relative;z-index:1;display:grid;
+  max-width:var(--landing-max);margin-inline:auto;padding:var(--s3) var(--gutter) var(--s6)}
+.journey__caption{grid-column:1/-1;margin:0;padding-block:var(--s4) var(--s1);font-size:var(--f-cap);
+  text-transform:uppercase;letter-spacing:.18em;color:var(--ink-mute);
+  font-variant-numeric:tabular-nums}
+.journey__cut{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s1);
+  padding-block:var(--s4);border-bottom:1px solid var(--line)}
+.journey__rule{display:flex;gap:var(--s2);font-size:var(--f-cap);text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-mute);font-variant-numeric:tabular-nums}
+.journey__rule span:first-child{font-weight:var(--fw-semi);color:var(--ink)}
+.journey__word{margin:0;font-size:var(--f-head);line-height:1.02;letter-spacing:-.02em;
+  text-transform:uppercase;font-variation-settings:"wght" 430;
+  /* --near (0…1) is written by the scrub as the word crosses the middle of the
+     viewport; the opacity is the second half of the same gesture. */
+  opacity:calc(.55 + var(--near,0) * .45);will-change:font-variation-settings,opacity}
+.journey__body{font-size:var(--f-body);line-height:1.5;max-width:44ch;color:var(--ink-soft);margin:0}
+/* The claims are the drawing's key, not a second poster: small, numbered, two columns
+   when there is room. Alternating them down the page had become the section's loudest
+   voice while saying what the chapter rows below it already say — so the road keeps the
+   composition and the words keep the reading. */
+@media (min-width:760px){
+  .journey__cuts{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--s7)}
+}
+
+/* ── the page transition ───────────────────────────────────────────────────────
+   Drawn by lib/pagefx.js: a full-bleed path that rises over the page and falls away.
+   It covers the surface and nothing else — no pointer reaches the page through it, and
+   it is aria-hidden because it says nothing a reader needs to hear twice. */
+.pagefx{position:fixed;inset:0;width:100%;height:100%;display:block;
+  z-index:var(--z-pagefx);pointer-events:none}
+.pagefx__path{fill:var(--fx-ink);stroke:none}
+
+/* ── the inverted slab: the steps, printed the other way round ─────────── */
+.landing__slab{grid-column:1/-1;background:var(--stage);color:var(--paper);
+  padding:clamp(4rem,12vh,9rem) var(--gutter);margin-block-start:clamp(3rem,8vh,6rem)}
+.landing__slab>*{max-width:var(--landing-max);margin-inline:auto}
+.landing__slab-k{font-size:var(--f-cap);text-transform:uppercase;letter-spacing:.16em;
+  opacity:.55;margin:0}   /* the space under it is the weld's, not its own */
+.landing__slab-t{font-size:var(--f-poster);line-height:.98;letter-spacing:-.04em;
+  font-weight:var(--fw-bold);max-width:18ch;margin:0}
+.landing__steps{list-style:none;display:grid;gap:var(--s3);margin:0;padding:var(--s3) 0 0;
+  border-top:1px solid var(--stage-line)}
+.landing__step{position:relative;min-width:0}
+.landing__stepnum{display:block;font-size:var(--f-cap);letter-spacing:.16em;opacity:.5;
+  font-variant-numeric:tabular-nums;margin-bottom:var(--s1)}
+.landing__stept{font-size:var(--f-title);font-weight:var(--fw-semi);letter-spacing:-.02em;
+  margin:0 0 .4rem}
+.landing__stepb{font-size:var(--f-body);line-height:1.6;opacity:.72;max-width:34ch;margin:0}
+@media (min-width:800px){
+  .landing__steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s4)}
+  /* Four steps (the drive page) still read as one row, not a widow. */
+  .landing__steps:has(.landing__step:nth-child(4)){grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* ── the chapters: numbered rows, never a card checkerboard ─────────── */
+.landing__feature{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s2);min-width:0;
+  padding-block:var(--s4);border-top:1px solid var(--line);
+  transition:transform var(--slow) var(--bounce),background var(--med) var(--ease)}
+.landing__feature:hover{transform:translateY(-2px);background:var(--bg-raised)}
+.landing__featuren{font-size:var(--f-cap);letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-mute);font-weight:var(--fw-semi);font-variant-numeric:tabular-nums}
+.landing__featuret{font-size:var(--f-panel);font-weight:750;letter-spacing:-.03em;line-height:1;
+  text-transform:uppercase;max-width:14ch;margin:0;text-wrap:balance}
+.landing__featured{color:var(--ink-soft);font-size:var(--f-lg);max-width:44ch;margin:0}
+@media (min-width:900px){.landing__feature{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);align-items:baseline}}
+
+/* ── the closer ─────────────────────────────────────────────────────── */
+.landing__cta{grid-column:2;padding-block:clamp(4rem,12vh,9rem);border:0}
+.landing__cta-t{font-size:var(--f-end);line-height:1.1;letter-spacing:-.035em;
+  font-weight:var(--fw-semi);max-width:20ch;margin:0;text-wrap:balance}
+.landing__cta-t span{color:var(--ink-mute);font-weight:var(--fw-normal)}
+.landing__cta-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);
+  border-top:1px solid var(--line);padding-top:var(--s3)}
+.landing__cta-note{font-size:var(--f-cap);color:var(--ink-mute)}
+
+/* ── the foot: padding-block only ─────────────────────────────────────
+   The shorthand would reset the gutter the page grid relies on and push the
+   links flush to the viewport edge — the demo shipped that bug; this does not. */
+.landing__foot{grid-column:1/-1;border-top:1px solid var(--line);
+  padding:var(--s4) var(--gutter) var(--s3);display:grid;gap:var(--s3);font-size:var(--f-cap)}
+.landing__footrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2)}
+.landing__footrow a,.landing__policylink{color:var(--ink-soft);text-decoration:none;
+  background:none;border:0;padding:0;cursor:pointer;font:inherit}
+.landing__footrow a:hover,.landing__policylink:hover{color:var(--ink)}
+.landing__policies{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s3)}
+.landing__fine{color:var(--ink-mute);font-size:var(--f-micro)}
+
+/* ── sub-pages: measure, FAQ, download cards, policy docs ────────────── */
+.landing__pagetop{padding-block-start:clamp(6rem,16vh,10rem)}
+.landing__prose{max-width:60ch;display:grid;gap:var(--s3)}
+.landing__prose>.landing__p{margin:0}
+.landing__faq{border-top:1px solid var(--line);display:grid}
+.landing__faqitem{border-bottom:1px solid var(--line)}
+.landing__faqitem summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;
+  align-items:center;gap:1rem;padding:1.1rem 0;font-weight:var(--fw-semi);font-size:var(--f-head);
+  letter-spacing:-.01em}
 .landing__faqitem summary::-webkit-details-marker{display:none}
-.landing__faqitem summary::after{content:"+";font-weight:var(--fw-bold);color:var(--accent-text);
-  font-size:var(--f-lg);line-height:1}
-.landing__faqitem[open] summary::after{content:"−"}
-.landing__faqitem summary:focus-visible{outline:var(--focus-width) solid var(--focus);outline-offset:2px;border-radius:var(--r-xs)}
-/* drive hero perk card */
-.driverhero{display:flex;flex-direction:column;align-items:center;gap:var(--s5);
-  background:var(--bg-raised);border:1px solid var(--line);border-radius:var(--r-xl);
-  padding:var(--s6);box-shadow:var(--sh-2);min-width:0}
-.driverhero__art{width:150px;height:150px;--sticker-ink:var(--text-primary)}
-.driverhero__list{display:flex;flex-direction:column;gap:var(--s3);width:100%}
-.driverhero__row{display:flex;align-items:center;gap:var(--s3);font-weight:var(--fw-semi);
-  color:var(--text-primary);font-size:var(--f-body)}
-.driverhero__row svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
-  stroke:var(--ok);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.landing__faqitem summary::after{content:"+";font-weight:var(--fw-bold);font-size:1.3rem;color:var(--ink-mute)}
+.landing__faqitem[open] summary::after{content:"–"}
+.landing__faqitem .landing__p{padding:0 0 1.2rem;max-width:60ch}
+/* `1fr` is `minmax(auto,1fr)`: a track cannot be narrower than its content, so a
+   wide child (the QR figure's caption sets the floor) burst the card instead of
+   shrinking into it. minmax(0,…) is the difference between a fluid grid and one that
+   overflows the moment the copy is longer than the space. */
+.landing__dlcards{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--flow)}
+/* Android and iPhone are one decision seen twice, so at any width with room they sit
+   beside each other instead of making the reader scroll past the first to find the
+   second. `minmax(0,1fr)`: a track that may shrink below its content. */
+@media (min-width:700px){.landing__dlcards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.landing__dlcard{border:1px solid var(--line);border-radius:var(--r-sm);padding:var(--s3);
+  display:flex;flex-direction:column;gap:1rem;align-items:flex-start}
+.landing__dlcard-t{font-weight:var(--fw-black);font-size:var(--f-head);text-transform:uppercase;
+  letter-spacing:-.01em}
+.landing__dlcard-s{color:var(--ink-mute);font-size:var(--f-body)}
+.landing__dlmeta{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s3);font-size:var(--f-micro);
+  color:var(--ink-mute);font-variant-numeric:tabular-nums}
+/* The user-agent sheet gives `figure` 40 px of inline margin. On a poster that is a
+   80 px tax on every image, and at 320 px it pushed the install code out of the card
+   and the scroller out of its own width — so figures on this surface own their space. */
+.landing figure{margin:0}
+.landing__qr{display:grid;gap:var(--s2);justify-items:center;width:100%;min-width:0}
+.landing__qr svg{width:min(180px,52vw);height:auto;display:block}
+.landing__qr figcaption{font-size:var(--f-micro);color:var(--ink-mute);text-align:center}
+.landing__doc{max-width:60ch;display:grid;gap:var(--s2)}
+.landing__doc .landing__note{font-style:italic;margin-block:var(--s1) var(--s5)}
+.landing__docsec h2{margin:var(--s5) 0 var(--s1);font-size:var(--f-head);font-weight:var(--fw-bold);
+  text-transform:uppercase;letter-spacing:.02em}
+.landing__docsec p{color:var(--ink-soft);margin:0}
 
-/* ── full-bleed sticky stacking panels (native CSS: the next card slides
-      over the last; reduced-motion collapses to a plain stack) ─────────── */
-.stackpanels{position:relative;display:flex;flex-direction:column;width:100%}
-.stackpanels__kick{padding:0 var(--s6);margin:var(--s8) 0 var(--s6)}
-.stackpanels__dust{display:none}
-@media (min-width:840px){
-  .stackpanels__dust{display:block;position:sticky;top:0;height:100dvh;margin-bottom:-100dvh;
-    z-index:3;pointer-events:none;overflow:hidden}
-  .stackpanel{z-index:1}
-  .stackpanels__dustin{position:absolute;left:0;top:-40vh;width:2px;height:2px;
-    border-radius:var(--r-full);background:var(--on-solid);will-change:transform}
-  .stackpanels__dustin--far{opacity:.2}
-  .stackpanels__dustin--mid{opacity:.32}
-  .stackpanels__dustin--near{opacity:.48}
-}
-@media (min-width:840px) and (prefers-reduced-motion:no-preference){
-  @supports (animation-timeline:scroll()){
-    .stackpanels__dustin--far{animation:dust-far linear both;animation-timeline:--land}
-    .stackpanels__dustin--mid{animation:dust-mid linear both;animation-timeline:--land}
-    .stackpanels__dustin--near{animation:dust-near linear both;animation-timeline:--land}
-  }
-}
-@keyframes dust-far{from{transform:translate3d(0,20vh,0)}to{transform:translate3d(0,-180vh,0)}}
-@keyframes dust-mid{from{transform:translate3d(0,40vh,0)}to{transform:translate3d(0,-280vh,0)}}
-@keyframes dust-near{from{transform:translate3d(0,70vh,0)}to{transform:translate3d(0,-420vh,0)}}
-@media (prefers-reduced-motion:reduce){.stackpanels__dust{display:none}}
-.stackpanel{position:sticky;top:0;min-height:100dvh;display:block;padding:0;color:var(--on-solid);
-  overflow:hidden}
-@media (min-width:840px){
-  .stackpanel{min-height:200dvh}
-  .stackpanel:last-child{min-height:100dvh}
-}
-.stackpanel--violet{background:var(--violet-700)}
-.stackpanel--mint{background:var(--mint-700)}
-.stackpanel--sky{background:var(--sky-700)}
-.stackpanel--coral{background:var(--coral-700)}
-.stackpanel__blob{position:absolute;border-radius:var(--r-full);pointer-events:none;
-  opacity:.28;animation:blobdrift 14s ease-in-out infinite alternate}
-.stackpanel__blob--a{width:min(46vw,280px);height:min(46vw,280px);inset-block-start:-8%;inset-inline-start:-6%;
-  background:color-mix(in srgb,var(--ink-0) 55%,transparent)}
-.stackpanel__blob--b{width:min(38vw,220px);height:min(38vw,220px);inset-block-end:-10%;inset-inline-end:-4%;
-  background:color-mix(in srgb,var(--ink-0) 40%,transparent);animation-delay:-4s}
-@keyframes blobdrift{from{transform:translate(0,0) scale(1)}to{transform:translate(18px,-22px) scale(1.08)}}
-.stackpanel__stage{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.stackpanel__mesh{position:absolute;inset:0;opacity:.16;
-  background-image:radial-gradient(circle at center,var(--on-solid) 1.2px,transparent 1.4px);
-  background-size:28px 28px}
-.stackpanel__orb{position:absolute;border-radius:var(--r-full);
-  background:color-mix(in srgb,var(--on-solid) 20%,transparent)}
-.stackpanel__orb--a{width:min(52vw,340px);height:min(52vw,340px);inset-block-start:-12%;inset-inline-end:-8%}
-.stackpanel__orb--b{width:min(34vw,200px);height:min(34vw,200px);inset-block-end:18%;inset-inline-start:-6%}
-.stackpanel__orb--c{width:min(18vw,110px);height:min(18vw,110px);inset-block-start:28%;inset-inline-start:18%}
-.stackpanel__ring{position:absolute;inset-inline-end:8%;inset-block-start:14%;
-  width:min(42vw,280px);height:min(42vw,280px);border-radius:var(--r-full);
-  border:2px solid color-mix(in srgb,var(--on-solid) 32%,transparent);animation:ringspin 22s linear infinite}
-@keyframes ringspin{to{transform:rotate(360deg)}}
-.stackpanel__ghost{position:absolute;inset-inline-end:4%;inset-block-end:6%;
-  font-size:clamp(96px,28vw,220px);font-weight:var(--fw-bold);line-height:.8;
-  color:color-mix(in srgb,var(--on-solid) 12%,transparent);letter-spacing:-.06em}
-.stackpanel__inner{position:relative;z-index:1;max-width:var(--landing-max);width:100%;margin-inline:auto;
-  min-height:100dvh;box-sizing:border-box;padding:var(--s8) var(--s6);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:var(--s5)}
-@media (min-width:840px){
-  .stackpanel__inner{position:sticky;top:0;height:100dvh;min-height:100dvh;
-    flex-direction:row;align-items:center;justify-content:center;text-align:start;gap:var(--s8)}
-}
-.stackpanel__copy{display:flex;flex-direction:column;align-items:center;gap:var(--s3);min-width:0}
-@media (min-width:840px){.stackpanel__copy{align-items:flex-start;flex:1}}
-.stackpanel__kick{color:var(--on-solid);opacity:.88}
-.stackpanel{--sy:0}
-.stackpanel__art{width:min(260px,56vw);height:min(200px,42vw);flex:none;color:var(--on-solid)}
-.stackpanel__orb--a{transform:translate3d(calc(var(--sy)*24px),calc(var(--sy)*-140px),0)}
-.stackpanel__orb--b{transform:translate3d(calc(var(--sy)*-30px),calc(var(--sy)*90px),0)}
-.stackpanel__orb--c{transform:translate3d(0,calc(var(--sy)*-60px),0)}
-.stackpanel__ring{transform:translate3d(calc(var(--sy)*-20px),calc(var(--sy)*-80px),0) rotate(calc(var(--sy)*25deg))}
-.stackpanel__ghost{transform:translate3d(0,calc(var(--sy)*-100px),0)}
-.stackpanel__mesh{transform:translate3d(0,calc(var(--sy)*40px),0)}
+/* ── reveal and the weight floor ──────────────────────────────────────
+   The end state is also the no-JS state: an element that never gets
+   [data-rv="in"] is still only *hidden by the observer's own rule*, so the page
+   is readable if the script is blocked. `--d` staggers siblings from the markup. */
+/* One rhythm for the whole marketing surface: blocks of a section are one --flow
+   apart, a paragraph's next paragraph is one --s2, and a kick stays welded to the
+   title it introduces. This sits at the END of the landing sheet on purpose — every
+   component above keeps its own margin for the user-agent reset's sake, and the
+   section rhythm overrules them from here, so no page can set a gap that disagrees
+   with the poster. Two used to: the drive page's lede above its button, and About's
+   last line above its own. */
+.landing__section>*+*,.landing__cta>*+*,.landing__slab>*+*{margin-block-start:var(--flow)}
+.landing__p+.landing__p{margin-block-start:var(--s2)}
+.landing__kick+*,.landing__slab-k+*{margin-block-start:var(--s2)}
+/* A slab's title is a poster line: it opens the space under itself wider than the
+   flow, and that step is declared here, with the rest of the rhythm, not inside the
+   component that draws the title. */
+.landing__slab-t+*{margin-block-start:clamp(2.5rem,7vh,5rem)}
 
-.stackpanel--violet .stackpanel__art{--sticker-accent:var(--violet-300)}
-.stackpanel--mint .stackpanel__art{--sticker-accent:var(--mint-300)}
-.stackpanel--sky .stackpanel__art{--sticker-accent:var(--sky-300)}
-.stackpanel--coral .stackpanel__art{--sticker-accent:var(--coral-300)}
-.stackpanel__t{font-size:clamp(var(--f-title),4.5vw,var(--f-display));
-  font-weight:var(--fw-bold);margin:0;line-height:var(--lh-tight);letter-spacing:-.02em}
-.stackpanel__b{font-size:var(--f-lg);opacity:.92;max-width:46ch;margin:0;line-height:var(--lh-body)}
-@media (prefers-reduced-motion: no-preference){
-  @supports (animation-timeline: view()){
-    .stackpanel__orb--a{animation:parax-a linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
-    .stackpanel__orb--b{animation:parax-b linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
-    .stackpanel__ghost{animation:parax-g linear both;animation-timeline:view();animation-range:entry 0% exit 100%}
-  }
-}
-@keyframes parax-a{from{transform:translateY(40px) scale(1)}to{transform:translateY(-80px) scale(1.12)}}
-@keyframes parax-b{from{transform:translateY(-20px)}to{transform:translateY(70px)}}
-@keyframes parax-g{from{transform:translateY(30px)}to{transform:translateY(-50px)}}
-[data-theme="dark"] .stackpanel--violet{background:var(--violet-600)}
-[data-theme="dark"] .stackpanel--mint{background:var(--mint-600)}
-[data-theme="dark"] .stackpanel--sky{background:var(--sky-600)}
-[data-theme="dark"] .stackpanel--coral{background:var(--coral-600)}
-[data-theme="dark"] .stackpanel__orb{background:color-mix(in srgb,var(--on-solid) 28%,transparent)}
-[data-theme="dark"] .stackpanel__mesh{opacity:.26}
-[data-theme="dark"] .stackpanel__ghost{color:color-mix(in srgb,var(--on-solid) 18%,transparent)}
-
-
-/* hero parallax — the hero content lags the scroll for depth. Progressive:
-   static where scroll-timeline is unsupported; killed under reduced motion. */
-@media (prefers-reduced-motion: no-preference){
-  @supports (animation-timeline: scroll()){
-    .landing__heroinner{animation:heroscroll linear both;animation-timeline:scroll();
-      animation-range:0px 70vh}
-  }
-  @keyframes heroscroll{from{transform:translateY(0)}to{transform:translateY(72px)}}
+.landing [data-rv]{opacity:0;transform:translateY(14px);
+  transition:opacity var(--rev) var(--ease-glide),transform var(--rev) var(--ease-glide);
+  transition-delay:var(--d,0ms)}
+.landing [data-rv="in"]{opacity:1;transform:none}
+.landing [data-word]{opacity:calc(.55 + var(--near,0) * .45)}
+@media (prefers-reduced-motion:reduce){
+  .landing{scroll-behavior:auto}
+  .landing [data-rv]{opacity:1;transform:none;transition:none}
+  .landing__displayline>span{font-variation-settings:"wght" 900}
+  .landing [data-word]{font-variation-settings:"wght" 900;opacity:1}
+  .journey__stops circle{transition:none}
+  .journey__dest.is-arrived .journey__dest-pulse{animation:none}
 }
 
-@media (min-width:600px){
-  .landing__menu-panel{inset-inline:auto;inset-inline-end:var(--s4);min-width:240px}
-}
-@media (max-width:599.98px){
-  .landing__tgl--theme,.landing__login{display:none}
-}
-@media (min-width:840px){
-  .landing__links{display:flex}
-  .landing__menu{display:none}
-}
-
-/* reveal-on-scroll — scroll-driven, transform/opacity only, reduced-motion
-   guarded (the static page is the fallback) */
-@media (prefers-reduced-motion: no-preference){
-  @supports (animation-timeline: view()){
-    .reveal{animation:revealup linear both;animation-timeline:view();
-      animation-range:entry 0% entry 30%}
-  }
-  @keyframes revealup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-}
-
+/* ── RTL: Arabic un-mirrors what must not mirror ──────────────────────
+   No uppercase, no negative tracking, a thinner outline (a 2px box around
+   joined Arabic reads as a smudge), and the journey's right-hand cut keeps its
+   physical side — the road, not the reading order, decides where the copy sits. */
+[dir="rtl"] .landing__display,[dir="rtl"] .landing__displayline>span,
+[dir="rtl"] .journey__word,[dir="rtl"] .landing__slab-t,[dir="rtl"] .landing__title,
+[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t,
+[dir="rtl"] .landing__kick,[dir="rtl"] .journey__caption,
+[dir="rtl"] .journey__rule,[dir="rtl"] .landing__featuren,[dir="rtl"] .landing__stepnum{
+  text-transform:none;letter-spacing:0}
+[dir="rtl"] .landing__displayline--out>span{-webkit-text-stroke-width:1.2px}
 /* auth — centered card over the page background. width:100% for the same
    #root-flex reason as .landing. */
 .authwrap{width:100%;min-width:0;height:100%;overflow-y:auto;display:flex;
@@ -1226,6 +1408,13 @@ html.native .intro{padding-top:var(--safe-t)}
 /* map: hero zoom crop + real-map + locate */
 .mapbox--zoom .mapsvg{transform:scale(1.22);transform-origin:center}
 .mapbox--real{background:var(--map-land)}
+/* Third-party tiles are the one part of a map we do not draw, so they are
+   filtered into the product's register instead of being restyled. The vector
+   overlay is a sibling, not a child, so the route and the vehicle dot keep
+   full ink contrast above it. */
+.mapbox--real .leaflet-tile,
+.mapbox--real .gm-style,
+.mapbox__canvas .gm-style{filter:var(--map-tile-filter)}
 .mapbox__canvas{position:absolute;inset:0}
 .mapbox__locate{position:absolute;bottom:var(--s3);inset-inline-start:var(--s3);z-index:5;
   display:inline-flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);
@@ -1259,15 +1448,6 @@ html.native .intro{padding-top:var(--safe-t)}
   document.documentElement.setAttribute("data-theme",t);
 })();
 </script>
-<!-- brand gradient — one definition, referenced by every logo instance -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" style="stop-color:var(--brand)"/>
-      <stop offset="1" style="stop-color:var(--brand-2)"/>
-    </linearGradient>
-  </defs>
-</svg>
 <div id="root"></div>
 </body>
 </html>

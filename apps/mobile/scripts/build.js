@@ -100,7 +100,7 @@ const cfg = {
   plugins: {
     SplashScreen: {
       launchAutoHide: true,
-      backgroundColor: BRAND.logo.gradient[0],
+      backgroundColor: BRAND.browserThemeColor.light,
     },
     StatusBar: { style: "DARK" },
   },

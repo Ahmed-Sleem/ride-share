@@ -11,8 +11,9 @@
 | `tagline.*` | UI copy table, hero |
 | `description` | `<meta name="description">` |
 | `font.family` / `weight` | the wordmark (`--brand-font`) |
-| `logo.path` / `viewBox` / `gradient` | the in-app logo + the favicon |
-| `browserThemeColor` | mobile chrome `<meta name="theme-color">` |
+| `logo.path` / `viewBox` | the in-app mark — it inherits text ink, so it carries no colour of its own |
+| `logo.color.light` / `color.dark` | the favicon (a data URI has no document to inherit from) |
+| `browserThemeColor.light` / `.dark` | `<meta name="theme-color">` in both schemes, and the native splash background |
 | `email.fromName` / `email.colors` | the API's transactional email identity |
 
 ## How it propagates

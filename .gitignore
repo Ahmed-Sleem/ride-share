@@ -39,3 +39,9 @@ apps/mobile/android/captures/
 .DS_Store
 .vscode/
 .idea/
+
+# break-the-guard harness scratch (never product input)
+*.bak
+*.orig
+*.rej
+*~

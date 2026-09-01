@@ -1,0 +1,24 @@
+{
+  "_readme": "Golden QR matrices for lib/qr.js. Each `hex` is the module matrix row by row, packed MSB-first into ceil(size*size/8) bytes. Produced with the independent reference implementation `qrcode` (python, MIT) in byte mode at the pinned mask, then checked to match apps/web/src/lib/qr.js exactly. A pin is needed because the mask is the encoder's CHOICE (any of the eight is valid); the payload, ECC, layout and function patterns are not. If someone rewrites the encoder, this file says whether the output is still the standard's.",
+  "_generated": "2026-08-31, qrcode 8.x, ERROR_CORRECT_L/M, mask pinned, border=0, version auto",
+  "cases": [
+    {
+      "payload": "HELLO WORLD",
+      "level": "L",
+      "mask": 0,
+      "version": 1,
+      "size": 21,
+      "bits": 448,
+      "hex": "fe5bfc13906eb6bb74a5dba2aec10507faafe01b00eff624c1189fab7fc2c12dbafa004a1bfac6f05321ba92a5d29daea2ab05212fe9b380"
+    },
+    {
+      "payload": "https://ride-shareweb-production.up.railway.app/download/android.apk?v=3",
+      "level": "M",
+      "mask": 3,
+      "version": 5,
+      "size": 37,
+      "bits": 1376,
+      "hex": "fe8f010bfc16bb39506e84ac1abb750195e5dba3cb4daec137fb1507faaaaaafe016e24400b74d26ba5fa4a9784a839336fb5019c914a4cce1b7267bde04ef5fed8c28519ac49ad3d0305e1a57416fa7638fd1cafd93ac77299b9512abf6775a5cc65f6e942378d89fac5018c9581e971c91e6a04f2211fcd9c311894d3a6a7c6690b523f4fb805d86845ffac6bbaaf055cd4110ba7d862fc5d42c38356ebdd0e5b904c644cfcfe9643e4f80"
+    }
+  ]
+}

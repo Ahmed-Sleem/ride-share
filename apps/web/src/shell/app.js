@@ -174,6 +174,10 @@ function navItem(p, extra){
    15. RENDER
    ══════════════════════════════════════════════════════════════════════ */
 function render(){
+  /* One choke point for the page transition: every view change passes through here,
+     so nothing a person navigates to can miss the curtain, and nothing else (a field
+     re-render, a tick, a sheet) can put one up. */
+  if (typeof PageFx !== "undefined" && PageFx.armed(PageFx.routeKey(S), render)) return;
   try { renderUnsafe(); }
   catch (err) {
     const root=document.getElementById("root");
@@ -201,6 +205,9 @@ function renderUnsafe(){
   if (native && typeof Platform.applyChrome === "function") Platform.applyChrome(theme);
 
   const root=document.getElementById("root");
+  /* One teardown point for the landing's scroll machinery: whatever the next
+     view is, the previous render's observer and rAF loop are already gone. */
+  if (typeof teardownLanding === "function") teardownLanding();
   root.innerHTML="";
 
   /* view machine: boot splash → landing → auth → the signed-in app */
@@ -295,21 +302,44 @@ function bootSplash(){
 
 /* Boot: show the splash, resolve any stored session, then land. The minimum
    splash time is long enough to feel intentional, not long enough to fake. */
+/* The viewport, measured, in CSS pixels. A unit that a phone changes under the page
+   (or that a browser zoom counts twice) cannot promise a masthead that is exactly one
+   screen tall; a number read off the window can. It is published as `--view-h` and the
+   sheet consumes it: the hero, the intro, and the map band the claims now sit under. */
+function measureViewport() {
+  const set = () => {
+    const vv = typeof window !== "undefined" && window.visualViewport;
+    const h = Math.round((vv && vv.height) || (typeof window !== "undefined" && window.innerHeight) || 0);
+    if (h > 0) document.documentElement.style.setProperty("--view-h", h + "px");
+  };
+  set();
+  if (typeof window === "undefined") return;
+  window.addEventListener("resize", set);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", set);
+}
+
 function boot(){
   S.view="boot"; render();
+  measureViewport();
   loadMapsConfig();                             // fire-and-forget, never blocks boot
   flushFieldQueue();                            // field captures saved offline upload now
   if (typeof flushDriverOutbox === "function") flushDriverOutbox();
   const minDelay = new Promise(r=>setTimeout(r, 1500));
+  /* The splash leaves when the page has actually loaded — never before, however
+     short the minimum is — so the first thing under the curtain is a painted app. */
+  const loaded = typeof document !== "undefined" && document.readyState === "complete"
+    ? Promise.resolve()
+    : new Promise(r => (typeof window !== "undefined"
+        ? window.addEventListener("load", () => r(), { once: true }) : r()));
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
-  Promise.all([minDelay, session]).then(([, user])=>{
+  Promise.all([minDelay, session, loaded]).then(([, user])=>{
     if(S.view!=="boot") return;                 // a test or a tap already left
-    if(user){ enterApp(user); }
-    else {
-      guestHome();
-      render();
-    }
+    const swap = () => {
+      if (user) { enterApp(user); }
+      else { guestHome(); render(); }
+    };
+    PageFx.handoff(swap);          // the same curtain as every page
   });
 }
 

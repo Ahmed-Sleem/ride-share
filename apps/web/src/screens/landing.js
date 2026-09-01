@@ -1,29 +1,59 @@
-/* ══════════════════════════════════════════════════════════════════════
-   Landing page — the front door. Uber/Careem-style: a sticky top bar with
-   Ride (default) · Drive · About · Help · language · theme · Log in · Sign up,
-   a separate marketing PAGE for riders and for drivers, an About and a Help
-   page, and filled policy documents. The hero is full-bleed with the feature
-   slideshow; below it, scroll-driven reveals + full-bleed sticky "stacking
-   panels" (native CSS position:sticky — the next panel slides over the last,
-   no scroll library). Everything is light/dark + RTL via the shared tokens,
-   and reduced-motion collapses every effect to the static page.
-   ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   THE LANDING — the front door, printed as one poster.
+
+   One scroller, five pages, two documents:
+     landing()  →  ?share=<token>  a live trip, no chrome
+                →  S.landingDoc   terms / privacy / safety, in full
+                →  S.landingPage   rider (default) · drive · about · help · download
+
+   The rider page carries the poster: a masthead exactly one viewport tall, a
+   running band, the journey (four chapters that are stops on one real road), the
+   inverted slab with the three steps, the chapter list, the closer. Every other
+   page reuses the same scaffolding — kick, poster title, lede, measure — so the
+   site reads as one document rather than a poster with appendices.
+
+   Rules this file keeps:
+   • No style, no measurement, no colour. The visual lives in
+     styles/shell.html; the shapes come from lib/landing-parts.js.
+   • No copy. Every string is a key through t(), so Arabic is complete by
+     construction and nothing here can drift out of the copy table.
+   • No URLs invented here. The APK link is apkDownloadUrl(): the brand's own
+     `download.path`, resolved against the document that is asking, with the version
+     code from packages/brand on the query. No host is written in this file, and the
+     name the download arrives under is the name the server offers.
+   • No dead controls. Every button switches a page, opens a document, starts an
+     auth flow or downloads the build that exists.
+   • Motion is mounted once per render and torn down by shell/app.js before the
+     next one; the landing never leaves a rAF loop behind (lib/motion.js).
+   ══════════════════════════════════════════════════════════════════════════ */
+
 function landing() {
-  document.querySelectorAll("body > .step-tip").forEach((el) => el.remove());
   const shareTok = (typeof location !== "undefined" && location.search)
     ? new URLSearchParams(location.search).get("share") : null;
-  if (shareTok) return shareLanding(shareTok);
-  if (S.landingDoc) return landingDoc();
-  const page = ({ rider: riderLanding, drive: driveLanding, about: aboutLanding, help: helpLanding, download: downloadLanding })[S.landingPage] || riderLanding;
-  return page();
+  if (shareTok) return shareLanding(shareTok);   // a shared ride is not a poster
+  const view = S.landingDoc ? landingDoc()
+    : (({ rider: riderLanding, drive: driveLanding, about: aboutLanding,
+        help: helpLanding, download: downloadLanding })[S.landingPage] || riderLanding)();
+  /* Mounted here, once, for every landing view — because the reveal rule hides a
+     `[data-rv]` block until the observer marks it in, and a page that never
+     mounts is a page whose copy is invisible while its text still tests green. */
+  mountLanding(view);
+  return view;
 }
 
+/* ── a live trip, seen by someone you shared it with ──────────────────────
+   No marketing chrome: a person following a ride wants the ride, so this view is
+   the app's own empty/card vocabulary and nothing else. */
 function shareLanding(token) {
   const root = $("div", { class: "landing" }, landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      $("section", { class: "landing__section landing__pagetop" },
+      mkSection([
         $("h1", { class: "landing__title", text: t("j_shareTitle") }),
-        $("div", { id: "share-live", class: "stack gap3" }, Empty("livemap", t("shareTrip"), t("j_shareLoading"))))));
+        $("p", { class: "landing__lede", text: t("j_shareSub") }),
+        $("div", { class: "stack gap3", id: "share-live" },
+          Empty("livemap", t("shareTrip"), t("j_shareLoading"))),
+      ], { first: true })),
+    landingFooter());
   loadPublicShare(token);
   return root;
 }
@@ -48,13 +78,13 @@ async function loadPublicShare(token) {
   }
 }
 
-/* ── shared chrome ────────────────────────────────────────────────────── */
-
-/* The sticky top bar. Desktop: brand · Ride/Drive/About/Help · … · EN · theme ·
-   Log in · Sign up. Compact: brand · theme · Sign up · menu (the links + Log in
-   move into the dropdown). §8.1: every control does exactly what it says. */
+/* ── the head ─────────────────────────────────────────────────────────────
+   Fixed and frosted over the poster. Desktop shows the five page links; compact
+   moves them and Log in into a labelled panel — a hamburger with no name is a
+   riddle, and the same five destinations must be reachable at 320px (§8.1). */
 function landingNav() {
-  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"], ["help", "navHelp"], ["download", "navDownload"]];
+  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"],
+    ["help", "navHelp"], ["download", "navDownload"]];
   const nav = $("header", { class: "landing__nav" });
 
   nav.append($("button", {
@@ -67,19 +97,16 @@ function landingNav() {
   nav.append(linksEl);
 
   const actions = $("div", { class: "landing__actions" });
-  actions.append($("span", { class: "landing__tgl" }, langToggle()),
-                 $("span", { class: "landing__tgl landing__tgl--theme" }, themeToggle()));
-  actions.append($("button", {
-    class: "landing__login", attrs: { type: "button" }, text: t("login"),
-    on: { click: () => authGo("signin") },
-  }));
+  actions.append(mkLangButton(), mkThemeSwitch());
+  actions.append(Btn({ label: t("login"), kind: "bare", on: () => authGo("signin") }));
   actions.append(Btn({ label: t("signup"), on: () => authGo("signup") }));
   nav.append(actions);
 
   nav.append($("button", {
-    class: "landing__menu", attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu) },
+    class: "landing__menu",
+    attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu) },
     on: { click: () => { S.landingMenu = !S.landingMenu; render(); } },
-  }, icon("menu")));
+  }, icon("dots")));
 
   if (S.landingMenu) {
     const dd = $("div", { class: "landing__menu-panel", attrs: { role: "navigation", "aria-label": t("menu") } });
@@ -88,11 +115,13 @@ function landingNav() {
       on: { click: () => { S.landingMenu = false; landingGo(k); } },
     })));
     dd.append($("div", { class: "divider" }));
-    dd.append($("button", {
-      class: "landing__menulink", attrs: { type: "button" }, text: t("login"),
-      on: { click: () => { S.landingMenu = false; authGo("signin"); } },
-    }));
-    dd.append(Btn({ label: t("signup"), block: true, on: () => { S.landingMenu = false; authGo("signup"); } }));
+    /* In the panel both entries are links like the page links above them. A filled
+       button in a menu is a second hierarchy the bar already settles: the same
+       "Sign up" sits in the header at the same moment. */
+    [["login", "signin"], ["signup", "signup"]].forEach(([lbl, mode]) => dd.append($("button", {
+      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+      on: { click: () => { S.landingMenu = false; authGo(mode); } },
+    })));
     nav.append(dd);
   }
   return nav;
@@ -107,7 +136,8 @@ function landingLink(k, lbl) {
   });
 }
 
-/* Navigate between landing pages: swap content and return to the top. */
+/* Between landing pages: swap the content and put the reader back at the top of
+   the poster. `.landing` is the scroller — the document never scrolls. */
 function landingGo(page) {
   S.landingPage = page; S.landingMenu = false; render();
   const l = document.querySelector(".landing");
@@ -121,237 +151,228 @@ function authGo(mode) {
   render();
 }
 
+/* The foot: brand · links on one line, the tagline under it. padding-block only —
+   a shorthand here would reset the page gutter and push the links to the edge
+   (the demo shipped that bug; styles/shell.html says why it stays fixed). */
 function landingFooter() {
   return $("footer", { class: "landing__foot" },
-    $("span", { class: "t-cap", text: t("brand") + " · " + t("landingFoot") }),
-    $("div", { class: "landing__policies" },
-      policyLink("terms"), policyLink("privacy"), policyLink("safety")));
+    $("div", { class: "landing__footrow" },
+      $("strong", { class: "landing__brand", text: t("brand") }),
+      $("div", { class: "landing__policies" },
+        policyLink("terms"), policyLink("privacy"), policyLink("safety"))),
+    /* One line, and it is the one a reader expects at the bottom of a document: who
+       owns the name above, and in whose terms. The slogan already had its say. */
+    $("div", { class: "landing__footrow" },
+      $("span", { class: "landing__fine", text: `© ${t("brand")} · ${t("rights")}` })));
 }
 
-/* ── RIDER page (default) ─────────────────────────────────────────────── */
+/* ── RIDER page: the poster ─────────────────────────────────────────────── */
 function riderLanding() {
   const root = $("div", { class: "landing" },
     landingNav(),
-
-    $("section", { class: "landing__hero" },
-      $("div", { class: "landing__heroinner" },
-        $("div", { class: "landing__herotext" },
-          $("h1", { class: "landing__title", text: t("landingHero") }),
-          $("p", { class: "landing__sub", text: t("landingHeroSub") }),
-          $("div", { class: "row gap3 wrap" },
-            Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
-            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }),
-            Btn({ label: t("navDownload"), kind: "secondary", on: () => landingGo("download") }))),
-        heroStage("hero"))),
-
-    $("section", { class: "stackpanels", attrs: { "aria-label": t("panelKick") } },
-      storyDust(),
-      stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),
-      stackPanel("price", "2", "mint",   t("panel2T"), t("panel2B")),
-      stackPanel("boardfast", "3", "sky",    t("panel3T"), t("panel3B")),
-      stackPanel("route", "4", "coral",  t("panel4T"), t("panel4B"))),
-
     $("div", { class: "landing__body" },
-      $("section", { class: "landing__section landing__section--afterstory" },
-        $("div", { class: "landing__grid" },
-          featureCard("wallet",  t("landingF1T"), t("landingF1B"), "mint"),
-          featureCard("clock",   t("featureScheduleT"), t("featureScheduleB"), "sky"),
-          featureCard("card",    t("featureCashT"), t("featureCashB"), "coral"),
-          featureCard("livemap", t("landingF4T"), t("landingF4B"), "pink"),
-          featureCard("promos",  t("landingF3T"), t("landingF3B"), "lime"),
-          featureCard("check",   t("safetyF1T"), t("safetyF1B"), "mint"),
-          featureCard("sos",     t("safetyF3T"), t("safetyF3B"), "coral"))),
-
-      $("section", { class: "landing__section" },
-        $("h2", { class: "landing__h2", text: t("landingHowTitle") }),
-        $("div", { class: "landing__steps" },
-          stepCard("1", "way",   t("landingHow1T"), t("landingHow1B"), "violet"),
-          stepCard("2", "seat",  t("landingHow2T"), t("landingHow2B"), "sky"),
-          stepCard("3", "board", t("landingHow3T"), t("landingHow3B"), "mint"))),
-
-      $("section", { class: "landing__cta" },
-        $("h2", { class: "landing__h2", text: t("landingFoot") }),
-        $("div", { class: "row gap3 center" },
-          Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
-          Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
-
+      heroMasthead(),
+      mkMarquee(),
+      journeySection(),
+      mkSlab("landingHowTitle", "mkStepsKick", [
+        mkSteps([[1, "landingHow1T", "landingHow1B"],
+          [2, "landingHow2T", "landingHow2B"],
+          [3, "landingHow3T", "landingHow3B"]]),
+      ]),
+      mkSection([
+        mkEyebrow("panelKick"),
+        mkPanels(RIDER_PANELS),
+      ]),
+      mkSection([
+        /* The other side of the same marketplace, one link away: the reader who likes
+           what they have just read is the one person worth asking to drive. */
+        mkEyebrow("driveInviteT"),
+        mkLede("driveInviteB"),
+        mkActions([{ k: "driveInviteGo", go: "drive" }]),
+      ]),
+      mkEnd("mkEndT", "mkEndB", "landingFoot",
+        [{ k: "landingCtaStart", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
     landingFooter());
-  bindStoryScroll(root);
   return root;
 }
 
-/* Sticky chapter: illustration + particles + parallax layers.
-   Kick line lives on the first slide (not above the slider). */
-function storyDust() {
-  return $("div", { class: "stackpanels__dust", attrs: { "aria-hidden": "true" } },
-    dustLayer("far", DUST.far),
-    dustLayer("mid", DUST.mid),
-    dustLayer("near", DUST.near));
+/* The masthead. Three lines of display type on the rule field, the promise as a
+   lede under a hairline, the calls to action on the same baseline. It is exactly
+   one viewport tall by construction: the type size is measured against both
+   viewport axes, so it never crops and never needs a scroll to meet the brand. */
+function heroMasthead() {
+  return $("section", { class: "landing__hero" },
+    mkRuleField(),
+    mkHeadTop(),
+    /* The h1 is named by its own three lines. Labelling it with the lede below
+       would give a screen reader the paragraph twice and the poster never. */
+    mkDisplay([{ k: "mkDisplay1" }, { k: "mkDisplay2" }, { k: "mkDisplay3", out: true }]),
+    $("div", { class: "landing__hero-foot" },
+      mkLede("landingHero"),
+      /* One paragraph past the slogan: the lede says what the product is, this says how
+         it behaves — the timetable, the one fare, the cash at the door. */
+      mkProse(["landingHeroB"]),
+      $("div", { class: "landing__hero-cta" },
+        mkActions([{ k: "landingCtaStart", go: "signup" },
+          { k: "landingCtaSignIn", go: "signin", bare: true },
+          { k: "navDownload", go: "download", bare: true }]))));
 }
 
-/* Composed sky, not a hash scatter: clusters at the corners, a thin arc
-   above the copy, and the centre (art + title) left clear. */
-const DUST = {
-  far: [
-    [4,8,1],[9,14,1],[14,6,1],[18,18,1],[7,28,1],[22,10,1],
-    [78,7,1],[84,12,1],[91,6,1],[96,16,1],[88,24,1],[80,20,1],
-    [6,72,1],[11,80,1],[3,88,1],[16,90,1],[8,96,1],
-    [82,78,1],[90,84,1],[95,74,1],[88,92,1],[76,88,1],
-    [30,4,1],[38,8,1],[46,3,1],[54,7,1],[62,4,1],[70,9,1],
-    [28,94,1],[42,96,1],[58,93,1],[66,97,1],
-  ],
-  mid: [
-    [8,12,2],[15,20,1],[12,32,2],
-    [86,10,2],[93,18,1],[80,28,2],[97,30,1],
-    [5,68,2],[10,84,1],[18,76,2],
-    [84,70,2],[92,80,1],[78,86,2],
-    [34,10,1],[50,6,2],[66,12,1],
-    [24,88,1],[48,92,2],[72,90,1],
-  ],
-  near: [
-    [6,16,3],[16,8,2],
-    [90,14,3],[84,6,2],
-    [8,82,3],
-    [92,76,3],[86,90,2],
-    [48,8,2],
-    [20,92,2],[70,88,3],
-  ],
-};
+/* The journey. Four chapters that are the product's own argument, each one a
+   stop the bus passes as the reader scrolls: the copy below is the substance and
+   the map is the meter. The geometry is real Alexandria (data/journey.js, with
+   its provenance and its limits written there); the labels are the four stages of
+   a ride, not districts — the product publishes routes, not this drawing. */
+/* Seven claims, one per cut, laid along the road as it unrolls: the drawing is
+   the meter and the claim is the reading. This is where the rider page says what
+   the service gives you — nowhere else on the page says it again. */
+const RIDER_CUTS = [
+  { t: "landingF1T", b: "landingF1B" },
+  { t: "featureScheduleT", b: "featureScheduleB" },
+  { t: "featureCashT", b: "featureCashB" },
+  { t: "landingF4T", b: "landingF4B" },
+  { t: "landingF3T", b: "landingF3B" },
+  { t: "safetyF1T", b: "safetyF1B" },
+  { t: "safetyF3T", b: "safetyF3B" },
+];
 
-function dustLayer(kind, stars) {
-  const el = $("div", { class: "stackpanels__dustin stackpanels__dustin--" + kind });
-  const tiled = [];
-  [0, 110, 220].forEach((off) => {
-    stars.forEach(([x, y, r]) => tiled.push(x + "vw " + (y + off) + "vh 0 " + r + "px var(--on-solid)"));
+/* The chapter list is the feature board: seven claims, each a numbered row.
+   Safety is folded in rather than quarantined in its own coloured block — a
+   promise you have to scroll past to find is a promise you do not make. */
+/* The chapters: the same promises read as a case in four numbered rows — the
+   seat, the price, the boarding, the network. The copy is theirs alone. */
+const RIDER_PANELS = [
+  { t: "panel1T", b: "panel1B" },
+  { t: "panel2T", b: "panel2B" },
+  { t: "panel3T", b: "panel3B" },
+  { t: "panel4T", b: "panel4B" },
+];
+
+function journeySection() {
+  return mkJourney(RIDER_CUTS, {
+    labelKey: "mkJourneyLabel", captionKey: "mkJourneyCaption",
   });
-  el.style.boxShadow = tiled.join(",");
-  return el;
 }
 
-function stackPanel(ic, n, tone, title, body, kick) {
-  const copyKids = [];
-  if (kick) copyKids.push($("div", { class: "landing__kick stackpanel__kick", text: kick }));
-  copyKids.push($("h3", { class: "stackpanel__t", text: title }));
-  copyKids.push($("p", { class: "stackpanel__b", text: body }));
-  return $("article", { class: "stackpanel stackpanel--" + tone },
-    $("div", { class: "stackpanel__stage", attrs: { "aria-hidden": "true" } },
-      $("div", { class: "stackpanel__mesh" }),
-      $("div", { class: "stackpanel__orb stackpanel__orb--a" }),
-      $("div", { class: "stackpanel__orb stackpanel__orb--b" }),
-      $("div", { class: "stackpanel__orb stackpanel__orb--c" }),
-      $("div", { class: "stackpanel__ring" }),
-      $("span", { class: "stackpanel__ghost ltr", text: n })),
-    $("div", { class: "stackpanel__inner" },
-      stickerEl(ic, "stackpanel__art"),
-      $("div", { class: "stackpanel__copy" }, ...copyKids)));
-}
-
-/* ── DRIVE page ───────────────────────────────────────────────────────── */
+/* ── DRIVE page ───────────────────────────────────────────────────────────
+   A second audience gets a second page, not a second coat of paint: the same
+   scaffolding, the driver's own copy, their own steps and their own closer. */
 function driveLanding() {
   const root = $("div", { class: "landing" },
     landingNav(),
-
-    $("section", { class: "landing__hero" },
-      $("div", { class: "landing__heroinner" },
-        $("div", { class: "landing__herotext" },
-          $("div", { class: "landing__kick", text: t("driveHeroKick") }),
-          $("h1", { class: "landing__title", text: t("driveHeroT") }),
-          $("p", { class: "landing__sub", text: t("driveHeroB") }),
-          $("div", { class: "row gap3" },
-            Btn({ label: t("applyToDrive"), on: () => authGo("signup") }),
-            Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") }))),
-        heroStage("drivehero"))),
-
-    $("section", { class: "stackpanels", attrs: { "aria-label": t("driveHeroKick") } },
-      storyDust(),
-      stackPanel("hours", "1", "sky",    t("driverF4T"), t("driverF4B"), t("driveHeroKick")),
-      stackPanel("book",  "2", "mint",   t("driverF2T"), t("driverF2B")),
-      stackPanel("save",  "3", "coral",  t("driverF3T"), t("driverF3B")),
-      stackPanel("noroute", "4", "violet", t("driverF5T"), t("driverF5B"))),
-
     $("div", { class: "landing__body" },
-      $("section", { class: "landing__section landing__section--afterstory" },
-        $("div", { class: "landing__grid" },
-          featureCard("doc",      t("driverF1T"), t("driverF1B"), "sky"),
-          featureCard("clock",    t("driverF2T"), t("driverF2B"), "mint"),
-          featureCard("card",     t("driverF3T"), t("driverF3B"), "coral"),
-          featureCard("duty",     t("driverF4T"), t("driverF4B"), "pink"),
-          featureCard("routes",   t("driverF5T"), t("driverF5B"), "lime"),
-          featureCard("earnings", t("driverF6T"), t("driverF6B"), "sky"))),
-
-      $("section", { class: "landing__section" },
-        $("h2", { class: "landing__h2", text: t("driveStepsKick") }),
-        $("div", { class: "landing__steps" },
-          stepCard("1", "book",  t("driveStep1T"), t("driveStep1B"), "violet"),
-          stepCard("2", "secure", t("driveStep2T"), t("driveStep2B"), "sky"),
-          stepCard("3", "hours", t("driveStep3T"), t("driveStep3B"), "mint"),
-          stepCard("4", "drivehero", t("driveStep4T"), t("driveStep4B"), "coral"))),
-
-      $("section", { class: "landing__cta" },
-        $("h2", { class: "landing__h2", text: t("driveReqT") }),
-        $("p", { class: "landing__p landing__cta-sub", text: t("driveReqB") }),
-        $("div", { class: "row gap3 center" },
-          Btn({ label: t("applyToDrive"), on: () => authGo("signup") }),
-          Btn({ label: t("landingCtaSignIn"), kind: "outline", on: () => authGo("signin") })))),
-
+      mkSection([
+        mkEyebrow("forDrivers"),
+        $("h1", { class: "landing__title", text: t("driveHeroT") }),
+        mkLede("driveHeroB"),
+        mkActions([{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }]),
+      ], { first: true }),
+      mkSlab("driveStepsKick", "driveStepsT", [
+        mkSteps([[1, "driveStep1T", "driveStep1B"],
+          [2, "driveStep2T", "driveStep2B"],
+          [3, "driveStep3T", "driveStep3B"],
+          [4, "driveStep4T", "driveStep4B"]]),
+      ]),
+      mkSection([
+        mkEyebrow("driveBoardKick"),
+        mkPanels(DRIVER_PANELS),
+      ]),
+      mkSection([
+        mkEyebrow("driveReqT"),
+        mkProse(["driveReqB", "driveReqB2"]),
+      ]),
+      mkEnd("driveEndT", "driveEndB", "landingFoot",
+        [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
     landingFooter());
-  bindStoryScroll(root);
   return root;
 }
 
-/* ── ABOUT + HELP pages ───────────────────────────────────────────────── */
+/* The driver page's chapters, in the order a driver decides: what you sign up to do,
+   when you work, what a slot is worth, how you get paid. What the operator owns — the
+   routes, the prices — is not a driver's decision, so it is not a chapter. */
+const DRIVER_PANELS = [
+  { t: "driverF1T", b: "driverF1B" },
+  { t: "driverF4T", b: "driverF4B" },
+  { t: "driverF2T", b: "driverF2B" },
+  { t: "driverF3T", b: "driverF3B" },
+];
+
+/* ── ABOUT / HELP / DOWNLOAD ────────────────────────────────────────────── */
 function aboutLanding() {
   return $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      $("section", { class: "landing__section landing__pagetop" },
-        $("div", { class: "landing__kick", text: t("aboutKick") }),
+      mkSection([
+        mkEyebrow("aboutKick"),
         $("h1", { class: "landing__title", text: t("aboutTitle") }),
-        $("p", { class: "landing__p", text: t("aboutP1") }),
-        $("p", { class: "landing__p", text: t("aboutP2") }),
-        $("p", { class: "landing__p", text: t("aboutP3") }),
-        $("div", { class: "row gap3" },
-          Btn({ label: t("landingCtaStart"), on: () => authGo("signup") }),
-          Btn({ label: t("navDrive"), kind: "outline", on: () => landingGo("drive") })))),
+        mkProse(["aboutP1", "aboutP2", "aboutP3"]),
+        mkActions([{ k: "landingCtaStart", go: "signup" }, { k: "navDrive", go: "drive", bare: true }]),
+      ], { first: true }),
+      mkSection([
+        mkEyebrow("aboutPriceT"),
+        mkProse(["aboutPrice1", "aboutPrice2"]),
+      ]),
+      mkSection([
+        mkEyebrow("aboutOpsT"),
+        mkProse(["aboutOps1", "aboutOps2"]),
+        $("p", { class: "landing__note", text: t("policyTemplateNote") }),
+      ])),
     landingFooter());
 }
 
-function apkDownloadUrl() {
-  const origin = (typeof location !== "undefined" && location.origin && location.protocol !== "file:")
-    ? location.origin : "https://ride-shareweb-production.up.railway.app";
-  const code = (typeof BRAND !== "undefined" && BRAND.version && BRAND.version.code) ? BRAND.version.code : 0;
-  return origin + "/download/android.apk?v=" + code;
-}
-
-function downloadLanding() {
-  const apkUrl = apkDownloadUrl();
-  const qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(apkUrl);
+function helpLanding() {
   return $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      $("section", { class: "landing__section landing__pagetop" },
-        $("div", { class: "landing__kick", text: t("navDownload") }),
-        $("h1", { class: "landing__title", text: t("j_dlTitle") }),
-        $("p", { class: "landing__p", text: t("j_dlSub") }),
-        $("div", { class: "desk-split" },
-          $("div", { class: "card" },
-            $("strong", { class: "t-head", text: t("j_dlAndroid") }),
-            $("a", { class: "btn btn--primary", attrs: { href: apkUrl, download: "ride-share.apk" }, text: t("j_dlAndroid") }),
-            $("div", { class: "stack gap2 center" },
-              $("div", { class: "t-cap", text: t("j_dlQr") }),
-              $("img", { class: "dlqr", attrs: { src: qrSrc, width: "220", height: "220", alt: t("j_dlQr") } }))),
-          $("div", { class: "card" },
-            $("strong", { class: "t-head", text: t("j_dlIos") }),
-            $("p", { class: "t-cap", text: t("j_dlIosSoon") }))))),
+      mkSection([
+        mkEyebrow("helpKick"),
+        $("h1", { class: "landing__title", text: t("helpTitle") }),
+        mkFaq(),
+      ], { first: true })),
     landingFooter());
 }
 
+/* The installer lives on whatever server is serving this page — that is the whole
+ * rule. Resolving the brand's own `download.path` against the document gives the real
+ * address in production and a self-referential one in a preview, and it means a move or
+ * a rename cannot leave a stale host behind inside a bundle. */
+function apkDownloadUrl() {
+  const D = (typeof BRAND !== "undefined" && BRAND.download) ? BRAND.download : null;
+  if (!D) return "";
+  const base = (typeof document !== "undefined" && document.baseURI) ||
+    (typeof location !== "undefined" && location.href) || "";
+  const code = (BRAND.version && BRAND.version.code) ? BRAND.version.code : 0;
+  if (!base) return D.path;
+  try { return `${new URL(D.path, base).href}?v=${code}`; }
+  catch { return D.path + "?v=" + code; }
+}
+
+function downloadLanding() {
+  return $("div", { class: "landing" },
+    landingNav(),
+    $("div", { class: "landing__body landing__body--page" },
+      mkSection([
+        /* No eyebrow here: the page is called Get the app, the nav link that got
+           you here is called Get the app, and the heading says it too. Three of
+           them on one screen is two too many. */
+        $("h1", { class: "landing__title", text: t("j_dlTitle") }),
+        mkLede("j_dlSub"),
+        mkDownloadCards(),
+      ], { first: true })),
+    landingFooter());
+}
+
+/* ── THE INTRO (mobile surface only) ────────────────────────────────────
+   Four slides that say what the app does, then the auth flow. Skinned onto the
+   poster's tokens, never onto a hue, and the behaviour is untouched: the website
+   never sees it (guestHome forces the landing) and `rs.intro.v1` still means
+   "seen". */
 function introSlides() {
   return [
-    { ic: "bus", cls: "landing__featureico landing__featureico--coral", k: "j_intro1K", t: "j_intro1T", b: "j_intro1B" },
-    { ic: "lookup", cls: "landing__featureico landing__featureico--sky", k: "j_intro2K", t: "j_intro2T", b: "j_intro2B" },
-    { ic: "qr", cls: "landing__featureico landing__featureico--mint", k: "j_intro3K", t: "j_intro3T", b: "j_intro3B" },
-    { ic: "earnings", cls: "landing__featureico landing__featureico--coral", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B", c: "j_intro4C" },
+    { ic: "bus", k: "j_intro1K", t: "j_intro1T", b: "j_intro1B" },
+    { ic: "lookup", k: "j_intro2K", t: "j_intro2T", b: "j_intro2B" },
+    { ic: "qr", k: "j_intro3K", t: "j_intro3T", b: "j_intro3B" },
+    { ic: "earnings", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B", c: "j_intro4C" },
   ];
 }
 
@@ -372,12 +393,12 @@ function introView() {
   const dots = $("div", { class: "intro__dots", attrs: { "aria-hidden": "true" } });
   slides.forEach((_, n) => dots.append($("span", { class: "intro__dot" + (n === i ? " intro__dot--on" : "") })));
   const copy = [
-    $("span", { class: "landing__kick", text: t(s.k) }),
-    $("div", { class: s.cls }, icon(s.ic)),
-    $("h1", { class: "t-title", text: t(s.t) }),
-    $("p", { class: "muted", text: t(s.b) }),
+    $("span", { class: "intro__kick", text: t(s.k) }),
+    $("div", { class: "intro__ic", attrs: { "aria-hidden": "true" } }, icon(s.ic)),
+    $("h1", { class: "intro__t", text: t(s.t) }),
+    $("p", { class: "intro__b", text: t(s.b) }),
   ];
-  if (s.c) copy.push($("p", { class: "t-lg", text: t(s.c) }));
+  if (s.c) copy.push($("p", { class: "intro__c", text: t(s.c) }));
   copy.push(dots);
   return $("div", { class: "intro", attrs: { "aria-label": t("j_introStart") } },
     $("div", { class: "intro__stage" }, ...copy),
@@ -390,24 +411,10 @@ function introView() {
       } })));
 }
 
-function helpLanding() {
-  return $("div", { class: "landing" },
-    landingNav(),
-    $("div", { class: "landing__body landing__body--page" },
-      $("section", { class: "landing__section landing__pagetop" },
-        $("div", { class: "landing__kick", text: t("helpKick") }),
-        $("h1", { class: "landing__title", text: t("helpTitle") })),
-      $("section", { class: "landing__section" },
-        $("div", { class: "landing__faq" },
-          (T[S.lang].helpItems || []).map(([q, a]) => $("details", { class: "landing__faqitem" },
-            $("summary", { text: q }),
-            $("p", { class: "landing__p", text: a }))))),
-      landingFooter()));
-}
-
-/* Policies — Terms / Privacy / Safety. Filled, generic, editable content from
-   the one copy table; the template note stays (final legal wording is the
-   operator's, DEC-030). */
+/* ── POLICIES ───────────────────────────────────────────────────────────
+   Terms / Privacy / Safety, filled from the copy table. The template note stays
+   on the page on purpose: the legal text is the operator's (DEC-030), and the
+   landing must not imply that this build has a lawyer-approved policy. */
 function policyLink(kind) {
   return $("button", { class: "landing__policylink", attrs: { type: "button" }, text: t(kind),
     on: { click: () => { S.landingDoc = kind; render(); } } });
@@ -419,110 +426,14 @@ function landingDoc() {
   const sections = T[S.lang][key] || [];
   return $("div", { class: "landing" },
     $("header", { class: "landing__nav" },
-      $("div", { class: "landing__brand" }, logoSVG(), $("span", { text: t("brand") })),
-      $("div", { class: "row gap2" }, langToggle(), themeToggle())),
-    $("div", { class: "landing__body" },
-      $("section", { class: "landing__section landing__doc" },
-        $("button", { class: "btn btn--ghost", attrs: { type: "button" },
-          on: { click: () => { S.landingDoc = null; render(); } } }, icon("back"), $("span", { text: t("landingBack") })),
-        $("h1", { class: "landing__h2", text: title }),
-        $("p", { class: "landing__p", text: t("policyTemplateNote") }),
-        sections.map(([h, p]) => $("div", { class: "landing__docsec" },
-          $("h2", { class: "landing__h3", text: h }),
-          $("p", { class: "landing__p", text: p }))))));
-}
-
-/* Embed a recolorable sticker (STICKERS, injected by build.js). */
-function stickerEl(key, cls) {
-  const el = $("div", { class: "sticker" + (cls ? " " + cls : "") });
-  el.innerHTML = STICKERS[key] || "";
-  return el;
-}
-
-function heroStage(ic) {
-  return $("div", { class: "heroart heroart--one", attrs: { "aria-hidden": "true" } },
-    stickerEl(ic, "heroart__s heroart__s--solo"));
-}
-
-function bindStoryScroll(scroller) {
-  if (!scroller) return;
-  if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  let ticking = false;
-  const tick = () => {
-    ticking = false;
-    const vh = scroller.clientHeight || 1;
-    const hero = scroller.querySelector(".landing__hero");
-    if (hero) {
-      const t = Math.max(0, Math.min(1, -hero.getBoundingClientRect().top / Math.max(hero.offsetHeight, 1)));
-      hero.style.setProperty("--hy", t.toFixed(3));
-    }
-    scroller.querySelectorAll(".stackpanel").forEach((p) => {
-      const t = Math.max(-1, Math.min(1, -p.getBoundingClientRect().top / vh));
-      p.style.setProperty("--sy", t.toFixed(3));
-    });
-  };
-  scroller.addEventListener("scroll", () => {
-    if (!ticking) { ticking = true; requestAnimationFrame(tick); }
-  }, { passive: true });
-  requestAnimationFrame(tick);
-}
-
-/* ── feature cards ──────────────────────────────────────────────────────── */
-function featureCard(ic, title, body, tone) {
-  return $("div", { class: "landing__feature reveal" },
-    $("div", { class: "landing__featureico landing__featureico--" + tone }, icon(ic)),
-    $("h3", { class: "landing__h3", text: title }),
-    $("p", { class: "landing__p", text: body }));
-}
-
-/* ── how-it-works steps: number stays on the SAME side in RTL (physical
-      right), and a floating tooltip follows the cursor on hover ─────────── */
-function stepCard(n, ic, title, body, tone) {
-  const tip = $("div", { class: "step-tip", attrs: { role: "tooltip" } },
-    $("span", { class: "step-tip__num ltr", text: n }),
-    $("strong", { text: title }),
-    $("span", { class: "step-tip__body", text: body }));
-  const card = $("div", { class: "landing__step reveal" + (tone ? " landing__step--" + tone : "") },
-    $("div", { class: "landing__stepnum ltr", text: n }),
-    $("div", { class: "landing__stepbody" },
-      stickerEl(ic, "landing__stepart"),
-      $("div", { class: "landing__steptext" },
-        $("h3", { class: "landing__h3", text: title }),
-        $("p", { class: "landing__stepdesc landing__p", text: body }))));
-  document.body.appendChild(tip);
-
-  const isCompact = () => typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: none), (max-width: 839.98px)").matches;
-  let raf = 0, tx = 0, ty = 0, cx = 0, cy = 0;
-  const place = () => {
-    raf = 0;
-    tx += (cx - tx) * 0.22;
-    ty += (cy - ty) * 0.22;
-    const w = 240, h = tip.offsetHeight || 88, pad = 12;
-    const x = Math.min(window.innerWidth - w - pad, Math.max(pad, tx + 16));
-    const y = Math.min(window.innerHeight - h - pad, Math.max(pad, ty - h - 12));
-    tip.style.transform = "translate3d(" + x + "px," + y + "px,0)";
-    if (tip.classList.contains("step-tip--on") && (Math.abs(cx - tx) > 0.4 || Math.abs(cy - ty) > 0.4))
-      raf = requestAnimationFrame(place);
-  };
-  card.addEventListener("pointerenter", (e) => {
-    if (isCompact()) return;
-    cx = e.clientX; cy = e.clientY; tx = cx; ty = cy;
-    tip.classList.add("step-tip--on");
-    if (!raf) raf = requestAnimationFrame(place);
-  });
-  card.addEventListener("pointermove", (e) => {
-    if (isCompact() || !tip.classList.contains("step-tip--on")) return;
-    cx = e.clientX; cy = e.clientY;
-    if (!raf) raf = requestAnimationFrame(place);
-  });
-  card.addEventListener("pointerleave", () => {
-    tip.classList.remove("step-tip--on");
-  });
-  return card;
-}
-
-function langToggle() {
-  return IconBtn({ name: "globe", label: t("language"),
-    on: () => { S.lang = S.lang === "en" ? "ar" : "en"; storeSet("rs.lang", S.lang); render(); } });
+      $("span", { class: "landing__brand" }, logoSVG(), $("span", { text: t("brand") })),
+      $("div", { class: "landing__actions" }, mkLangButton(), mkThemeSwitch())),
+    $("div", { class: "landing__body landing__body--page" },
+      mkSection([
+        $("div", { class: "landing__doc" },
+          Btn({ label: t("landingBack"), kind: "ghost", icon: "back", on: () => { S.landingDoc = null; render(); } }),
+          $("h1", { class: "landing__title", text: title }),
+          $("p", { class: "landing__note", text: t("policyTemplateNote") }),
+          mkDoc(sections)),
+      ], { first: true })));
 }

@@ -158,9 +158,20 @@ const money = n => {
   return S.lang==="ar" ? `${sign}${v} ج.م` : `${sign}${v} EGP`;
 };
 
+/* SVG has its own namespace, and `document.createElement("svg")` quietly hands
+   back an HTML element: it parses, it has a class, it even reports a tag name —
+   and it draws nothing and answers to no geometry API, so a whole illustration
+   can be "built" and stay invisible. Every SVG tag therefore comes through here
+   instead of createElement, and `className` goes the attribute route (an SVG
+   element's className is read-only). One rule, in the one element factory. */
+const SVG_NS = "http://www.w3.org/2000/svg";
+const SVG_TAGS = new Set(["svg","g","a","path","rect","circle","ellipse","line","polyline",
+  "polygon","text","tspan","defs","use","symbol","marker","mask","clipPath","filter",
+  "feGaussianBlur","linearGradient","radialGradient","stop","image"]);
 const $ = (tag, opts={}, ...kids) => {
-  const n = document.createElement(tag);
-  if (opts.class) n.className = opts.class;
+  const isSvg = SVG_TAGS.has(tag);
+  const n = isSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+  if (opts.class) { if (isSvg) n.setAttribute("class", opts.class); else n.className = opts.class; }
   if (opts.id != null) n.id = opts.id;   // convenience: id is a plain property
   if (opts.text != null) n.textContent = opts.text;
   if (opts.attrs) for (const [k,v] of Object.entries(opts.attrs)){
@@ -211,6 +222,9 @@ const ICON = {
   back:'<path d="m15 5-7 7 7 7"/>', fwd:'<path d="m9 5 7 7-7 7"/>',
   signout:'<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="m10 8 4 4-4 4"/><path d="M14 12H4"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  /* The compact menu control is three dots and no chrome: a bordered square around
+     a glyph reads as a button inside a bar that is already a bar. */
+  dots:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
   qr:'<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
   sos:'<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
   share:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
@@ -234,17 +248,21 @@ const ICON = {
   star:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6L12 16.8 6.6 19.6l1.2-6L3.3 9.4l6.1-.8z"/>'
 };
 
-/* Brand mark — the user's bookmark-and-pin glyph. Filled (not stroked), and
-   coloured by the brand gradient defined once in the document, or by the
-   given fill. */
+/* Brand mark — the user's bookmark-and-pin glyph. Filled, never stroked, and it
+   takes the INK of whatever wraps it: there is no logo colour to keep in sync,
+   because the mark is text-coloured by definition (the monochrome system in
+   styles/shell.html). An explicit `fill` overrides that for the rare surface
+   with no text context. The favicon is NOT one of them: it is generated from
+   packages/brand/brand.json by apps/web/build.js, which is also the only place
+   the mark's two literal colours are written down. */
 const LOGO_PATH = BRAND.logo.path;   // the ONE brand source (packages/brand)
 const logoSVG = (fill, cls) => {
-  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  const s = document.createElementNS(SVG_NS,"svg");
   s.setAttribute("viewBox", BRAND.logo.viewBox);
   s.setAttribute("aria-hidden","true");
   if (cls) s.setAttribute("class", cls);
-  const p = document.createElementNS("http://www.w3.org/2000/svg","path");
-  p.setAttribute("fill", fill || "url(#brandGrad)");
+  const p = document.createElementNS(SVG_NS,"path");
+  p.setAttribute("fill", fill || "currentColor");
   p.setAttribute("fill-rule","evenodd");
   p.setAttribute("clip-rule","evenodd");
   p.setAttribute("stroke","none");
@@ -253,7 +271,7 @@ const logoSVG = (fill, cls) => {
   return s;
 };
 const icon = (n, cls) => {
-  const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+  const s = document.createElementNS(SVG_NS,"svg");
   s.setAttribute("viewBox","0 0 24 24");   // icons stay on the 24px grid
   s.setAttribute("aria-hidden","true");
   s.setAttribute("fill","none");
@@ -410,7 +428,7 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
   const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
     on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
-  const ns="http://www.w3.org/2000/svg";
+  const ns=SVG_NS;
   const svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox","0 0 400 220");
   svg.setAttribute("preserveAspectRatio","xMidYMid slice");
@@ -519,8 +537,36 @@ function locateMe() {
 }
 
 /* QR — deterministic blocks + the numeric code that is the real fallback */
+/* InstallQR paints a matrix that a camera can decode — see lib/qr.js, which is
+   the encoder and says why the two must not be confused. The boarding code above
+   is a visual aid for a person at a desk (the scannable value there is the text
+   code); an install link is scanned by a stranger's phone, so its pattern has to
+   be real. The art is aria-hidden because the URL beside it is the accessible
+   version of the same fact. */
+function InstallQR(text){
+  const q = QR.encode(text, "M");
+  const ns = SVG_NS, quiet = 4, n = q.size + quiet * 2;
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${n} ${n}`);
+  svg.setAttribute("shape-rendering", "crispEdges");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const inData = r >= quiet && c >= quiet && r < quiet + q.size && c < quiet + q.size;
+    if (inData && q.grid[r - quiet][c - quiet]) d += `M${c} ${r}h1v1h-1z`;
+  }
+  const bg = document.createElementNS(ns, "rect");
+  bg.setAttribute("width", n); bg.setAttribute("height", n);
+  bg.setAttribute("fill", "var(--qr-paper)");
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", d); path.setAttribute("fill", "var(--qr-ink)");
+  svg.append(bg, path);
+  return svg;
+}
+
 function QRPanel({code}){
-  const ns="http://www.w3.org/2000/svg", n=21, cell=8;
+  const ns=SVG_NS, n=21, cell=8;
   const svg=document.createElementNS(ns,"svg");
   svg.setAttribute("viewBox",`0 0 ${n*cell} ${n*cell}`);
   svg.setAttribute("class","qr");

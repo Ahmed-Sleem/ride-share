@@ -4,18 +4,36 @@
 set -u
 cd "$(dirname "$0")/.."
 PASS=0; FAIL=0
+# Scratch lives OUTSIDE the tree and the trap restores on any exit. A `.bak`
+# beside the source is a trap: an interrupted run leaves the product file
+# mutated with its only good copy sitting next to it — which has already
+# happened here, and it made `verify-repo` read the harness's leftovers as CSS.
+BREAKS_TMP="${HOME}/.vtest/breaks-scratch.$$"   # not $TMPDIR: a sandbox rehydrate wipes it
+mkdir -p "$BREAKS_TMP/orig"
+SCRATCH="$BREAKS_TMP"
+INFLIGHT=""
+_breaks_restore () {
+  [ -n "$INFLIGHT" ] || return 0
+  cp "$BREAKS_TMP/${INFLIGHT//\//_}" "$INFLIGHT" 2>/dev/null
+  INFLIGHT=""
+}
+trap '_breaks_restore; rm -rf "$BREAKS_TMP"' EXIT INT TERM
 
 run_break () {                       # name | file | sed-expr | expected-failing-test
   local name="$1" file="$2" expr="$3" expect="$4"
-  cp "$file" "$file.bak"
+  # BREAKS_ONLY="some words" runs a single case, for reviewing one guard in
+  # seconds instead of eighteen minutes. The full run stays the default.
+  if [ -n "${BREAKS_ONLY:-}" ]; then case "$name" in *"$BREAKS_ONLY"*) ;; *) return;; esac; fi
+  local bak="$BREAKS_TMP/${file//\//_}"
+  cp "$file" "$bak"; mkdir -p "$SCRATCH/orig/$(dirname "$file")"; cp -n "$file" "$SCRATCH/orig/$file"; INFLIGHT="$file"
   sed -i "$expr" "$file"
-  if cmp -s "$file" "$file.bak"; then
+  if cmp -s "$file" "$bak"; then
     echo "  BROKEN-BREAK  $name → edit did not change the file"
-    FAIL=$((FAIL+1)); mv "$file.bak" "$file"; return
+    FAIL=$((FAIL+1)); cp "$bak" "$file"; INFLIGHT=""; return
   fi
   node build.js >/dev/null 2>&1
   local out; out="$(node tests/unit.test.js 2>&1)"
-  mv "$file.bak" "$file"; node build.js >/dev/null 2>&1
+  cp "$bak" "$file"; INFLIGHT=""; rm -f "$bak"; node build.js >/dev/null 2>&1
   local hit=""; IFS='|' read -ra WANT <<< "$expect"
   # -F: expectation names are LITERAL strings (e.g. "(no [object Object])" —
   # a regex grep treats the brackets as a character class and can never match).
@@ -39,6 +57,14 @@ run_break "root not viewport height" src/styles/shell.html \
 run_break "body allowed to scroll" src/styles/shell.html \
   's|^html,body{height:100%;margin:0;padding:0;overflow:hidden}|html,body{height:100%;margin:0;padding:0}|' \
   "page itself never scrolls"
+
+run_break "desktop rail never widens" src/styles/shell.html \
+  's|^  \.nav{width:var(--rail-expanded);padding-inline|  .nav{padding-inline|' \
+  "expanded widens the rail"
+
+run_break "the landing's full-width declaration is dropped" src/styles/shell.html \
+  's@^\.landing{width:100%;min-width:0;height:100%@.landing{height:100%@' \
+  "the landing is declared full width"
 
 run_break "main cannot shrink" src/styles/shell.html \
   's|^\.main{flex:1;min-height:0;overflow-y:auto;|.main{flex:1;overflow-y:auto;|' \
@@ -126,15 +152,15 @@ run_break "safe area ignored by the nav" src/styles/shell.html \
 
 # ── accent colour ────────────────────────────────────────────────────────
 run_break "accent collapses into the brand" src/styles/shell.html \
-  's|  --accent:var(--coral-500); --accent-hover:var(--coral-600);|  --accent:var(--violet-500); --accent-hover:var(--coral-600);|' \
-  "accent and brand are different roles"
+  's|  --accent:var(--ink-700); --accent-hover:var(--ink-600);|  --accent:var(--ink-900); --accent-hover:var(--ink-600);|' \
+  "brand and accent are different roles|accent is a distinct ink step"
 
 run_break "accent unused in the product" src/shell/app.js \
   's|    wrap.append($("button",{class:"chip chip--accent", attrs:{type:"button",|    wrap.append($("button",{class:"chip", attrs:{type:"button",|' \
   "accent is actually used in the product"
 
 run_break "hardcoded hex colour" src/styles/shell.html \
-  's|^\.btn--primary{background:linear-gradient(135deg,var(--brand),var(--brand-2));|.btn--primary{background:linear-gradient(135deg,#6C63FF,var(--brand-2));|' \
+  's|^\.btn--primary{background:var(--brand);color:var(--on-brand)}|.btn--primary{background:#6C63FF;color:var(--on-brand)}|' \
   "no hardcoded colour in css rules"
 
 # ── behaviour that must not regress ──────────────────────────────────────
@@ -162,20 +188,30 @@ run_break "sample content returns to the bundle" src/data/content.js \
   's|const T = {|const T = {\n  sample:"Corniche Line",|' \
   "no sample content in the bundle (demo data is gone)"
 
-run_break "stops tool loses its coordinate form" src/screens/staff.js \
+run_break "the stop form loses its coordinate field" src/screens/staff.js \
   's|      field("stop-lat", t("latLabel"), "text", "off"),|      field("stop-latX", t("latLabel"), "text", "off"),|' \
-  "stops tool has a coordinate form"
+  "route form has stop coordinates|route detail owns stop add (no separate stops page)"
 
-run_break "stops tool loses its CSV import" src/screens/staff.js \
-  's|    $("textarea",{class:"input", attrs:{id:"stop-csv"|    $("textarea",{class:"input", attrs:{id:"stop-csvX"|' \
-  "stops tool has a CSV import"
+# Retired: a "stops tool loses its CSV import" case used to sit here. The only
+# CSV control is in opsStops(), which no nav reaches since stops became a route
+# property (M2), so its check could only ever watch dead markup; the endpoint it
+# calls is covered server-side. If the owner keeps opsStops on purpose, the live
+# form is where an import belongs — add the guard with the control, not before.
+
+run_break "super_admin offered at staff creation" src/screens/admin.js \
+  's|  \["operations","manager","support"\].forEach((r) => {|  ["operations","manager","support","super_admin"].forEach((r) => {|' \
+  "staff create offers no super_admin option"
+
+run_break "super_admin offered at staff editing" src/screens/admin.js \
+  's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
+  "staff edit offers no super_admin option"
 
 run_break "landing loses the drive how-to steps" src/screens/landing.js \
-  's|$("h2", { class: "landing__h2", text: t("driveStepsKick") })|$("h2", { class: "landing__h2", text: t("driveStepsKickX") })|' \
+  's|mkSlab("driveStepsKick", "driveStepsT", \[|mkSlab("driveStepsKickX", "driveStepsT", \[|' \
   "drive page has the how-to steps"
 
 run_break "landing loses its policy links" src/screens/landing.js \
-  's|      policyLink("terms"), policyLink("privacy"), policyLink("safety")));|      null));|' \
+  's|policyLink("terms"), policyLink("privacy"), policyLink("safety")|policyLink("terms")|' \
   "landing footer links policies"
 
 run_break "policies revert to empty placeholders" src/data/content.js \
@@ -183,12 +219,12 @@ run_break "policies revert to empty placeholders" src/data/content.js \
   "terms doc has real sections (en)"
 
 run_break "landing loses the page nav links" src/screens/landing.js \
-  's|const links = \[\["rider", "navRide"\], \["drive", "navDrive"\], \["about", "navAbout"\], \["help", "navHelp"\], \["download", "navDownload"\]\];|const links = [["rider", "navRide"]];|' \
-  "top bar has Ride/Drive/About/Help links"
+  's|\["about", "navAbout"\],||' \
+  "nav renders Ride/Drive/About/Help/Get-the-app|top bar has Ride/Drive/About/Help links"
 
-run_break "landing loses the sticky stacking panels" src/screens/landing.js \
-  's|      stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),|      null,|' \
-  "rider landing has 4 stacking panels"
+run_break "landing loses the chapter panels" src/screens/landing.js \
+  's|        mkPanels(RIDER_PANELS),|        null,|' \
+  "rider landing lists the four chapters"
 
 run_break "logo path hardcoded again (second definition)" src/lib/components.js \
   's|const LOGO_PATH = BRAND.logo.path;|const LOGO_PATH = "M0 0";|' \
@@ -247,9 +283,13 @@ run_break "favicon removed" src/styles/shell.html \
   's|rel="icon"|rel="iconx"|' \
   "favicon is embedded"
 
-run_break "logo loses its gradient" src/lib/components.js \
-  's|"url(#brandGrad)"|"currentColor"|' \
-  "logo references the gradient"
+run_break "the board screen's camera handler disappears" src/screens/driver.js \
+  's|async function scanCameraAction(journeyId) {|async function scanCameraActionGone(journeyId) {|' \
+  "the board screen's camera handler exists|a denied camera says so and keeps the keypad"
+
+run_break "the logo stops inheriting the ink" src/lib/components.js \
+  's|p.setAttribute("fill", fill [|][|] "currentColor")|p.setAttribute("fill", fill \|\| "#111111")|' \
+  "the logo inherits ink"
 
 run_break "input loses its label" src/lib/components.js \
   's|attrs:{type:"search", placeholder, "aria-label":placeholder}|attrs:{type:"search", placeholder}|' \
@@ -285,9 +325,9 @@ run_break "resend button removed" src/screens/auth.js \
 
 
 # ── M1.7: hero art (no slideshow) ─────────────────────────────────────────
-run_break "story panels removed from the rider page" src/screens/landing.js \
-  's|stackPanel("seat",  "1", "violet", t("panel1T"), t("panel1B"), t("panelKick")),|null,|' \
-  "story panels sit after the hero|rider landing has 4 stacking panels"
+run_break "the journey is removed from the rider page" src/screens/landing.js \
+  's|mkJourney(RIDER_CUTS, {|mkJourney([], {|' \
+  "the journey carries the seven claims"
 
 # ── M1.8: email auth + slider polish ──────────────────────────────────────
 run_break "role-choice chevron loses its size" src/styles/shell.html \
@@ -295,36 +335,36 @@ run_break "role-choice chevron loses its size" src/styles/shell.html \
   "role-choice chevron has an explicit size"
 
 run_break "streamline credit returns" src/screens/landing.js \
-  's|policyLink("safety")));|policyLink("safety")), $("a",{class:"landing__credits",text:"Vectors by Streamline"}));|' \
+  's|policyLink("safety"))|policyLink("safety"), $("a",{class:"landing__credits",text:"Vectors by Streamline"}))|' \
   "footer has no Streamline credit|the Streamline credit is gone"
 
-run_break "story panel returns a gradient" src/styles/shell.html \
-  's|.stackpanel--violet{background:var(--violet-700)}|.stackpanel--violet{background:linear-gradient(160deg,var(--brand-soft),transparent)}|' \
-  "story panels are bold (violet card has no gradient)"
+run_break "the chapters come back as colour blocks" src/styles/shell.html \
+  's|.landing__feature{display:grid;|.landing__feature{background:var(--stage);display:grid;|' \
+  "the chapters are ink on paper, never a colour block"
 
 run_break "feature hover loses the bounce" src/styles/shell.html \
-  's|transform var(--slow) var(--bounce),border-color|transform var(--slow) var(--ease),border-color|' \
+  's|transform var(--slow) var(--bounce),background|transform var(--slow) var(--ease),background|' \
   "feature hover uses the bounce easing"
 
-run_break "dark doodle accents removed" src/styles/shell.html \
-  's|\[data-theme="dark"\] \.landing__step--violet \.landing__stepart{--sticker-accent:var(--violet-300)}|[data-theme="dark"] .landing__step--violet .landing__stepart{--sticker-accent:var(--accent)}|' \
-  "dark mode gives step cards brighter accents"
+run_break "dark mode forgets to invert the slab" src/styles/shell.html \
+  's|  --stage:var(--ink-0); --stage-line:rgba(10,10,10,.16);|  --stage:var(--ink-900); --stage-line:rgba(255,255,255,.16);|' \
+  "only the slab inverts, and dark inverts the slab"
 
 run_break "otp boxes collapse to five" src/lib/components.js \
   's|for (let i = 0; i < 6; i++)|for (let i = 0; i < 5; i++)|' \
   "OTP step renders six code boxes"
 
-run_break "story doodle loses its white ink" src/styles/shell.html \
-  's|.stackpanel__art{width:min(260px,56vw);height:min(200px,42vw);flex:none;color:var(--on-solid)}|.stackpanel__art{width:min(260px,56vw);height:min(200px,42vw);flex:none;color:var(--ink-900)}|' \
-  "story doodle is white line-work with a same-hue light accent"
+run_break "the map stops being decoration" src/lib/landing-parts.js \
+  's|attrs: { "data-journey-map": "", "aria-hidden": "true", focusable: "false" },|attrs: { "data-journey-map": "", focusable: "false" },|' \
+  "the map is decoration and every label on it comes from the copy table"
 
-run_break "hero loses its single-illustration marker (v3 one-color rule)" src/screens/landing.js \
-  's|  return $("div", { class: "heroart heroart--one", attrs: { "aria-hidden": "true" } },|  return $("div", { class: "heroart heroart--multi", attrs: { "aria-hidden": "true" } },|' \
-  "landing shows one intro illustration"
+run_break "the masthead loses its third line" src/screens/landing.js \
+  's|{ k: "mkDisplay2" }, { k: "mkDisplay3", out: true }|{ k: "mkDisplay2" }|' \
+  "the masthead prints three lines and no illustration"
 
-run_break "hero drift animation removed" src/styles/shell.html \
-  's|  animation:herodrift 36s ease-in-out infinite alternate}|  /* drift removed */}|' \
-  "hero glow drifts very slowly"
+run_break "the running band stops looping" src/styles/shell.html \
+  's|  .landing__marquee-in{animation:landingslide var(--marquee) linear infinite}|  /* loop removed */|' \
+  "the running band is one row doubled and shifted by half|the band only moves when the reader allows motion"
 
 run_break "signup name field dropped from the code step" src/screens/auth.js \
   's|      { nameField:true, btnLabel:t("createAccount") });|      { });|' \
@@ -358,9 +398,6 @@ run_break "bypass sends an empty code string" src/screens/auth.js \
   's|const code = S.otpBypass ? undefined : otpValue();|const code = S.otpBypass ? "" : otpValue();|' \
   "bypass signup omits the code field entirely (no empty-string 400)"
 
-run_break "super_admin offered at staff creation" src/screens/admin.js \
-  's|        \["operations","manager","support"\].map(r=>|        ["operations","manager","support","super_admin"].map(r=>|' \
-  "staff create offers no super_admin option"
 
 # ── Path A — wallet & payments (P3.7.4) ──────────────────────────────────
 run_break "wallet loses its honest paymob-off sentence" src/screens/wallet.js \
@@ -407,5 +444,105 @@ run_break "website guest home shows intro slides" src/lib/components.js \
   "website guest opens landing, not intro"
 
 echo
+# ── the renewal's own rules: a real QR, and a complete copy table ─────────
+run_break "the install code goes back to a third-party service" src/lib/components.js \
+  's|const q = QR.encode(text, "M");|const q = (() => { const i = document.createElement("img"); i.className = "dlqr"; i.src = "https://api.qrserver.com/q/?data=" + encodeURIComponent(text); return i; })();|' \
+  "no QR is fetched from anywhere|the install code is drawn locally from the same URL the button opens"
+
+run_break "a key is dropped from the Arabic table" src/data/content.js \
+  's|  mkStop1:"اطلب",||' \
+  "every key exists in both languages"
+
+run_break "the QR encoder starts truncating instead of refusing" src/lib/qr.js \
+  's|if (!version) throw new Error("QR: payload does not fit|if (false) throw new Error("QR: payload does not fit|' \
+  "an oversized payload fails loudly instead of truncating"
+
+run_break "the format bits stop being masked" src/lib/qr.js \
+  's|bchRemainder(data, 0x537)) ^ 0x5412;|bchRemainder(data, 0x537)) ^ 0x5413;|' \
+  "v1L writes a format area a scanner can read|QR matches the reference"
+
+run_break "mask 0 stops matching its definition" src/lib/qr.js \
+  's|(r, c) => (r + c) % 2 === 0|(r, c) => (r + c) % 2 === 1|' \
+  "QR matches the reference"
+
+# The summary goes last: every case above must have run before the count is
+# printed, and the exit code is what CI reads.
+run_break "a landing grid track goes back to content-bound" src/styles/shell.html \
+  's@grid-template-columns:minmax(0,1fr);gap:var(--flow)@grid-template-columns:1fr;gap:var(--flow)@' \
+  "no landing grid leaves a track at its content width"
+
+# ── the renewal: one name, one curtain, one measured screen ─────────────────
+run_break "the curtain is armed per view instead of per route" src/shell/app.js \
+  's@PageFx.armed(PageFx.routeKey(S), render)@PageFx.armed(S.view, render)@' \
+  "the transition is armed where every view change passes"
+
+run_break "the curtain forgets to invert for the dark sheet" src/styles/shell.html \
+  's|  --fx-ink:var(--ink-50);||' \
+  "the curtain is visible on the dark sheet too"
+
+run_break "the curtain rises under the sticky bar" src/styles/shell.html \
+  's@--z-pagefx:95;@--z-pagefx:5;@' \
+  "the curtain covers the sticky bar"
+
+run_break "the splash leaves before the page has loaded" src/shell/app.js \
+  's@Promise\.all(\[minDelay, session, loaded\])@Promise.all([minDelay, session])@' \
+  "the splash waits for the page to load before it leaves"
+
+run_break "the splash stops handing off through the curtain" src/shell/app.js \
+  's@PageFx.handoff(swap);@swap();@' \
+  "the splash hands off through the same curtain"
+
+run_break "the masthead goes back to a guessed unit" src/styles/shell.html \
+  's@min-height:var(--view-h,100dvh);@min-height:100vh;@' \
+  "the viewport is measured and published"
+
+run_break "the intro goes back to width-only type" src/styles/shell.html \
+  's@--f-intro:clamp(1.45rem,min(7vw,6.2vh),2.6rem);@--f-intro:clamp(1.45rem,7vw,2.6rem);@' \
+  "the intro is measured on both axes"
+
+run_break "the store cards stack again" src/styles/shell.html \
+  's@.landing__dlcards{grid-template-columns:repeat(2,minmax(0,1fr))}@.landing__dlcards{grid-template-columns:minmax(0,1fr)}@' \
+  "the two stores share a row once there is room"
+
+run_break "the claims go back on top of the drawing" src/styles/shell.html \
+  's@.journey__svg{position:static;width:100%;@.journey__svg{position:absolute;inset:0;width:100%;@' \
+  "the claims sit under the drawing at every width"
+
+run_break "the bar puts every control on one line" src/styles/shell.html \
+  's@.landing__actions>.btn{margin-inline-start:var(--s3)}@.landing__actions>.btn{margin-inline-start:0}@' \
+  "the auth pair is set apart from the switches"
+
+run_break "the page names leave the centre of the bar" src/styles/shell.html \
+  's@.landing__links{position:absolute;inset-inline-start:50%;transform:translateX(-50%)}@.landing__links{transform:translateX(-50%)}@' \
+  "the page names are centred in the bar where there is room"
+
+run_break "the foot line goes back to the slogan" src/screens/landing.js \
+  's@t("rights")@t("landingFoot")@' \
+  "the foot line is built from the brand, not typed out"
+
+run_break "a cut driver chapter comes back" src/screens/landing.js \
+  's@  { t: "driverF3T", b: "driverF3B" },@  { t: "driverF3T", b: "driverF3B" },\n  { t: "driverF5T", b: "driverF5B" },@' \
+  "the driver page states four decisions|the deleted driver claims are deleted, not hidden"
+
+run_break "the installer file name is typed out again" src/lib/landing-parts.js \
+  's@download: BRAND.download.apk@download: "ride-share.apk"@' \
+  "the installer's file name comes from brand.json"
+
+# Every case backs up before it mutates; this proves the product tree came back whole.
+# A leftover mutation is not a test failure — it is a corrupted build that the next suite
+# would read as truth, which has already happened here.
+drift=0
+if [ -d "$SCRATCH/orig" ]; then
+  while IFS= read -r f; do
+    rel="${f#$SCRATCH/orig/}"
+    cmp -s "$f" "$rel" || { echo "  RESTORE FAILED  $rel"; cp "$f" "$rel" 2>/dev/null; drift=1; }
+  done < <(find "$SCRATCH/orig" -type f)
+fi
+[ "$drift" -eq 0 ] || exit 1
+
+run_break "the curtain's pacing token is renamed in the sheet" src/styles/shell.html \
+  's|  --fx-rise:220ms;|  --fx-rise-ms:220ms;|' \
+  "every pacing token the curtain reads is defined in the sheet"
+
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

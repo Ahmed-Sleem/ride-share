@@ -13,8 +13,8 @@ export interface Brand {
   tagline: { en: string; ar: string };
   description: string;
   font: { family: string; weight: number };
-  logo: { viewBox: string; path: string; gradient: [string, string] };
-  browserThemeColor: { dark: string };
+  logo: { viewBox: string; path: string; color: { light: string; dark: string } };
+  browserThemeColor: { light: string; dark: string };
   email: {
     fromName: string;
     colors: {

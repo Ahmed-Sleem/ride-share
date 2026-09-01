@@ -238,6 +238,24 @@ async function loadDriverJourneyInto(pick, scan, list) {
   } catch (e) { pick.append(Banner("danger", errText(e.messageKey))); }
 }
 
+/* The camera control had a label and no function: tapping it threw a TypeError,
+   and on the web there is no camera to reach at all. Platform.scanCode() answers
+   { code }, { denied } or null and never throws, so those three cases are the
+   whole handler, and the keypad above stays the fallback it was designed to be. */
+async function scanCameraAction(journeyId) {
+  if (S.stopBusy) return;
+  const scan = (typeof Platform !== "undefined" && typeof Platform.scanCode === "function")
+    ? await Platform.scanCode() : null;
+  if (scan && scan.code) {
+    S.scanCode = scan.code;
+    const f = document.getElementById("scan-code");
+    if (f) f.value = scan.code;
+    await scanCodeAction(journeyId);
+    return;
+  }
+  toast(scan && scan.denied ? t("j_scanDenied") : t("j_scanUnavailable"));
+}
+
 async function scanCodeAction(journeyId) {
   const code = (S.scanCode || "").replace(/\D/g,"");
   if (code.length !== 6) { toast(t("validation.code")); return; }

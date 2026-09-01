@@ -1,5 +1,187 @@
 # CHANGELOG
 
+## 2026-09-01 — GUI renewal phase 1: the landing rebuilt as a monochrome poster
+
+The marketing surface is rebuilt on the owner's demo's visual language, with the
+product's content and the repository's rules. Plan of record:
+[planning/GUI_RENEWAL.md](../planning/GUI_RENEWAL.md); the drawing's provenance:
+[design/JOURNEY_GEOMETRY.md](../design/JOURNEY_GEOMETRY.md).
+
+**Added** (`apps/web/`): `src/lib/qr.js` (ISO/IEC 18004 encoder — byte mode,
+L/M/Q/H, v1–12, eight masks with the spec's penalties, no DOM, verified against
+golden matrices produced by an independent reference implementation and read back
+by a decoder in the test); `src/lib/landing-parts.js` (the poster's shapes);
+`src/lib/motion.js` (reveal observer, variable-weight scrub, the journey — the
+scroller is passed in, only compositor properties are written, every mount returns
+a dispose, reduced motion gets the finished page); `src/data/journey.js`
+(generated geography with its bbox and source in the file); `tests/fixtures/`
+(the golden QR file).
+
+**Rewritten**: `src/screens/landing.js` — all seven views (rider, drive, about,
+help, download, shared-trip, policy documents) composed from the primitives;
+the landing block of `src/styles/shell.html`, transcribed from measured demo
+geometry rather than approximated; the splash and the four intro slides re-skinned
+onto `--paper`/`--ink` with no new colours.
+
+**Removed from the interface**: hero illustration and sticker usage, the sticky
+dark journey stage, the colour-blocked story panels, the `herodrift` glow,
+`.dlqr` as an `<img>`, the third-party QR fetch (`api.qrserver.com` is gone from
+the bundle and a test asserts it stays gone), and `--sticker-accent`. The asset
+packs themselves were not deleted — they are reported in
+[planning/GUI_RENEWAL.md](../planning/GUI_RENEWAL.md) §8 as the owner's decision,
+measured at 408,215 bytes of built output with no remaining consumer.
+
+**The owner's review round** (nine items, all landing): the poster is centred by its
+gutters (`minmax(--gutter,1fr)`, `--landing-max: 1360px`) after measuring the whole
+`0→1232` pin-to-the-left at 1440; the hero's three lines are `Fixed routes / Published
+times / One fare` with a full sentence as the lede, and the `h1` no longer steals that
+sentence as its `aria-label`; the feature rows carry short titles with the information
+in the descriptions and one type step smaller; the claims moved to the road and the
+chapters to the rows, the way the demo arranges them, so nothing says itself twice —
+`unit.test.js` renders every view in both languages and refuses a repeated heading,
+lede, caption or paragraph; the download page lost an eyebrow that copied its own `h1`,
+and `driveHeroKick`/`mkChaptersKick` were deleted as duplicate copy keys; About gained
+how-a-fare-works and who-runs-it; the compact menu is three dots with no chrome, its
+panel is the bar's `--glass-blur` on `--glass-solid`, it opens with `--panel-in-dur` /
+`--panel-in-ease` and a row arriving `--panel-in-step` behind the last, and Sign up is
+a link like the rest of the list; and section spacing is one token, `--flow`, declared
+at the end of the landing sheet (measured: 8 px under a welded eyebrow, 22 px between
+blocks, five views, both languages).
+**Two more, found by reading the pixels rather than the DOM**: on a phone the claims
+band printed its copy straight through the map — the drawing fills whatever box it is
+given, so at 390 px the road crossed every line of text, and the "road hugs the right
+edge" assumption in the CSS was false for this coastline. Under 900 px the map is now
+its own band at the head of the section and the claims follow as numbered rows
+(`.journey__svg{position:static;height:min(46vh,330px)}`, measured overlap 0 in both
+languages). Removing the boards' `h2` left `.landing__h2` styled and unemitted, so the
+rule and its RTL partner are gone; the two remaining dead entries this round produced
+(`forRiders`, `mkJourney`'s optional cut label) are listed for the owner in §8 rather
+than deleted.
+
+**The adaptive round — the marketing surface measured, not sampled.** The landing had
+seven viewports in its suite and the app had fifteen; "adaptive" cannot rest on that.
+`tests/landing.test.js` now runs the whole battery at 26 viewports (320×480 to 3440×1440,
+landscape and short lids included, the narrow ones doubling as the 200 % zoom case) and a
+deep battery at the ten widths where a rule turns over — 699/700 where the bar folds to
+dots, 899/900 where the claims stop sharing a column with the map, 1359/1360 where the
+measure caps — on all five pages, in both directions. Each of those 100 combinations
+measures: no horizontal overflow on the document *or* on `.landing`; nothing escaping the
+window; no control clipped out of it (a `overflow:hidden` box hides that defect from every
+other check, so it gets its own); copy never clipped to an ellipsis; no block wider than
+the space it was given; the rhythm of the section, cta and slab containers read from their
+declarations (no component carries its own bottom margin, and the space above a block is a
+token or a weld the central sheet declares); every block revealed after a scroll; and every
+tap target at the floor. Four defects came out of the first pass, all shipped-in:
+
+- **The bar at 320 px pushed its own menu off the screen.** The rule that removes the
+  masthead's "Log in" on phones named `.btn--ghost`, a class the markup stopped producing;
+  the row kept the redundant control (the panel already offers it) and the dots — the
+  phone's only way into the site — landed at x=399 of a 320 px window. The selector names
+  `.btn--bare` now, and under 380 px the wordmark steps back for the mark so the row fits
+  with room instead of being squeezed letter by letter.
+- **`figure` carries 40 px of inline margin from the user-agent sheet**, so the install
+  code on Get the app was 80 px wider than its card at every size and 7 px wider than the
+  scroller at 320 px — a page that scrolls sideways on the smallest phone the product
+  supports. Figures on this surface own their space (`.landing figure{margin:0}`).
+- **A `1fr` track cannot be narrower than its content** (`minmax(auto,1fr)`), which is the
+  difference between a fluid grid and one that overflows the moment the copy is long. The
+  landing's two remaining bare tracks are `minmax(0,1fr)` now, and `unit.test.js` refuses a
+  new one — a declaration the browser cannot talk out of.
+- **The reveal depended on being observed.** `IntersectionObserver` reports a change of
+  ratio, not a position: a flick or a scrollbar jump can carry a block from below the fold
+  to above it between two samples and the observer never fires for it — no entry, no
+  callback, and CSS still holding it at `opacity:0`. Board rows 02 and 03 on the rider page
+  were invisible exactly that way at 1440 px. `Motion.reveal` now sweeps the still-pending
+  set on scroll (rAF-throttled, self-unsubscribing when nothing is left, and handed back as
+  a dispose so `mountLanding` owns it like every other mount), and the suite refuses a view
+  with anything still transparent at each of the 100 combinations.
+- Bar labels gained a hit box: the shortest Arabic name in the masthead is 14 px of glyph,
+  so the link takes `--s2` of inline padding and keeps the row's own spacing — a thumb aims
+  at 30×40 now, and the tap floor is a test, not an intention.
+
+**Bugs fixed here, with the guard that keeps them fixed:**
+
+- Four landing views rendered invisible copy. `shell.html` hides `[data-rv]` until a
+  script marks it `in`, but `mountLanding` ran only on the rider and drive pages, so
+  About, Help, Get the app and the policy documents printed their text at `opacity:0`
+  while every DOM assertion passed. The call moved into the `landing()` dispatcher,
+  where a new view cannot miss it, `mkSection` marks the blocks it holds that do not
+  already reveal, and a case in `tests/layout-breaks.sh` deletes the marking and
+  expects red.
+- The reveal skipped anything the reader jumped past: `isIntersecting` never fires for
+  a block that left the viewport between two frames (a scrollbar drag, an in-page
+  link), so it stayed transparent for the session. A block above the scroller's top
+  now counts as seen, and the landing suite scrolls every view to its bottom and
+  refuses a view with anything still hidden.
+- The desktop rail never widened: the landing splice dropped
+  `.nav{width:var(--rail-expanded)}`, leaving the expanded labels sharing 80 px with
+  the icons. Restored, with a break case that removes it and must fail
+  "expanded widens the rail".
+- A leftover from the break harness's older scratch scheme was found in the product:
+  `field("stop-latX", …)` in two places in `screens/staff.js`, from a killed run whose
+  restore never happened — a live defect, since the desk stop form wrote to an id its
+  own submit handler never read. Caught by `unit.test.js`'s `#stop-lat` assertions; both
+  harnesses now keep their pre-case copy in `$TMPDIR` with an `EXIT` trap, the colour
+  guard ignores scratch extensions, and `.gitignore` covers them.
+- The Arabic copy table had holes: `booked` and `bookedBody` had been spliced into the
+  sentence above them (corrupting `cancelTerms`) and `auth.owner_only` never existed,
+  so an Arabic admin screen printed a raw key. Filled, and `unit.test.js` now compares
+  the two language trees key by key in both directions and refuses an empty or
+  key-echoing string. The Arabic journey beats also said something else
+  (`تأكيد/صعود/الطريق` for Match/Board/Ride) and were re-mirrored; a parity guard
+  counts keys and empties, not meaning, which is worth remembering for phase 2.
+- `scanCameraAction` was called by the driver board and defined by nobody: an enabled
+  button that threw on tap. It now uses `Platform.scanCode()`'s three answers
+  (`{code}` submits through the same path as a typed code, `{denied}` and `null` say so
+  in words and keep the keypad), and a break case proves the guard fails if the handler
+  disappears again.
+- The install QR is generated locally from the exact URL its button opens, with the
+  cache-buster taken from `BRAND.version.code`; `apkDownloadUrl` no longer carries a
+  hardcoded origin fallback.
+- `.mapstops__item` referenced two tokens that were never defined. The stylesheet is
+  swept both ways — 162 `var()` references, none unresolved, and no token defined and
+  never read; the two the scripts own (`--d`, `--near`) are read with a fallback, so the
+  first paint is already finished-looking. The physical `margin/padding/border-left|right`
+  count in `shell.html` is zero so RTL cannot inherit a one-direction layout.
+- The QR encoder's own defects, found by the differential harness: Reed–Solomon
+  generator polynomial order, a double-counted penalty rule and a mis-implemented
+  rule 3, a format-area over-reservation, and (during this work) a splice that deleted
+  four functions — the reason `node --check` now follows every edit to a concatenated
+  bundle. Mask *selection* still differs from the reference on some inputs; that is the
+  encoder's free choice, documented rather than chased.
+
+**Test harness, four defects of its own fixed**: two stops break cases named tests
+that do not exist and so could never fail (re-pointed at the live route-form
+assertions); "staff create offers no super_admin option" grepped the source for one of
+two role lists, so adding `super_admin` to either passed (both surfaces are now
+rendered and read, as two separate cases); `tests/breaks.sh` printed its summary in the
+middle of the file, so appended cases ran without counting and an early failure skipped
+the rest (moved to the end, with a `BREAKS_ONLY=<substring>` filter so one guard can be
+reviewed in seconds); and `layout-breaks.sh` had the same shape — a case added at the
+bottom of the file never ran, and "landing loses its full width" went blind, because a
+grid floor can hide the shrink from a runtime measurement, so that guarantee is now
+asserted as a declaration in `unit.test.js` with the break case moved beside it. Four cases had to be re-derived against the new
+source after the copy renames (the drive steps slab, the rider board's chapter count,
+the road's cut list, the map's `aria-hidden`): each was edited until it fails the one
+test that owns that guarantee, and no anchor was left to pass by matching nothing.
+
+**Verification**: unit 553 / 0, a11y 14 / 0 (axe, every role, both languages),
+layout 8,185 / 0 (Chromium, 15 viewports 320→2560 plus overlays, themes, RTL, zoom),
+  landing 1,232 / 0 (Chromium: the
+masthead is exactly one viewport tall at every width, the route measures over 200 px of
+real geometry, the band is wider than the screen so its loop seam cannot show, the head
+frosts, dark inverts the slab against the paper by measured luminance, every view
+reveals all of itself when scrolled, the bus rides to the destination and fires the
+arrival once, and the adaptive matrix above), layout-breaks 11 / 0 (the three new cases put
+the map back over the copy, drop the flow rhythm, and take the menu under the tap floor —
+each turns the suite red), breaks 98 / 0 (every planted defect caught, none missed,
+none caught for the wrong reason), `scripts/verify-repo.sh` green
+(11 guards including branding, tokens, secrets, authority and hide-not-disable).
+Bundle: 941.6 KB, 18 modules.
+
+No backend, API, schema or deployment file was touched. `archive/` is untouched.
+Phase 2 (the app GUI) waits for its demo; phase 3 keeps the queued plan items.
+
 ## 2026-08-31 — GUI renewal preparation: pre-renewal archive + design study
 
 - `archive/gui-before-renewal-2026-08-31-8828381.zip`: byte-exact `git archive` of the whole GUI
@@ -29,6 +211,33 @@
 - `API.request` in `api.js` signs outgoing `/v1/*` requests with HMAC headers
   when running on the mobile surface.
 - 14 mobile tests green including subtle HMAC & SHA-256 verification tests.
+
+**Also this date — the curtain, the twelve, and the tree's integrity.**
+
+- One page transition now serves the whole surface: `src/lib/pagefx.js` draws a
+  bottom-anchored path that rises, fills, releases and falls. It is armed only by a
+  gesture the reader actually made (a trusted `pointerdown` or key — never a
+  synthesised click), it swaps the page on the frame the screen is covered, and the
+  swap keeps its own 600 ms deadline so a hidden tab still gets its page. Pacing is
+  read from `--fx-rise/fill/release/fall` and stacking from `--z-pagefx`, so the
+  sheet owns the motion and the JS only supplies the fallback.
+- The owner's twelve review points are all in: page names centred on the bar's axis,
+  the masthead one screen tall through `--view-h`, the splash waiting on its three
+  conditions and leaving through the curtain, the button rhythm in the actions row,
+  the name in one place (brand file → copy table → footer → install path → server
+  header), the claims under their own band with a two-column key, a rights-only
+  footer, four driver chapters instead of six, and two-up store cards.
+- Transactional mail prints on the ink ramp (`brand.json → email.colors`, every value
+  an existing token), so a receipt can no longer disagree with the interface.
+- Suites on this tree: unit 586 · a11y 14 · landing 2,172 · layout 8,185 ·
+  breaks 111 · layout-breaks 11 (see §10 of the plan for the exact commands).
+- The break harnesses moved their scratch out of `$TMPDIR` and now end every run by
+  proving each product file is byte-identical to the copy they started from. Two
+  interrupted runs had left 49 of their own planted defects live across 16 files —
+  an input at 14 px, a stray brace that silently killed every rule below it, a
+  landing that opened the app's intro instead of the poster — and `git diff` could
+  not see any of it, because a renewal tree is dirty by design. Lesson recorded in
+  §10 of the plan: never edit `src/` while a break harness is running.
 
 ## 2026-08-25 — Mobile service is an app API, not a website
 

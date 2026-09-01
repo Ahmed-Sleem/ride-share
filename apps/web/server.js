@@ -16,6 +16,19 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
+/* The brand file is the one place the product's name is written down; the bundle reads
+   it at build time, and the server reads it so the file name it offers the browser is
+   the same name the install card promises. */
+const BRAND = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'packages', 'brand', 'brand.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
+const DL_PATH = (BRAND.download && BRAND.download.path) || '/download/android';
+const DL_APK = (BRAND.download && BRAND.download.apk) || 'app.apk';
+
 const DIST = path.join(__dirname, 'dist', 'index.html');
 const LEGACY = path.join(__dirname, 'dist-preview.html');
 
@@ -135,17 +148,19 @@ async function handler(req, res) {
       surface: 'web',
     }, req);
   }
-  if (url === '/download/android.apk' || url === '/download/android') {
+  // `<slug>.apk` is the extensionless alias; the `.apk` form keeps older links and
+  // already-printed QR codes working.
+  if (url === DL_PATH || url === DL_PATH + '.apk') {
     const candidates = [
       process.env.ANDROID_APK_PATH,
       path.join(__dirname, 'downloads', 'android.apk'),
       path.join(__dirname, '..', '..', 'uploads', 'app-debug.apk'),
     ].filter(Boolean);
     const file = candidates.find((p) => { try { return fs.existsSync(p) && fs.statSync(p).isFile(); } catch { return false; } });
-    if (!file) return json(res, 404, { ok: false, code: 'APK_NOT_STAGED', hint: 'Place the debug APK at apps/web/downloads/android.apk or set ANDROID_APK_PATH' }, req);
+    if (!file) return json(res, 404, { ok: false, code: 'APK_NOT_STAGED', hint: `Serve the installer from apps/web/downloads/${DL_APK} or set ANDROID_APK_PATH` }, req);
     res.writeHead(200, {
       'content-type': 'application/vnd.android.package-archive',
-      'content-disposition': 'attachment; filename="ride-share.apk"',
+      'content-disposition': `attachment; filename="${DL_APK}"`,
       'cache-control': 'no-store',
     });
     return fs.createReadStream(file).pipe(res);

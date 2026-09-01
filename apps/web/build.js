@@ -16,20 +16,59 @@ const OUT   = path.join(__dirname, "dist-preview.html");
 const BRAND = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "..", "packages", "brand", "brand.json"), "utf8"));
 
-/* favicon — a data URI built from the brand logo + gradient. */
+/* brand.json is a *published* file: whatever can write the repository can write this
+   one, and its contents are spliced into the served document — into `<title>`, into two
+   `theme-color` metas, into a CSS font stack, into the favicon's inline <svg>, and into
+   the install card's link. So the shapes are refused here, where the reason is obvious,
+   rather than reaching a browser as markup, as `undefined`, or as a dead button. */
+(() => {
+  const fail = (m) => { console.error("FAIL: brand.json — " + m); process.exit(1); };
+  const noMarkup = (v, what) => {
+    if (typeof v !== "string" || v.trim() === "" || /[<>"`&]/.test(v)) fail(what + " must be plain text");
+  };
+  for (const k of ["name", "tagline"]) {
+    const o = BRAND[k];
+    if (!o || typeof o !== "object") fail(`\`${k}\` must give one value per language`);
+    for (const lang of Object.keys(o)) noMarkup(o[lang], `${k}.${lang}`);
+  }
+  noMarkup(BRAND.description, "description");
+  if (/[<>{}&`\[\];@]/.test(BRAND.font.family) || !/^[A-Za-z0-9 ,;'"().+-]+$/.test(BRAND.font.family)) {
+    fail("`font.family` must be a plain font stack (it becomes a CSS value)");
+  }
+  if (!Number.isFinite(BRAND.font.weight)) fail("`font.weight` must be a number");
+  const hex = (v) => /^#[0-9a-fA-F]{6}$/.test(v);
+  for (const [what, o, keys] of [["browserThemeColor", BRAND.browserThemeColor, ["light", "dark"]],
+                                 ["logo.color", BRAND.logo.color, ["light", "dark"]]]) {
+    for (const k of keys) if (!o || !hex(o[k])) fail(`\`${what}.${k}\` must be a #rrggbb colour`);
+  }
+  if (!/^[\d. -]+$/.test(String(BRAND.logo.viewBox))) fail("`logo.viewBox` must be numbers");
+  if (!/^[A-Za-z0-9][\w.+-]*$/.test(String(BRAND.version.name)) || !Number.isInteger(BRAND.version.code)) {
+    fail("`version` must give a name and an integer code (the install link carries it)");
+  }
+  const d = BRAND.download;
+  if (!d || !/^\/[\w./-]*$/.test(String(d.path))) fail("`download.path` must be a rooted path");
+  if (!d || !/^[\w.-]+\.apk$/.test(String(d.apk))) fail("`download.apk` must be an .apk file name");
+  if (typeof BRAND.logo.path !== "string" || BRAND.logo.path.length < 8
+      || !/^[AaMmLlHhVvCcSsQqTtAaZz0-9.,\s+-]+$/.test(BRAND.logo.path)) {
+    fail("`logo.path` must be SVG path data");
+  }
+})();
+
+/* favicon — a data URI built from the brand logo, flat ink that answers
+   `prefers-color-scheme` the same way the document does. The in-app mark is
+   currentColor (see logoSVG in lib/components.js); a favicon has no document to
+   inherit from, so the two literal colours live in brand.json — the one place
+   the mark is written down. */
 const faviconSvg =
   `<svg xmlns='http://www.w3.org/2000/svg' viewBox='${BRAND.logo.viewBox}'>` +
-  `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
-  `<stop offset='0' stop-color='${BRAND.logo.gradient[0]}'/>` +
-  `<stop offset='1' stop-color='${BRAND.logo.gradient[1]}'/>` +
-  `</linearGradient></defs>` +
-  `<path fill='url(#g)' fill-rule='evenodd' d='${BRAND.logo.path}'/></svg>`;
+  `<style>@media (prefers-color-scheme:dark){path{fill:${BRAND.logo.color.dark}}}</style>` +
+  `<path fill='${BRAND.logo.color.light}' fill-rule='evenodd' d='${BRAND.logo.path}'/></svg>`;
 const faviconDataUri = "data:image/svg+xml," + encodeURIComponent(faviconSvg);
 
 const SHELL_TOKENS = {
   "__BRAND_TITLE__": BRAND.name.en,
   "__BRAND_DESCRIPTION__": BRAND.description,
-  "__BRAND_THEME_COLOR__": BRAND.logo.gradient[0],
+  "__BRAND_THEME_COLOR__": BRAND.browserThemeColor.light,
   "__BRAND_THEME_DARK__": BRAND.browserThemeColor.dark,
   "__BRAND_FAVICON__": faviconDataUri,
   "__BRAND_FONT__": BRAND.font.family,
@@ -48,10 +87,15 @@ if (/__BRAND_[A-Z_]+__/.test(shell)) {
 /* Order matters: data → components → api → screens → shell wiring. */
 const PARTS = [
   "data/content.js",
+  "data/journey.js",   /* the landing's decorative geometry (provenance in the file) */
+  "lib/qr.js",         /* a real QR encoder — an install code must actually scan */
   "lib/components.js",
   "lib/search.js",
   "lib/api.js",
   "lib/map.js",
+  "lib/motion.js",     /* the landing's scroll machinery (reveal, weight, journey) */
+  "lib/pagefx.js",     /* the page transition — one curtain, armed by render() */
+  "lib/landing-parts.js",/* the poster's shapes: masthead, band, journey, slab, chapters */
   "screens/planner.js",	/* Path A: Uber-style planner search (DEC-206) */			/* RouteMap — the one data-bound map primitive (R21) */
   "screens/landing.js",
   "screens/auth.js",

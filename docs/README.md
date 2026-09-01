@@ -22,7 +22,15 @@ lives in `apps/api/`, and deployment/infrastructure lives in `infra/`.
 
 ## Where to start work
 
-The current work is **BUILD_PLAN Phase 3, points P3.7–P3.9** — the wallet and
+The GUI renewal is the active work: the landing was rebuilt on the
+monochrome design system (phase 1 of three — landing, app shell, then the
+remaining plan items and fixes), and the app-shell phase waits for its demo to
+be confirmed. The pre-renewal interface is archived byte-for-byte at
+`archive/gui-before-renewal-2026-08-31-8828381.zip`, which is the revert point
+and the comparison baseline; `docs/process/CHANGELOG.md` records what the
+renewal changed and why.
+
+Build-wise, the plan is unchanged: **BUILD_PLAN Phase 3, points P3.7–P3.9** — the wallet and
 ledger (cash-first), the driver manifest and boarding-code scan, and the live
 journey screens — after which the first vertical slice is complete. The
 status index is [process/checklists/00_MASTER.md](process/checklists/00_MASTER.md);
@@ -66,8 +74,10 @@ deactivation thresholds, monorepo tooling, cold-start demand estimation. Each
 finding carries its source.
 
 ### design/
-The design system chapter: tokens, type scale, spacing, component rules, and
-the reasoning behind the two-colour model.
+The design system chapter: tokens, type scale, spacing, component rules, the
+one-ink palette and its four exceptions, the poster rules for the marketing
+surface, and the provenance of the geography on the landing
+([design/JOURNEY_GEOMETRY.md](design/JOURNEY_GEOMETRY.md)).
 
 ### process/
 | File | Contents |

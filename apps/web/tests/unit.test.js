@@ -153,6 +153,24 @@ group("ADAPTIVE — Material 3 breakpoints, nav swaps at each");
   ok("short-viewport rule exists",       /@media \(max-height:520px\)/.test(CSS));
 
   const compact=CSS.slice(CSS.indexOf("@media (max-width:599.98px)"));
+  /* The landing is a flex child of #root, so it has to say how wide it is: without
+     this pair it shrinks to its content and the poster renders at half a viewport
+     (a bug that was actually reported). Measuring it at runtime is not enough — a
+     grid floor can hide the shrink — so the declaration itself is the contract. */
+  ok("the landing is declared full width", /^\.landing\{width:100%;min-width:0;height:100%/m.test(CSS));
+  /* A `1fr` track is `minmax(auto,1fr)`, so it cannot shrink below its content: one
+     wide child (a caption, a QR, a long word) and the card bursts the page instead of
+     adapting. Every landing grid therefore names its floor. The app's own grids are
+     not in this set — their `1fr` tracks are bounded by `min-width:0` on the item. */
+  const bareFr = [];
+  CSS.replace(/([^{}]+)\{([^{}]*)\}/g, (_, sel, body) => {
+    if (!/\.landing|\.journey/.test(sel)) return;
+    const m = body.match(/grid-template-columns:([^;}]*)/);
+    if (!m) return;
+    const left = m[1].replace(/minmax\((?:[^()]|\([^()]*\))*\)/g, "");
+    if (/fr/.test(left)) bareFr.push(sel.trim().split("\n").pop().slice(0, 40));
+  });
+  ok("no landing grid leaves a track at its content width", bareFr.length === 0, bareFr.join(" | "));
   ok("compact puts the bar at the bottom", /order:2/.test(compact.slice(0,400)));
   ok("compact stacks the shell", /flex-direction:column/.test(compact.slice(0,400)));
 
@@ -215,26 +233,76 @@ group("SAFE AREAS AND ZOOM");
      !/maximum-scale/.test(SRC) && !/user-scalable\s*=\s*no/.test(SRC));
 }
 
-group("ACCENT COLOUR HAS A JOB");
+group("THE PALETTE IS INK, AND INK HAS A JOB");
 {
-  ok("primary brand is violet", /--brand:var\(--violet-500\)/.test(CSS));
-  ok("accent token exists", /--accent:var\(--coral-500\)/.test(CSS));
-  ok("accent has a dark-theme value", /\[data-theme="dark"\]\{[\s\S]*--accent:var\(--coral-400\)/.test(CSS));
+  /* The product prints in ink on paper. These assertions used to name hues
+     (brand is violet, accent is coral); they now guard the same three ideas in
+     the register the design actually has: brand and accent are different ROLES
+     (different steps, never interchangeable), every colour a component paints
+     with comes from a token, and decorative colour is gone for good. */
+  ok("brand is the theme ink", /--brand:var\(--ink-900\)/.test(CSS));
+  ok("accent is a distinct ink step", /--accent:var\(--ink-700\)/.test(CSS));
+  ok("accent has a dark-theme value",
+     /\[data-theme="dark"\]\{[\s\S]*--accent:#CFCFCF/.test(CSS));
   ok("accent soft/border variants exist",
      /--accent-soft:/.test(CSS) && /--accent-border:/.test(CSS));
   ok("on-accent is defined, not guessed", /--on-accent:/.test(CSS));
-  ok("focus ring uses the accent colour", /--focus:var\(--accent\)/.test(CSS));
-  ok("accent and brand are different roles",
-     !/--accent:var\(--violet/.test(CSS) && !/--brand:var\(--coral/.test(CSS));
-  ok("primitives are two-layer (raw violet ramp exists)",
-     /--violet-500:#6C63FF/.test(CSS));
-  ok("pops are tokenised",
-     /--pop-mint:/.test(CSS) && /--pop-lime:/.test(CSS) && /--pop-sky:/.test(CSS) &&
-     /--pop-pink:/.test(CSS) && /--pop-coral:/.test(CSS));
+  ok("focus ring is the brand ink", /--focus:var\(--brand\)/.test(CSS));
+  ok("brand and accent are different roles",
+     /--brand:var\(--ink-900\)/.test(CSS) && !/--accent:var\(--ink-900\)/.test(CSS));
+  ok("primitives are two-layer (every semantic colour is a ramp reference)",
+     /--ink-900:#0A0A0A/.test(CSS) && /--brand:var\(--ink-900\)/.test(CSS));
+
+  /* The decision, not just the look: no decorative palette may come back,
+     because a chip that means something only in coral is unreadable in print,
+     in a screenshot, and for a colour-blind rider (§10.4). */
+  ok("no decorative pop palette survives",
+     !/--pop-[a-z]+:/.test(CSS) && !/\.chip--(mint|lime|sky|pink|coral)\{/.test(CSS));
+  ok("no gradient paints a control",
+     !/--brand-2:/.test(CSS) && !/\.btn--primary\{background:linear-gradient/.test(CSS));
+  /* Status keeps its colour: it is the one place hue carries meaning, and it
+     is always paired with an icon and a word. */
+  ok("status hues are the only non-neutrals left",
+     /--ok:var\(--green-500\)/.test(CSS) && /--danger:var\(--red-500\)/.test(CSS) &&
+     /--warn:var\(--amber-500\)/.test(CSS) && /--info:var\(--blue-500\)/.test(CSS));
+
   const t=boot();
   t.set({user:{id:"u1",role:"rider",name:"Nour"}});
   t.go("rider","home");
   ok("accent is actually used in the product", !!t.q(".chip--accent"));
+}
+
+group("MONOCHROME CONTRAST — MEASURED, NOT EYEBALLED");
+{
+  /* Every pair the product paints with, checked against WCAG 2.2 relative
+     luminance. This is what the ramp comment promises, so the test does the
+     measuring: if someone edits --ink-500 lighter, "muted text on paper" fails
+     and says so by name instead of shipping a page nobody can read. */
+  const hex = h => { h=h.replace("#",""); return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255); };
+  const lum = h => { const f=v=>v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);
+                     const [r,g,b]=hex(h).map(f); return 0.2126*r+0.7152*g+0.0722*b; };
+  const ratio = (a,b) => { const x=lum(a),y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05); };
+  const tok = n => { const m=new RegExp("--"+n+":(#[0-9A-Fa-f]{6})").exec(CSS); return m&&m[1]; };
+  const step = ref => { const m=/var\(--(ink-[0-9]+)\)/.exec(ref||""); return m?tok(m[1]):ref; };
+  const brandRef = (/--brand:([^;]+)/.exec(CSS)||[])[1];
+  const onBrandRef = (/--on-brand:([^;]+)/.exec(CSS)||[])[1];
+  const mutedRef = (/--text-muted:([^;]+)/.exec(CSS)||[])[1];
+  const secRef = (/--text-secondary:([^;]+)/.exec(CSS)||[])[1];
+  const baseRef = (/--bg-base:([^;]+)/.exec(CSS)||[])[1];
+  const paper = step(baseRef), ink = step(brandRef);
+  ok("brand fill holds its label text at AA large", ratio(ink,step(onBrandRef))>=3,
+     "on-brand "+ratio(ink,step(onBrandRef)).toFixed(2));
+  ok("primary text on paper is AAA", ratio("#0A0A0A",paper)>=7);
+  ok("secondary text on paper is AA", ratio(step(secRef),paper)>=4.5,
+     String(ratio(step(secRef),paper)));
+  ok("muted text on paper is AA", ratio(step(mutedRef),paper)>=4.5,
+     String(ratio(step(mutedRef),paper)));
+  ok("the ink ramp is monotonic", (()=>{
+       const want=[0,25,50,100,150,200,300,400,500,600,700,800,850,900,950,1000];
+       let prev=1.1;
+       for (const n of want){ const v=tok("ink-"+n); if(!v) return false;
+         const l=lum(v); if(l>prev+1e-4) return false; prev=l; }
+       return true; })());
 }
 
 group("THEME — AUTO FOLLOWS THE SYSTEM, MANUAL OVERRIDES");
@@ -287,9 +355,17 @@ group("RAIL COLLAPSES ON DESKTOP");
 group("BRAND MARK AND FAVICON");
 {
   ok("favicon is embedded", /rel="icon"/.test(SRC) && /data:image\/svg\+xml/.test(SRC));
-  ok("brand gradient is defined once", /id="brandGrad"/.test(SRC));
-  ok("logo references the gradient", /url\(#brandGrad\)/.test(SRC));
-  ok("theme colour matches the brand", /name="theme-color" content="#6C63FF"/.test(SRC));
+  ok("no gradient definition is left in the document", !/brandGrad/.test(SRC));
+  ok("the logo inherits ink", /p.setAttribute\("fill", fill \|\| "currentColor"\)/.test(SRC));
+  ok("theme colour follows the paper/ink pair, in both schemes",
+     /name="theme-color" content="#FFFFFF"/.test(SRC) &&
+     /media="\(prefers-color-scheme: dark\)" content="#0A0A0A"/.test(SRC));
+  const favHref = (/href="data:image\/svg\+xml,([^"]+)"/.exec(SRC) || [])[1] || "";
+  const favSvg = decodeURIComponent(favHref);
+  ok("favicon answers prefers-color-scheme", /@media \(prefers-color-scheme:dark\)/.test(favSvg),
+     favSvg.slice(0, 60));
+  ok("favicon is the brand mark, flat (no gradient defs in a data URI)",
+     /fill-rule='evenodd'/.test(favSvg) && !/linearGradient/.test(favSvg));
   const t=boot();
   t.go("rider","home");
   ok("nav shows the brand mark", !!t.q(".nav__brand svg path[fill]"));
@@ -619,9 +695,18 @@ group("M1 — SPLASH, LANDING, AUTH, REAL IDENTITY");
   t.w.S.view="landing"; t.w.render();
   ok("landing renders the hero", !!t.q(".landing__hero"));
   ok("landing has both CTAs", t.all(".landing .btn").length>=2, String(t.all(".landing .btn").length));
-  ok("landing shows one intro illustration", !!t.q(".heroart--one") && t.all(".heroart .sticker").length===1);
+  /* The masthead is type, not art (the renewal's third decision): three printed
+     lines and no illustration to keep in step with a palette. This replaces the
+     one-illustration rule the old page needed, and it is stricter — there is no
+     artwork left to duplicate, so a slideshow cannot creep back in. */
+  ok("the masthead prints three lines and no illustration",
+     t.all(".landing__hero .landing__displayline").length===3 && !t.q(".heroart") && !t.q(".sticker"),
+     String(t.all(".landing__hero .landing__displayline").length));
   ok("one-color illustrations use currentColor", /fill=\\"currentColor\\"/.test(SRC) || /fill="currentColor"/.test(SRC));
-  ok("story panels sit after the hero", t.all(".stackpanel").length===4, String(t.all(".stackpanel").length));
+  /* The seven claims ride the road, one per cut; the four chapters are the rows
+     below it. Two blocks, two jobs — a claim may appear in one of them only. */
+  ok("the journey carries the seven claims", t.all(".journey__cut").length===7,
+     String(t.all(".journey__cut").length));
 
   t.w.S.view="auth"; t.w.render();
   ok("auth renders a card", !!t.q(".authwrap__card"));
@@ -708,28 +793,47 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   const cr = t.q(".landing__credits");
   ok("footer has no Streamline credit", !t.q(".landing__credits"));
 
-  // story panels: ONE bold pop colour each (700 steps), flat, no gradient
-  ok("story panels are bold (violet card has no gradient)",
-     /\.stackpanel--violet\{background:var\(--violet-700\)\}/.test(CSS) &&
-     !/\.stackpanel--violet\{background:linear-gradient/.test(CSS));
-  ok("all four story panels use the bold 700 shades",
-     /\.stackpanel--coral\{background:var\(--coral-700\)\}/.test(CSS) &&
-     /\.stackpanel--sky\{background:var\(--sky-700\)\}/.test(CSS) &&
-     /\.stackpanel--mint\{background:var\(--mint-700\)\}/.test(CSS));
-  ok("story panel text is white on the bold card", /\.stackpanel\{[^}]*color:var\(--on-solid\)/.test(CSS));
-  ok("story doodle is white line-work with a same-hue light accent",
-     /\.stackpanel__art\{[^}]*color:var\(--on-solid\)/.test(CSS) &&
-     /\.stackpanel--violet\{background:var\(--violet-700\)\}/.test(CSS));
-  ok("stickers float with a springy motion", /@keyframes stickerfloat/.test(CSS));
-  ok("hero glow drifts very slowly", /\.landing__hero\{[^}]*animation:herodrift/.test(CSS) && /@keyframes herodrift/.test(CSS));
+  // the poster prints in one ink: no hue-blocked cards, no sticker accents
+  ok("the chapters are ink on paper, never a colour block",
+     /\.landing__feature\{[^}]*border-top:1px solid var\(--line\)/.test(CSS) &&
+     !/\.landing__feature\{[^}]*background:var\(--stage\)/.test(CSS) &&
+     !/--sticker-accent/.test(CSS) && !/\.stackpanel/.test(CSS));
+  ok("only the slab inverts, and dark inverts the slab",
+     /--stage:var\(--ink-900\)/.test(CSS) &&
+     /\[data-theme="dark"\]\{[\s\S]*--stage:var\(--ink-0\)/.test(CSS));
+  ok("the rule field is twelve hairlines, not a background image",
+     /\.landing__hero-grid\{[^}]*repeat\(12,minmax\(0,1fr\)\)/.test(CSS) &&
+     /\.landing__hero-grid i\{border-inline-start:1px solid var\(--grid-line\)\}/.test(CSS));
+  ok("the running band is one row doubled and shifted by half",
+     /\.landing__marquee-in\{animation:landingslide var\(--marquee\) linear infinite\}/.test(CSS) &&
+     /@keyframes landingslide\{from\{transform:translate3d\(0,0,0\)\}to\{transform:translate3d\(-50%,0,0\)\}\}/.test(CSS) &&
+     /\.landing__marquee\{[^}]*overflow:hidden/.test(CSS));
+  ok("the band only moves when the reader allows motion",
+     /@media \(prefers-reduced-motion:no-preference\)\{[^}]*\/\*[^]*?animation-play-state:paused/.test(CSS));
+  /* Nothing is written onto the map by hand: the drawing is aria-hidden, a cut
+     wears no word the copy table has not issued, and the four stop labels the map
+     does draw come from mkStop1..4 like everything else the page says. */
+  ok("the map is decoration and every label on it comes from the copy table",
+     !!t.q(".journey__svg") && t.q(".journey__svg").getAttribute("aria-hidden")==="true" &&
+     [...t.all(".journey__rule")].every((r) => {
+       const extra = r.textContent.replace(/[0-9]/g, "").trim();
+       return extra === "" || Object.keys(t.w.T.en).some((k) => t.w.T.en[k] === extra);
+     }) &&
+     ["mkStop1", "mkStop2", "mkStop3", "mkStop4"].every((k) => typeof t.w.T.en[k] === "string"),
+     t.all(".journey__rule").map((r) => r.textContent).join("|").slice(0, 60));
 
-  // bounce easing drives the feature-card hover
+  // bounce easing still drives the lift on a chapter row
   ok("bounce easing token is defined", /--bounce:cubic-bezier\(\.34,1\.56,\.64,1\)/.test(CSS));
   ok("feature hover uses the bounce easing", /\.landing__feature\{[^}]*var\(--bounce\)/.test(CSS));
 
-  // dark mode brightens the doodle accents (light stays coral)
-  ok("dark mode gives step cards brighter accents",
-     /\[data-theme="dark"\] \.landing__step--violet \.landing__stepart\{[^}]*var\(--violet-300\)/.test(CSS));
+  /* The landing is the app's own scroller, and both the reveals and the weight
+     scrub have to read IT, not the window: a `window.scrollY` in this shell is
+     permanently zero, which is the bug the port had to avoid. */
+  ok("the scroll machinery never reads the document scroller",
+     !/window\.scrollY|documentElement\.scrollTop/.test(t.w.eval("Motion.toString()")));
+  ok("the landing is the scroller, and the document is not",
+     /\.landing\{width:100%;min-width:0;height:100%;overflow-y:auto/.test(CSS) &&
+     /html,body\{height:100%;margin:0;padding:0;overflow:hidden\}/.test(CSS));
 
   // email sign-up flow
   t.w.S.view="auth"; t.w.S.authMode="signup"; t.w.S.authStep="email"; t.w.render();
@@ -742,10 +846,52 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   // one email = one account: sign-up has its own (stricter) endpoint
   ok("sign-up verifies through a dedicated endpoint", /signupVerify/.test(SRC) && /\/auth\/signup\/verify/.test(SRC));
 
-  // the main admin is the only super_admin; staff rows are immutable for it
-  ok("staff create offers no super_admin option", /\["operations","manager","support"\]/.test(SRC));
+  /* The main admin is the only super_admin, so no surface may offer it. A grep
+     over the source was too weak here: the same three roles are typed in twice —
+     the create picker and the edit sheet — so offering super_admin in one of them
+     still left the other matching and the check passed while a real control had
+     changed. Both surfaces are rendered and read instead. */
+  const picker = t.w.eval('rolePicker("staff-role", "operations")');
+  const pickRoles = [...picker.querySelectorAll("[data-role]")].map((b) => b.getAttribute("data-role"));
+  ok("staff create offers no super_admin option",
+     pickRoles.length === 3 && ["operations", "manager", "support"].every((r) => pickRoles.includes(r)) &&
+     !pickRoles.includes("super_admin"), pickRoles.join(","));
+  const editRoles = [...t.w.eval('staffEdit()').querySelectorAll("#staff-edit-role option")].map((o) => o.value);
+  ok("staff edit offers no super_admin option",
+     editRoles.length === 3 && !editRoles.includes("super_admin") && !editRoles.includes("admin"),
+     editRoles.join(","));
   ok("system admin is marked and protected (no edit/remove)", /isSystemAdmin/.test(SRC) && /adminSystemAdmin/.test(SRC));
 }
+
+group("G-081 — the driver board's camera scan is a real control");
+/* The button was wired to a name that no file defined: it was enabled, tappable,
+   and threw. A dead control is worse than an absent one, so both ends are
+   pinned — the handler must be a function, and every answer the bridge can give
+   has to reach the driver in words. */
+const mG081 = (async () => {
+  const t = boot();
+  ok("the board screen's camera handler exists",
+     t.w.eval('typeof scanCameraAction') === "function", t.w.eval('typeof scanCameraAction'));
+  t.w.Platform = Object.assign({}, t.w.Platform, { scanCode: async () => ({ denied: true }) });
+  await t.w.eval('scanCameraAction("j1")');
+  const denied = t.w.S.toast;
+  const sent = [];
+  t.w.queueOrSend = async (kind, method, url, body) => { sent.push({ kind, method, url, body }); return { ok: true }; };
+  t.w.Platform = Object.assign({}, t.w.Platform, { scanCode: async () => ({ code: "421907" }) });
+  await t.w.eval('scanCameraAction("j1")');
+  /* The scan is only real if it takes the same path as a typed code — same
+     endpoint, same journey, six digits, and the offline queue in front. */
+  ok("a scanned code is submitted as a boarding code",
+     sent.length === 1 && sent[0].url === "/bookings/scan" && sent[0].kind === "scan" &&
+     sent[0].body.code === "421907" && sent[0].body.journeyId === "j1",
+     JSON.stringify(sent[0] || null));
+  t.w.Platform = Object.assign({}, t.w.Platform, { scanCode: async () => null });
+  await t.w.eval('scanCameraAction("j1")');
+  ok("no camera at all says so in its own words",
+     t.w.S.toast === t.w.T.en.j_scanUnavailable, String(t.w.S.toast));
+  ok("a denied camera says so, and keeps the keypad",
+     [t.w.T.en.j_scanDenied, t.w.T.en.j_scanUnavailable].includes(denied), String(denied));
+})();
 
 group("M1.9c — LOGIN READS INPUT, PASSWORD EYE, LIVE COOLDOWN");
 const m19c = (async () => {
@@ -875,10 +1021,12 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   const txt = t.q(".landing").textContent;
   ok("landing speaks to riders", txt.includes(t.w.T.en.landingF1T));
   ok("landing has no duplicate safety block", !txt.includes(t.w.T.en.safetyTitle));
-  const featTxt = t.all(".landing__feature").map((el)=>el.textContent).join("|");
+  const claimTxt = t.all(".journey__cut, .landing__feature").map((el)=>el.textContent).join("|");
+  /* Safety is folded into the claims, not quarantined in its own coloured block —
+     and the claim set is now the road, so the check reads the road. */
   ok("landing folds safety into features (no board-by-code card)",
-     featTxt.includes(t.w.T.en.safetyF1T) && featTxt.includes(t.w.T.en.safetyF3T)
-     && !featTxt.includes(t.w.T.en.featureCodeT));
+     claimTxt.includes(t.w.T.en.safetyF1T) && claimTxt.includes(t.w.T.en.safetyF3T)
+     && !claimTxt.includes(t.w.T.en.featureCodeT));
   ok("landing footer links policies", t.all(".landing__policylink").length === 3,
      String(t.all(".landing__policylink").length));
   ok("the Streamline credit is gone", !t.q(".landing__credits"));
@@ -900,21 +1048,166 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
 })();
 
+group("RENEWAL — one name, one curtain, one screen per surface");
+(() => {
+  const SHELL = fs.readFileSync(path.join(__dirname, "..", "src", "styles", "shell.html"), "utf8");
+  const SERVER = fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8");
+  const BUILDER = fs.readFileSync(path.join(__dirname, "..", "build.js"), "utf8");
+  const BRAND_FILE = JSON.parse(fs.readFileSync(
+    path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json"), "utf8"));
+  const z = (name) => {
+    const m = new RegExp(name + ":(\\d+)").exec(SHELL);
+    return m ? Number(m[1]) : -1;
+  };
+  const t = boot();
+  t.w.S.view = "landing"; t.w.S.landingPage = "rider"; t.w.render();
+  const land = t.q(".landing");
+
+  /* The naming law, measured at the three places a name can hide: the copy table, the
+     install artifact, and the download the server hands over. */
+  ok("the foot line is built from the brand, not typed out",
+     t.q(".landing__foot .landing__fine").textContent.trim()
+       === "\u00a9 " + t.w.T.en.brand + " \u00b7 " + t.w.T.en.rights,
+     t.q(".landing__foot .landing__fine").textContent.trim());
+  ok("the copyright names no year",
+     !/\b(19|20)\d\d\b/.test(t.q(".landing__foot").textContent), t.q(".landing__foot").textContent.trim());
+  ok("the slogan is said once per page, not echoed under the fold",
+     [...land.querySelectorAll("*")].filter((e) => !e.children.length
+       && e.textContent.trim() === t.w.T.en.landingFoot.trim()).length === 1);
+  ok("no deployment host is written into the bundle",
+     !/up\.railway\.app|\.railway\.net/.test(SRC), (SRC.match(/https:\/\/[\w.-]*railway[\w.-]*/) || [""])[0]);
+  ok("the installer's file name comes from brand.json",
+     /download: BRAND\.download\.apk/.test(fs.readFileSync(path.join(__dirname, "..", "src", "lib", "landing-parts.js"), "utf8")),
+     "the bundle may carry the string once, as brand data; the source may not");
+  ok("the server names the artifact from the same field",
+     /BRAND\.download\.apk/.test(SERVER) && !/filename="ride-share\.apk"/.test(SERVER));
+  ok("the brand file is validated where it is read",
+     /must be SVG path data/.test(BUILDER) && /#rrggbb/.test(BUILDER) && /plain text/.test(BUILDER));
+  ok("brand.json carries the install facts the code reads",
+     BRAND_FILE.download.path.startsWith("/") && /\.apk$/.test(BRAND_FILE.download.apk)
+       && /^#[0-9a-f]{6}$/i.test(BRAND_FILE.browserThemeColor.light)
+       && /^#[0-9a-f]{6}$/i.test(BRAND_FILE.browserThemeColor.dark),
+     JSON.stringify(BRAND_FILE.browserThemeColor));
+  ok("the served document has no undefined hole in its head",
+     /name="theme-color" content="#/.test(SRC) && !/content="undefined"|fill='undefined'/.test(SRC));
+
+  /* The driver page: four decisions, and what the owner cut is cut — not hidden. */
+  t.w.S.landingPage = "drive"; t.w.render();
+  ok("the driver page states four decisions", t.all(".landing__feature").length === 4,
+     String(t.all(".landing__feature").length));
+  ok("the deleted driver claims are deleted, not hidden",
+     !/driverF5T|driverF6T/.test(SRC), "the chapters are gone from the table and from the page");
+  t.w.S.landingPage = "rider"; t.w.render();
+  const invite = [...t.all(".landing a, .landing button")]
+     .find((e) => e.textContent.trim() === t.w.T.en.driveInviteGo);
+  ok("the rider page asks the reader to drive", !!invite);
+  if (invite) invite.click();
+  ok("… and the answer is the driver page", t.w.S.landingPage === "drive", String(t.w.S.landingPage));
+  t.w.S.landingPage = "rider"; t.w.render();
+  ok("the invitation's copy exists in both languages",
+     !!t.w.T.en.driveInviteB && !!t.w.T.ar.driveInviteB && t.w.T.ar.driveInviteB !== t.w.T.en.driveInviteB);
+  ok("the masthead explains the service, not only names it",
+     !!t.q(".landing__hero .landing__p") && !!t.q(".landing__hero .landing__lede"));
+
+  /* One curtain, in one place: the route change is the trigger, the sheet owns the
+     pacing, and the state swap is never held hostage by the animation. */
+  ok("the transition is armed where every view change passes",
+     /PageFx\.armed\(PageFx\.routeKey\(S\), render\)/.test(SRC));
+  ok("the swap has a deadline of its own", /setTimeout\(doSwap, FALLBACK_SWAP_MS\)/.test(SRC));
+  ok("the curtain never fights reduced motion", /if \(reduced\(\) \|\| busy/.test(SRC));
+  ok("the curtain is only drawn for a gesture that happened",
+     /now\(\) - lastGesture > GESTURE_WINDOW/.test(SRC) && /e\.isTrusted/.test(SRC));
+  /* Two names that must agree across two files, checked as one contract. The bundle
+     strips `import`, so a module can ask its neighbour for a symbol that was never
+     exported and node will not notice until the line runs at a person; a stylesheet
+     answers an unknown custom property with the empty string, so a renamed token turns
+     a 220 ms beat into a 0 ms one. Both failures are silent at build time. */
+  const FX_READ = [...SRC.matchAll(/token:\s*"(--fx-[a-z0-9-]+)"/g)].map((m) => m[1]);
+  ok("the curtain reads exactly four pacing tokens", FX_READ.length === 4, FX_READ.join(","));
+  const FX_MISSING = FX_READ.filter((k) => !new RegExp(k + ":").test(SHELL));
+  ok("every pacing token the curtain reads is defined in the sheet",
+     FX_READ.length === 4 && FX_MISSING.length === 0, FX_MISSING.join(",") || "all four");
+  ok("the curtain's stacking token is defined in the sheet", /--z-pagefx:/.test(SHELL));
+  const DARK = SHELL.slice(SHELL.indexOf('[data-theme="dark"]'));
+  ok("the curtain is visible on the light sheet", /--fx-ink:var\(--ink-900\)/.test(SHELL));
+  ok("the curtain is visible on the dark sheet too", /--fx-ink:var\(--ink-50\)/.test(DARK),
+     "an ink curtain on an ink page is no transition at all");
+  /* No guard here for "every named import resolves to an export": this surface has no
+     ES imports at all — build.js concatenates the modules in PARTS order into one
+     scope — so such a guard could never fail, and a guard that cannot fail is not a
+     guard. What the concatenation does make fragile is a stylesheet token read through
+     getComputedStyle, which is checked above against the names the module reads. */
+
+  ok("the pacing lives in the stylesheet", /--fx-rise:/.test(SHELL) && /getPropertyValue\(phase\.token\)/.test(SRC));
+  ok("the curtain covers the sticky bar", z("--z-pagefx") > z("--z-landing-nav"), `${z("--z-pagefx")} vs ${z("--z-landing-nav")}`);
+  ok("the curtain never eats a click", /\.pagefx\{[^}]*pointer-events:none/.test(SHELL.replace(/\s+/g, " ")));
+  ok("the splash hands off through the same curtain", /PageFx\.handoff\(swap\)/.test(SRC));
+  ok("the splash waits for the page to load before it leaves",
+     /Promise\.all\(\[minDelay, session, loaded\]\)/.test(SRC) && /addEventListener\("load"/.test(SRC));
+  ok("the curtain is in the bundle before the screens that open it",
+     BUILDER.indexOf('"lib/pagefx.js"') > -1 && BUILDER.indexOf('"lib/pagefx.js"') < BUILDER.indexOf('"screens/landing.js"'));
+
+  /* One screen is measured, never assumed, and the claims no longer share a box with
+     the drawing. */
+  ok("the viewport is measured and published", /setProperty\("--view-h"/.test(SRC)
+     && /min-height:var\(--view-h,100dvh\)/.test(SHELL));
+  ok("the measured height is re-read when the window changes",
+     /addEventListener\("resize", set\)/.test(SRC) && /visualViewport/.test(SRC));
+  ok("the intro is measured on both axes", /--f-intro:clamp\(1\.45rem,min\(7vw,6\.2vh\)/.test(SHELL));
+  ok("the page names are centred in the bar where there is room",
+     /@media \(min-width:1000px\)\{\s*\n\s*\.landing__links\{position:absolute;inset-inline-start:50%/.test(SHELL));
+  ok("the auth pair is set apart from the switches", /\.landing__actions>\.btn\{margin-inline-start:var\(--s3\)\}/.test(SHELL));
+  ok("the claims sit under the drawing at every width",
+     /\.journey__svg\{position:static/.test(SHELL) && !/data-side/.test(SRC) && !/data-side/.test(SHELL));
+  ok("the two stores share a row once there is room",
+     /@media \(min-width:700px\)\{\.landing__dlcards\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}\}/.test(SHELL));
+
+})();
+
 group("LANDING v2 — nav pages, drive, about, help, sticky panels");
 (() => {
   const t=boot();
   t.w.S.view="landing"; t.w.S.landingPage="rider"; t.w.render();
 
   // top bar: the Uber-style links + auth actions + menu (compact)
+  /* Scoped to the bar itself: the footer carries the same words, so a nav that
+     lost one of its five labels would still pass a check over the whole page. */
   ok("top bar has Ride/Drive/About/Help links", ["navRide","navDrive","navAbout","navHelp","navDownload"]
-     .every((k)=> t.q(".landing").textContent.includes(t.w.T.en[k])));
+     .every((k)=> t.q(".landing__links").textContent.includes(t.w.T.en[k])));
   ok("top bar has Log in and Sign up", t.q(".landing").textContent.includes(t.w.T.en.login)
      && t.q(".landing").textContent.includes(t.w.T.en.signup));
   ok("compact menu button is labelled", !!t.q(".landing__menu") && t.q(".landing__menu").getAttribute("aria-label") === t.w.T.en.menu);
 
   // the rider page carries the sticky stacking panels (the parallax section)
-  ok("rider landing has 4 stacking panels", t.all(".stackpanel").length === 4,
-     String(t.all(".stackpanel").length));
+  ok("rider landing lists the four chapters", t.all(".landing__feature").length === 4,
+     String(t.all(".landing__feature").length));
+  /* ── one sentence, one home ────────────────────────────────────────────
+     The poster tells its story in blocks: an eyebrow, a title, a lede, a claim.
+     Nothing on a page may say the same sentence twice — a repeated heading is a
+     section that should have been one. Measured on the rendered page, in both
+     languages, because a copy table can hold two keys with the same words. */
+  const HEADINGS = ".landing__kick,.landing__h1,.landing__h2,.landing__title,.landing__lede,"
+    + ".landing__slab-t,.landing__slab-k,.landing__featuret,.landing__cta-t,.journey__word,"
+    + ".journey__caption,.landing__p,.landing__stept";
+  for (const page of ["rider", "drive", "about", "help", "download"]) {
+    for (const lang of ["en", "ar"]) {
+      t.w.S.landingPage = page; t.w.S.landingDoc = null; t.w.S.lang = lang; t.w.render();
+      const seen = new Set(), twice = [];
+      t.all(HEADINGS).forEach((el) => {
+        const line = el.textContent.replace(/\s+/g, " ").trim();
+        if (!line) return;
+        if (seen.has(line)) twice.push(line); else seen.add(line);
+      });
+      ok(`${page} (${lang}): nothing on the page says itself twice`, twice.length === 0,
+         twice.slice(0, 2).join(" | "));
+    }
+  }
+  /* This block writes S.lang and S.landingPage on the shared window, so it puts
+     them back: the assertions after it in this group render the English rider
+     page, and a test that leaves the room rearranged fails the next one. */
+  t.w.S.lang = "en"; t.w.S.landingPage = "rider"; t.w.S.landingDoc = null; t.w.render();
+  ok("no hue-named chapter skins survive",
+     !/landing__feature--(mint|sky|pink|lime|coral|violet)/.test(t.q(".landing").innerHTML));
 
   // drive → about → help navigate without a full app render
   const links = t.all(".landing__link");
@@ -1118,7 +1411,7 @@ group("SURFACES — website has no intro; mobile origin has intro");
   t.w.__RS_SURFACE = "web";
 }
 
-const pendingAsync = [m19c, m19e, mTrips, mSearchNorm, mSearchScreen, mW1];
+const pendingAsync = [mG081, m19c, m19e, mTrips, mSearchNorm, mSearchScreen, mW1];
 
 /* ═══════════════════════════════════════════════════════════════════
    PATH A — wallet & payments (P3.7.4). S.wallet/S.payConfig drive the
@@ -1169,6 +1462,40 @@ group("PATH A — paymentChoice follows DEC-204 order and hides what cannot be u
   t.set({ payConfig:{ paymobEnabled:false } });
   const el3 = t.w.paymentChoice(3000);
   ok("Paymob off → only cash offered", !/card payment/i.test(el3.textContent) && /pay the driver/.test(el3.textContent));
+}
+
+group("I18N — the copy table has no holes in either language");
+{
+  /* Both languages, every key, checked as a SHAPE rather than feature by feature.
+     This guards a bug class that already happened twice here: an Arabic block that
+     lost `booked`/`bookedBody` (they had been spliced into the sentence above) and
+     an admin-only note that never existed in Arabic at all. Either one prints a raw
+     key like `auth.owner_only` on a real screen, and a per-feature parity test only
+     covers the features somebody remembered to write a test for. */
+  const t = boot();
+  const en = t.w.T.en, ar = t.w.T.ar;
+  const flat = (o, pre = "") => Object.entries(o)
+    .flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v)) ? flat(v, pre + k + ".") : [pre + k]);
+  const enK = flat(en), arK = flat(ar);
+  const missing = enK.filter(k => !arK.includes(k));
+  const extra = arK.filter(k => !enK.includes(k));
+  ok("every key exists in both languages", missing.length === 0 && extra.length === 0,
+     "missing in ar: " + missing.join(",") + (extra.length ? " | extra in ar: " + extra.join(",") : ""));
+  const holes = [];
+  (function walk(a, b, pre) {
+    for (const k of Object.keys(a)) {
+      const av = a[k], bv = b && b[k];
+      if (av && typeof av === "object" && !Array.isArray(av)) {
+        if (!bv || typeof bv !== "object" || Array.isArray(bv)) { holes.push(pre + k + ": not a group in ar"); continue; }
+        walk(av, bv, pre + k + ".");
+      } else if (typeof av === "string" && av.trim()) {
+        if (typeof bv !== "string" || !bv.trim()) holes.push(pre + k + ": empty in ar");
+        else if (bv === k) holes.push(pre + k + ": ar answers with the key");
+      }
+    }
+  })(en, ar, "");
+  ok("no Arabic string is empty or a leftover key", holes.length === 0, holes.slice(0, 4).join(" | "));
+  ok("the table is not one-sided in size", enK.length === arK.length, enK.length + " vs " + arK.length);
 }
 
 group("PATH A — payments copy exists in BOTH languages (i18n parity)");
@@ -1512,10 +1839,163 @@ group("INTRO + DOWNLOAD — first-open slides and versioned APK URL");
   t.w.__RS_SURFACE = "web";
   t.w.S.view="landing"; t.w.S.landingPage="download"; t.w.render();
   const a=t.q("a.btn--primary");
-  ok("download APK href is cache-busted", !!a && /\/download\/android\.apk\?v=/.test(a.getAttribute("href")), a&&a.getAttribute("href"));
+  const BRAND_FILE = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json"), "utf8"));
+  // The href is the brand's own rooted path, cache-busted — no literal host or file
+  // name in the bundle, and no test that quietly assumes one.
+  ok("download href is the brand's install path, cache-busted",
+     !!a && a.getAttribute("href").endsWith(BRAND_FILE.download.path + "?v=" + BRAND_FILE.version.code)
+       && !/undefined|null|:\/\//.test(a.getAttribute("href")),   /* no host of its own */
+     /* A document with no hierarchical base (this harness) keeps the link rooted rather
+        than inventing an origin; the browser suite proves the absolute form. */
+     a && a.getAttribute("href"));
+  /* The page and the server are two programs reading one file: the name the card
+     promises and the name the download arrives as cannot be allowed to disagree. */
+  ok("the server offers the file name the install card promises",
+     /filename="\$\{DL_APK\}"/.test(fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8"))
+       && /const DL_APK = \(BRAND.download && BRAND.download.apk\)/.test(fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8")),
+     "server.js must name the artifact from brand.json");
   ok("download has no debug-APK disclaimer", !/Debug APK|closed beta/.test(t.q(".landing").textContent));
-  ok("download is two columns", t.all(".desk-split .card").length===2);
-  ok("QR encodes the same APK URL", !!t.q(".dlqr") && decodeURIComponent(t.q(".dlqr").getAttribute("src")||"").includes("/download/android.apk?v="));
+  ok("download offers both platforms", t.all(".landing__dlcard").length===2,
+     String(t.all(".landing__dlcard").length));
+  const apk = t.w.eval("apkDownloadUrl()");
+  ok("the install link is the live origin, cache-busted by the build number",
+     t.q(".landing__dlcard a").getAttribute("href")===apk && /\?v=\d+$/.test(apk), apk);
+  /* The QR used to come from api.qrserver.com: a third party learning who is
+     installing the app, and nothing at all when the page is offline — for a code
+     that has to scan, that is a dead control. */
+  ok("no QR is fetched from anywhere",
+     !/api\.qrserver\.com|chart\.google\.com/.test(SRC) && !/<img[^>]*class="dlqr"/.test(t.q(".landing").innerHTML));
+  ok("the install code is drawn locally from the same URL the button opens",
+     !!t.q(".landing__qr svg path[fill]") &&
+     t.q(".landing__qr svg").getAttribute("shape-rendering")==="crispEdges");
+
+  /* lib/qr.js against the standard, using golden matrices made by an
+     independent reference implementation (tests/fixtures/qr-golden.json). The
+     mask is pinned because choosing it is the encoder's right; payload, error
+     correction, layout and function patterns are not. */
+  const QRt = t.w.eval("QR");
+  const golden = JSON.parse(require("fs").readFileSync(require("path").join(__dirname,"fixtures","qr-golden.json"),"utf8"));
+  golden.cases.forEach((c) => {
+    const q = QRt.encode(c.payload, c.level, { mask: c.mask });
+    const bits = [];
+    for (let i = 0; i < c.hex.length / 2; i++) {
+      const byte = parseInt(c.hex.substr(i * 2, 2), 16);
+      for (let b = 7; b >= 0; b--) bits.push((byte >> b) & 1);
+    }
+    const mine = [];
+    for (let r = 0; r < c.size; r++) for (let cc = 0; cc < c.size; cc++) mine.push(q.grid[r][cc] ? 1 : 0);
+    const firstDiff = mine.findIndex((v, ix) => v !== bits[ix]);
+    ok("QR matches the reference (" + c.payload.slice(0, 16) + "…, " + c.level + ", v" + c.version + ")",
+       q.version === c.version && q.size === c.size && firstDiff === -1,
+       firstDiff === -1 ? "" : "first difference at module " + firstDiff);
+    const at = (r, cc) => (q.grid[r][cc] ? 1 : 0);
+    const finder = (r0, c0) => {
+      for (let r = 0; r < 7; r++) for (let cc = 0; cc < 7; cc++) {
+        const want = (r === 0 || r === 6 || cc === 0 || cc === 6 || (r >= 2 && r <= 4 && cc >= 2 && cc <= 4)) ? 1 : 0;
+        if (at(r0 + r, c0 + cc) !== want) return false;
+      }
+      return true;
+    };
+    ok("QR v" + q.version + " carries its finder patterns and timing lines",
+       finder(0, 0) && finder(0, q.size - 7) && finder(q.size - 7, 0) &&
+       Array.from({ length: q.size - 16 }, (_, i) => at(6, 8 + i) === (i % 2 === 0 ? 1 : 0)).every(Boolean) &&
+       Array.from({ length: q.size - 16 }, (_, i) => at(8 + i, 6) === (i % 2 === 0 ? 1 : 0)).every(Boolean));
+  });
+/* ── and a scanner's own view: read the matrix back to the string ─────────
+     Golden matrices prove the bytes match another implementation. This proves
+     the whole contract a phone cares about: the format area says which mask and
+     which error level, the data can be found by walking the symbol the way the
+     standard walks it, and the bytes that come out are the URL that went in.
+     Only single-block versions (v1–v2 at any level, v3 L/M, v4 L) are decoded
+     here, because a decoder for interleaved blocks needs the block table again
+     and would then be checking the table against itself — those symbols are
+     covered by the golden fixtures instead. */
+  const ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26] };
+  const DATA_CW = { "1L":19, "1M":16, "1Q":13, "1H":9, "2L":34, "2M":28, "2Q":22, "2H":16,
+                    "3L":55, "3M":44, "4L":80 };
+  const EC_BITS = { L: 1, M: 0, Q: 3, H: 2 };
+  function functionMap(size, version) {
+    const f = Array.from({ length: size }, () => new Uint8Array(size));
+    const mark = (r0, c0, h, w) => { for (let r = 0; r < h; r++) for (let c = 0; c < w; c++) {
+      const rr = r0 + r, cc = c0 + c; if (rr >= 0 && cc >= 0 && rr < size && cc < size) f[rr][cc] = 1; } };
+    mark(0, 0, 9, 9); mark(0, size - 8, 9, 8); mark(size - 8, 0, 8, 9);   // finders + separators + format
+    for (let i = 0; i < size; i++) { f[6][i] = 1; f[i][6] = 1; }            // timing
+    const centres = ALIGN[version] || [];
+    for (const r of centres) for (const c of centres) {
+      if ((r <= 8 && c <= 8) || (r <= 8 && c >= size - 9) || (r >= size - 9 && c <= 8)) continue;
+      mark(r - 2, c - 2, 5, 5);                                              // alignment
+    }
+    if (version >= 7) { mark(size - 11, 0, 6, 3); mark(0, size - 11, 3, 6); }
+    return f;
+  }
+  const MASKS = [
+    (r, c) => (r + c) % 2 === 0, (r) => r % 2 === 0, (r, c) => c % 3 === 0,
+    (r, c) => (r + c) % 3 === 0, (r, c) => (((r / 2) | 0) + ((c / 3) | 0)) % 2 === 0,
+    (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0,
+    (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0,
+    (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0];
+
+  function readBack(grid, size, version) {
+    const at = (r, c) => (grid[r][c] ? 1 : 0);
+    // format info, read where the standard puts it and un-masked by the constant
+    /* Figure 25: the fifteen bits are laid out in two copies around the three
+       two copies around the three finders. Read both and require agreement —
+       finders; (8,0) carries the most significant one, the error-correction
+       indicator's high bit. Both copies are read and required to agree: a
+       symbol written with only one copy is "readable" to a lazy test and
+       unreadable to a phone. */
+    const pos1 = (i) => i <= 5 ? [8, i] : i === 6 ? [8, 7] : i === 7 ? [8, 8]
+                    : i === 8 ? [7, 8] : [14 - i, 8];
+    const pos2 = (i) => i < 7 ? [size - 1 - i, 8] : [8, size - 15 + i];
+    let a = 0, b = 0;
+    for (let i = 0; i < 15; i++) { a |= at(...pos1(i)) << (14 - i); b |= at(...pos2(i)) << (14 - i); }
+    const fmt = a ^ 0x5412;
+    const levelBits = (fmt >> 13) & 3, mask = (fmt >> 10) & 7;
+    // the data itself: right-to-left column pairs, up then down, skipping functions
+    const fn = functionMap(size, version);
+    const bits = [];
+    const f = MASKS[mask];
+    let dir = -1, row = size - 1;
+    for (let col = size - 1; col > 0; col -= 2) {
+      if (col === 6) col--;                                  // the vertical timing line
+      for (;;) {
+        for (let c = 0; c < 2; c++) {
+          const cc = col - c;
+          if (!fn[row][cc]) bits.push(at(row, cc) ^ (f(row, cc) ? 1 : 0));
+        }
+        row += dir;
+        if (row < 0 || row >= size) { dir = -dir; row += dir; break; }
+      }
+    }
+    return { levelBits, mask, bits, fmtA: a, fmtB: b };
+  }
+
+  golden.cases.length && ["1L", "2M", "3M"].forEach((which) => {
+    const version = +which[0], level = which[1];
+    const text = { "1L": "RIDE-1", "2M": "https://ride.example/a?b=c", "3M": "x".repeat(40) }[which];
+    const q = QRt.encode(text, level);
+    const got = readBack(q.grid, q.size, version);
+    ok(`v${version}${level} writes the format info twice, identically`,
+       got.fmtA === got.fmtB, got.fmtA.toString(2) + " vs " + got.fmtB.toString(2));
+    ok(`v${version}${level} writes a format area a scanner can read`,
+       q.version === version && got.levelBits === EC_BITS[level] && got.mask === q.mask,
+       `level ${got.levelBits} mask ${got.mask} vs ${q.mask}`);
+    const bytes = [];
+    const need = DATA_CW[which] * 8;
+    let p = 0;
+    const take = (n) => { let v = 0; for (let i = 0; i < n; i++) v = (v << 1) | (got.bits[p++] || 0); return v; };
+    const mode = take(4);
+    const len = take(8);
+    for (let i = 0; i < len && (p + 8) <= need; i++) bytes.push(take(8));
+    ok(`v${version}${level} decodes back to the string that went in`,
+       mode === 4 && len === text.length && String.fromCharCode(...bytes) === text,
+       `mode ${mode} len ${len} got ${bytes.length} of ${text.length}`);
+  });
+
+  ok("an oversized payload fails loudly instead of truncating", (() => {
+    try { QRt.encode("x".repeat(3000), "H"); return false; } catch (e) { return /does not fit/.test(e.message); }
+  })());
+
 }
 
 group("I18N — landing panel2 + fleet copy");
