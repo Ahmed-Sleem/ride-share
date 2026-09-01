@@ -1,5 +1,77 @@
 # CHANGELOG
 
+## 2026-09-01 — renewal round 2: the owner's twelve edits, the page curtain, and the brand chain
+
+Plan of record: [planning/GUI_RENEWAL.md](../planning/GUI_RENEWAL.md) §9 (the twelve,
+item by item) and [design/README.md](../design/README.md) (the curtain, the name).
+
+**Added**: `apps/web/src/lib/pagefx.js` — the vertical SVG-path page transition, armed by
+`render()` on a route key, painted under full cover, gesture-gated, with a deadline for its
+own swap and a plain swap under reduced motion. `measureViewport()` in `shell/app.js`
+publishes `--view-h`; `--fx-rise/fill/release/fall`, `--z-pagefx`, `--f-intro`,
+`--f-introgap` are the sheet's side of it. `packages/brand/brand.json` gained `download`
+(`path`, `apk`). Thirteen new cases went into `tests/breaks.sh` and the map case in
+`tests/layout-breaks.sh` was re-derived to the rule that now owns it; the fold below took the
+branch's two further cases, so the harness stands at 113.
+
+**Changed**: the bar's page names are centred in the bar at ≥1000 px and the auth pair is
+pushed off the language/theme group by `--s3` (both measured per viewport now); the masthead
+is a measured one-screen floor with one more paragraph of explanation; the seven rider claims
+moved *under* the drawing as a compact two-column key at every width, deleting the
+phone-only band exception and the `data-side` alternation; the driver board is four decisions
+(`driverF5*`/`driverF6*` and their copy are deleted in both languages); the rider page asks
+the reader to drive (`driveInvite*`, `go:"drive"`); the store cards sit side by side at
+≥700 px; the footer is now `© <brand> · All rights reserved.` — generic, no year, and the
+slogan is said once per page; the APK link and the downloaded file name both read
+`brand.json`, and the hardcoded deployment origin is gone from `screens/landing.js`.
+`build.js` now validates `brand.json` (plain text where it reaches markup, `#rrggbb` where it
+reaches a colour, path data where it reaches an inline `<svg>`, a rooted path and an `.apk`
+name where the install card links), and `apps/web/server.js` names the artifact from the same
+field, so the page and the download cannot disagree.
+
+**Fixed, found on the way** — two holes that were live in `HEAD`, both invisible to the
+browser suites because the bundles they read are committed artifacts: `brand.json` had no
+`browserThemeColor.light` while `build.js` substituted it (a fresh build wrote
+`content="undefined"` into the served head), and it had no `logo.color` while the favicon
+template interpolated `BRAND.logo.color.{light,dark}` (the mark arrived with
+`fill='undefined'`). Both values are now present and refused at build time if removed again.
+**Reconciled**: the tree also carried `--f-input: 14px`, below the 16 px iOS force-zoom floor
+its own comment states; the guard *"--f-input is 16px"* was red and the token is restored.
+
+**Decisions recorded this session**: transactional email moves onto the ink ramp (owner's
+choice — queued as the next phase, with the CI job `Verify GUI (full browser suite)` to be
+diagnosed first-or-alongside); nothing on the dead-code list is removed yet — it was recounted
+after the owner's own edits (§8.1: every item still present, `.gitkeep` now 32 rather than 18,
+and `mkJourney`'s `c.n` corrected to *live*, since the rule label reads it).
+
+**Verified on the merged tree**: unit 591 / 0 · a11y 14 / 0 · landing 2,172 / 0 (26 viewports ×
+the masthead's measured height and no-crop rule, the centred bar, the auth-group spacing, the
+rights line, the one-slogan rule, the two-up store row, the intro and splash held to exactly
+one screen, plus the policy documents through the deep battery) · layout 8,185 / 0 ·
+`scripts/verify-repo.sh` green · bundle rebuilt from the folded source (1,011,499 bytes, 19 modules). The transition was verified
+frame-by-frame in Chrome (rise → full cover with the new page painted under it → fall →
+element removed; `z-index:95`, `pointer-events:none`, state never gated). **Owed**: the full
+`breaks.sh` (113) and `layout-breaks.sh` (11) runs for the merged tree — the batch was interrupted
+after 12 cases (11 caught, 0 missed, 0 caught for the wrong reason) and is scheduled as its own
+phase; the fold itself was verified with unit, a11y, landing and layout all green.
+
+**The fold.** `origin/main` had moved during this round (`c16e30d`, the renewal plus part of this
+round, pushed from outside this session) and neither side descended from the other, so nothing was
+forced. Their tree became the base and everything of mine that was not unique content was dropped
+in favour of theirs: the `pagefx.js` hardenings (the watcher ignores `click` because jsdom marks a
+synthesised `element.click()` trusted; a `getClientRects()` guard so a layout-less document never
+waits on a deferred paint), `--fx-ink` inverting the curtain against the dark sheet, the ink-ramp
+email palette (the decision this session queued, already implemented upstream), their two break
+cases and five unit guards for the curtain, and a `layout-breaks.sh` scratch dir outside `$TMPDIR`
+with a post-run drift check. What stayed from this side: the dead-code re-audit, this entry, and
+§8.1/§12 of the plan. **The artifact is rebuilt and compared in this commit** — and `cmp` says `c16e30d`'s
+`dist-preview.html` is byte-identical to a clean rebuild of `c16e30d`'s source, so their tree
+was already self-consistent and the fold moves the artifact not at all. Checking that is what
+killed a wrong conclusion I had written here an hour ago (that the deployed page was running
+the unhardened watcher). It also corrected a number: `build.js` prints `html.length/1024`, so
+954.9 KB is *characters*, and the file is 1,011,499 UTF-8 bytes because the Arabic copy is
+multi-byte — a printed figure compares two builds, it does not measure one.
+
 ## 2026-09-01 — GUI renewal phase 1: the landing rebuilt as a monochrome poster
 
 The marketing surface is rebuilt on the owner's demo's visual language, with the

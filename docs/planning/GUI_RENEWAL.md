@@ -271,6 +271,35 @@ Removed from this list because the re-audit contradicted it: `railpack.json`'s `
 placeholder (no longer present), and `mkJourney`'s `c.n` — the journey key still numbers
 its rows, so `data-n` is load-bearing.
 
+### 8.1 Re-audit, after the owner's own edits (same day, nothing removed)
+
+Recounted from the tree, not from the table above: every item is **still there**.
+
+| Item | Count in the tree now |
+|---|---|
+| `apps/web/assets/undraw/*.svg` | 14 files |
+| `apps/web/assets/stickers/*.svg` | 7 files |
+| `STICKERS` / `ILLU_KEYS` in `build.js` | 3 references (the injection is live) |
+| `.dlqr` rule in `styles/shell.html` | 1 |
+| `LEGACY` fallback in `apps/web/server.js` | 2 |
+| `opsStops()` in `screens/staff.js` | 1 |
+| `importCsvAction` / `#stop-csv` in `screens/staff.js` | 2 / 2 |
+| `logo.gradient` in `packages/brand/brand.json` | 1 (nothing reads it; the favicon uses `logo.color`) |
+| `railpack.json`'s `"..."` placeholder | 1 |
+| `.gitkeep` files | **32** (was 18 — more empty scaffolds were added) |
+| `forRiders` | 2 |
+| `apps/web/dist-preview.html` tracked | yes (954.0 KB of build output in the index) |
+
+Two corrections to the original list: `mkJourney`'s `c.n` is **not** dead — the rule label
+and the guard both read it — and the list now has a new member: nothing. What *did* change
+is a **regression found while reconciling** (not dead code, so recorded here where the
+renewal's checks live): the tree had `--f-input: 14px`, below the 16 px iOS force-zoom floor
+the token's own comment five lines above it states, and the unit guard
+*"--f-input is 16px"* was red. Restored to 16 px; the guard is the reason it was noticed
+rather than eyeballed. Recommendation stands: drop the illustration pack (≈408 KB of the
+953 KB shipped file, more than the whole renewal added) and the small items, keep
+`archive/*` and the empty API scaffolds, and decide `opsStops()` with the staff screen.
+
 ## 9. The owner's renewal list — the twelve, and the curtain
 
 Twelve edits asked for after the adaptive round, plus the transition from the codrops
@@ -347,7 +376,8 @@ served head contains no `undefined` hole.
 **Verification.** unit 586 / 0 · a11y 14 / 0 · landing 2,172 / 0 (26 viewports × the new
 per-screen measurements, plus the policy documents in the deep battery) · layout 8,185 / 0.
 The break harnesses were re-pointed at the new rules: 13 new cases in `tests/breaks.sh`
-(111 total) and the map case in `tests/layout-breaks.sh` re-derived to the rule that now
+(111 at the time; 113 after the fold in §12) and the map case in `tests/layout-breaks.sh`
+re-derived to the rule that now
 owns it; their numbers are recorded in the CHANGELOG entry for this round.
 
 ## 10. Verification as it is actually run (and the one rule that keeps it honest)
@@ -415,3 +445,26 @@ Three defences are now in the harnesses, and the fourth is a rule:
      Centralising it changes the words in the mail, so it is an owner call.
 - The dead-code inventory in §8 is measured and reported, and nothing there has been
   removed, at the owner's instruction.
+
+## 12. The fold: how `c16e30d` and the local round-2 work were reconciled
+
+Their commit was taken as the base, and everything in it that touched the same ground as
+mine was **adopted rather than re-litigated** — the tree the product ships is now theirs plus
+my documentation, which is the smallest possible difference to a deployed page:
+
+| Their `c16e30d` | Resolution |
+|---|---|
+| `pagefx.js`: the gesture watcher ignores `click` (jsdom marks a synthesised `element.click()` **trusted**, so a suite that drives the app that way would be held behind the curtain) and a `getClientRects()` guard so a layout-less document is never left waiting on a deferred paint | **adopted** — both are strictly better than what I had, and the live page was still running my older, unhardened file |
+| `--fx-ink` so the curtain reads against the sheet it covers, inverted in dark | **adopted** |
+| `brand.json`'s email palette moved onto the ink ramp | **adopted** — this was the owner's decision from the last review, already implemented upstream; my report queued it, so the queue is closed |
+| 2 extra break cases and 5 extra unit guards for the curtain (pacing tokens defined, four and only four, stacking token, visible on both sheets) | **adopted** |
+| `layout-breaks.sh`: scratch moved out of `$TMPDIR` (a rehydrate wipes it) plus a post-run drift check that fails the harness if any mutated file came back wrong | **adopted** — that check is the answer to the incident this branch had |
+| `mkStop1:"اطلب"` | **adopted** — an imperative reads better as a step chip next to three nouns than my `طلب` did, and their tests assert it |
+| my §8.1 dead-code re-audit, this section, the CHANGELOG entry | **kept** |
+
+A note on the artifact, because it nearly produced a wrong conclusion here: `c16e30d`'s
+`dist-preview.html` is **byte-identical** to a clean rebuild of `c16e30d`'s source (`cmp` says
+so), so their tree was self-consistent and the fold changes the artifact not at all. What was
+stale was my *local* comparison: `build.js` prints `html.length/1024`, i.e. **characters, not bytes** — 977,778 of them for
+this file, and the Arabic copy is multi-byte in UTF-8, so the printed 954.9 KB and `ls`'s
+1,011,499 bytes are the same file. A printed number compares two builds; it does not measure one.
