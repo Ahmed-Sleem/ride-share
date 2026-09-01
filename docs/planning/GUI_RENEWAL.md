@@ -483,3 +483,21 @@ half-finished things.
 
 Phase 2 of the renewal (the app GUI) starts only when `ride-share-app.html` arrives; nothing in L1–L3
 blocks on it, and nothing in it should be guessed at in the meantime.
+
+## 14. The 16-item review round — and why it reorders §13
+
+The owner reviewed the **deployed** page and returned sixteen items, with causes measured against
+that deployment. They are planned in [LANDING_REWORK.md](LANDING_REWORK.md) as four phases M1–M4.
+
+Two consequences for the order in §13:
+
+- **L1 moves after M1.** Running `breaks.sh` / `layout-breaks.sh` to completion now would be wasted:
+  M1 reverses the very assertions several cases encode (`onMap === 0`, the `.journey__svg{position:static}`
+  anchor, the fixed cut width). Certification comes after the geometry it would have to contradict.
+- **L2 does not move.** The red CI job predates the renewal and lives in `pnpm -r build / typecheck /
+  lint / test`, so it is independent of any of the sixteen; it still gates every later claim, and it is
+  the first thing read when a phase ends.
+
+So: **M1 (map) → M2 (load, curtain, theme, language) → M3 (top bar, intro, RTL) → M4 (drive view,
+policy pages, full audit)**, with L2 slotted into whichever session ends early, and L1 immediately
+after M4 — it certifies the whole landing in one pass instead of twice.
