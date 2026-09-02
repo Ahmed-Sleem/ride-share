@@ -14,7 +14,7 @@
 | **Tagline** | Share the ride. One fixed price. | شارك الرحلة. سعر ثابت. |
 | **Full Description** | Shared rides on fixed routes at a fixed price. | خدمة نقل تشاركي على مسارات ثابتة وبسعر ثابت. |
 | **App Version** | v0.1.0 (Build 3) | v0.1.0 (إصدار 3) |
-| **Font Family** | -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", sans-serif | -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", sans-serif |
+| **Font Family** | "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", sans-serif | "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", sans-serif (Arabic runs are carried by Cairo, self-hosted; poster display in Arabic asks for Jomhuria first — see `design/CH10a_design_system.md` §10a.2) |
 
 ---
 

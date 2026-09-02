@@ -142,7 +142,9 @@ function landingLink(k, lbl) {
 /* Between landing pages: swap the content and put the reader back at the top of
    the poster. `.landing` is the scroller — the document never scrolls. */
 function landingGo(page) {
-  S.landingPage = page; S.landingMenu = false; render();
+  /* A nav name means "read that page", so it also means "put the document down" — the
+     bar is one control set on every surface, including a policy. */
+  S.landingPage = page; S.landingMenu = false; S.landingDoc = null; render();
   const l = document.querySelector(".landing");
   if (l) l.scrollTop = 0;
 }
@@ -207,17 +209,15 @@ function riderLanding() {
    and getting the app are the bar's job, and a poster that repeats its own header has two
    places to be wrong. The masthead's own way forward is the road below it. */
 function heroMasthead() {
-  return $("section", { class: "landing__hero" },
-    mkRuleField(),
-    mkHeadTop(),
-    /* The h1 is named by its own three lines. Labelling it with the lede below
-       would give a screen reader the paragraph twice and the poster never. */
-    mkDisplay([{ k: "mkDisplay1" }, { k: "mkDisplay2" }, { k: "mkDisplay3", out: true }]),
-    $("div", { class: "landing__hero-foot" },
-      mkLede("landingHero"),
-      /* One paragraph past the slogan: the lede says what the product is, this says how
-         it behaves — the timetable, the one fare, the cash at the door. */
-      mkProse(["landingHeroB"])));
+  return mkIntro({
+    /* The h1 is named by its own three lines. Labelling it with the lede below would
+       give a screen reader the paragraph twice and the poster never. */
+    lines: [{ k: "mkDisplay1" }, { k: "mkDisplay2" }, { k: "mkDisplay3", out: true }],
+    lede: "landingHero",
+    /* One paragraph past the slogan: the lede says what the product is, this says how
+       it behaves — the timetable, the one fare, the cash at the door. */
+    prose: ["landingHeroB"],
+  });
 }
 
 /* The journey. Four chapters that are the product's own argument, each one a
@@ -263,12 +263,8 @@ function driveLanding() {
   const root = $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body" },
-      mkSection([
-        mkEyebrow("forDrivers"),
-        $("h1", { class: "landing__title", text: t("driveHeroT") }),
-        mkLede("driveHeroB"),
-        mkActions([{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }]),
-      ], { first: true }),
+      mkIntro({ kick: "forDrivers", lines: [{ k: "driveHeroT" }], lede: "driveHeroB",
+        actions: [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }] }),
       mkSlab("driveStepsKick", "driveStepsT", [
         mkSteps([[1, "driveStep1T", "driveStep1B"],
           [2, "driveStep2T", "driveStep2B"],
@@ -279,9 +275,12 @@ function driveLanding() {
         mkEyebrow("driveBoardKick"),
         mkPanels(DRIVER_PANELS),
       ]),
+      /* The three things a driver must bring are the page’s own numbered rows, not a
+         sentence to parse out of a paragraph — same scale, same rhythm, no new style. */
       mkSection([
         mkEyebrow("driveReqT"),
-        mkProse(["driveReqB", "driveReqB2"]),
+        mkProse(["driveReqB2"]),
+        mkSteps([[1, "driveReq1T", null], [2, "driveReq2T", null], [3, "driveReq3T", null]]),
       ]),
       mkEnd("driveEndT", "driveEndB", "landingFoot",
         [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
@@ -304,12 +303,11 @@ function aboutLanding() {
   return $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      mkSection([
-        mkEyebrow("aboutKick"),
-        $("h1", { class: "landing__title", text: t("aboutTitle") }),
-        mkProse(["aboutP1", "aboutP2", "aboutP3"]),
-        mkActions([{ k: "landingCtaStart", go: "signup" }, { k: "navDrive", go: "drive", bare: true }]),
-      ], { first: true }),
+      mkIntro({ kick: "aboutKick", lines: [{ k: "aboutTitle" }], prose: ["aboutP1"],
+        actions: [{ k: "landingCtaStart", go: "signup" }, { k: "navDrive", go: "drive", bare: true }] }),
+      /* The masthead holds one screen; the long answer goes under it, in the same
+         voice, with the two paragraphs the poster could not carry. */
+      mkSection([mkProse(["aboutP2", "aboutP3"])]),
       mkSection([
         mkEyebrow("aboutPriceT"),
         mkProse(["aboutPrice1", "aboutPrice2"]),
@@ -326,11 +324,9 @@ function helpLanding() {
   return $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      mkSection([
-        mkEyebrow("helpKick"),
-        $("h1", { class: "landing__title", text: t("helpTitle") }),
-        mkFaq(),
-      ], { first: true })),
+      mkIntro({ kick: "helpKick", lines: [{ k: "helpTitle" }] }),
+      mkSection([mkFaq()]),
+    ),
     landingFooter());
 }
 
@@ -353,14 +349,12 @@ function downloadLanding() {
   return $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      mkSection([
-        /* No eyebrow here: the page is called Get the app, the nav link that got
-           you here is called Get the app, and the heading says it too. Three of
-           them on one screen is two too many. */
-        $("h1", { class: "landing__title", text: t("j_dlTitle") }),
-        mkLede("j_dlSub"),
-        mkDownloadCards(),
-      ], { first: true })),
+      /* No kick here: the page is called Get the app, the nav link that got you here
+         is called Get the app, and the heading says it too. Three of them on one
+         screen is two too many. */
+      mkIntro({ lines: [{ k: "j_dlTitle" }], lede: "j_dlSub" }),
+      mkSection([mkDownloadCards()]),
+    ),
     landingFooter());
 }
 
@@ -427,13 +421,13 @@ function landingDoc() {
   const title = ({ terms: t("policyTermsTitle"), privacy: t("policyPrivacyTitle"), safety: t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
   const sections = T[S.lang][key] || [];
   return $("div", { class: "landing" },
-    $("header", { class: "landing__nav" },
-      $("span", { class: "landing__brand" }, logoSVG(), $("span", { text: t("brand") })),
-      $("div", { class: "landing__actions" }, mkLangButton(), mkThemeSwitch())),
+    /* The same bar as every other surface — a document opened from the footer is still
+       the site, and it must offer the same way back out, in the same place. */
+    landingNav(),
     $("div", { class: "landing__body landing__body--page" },
       mkSection([
         $("div", { class: "landing__doc" },
-          Btn({ label: t("landingBack"), kind: "ghost", icon: "back", on: () => { S.landingDoc = null; render(); } }),
+          Btn({ label: t("landingBack"), kind: "ghost", icon: "back", on: () => { S.landingDoc = null; S.landingPage = "rider"; S.landingMenu = false; render(); } }),
           $("h1", { class: "landing__title", text: title }),
           $("p", { class: "landing__note", text: t("policyTemplateNote") }),
           mkDoc(sections)),

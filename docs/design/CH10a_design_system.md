@@ -65,6 +65,30 @@ Purpose: every screen in CH10b references components defined here instead of re-
 
 ### Rules
 - **Font:** a family with genuine Arabic support (e.g. IBM Plex Sans Arabic / Noto Sans Arabic)
+- **Shipped (round 5):** the family is self-hosted, not linked. The deliverable is one
+  HTML file with no network, so `apps/web/assets/fonts/fonts.json` names the faces and
+  `build.js` inlines them as `data:` URIs after checking each file's sha256, its woff2
+  magic, its own budget and the bundle's total.
+  - **Text and UI — Cairo** (OFL-1.1), variable on the `wght` axis 200–1000, subset to
+    the Arabic ranges: 29,816 bytes of woff2. One file, so every `--fw-*` weight is a
+    real outline and no browser emboldens a glyph — the reported "Arabic is never bold"
+    was a missing bold face, not a missing rule.
+  - **Poster display in Arabic — Jomhuria** (OFL-1.1), the Egyptian newspaper masthead
+    face, offered by the owner and measured against Katibeh before choosing: its ink box
+    is 0.64 em where the fallback's is 1.05 em, so the `@font-face` carries
+    `size-adjust: 124%` and no component carries a per-language size fudge.
+  - **Routing is by range, never by a rule:** each face declares `unicode-range` over
+    Arabic only, so the Latin runs keep the brand's system stack and the letterforms
+    nobody asked to change stay untouched. Measured: the Latin advance width is identical
+    with and without these faces (498.07 px on a probe string), and the Arabic one moves
+    to Cairo's (350.78 vs 362.56).
+  - `Katibeh` stays in `assets/fonts/` with its licence, held out of the bundle: the
+    manifest marks one face `display:true`, and flipping that flag is the whole change.
+  - **One chain**: `packages/brand/brand.json` names the families, `body` and `.landing`
+    both read `var(--brand-font)`. `body` had carried a second literal copy of the eight
+    names, and the landing had no `font-family` at all — the poster had been rendering in
+    whatever the user agent called its default. Both are fixed, and the duplicate is a
+    tracked-then-closed gap (G-081).
   and matching Latin. Never render Arabic in a Latin-only face with fallback.
 - **Minimum body size 15pt.** Never smaller, whatever the layout pressure.
 - **Respect OS text scaling** up to 200%; layouts must reflow, not clip.

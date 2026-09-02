@@ -157,6 +157,9 @@ Two more things the landing owns:
 ## The brand has one source, and it is checked
 
 `packages/brand/brand.json` is the only place the name, tagline, version, font,
+(Arabic *faces* are the one exception, and the split is deliberate: brand.json names
+the families in the chain, `apps/web/assets/fonts/fonts.json` owns the files, licences
+and hashes — and the build refuses the two when they disagree.)
 logo path, browser theme colour and contact address are written. `build.js`
 substitutes them into the shell and fails the build on an unresolved
 `__BRAND_*`; `scripts/check-branding.sh` fails on a name or a logo path written

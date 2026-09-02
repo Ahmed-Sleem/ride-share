@@ -62,7 +62,8 @@ function signinAuth() {
       $("p",{class:"t-cap"}, t("enterPassword")),
       field("auth-password", t("passwordLabel"), "password", "current-password"),
       Btn({label:S.authBusy? "…" : t("signInAction"), block:true, dis:S.authBusy, on:()=>staffLogin()}),
-      backBtn(()=>{ S.loginMethod=null; render(); }));
+      /* One step back in the same flow, so the label says only that much. */
+      backBtn(()=>{ S.loginMethod=null; render(); }, t("back")));
   } else if (S.loginMethod === "otp") {
     body = otpStep(
       `${t("codeSentTo")} `,
@@ -96,7 +97,9 @@ function otpStep(sentPrefix, onVerify, onResend, onBack, opts) {
       ? $("p",{class:"t-cap center",text:`${t("attemptsLeft")}: ${S.attemptsLeft}`}) : null,
     Btn({label:S.authBusy? "…" : (opts.btnLabel || t("verifyCode")), block:true, dis:S.authBusy, on:onVerify}),
     resendButton(onResend),
-    backBtn(onBack));
+    /* The caller owns where this goes (each card names its own previous step), so the
+       label stays as general as the destination is unknown. */
+    backBtn(onBack, t("back")));
 }
 
 /* ── shared card chrome ────────────────────────────────────────────────── */
@@ -161,11 +164,6 @@ function cooldownButton(btn, idleLabel) {
   return btn;
 }
 
-function backBtn(onClick, label) {
-  return $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:label || t("changeEmail"),
-    on:{click:onClick}});
-}
-
 function lockoutBanner() {
   if (!S.lockedUntil) return null;
   if (new Date(S.lockedUntil).getTime() <= Date.now()) return null;
@@ -199,7 +197,7 @@ function forgotPassword() {
       S.authError ? Banner("danger", S.authError) : null,
       step==="done"
         ? Btn({label:t("signInAction"), block:true, on:()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; S.authError=null; render(); }})
-        : backBtn(()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; render(); }, t("landingBack"))));
+        : backBtn(()=>{ S.forgot=null; S.view="auth"; S.authMode="signin"; S.loginMethod=null; render(); }, t("authBack"))));
 }
 
 /* ── helpers + actions ────────────────────────────────────────────────── */

@@ -29,6 +29,11 @@ function boot(){
    A. SHELL — full viewport, one scroller, nothing scrolls away
    ───────────────────────────────────────────────────────────────── */
 const CSS = SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
+/* The inlined woff2 payloads are base64: 88 KB of it will contain `TODO`, `XXX`, even
+   `lorem` by chance, and a guard that greps the whole bundle for such words would be
+   red for a reason that means nothing. Text-shape guards read the bundle WITHOUT the
+   payloads; a payload is checked by hash in build.js, where the bytes matter. */
+const SRC_TEXT = SRC.replace(/base64,[A-Za-z0-9+/=]+/g, "base64,PAYLOAD");
 const PAGEFX = fs.readFileSync(path.join(__dirname, "..", "src", "lib", "pagefx.js"), "utf8");
 const rule = (sel) => {
   const m = CSS.match(new RegExp("\\n" + sel.replace(/[.#]/g,"\\$&") + "\\{([^}]*)\\}"));
@@ -821,6 +826,41 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      /\.landing__slab \.btn:not\(\.btn--bare\)\{background:var\(--paper\);color:var\(--ink\)/.test(CSS));
   ok("the curtain is armed for language and theme as well as for pages",
      /S\.lang, S\.theme \|\| ""/.test(PAGEFX));
+  /* ── type: the Arabic faces are self-hosted, routed by range, and paid for ──
+     What these guards protect is the *mechanism*, not one family name: a face may
+     only ever answer for Arabic, or it would silently re-brand the Latin; and every
+     byte of payload in the single file must be reachable from a stack that asks
+     for it.                                                     */
+  const FACES = (CSS.match(/@font-face\{[^}]*\}/g) || []);
+  const faceOf = (fam) => FACES.find((f) => f.includes(`font-family:"${fam}"`)) || "";
+  const BRANDJSON = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json"), "utf8"));
+  const FONTSJSON = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "assets", "fonts", "fonts.json"), "utf8"));
+  const AR_RANGES = FONTSJSON.arabicRanges.split(",").map((r) => r.trim());
+  ok("every inlined face answers for Arabic and nothing else",
+     FACES.length > 0 && FACES.every((f) => /unicode-range:U\+0600-06FF/.test(f)) &&
+     FACES.every((f) => (f.match(/unicode-range:[^;]+/)[0].split(":")[1].split(","))
+       .every((r) => AR_RANGES.includes(r.trim()))) &&
+     !FACES.some((f) => /U\+0000-00FF|U\+0041/.test(f)), `${FACES.length} faces`);
+  ok("the text face is variable, so a bold is a real outline and not a smudge",
+     /font-weight:200 1000/.test(faceOf("Cairo")) && /format\("woff2"\)/.test(faceOf("Cairo")));
+  ok("the brand's own stack names the Arabic text face",
+     BRANDJSON.font.family.includes("Cairo") && BRANDJSON.font.family.includes("sans-serif"),
+     BRANDJSON.font.family.slice(0, 40));
+  ok("the display role is one token, and no component names a family",
+     /--brand-font-display:/.test(CSS) &&
+     /\[dir="rtl"\][^{]*\{font-family:var\(--brand-font-display\)\}/.test(CSS.replace(/\n\s*/g, "")) &&
+     !/font-family:"(Jomhuria|Katibeh|Cairo)"/.test(SRC.replace(/@font-face\{[^}]*\}/g, "")));
+  ok("the masthead face carries the size compensation the metric needs",
+     /size-adjust:\d+(\.\d)?%/.test(FACES.find((f) => /font-family:"(Jomhuria|Katibeh)"/.test(f)) || ""),
+     (FACES.find((f) => /font-family:"(Jomhuria|Katibeh)"/.test(f)) || "").slice(0, 80));
+  ok("no face is carried that nothing asks for",
+     FONTSJSON.faces.every((f) => !SRC.includes(`font-family:"${f.family}"`) ||
+       f.display || BRANDJSON.font.family.includes(f.family)) &&
+     (FONTSJSON.faces.find((f) => f.family === "Katibeh") || {}).display !== true,
+     `${FACES.length} of ${FONTSJSON.faces.length} inlined`);
+  ok("the font payload stays inside the budget the single file declares",
+     (CSS.match(/base64,[A-Za-z0-9+/=]+/g) || []).reduce((n, m) => n + Math.ceil(m.length * 3 / 4), 0) <=
+     FONTSJSON.budgetBytes + 4096, `${Math.round((CSS.match(/base64,[A-Za-z0-9+/=]+/g) || []).reduce((n, m) => n + m.length, 0) * 3 / 4 / 1024)} KB`);
   /* R4-3: the masthead has two jobs — name the product, then explain the mechanic.
      What it must not do is say the same claim twice, so each claim word may appear
      once across both paragraphs (the lede sells the idea, the body pays for it). */
@@ -852,6 +892,76 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
       mast.driveInviteK !== mast.landingHero && mast.driveInviteT !== mast.landingHero,
       String(mast.driveInviteK));
   }
+
+  /* ── O-2: the intro dwells on a floor and a settle, not on a lucky network ─── */
+  ok("the splash holds for a measured floor, and is capped by a watchdog",
+     /SPLASH_FLOOR_MS = 1000, SPLASH_WATCHDOG_MS = 6000/.test(SRC) &&
+     /Promise\.race\(\[painted, new Promise\(r=>setTimeout\(r, SPLASH_WATCHDOG_MS\)\)\]\)/.test(SRC) &&
+     !/setTimeout\(r, 1500\)/.test(SRC), "1000 ms floor, 6 s cap, no bare timer");
+  ok("the release waits for the faces as well as the document",
+     /document\.fonts && document\.fonts\.ready/.test(SRC) &&
+     /addEventListener\("load", afterFonts/.test(SRC));
+  ok("the curtain still carries the handoff out of the splash",
+     /PageFx\.handoff\(swap\)/.test(SRC));
+
+  /* ── O-10: a way out of a page says where it goes, and goes there ─────────── */
+  for (const lang of ["en", "ar"]) {
+    const c = t.w.T[lang];
+    ok(`${lang}: each way out names its own destination`,
+      new RegExp(lang === "en" ? "home" : "الرئيسية", "i").test(c.landingBack) &&
+      new RegExp(lang === "en" ? "sign in" : "تسجيل الدخول", "i").test(c.authBack) &&
+      new RegExp(lang === "en" ? "list" : "القائمة", "i").test(c.backToList),
+      `${c.landingBack} / ${c.authBack} / ${c.backToList}`);
+    ok(`${lang}: the three ways out are three different sentences`,
+      new Set([c.landingBack, c.authBack, c.backToList]).size === 3);
+  }
+  /* Every way out must say where it goes. Counting with a regex would stop at the first
+     `)` of the arrow function in the first argument, so the calls are walked instead. */
+  const backCalls = [];
+  for (let i = SRC.indexOf("backBtn("); i >= 0; i = SRC.indexOf("backBtn(", i + 1)) {
+    if (SRC.slice(Math.max(0, i - 9), i).includes("function ")) continue;
+    let d = 0, j = i + "backBtn(".length - 1;
+    for (; j < SRC.length; j++) {
+      if (SRC[j] === "(") d++;
+      else if (SRC[j] === ")") { d--; if (!d) break; }
+    }
+    backCalls.push(/,t\("[A-Za-z]+"\)\)$/.test(SRC.slice(i, j + 1).replace(/\s+/g, "")));
+  }
+  ok("the shared back control has no default label to fall back on",
+     !/text:label\s*\|\|/.test(SRC) && backCalls.length >= 4 && backCalls.every(Boolean),
+     `${backCalls.filter(Boolean).length}/${backCalls.length} labelled`);
+  t.w.S.view = "landing"; t.w.S.landingPage = "about"; t.w.S.landingDoc = "terms";
+  t.w.S.landingMenu = false; t.w.render();
+  const back = [...t.all("button")].find((b) => b.textContent.trim() === t.w.T.en.landingBack);
+  ok("the document page offers the way out its label promises", !!back);
+  if (back) back.click();
+  ok("and taking it lands on the home of the site, not the page you were reading",
+    t.w.S.landingDoc === null && t.w.S.landingPage === "rider" && t.w.S.view === "landing",
+    `${t.w.S.landingPage}/${t.w.S.landingDoc}`);
+
+  /* ── O-12: one intro rule, on every surface, from one builder ─────────────── */
+  ok("the poster intro is built in exactly one place",
+     (SRC.match(/class: "landing__hero"/g) || []).length === 1 && /function mkIntro\(o\)/.test(SRC),
+     String((SRC.match(/class: "landing__hero"/g) || []).length));
+  ok("no landing page writes its own height for the intro",
+     !/\.landing__hero\{[^}]*height:100(dvh|vh)/.test(CSS) &&
+     /\.landing__hero\{[\s\S]{0,700}min-height:var\(--view-h,100dvh\)/.test(CSS));
+  for (const page of ["rider", "drive", "about", "help", "download"]) {
+    t.w.S.view = "landing"; t.w.S.landingPage = page; t.w.S.landingDoc = null;
+    t.w.S.landingMenu = false; t.w.render();
+    const body = t.q(".landing__body");
+    const first = body && body.firstElementChild;
+    ok(`${page}: opens with the shared one-screen intro`,
+      !!first && /landing__hero/.test(first.className) && !!first.querySelector(".landing__display"),
+      first ? first.className : "none");
+    ok(`${page}: the intro carries the page heading, and no section competes with it`,
+      !!body && !!body.querySelector(".landing__hero h1") && !body.querySelector(".landing__section h1"),
+      body ? "h1 in the hero only" : "no body");
+  }
+  /* These guards each rendered a different surface into the shared window, so the state
+     is put back before the next group reads it: a guard that leaves the page on Help
+     turns every later assertion about the poster into an assertion about nothing. */
+  t.w.S.view = "landing"; t.w.S.landingPage = "rider"; t.w.S.landingDoc = null; t.w.render();
   ok("only the slab inverts, and dark inverts the slab",
      /--stage:var\(--ink-900\)/.test(CSS) &&
      /\[data-theme="dark"\]\{[\s\S]*--stage:var\(--ink-0\)/.test(CSS));
@@ -1417,13 +1527,14 @@ group("M2 — STOPS ARE A ROUTE PROPERTY (no independent page)");
 group("BUILD INTEGRITY");
 {
   ok("no sample content in the bundle (demo data is gone)",
-     !/Corniche|Montazah|Smouha|Agami|Miami|Hiace|driverToday|walletHistory|const DATA/.test(SRC),
+     !/Corniche|Montazah|Smouha|Agami|Miami|Hiace|driverToday|walletHistory|const DATA/.test(SRC_TEXT),
      "a sample string leaked into the bundle");
   ok("output is a single self-contained file", !/<script\s+src=/.test(SRC) && !/<link\s+[^>]*stylesheet/.test(SRC),
      "external references would break offline / preview");
   ok("no prototype harness remains",
-     !/GUI prototype|harness|screenid|Screen not in this prototype/i.test(SRC));
-  ok("no leftover placeholder text", !/lorem|TODO|FIXME|XXX/i.test(SRC));
+     !/GUI prototype|harness|screenid|Screen not in this prototype/i.test(SRC_TEXT));
+  ok("no leftover placeholder text", !/lorem ipsum|\bTODO\b|\bFIXME\b|\bXXX\b/i.test(SRC_TEXT),
+     "word boundaries: a whole-bundle grep once read `toDocSec` as a placeholder");
   ok("no absolute local paths leaked", !/\/home\/[a-z]+\//.test(SRC));
   ok("viewport is mobile-correct", /viewport-fit=cover/.test(SRC));
   ok("theme-color set for mobile chrome", /name="theme-color"/.test(SRC));

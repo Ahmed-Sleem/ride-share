@@ -37,7 +37,7 @@ function opsReview(){                                         // O-12
   w.append($("div",{class:"row wrap gap3"},
     Btn({label:t("approve"), dis:S.authBusy, on:()=>reviewApplication("approve")}),
     Btn({label:t("reject"), kind:"danger", dis:S.authBusy, on:()=>reviewApplication("reject")})));
-  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("backToList")));
   return w;
 }
 
@@ -222,7 +222,7 @@ function stopReviewView() {
   w.append($("div",{class:"row wrap gap3"},
     mine ? null : Btn({label:t("approveStop"), on:()=>reviewStopAction(s.id, "approved")}),
     Btn({label:t("rejectStop"), kind:"danger", on:()=>reviewStopAction(s.id, "rejected")})));
-  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("backToList")));
   return w;
 }
 
@@ -501,7 +501,7 @@ function routeDetailView() {
   w.append($("div",{class:"row gap2"},
     $("h1",{class:"t-head grow",text:r.name_en || r.name_ar || r.code}),
     Chip({label:r.status, kind:r.status==="published"?"ok":""})));
-  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("landingBack")));
+  w.append(backBtn(()=>{ S.opsView=null; S.opsTarget=null; render(); }, t("backToList")));
 
   const mapCard = Card("card--tight",
     $("div",{class:"t-micro",text:t("j_routeStops")}),

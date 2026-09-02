@@ -5,7 +5,8 @@ One self-contained HTML file, assembled from `src/` by `build.js`.
 ## Build
 
 ```bash
-node build.js      # writes dist-preview.html
+node build.js      # writes dist-preview.html: verifies and inlines assets/fonts/*.woff2,
+                   # and refuses to write a bundle that does not parse or whose faces moved
 ```
 
 Edit `src/`. Never edit `dist-preview.html` — it is regenerated.
@@ -27,6 +28,8 @@ Edit `src/`. Never edit `dist-preview.html` — it is regenerated.
 | To change | Edit |
 |---|---|
 | A colour, spacing value, radius, font size, breakpoint | `src/styles/shell.html`, the `:root` block — one line, everywhere |
+| A **font face** (file, ranges, licence, budget) | `assets/fonts/fonts.json` — inlined by `build.js`, hashed, never a CDN |
+| Which family a **role** asks for | `packages/brand/brand.json` (`font.family`, `font.weight`) |
 | Any visible text | `src/data/content.js` |
 | A shared component's behaviour | `src/lib/components.js` |
 | Add a screen | One row in `PAGES` in `src/shell/app.js`, plus the screen function |

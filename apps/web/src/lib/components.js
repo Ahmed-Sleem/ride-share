@@ -185,6 +185,15 @@ const $ = (tag, opts={}, ...kids) => {
   return n;
 };
 
+/* A way out of a card or a detail view. The label is required, not defaulted: a ghost
+   button that fell back to an unrelated string once the copy moved would say the wrong
+   thing quietly, and no test would notice. Every call site names where it goes, and
+   tests/unit.test.js refuses a call that leaves the label out. */
+function backBtn(onClick, label) {
+  return $("button",{class:"btn btn--ghost", attrs:{type:"button"}, text:label,
+    on:{click:onClick}});
+}
+
 /* navigation — a real stack, so Back always has somewhere to go */
 const go = (p) => { if (S.page!==p) S.stack.push(S.page); S.page=p; S.sheet=null; render(); };
 const back = () => { S.page = S.stack.pop() || DEFAULT_PAGE[S.role]; S.sheet=null; render(); };

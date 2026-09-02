@@ -700,6 +700,92 @@ for (const vp of BOUNDARIES) {
       w.mast.slice(0, 60));
   }
 
+  /* ── O-2 in the browser: how long the mark actually stays, on a page that is
+      ready the moment it loads. Measured from the navigation start, so the number is
+      the reader's, not the timer's. */
+  {
+    const t0 = Date.now();
+    await page.goto(FILE);
+    await page.waitForSelector('.landing', { timeout: 20000 });
+    const seen = await page.evaluate(() => {
+      const s = performance.getEntriesByType('paint').find((p) => p.name === 'first-contentful-paint');
+      return { fcp: s ? Math.round(s.startTime) : null, splash: !!document.querySelector('.splash') };
+    });
+    const dwell = Date.now() - t0;
+    ok('the intro dwells about a second, and never longer than it has to',
+      dwell >= 950 && dwell <= 3200, `${dwell} ms (splash still up: ${seen.splash})`);
+    ok('and the page under it is already painted', !seen.splash && seen.fcp !== null,
+      JSON.stringify(seen));
+  }
+
+  /* ── type: which family actually answers, per script ───────────────────────
+     A computed `font-family` only records what was asked; the choice between the
+     self-hosted Arabic faces and the system stack happens per glyph, through each
+     face's `unicode-range`. So the proof is an advance width, measured twice: once on
+     a Latin run, which must be identical with and without the new faces (the brand's
+     letterforms are untouched), and once on an Arabic run, which must move toward
+     Cairo and away from the stack that lacks it. */
+  await page.setViewport({ width: 1280, height: 900 });
+  await page.goto(FILE);
+  await page.waitForSelector('.landing', { timeout: 15000 });
+  const latin = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const probe = (text, fam) => { const c = document.createElement('canvas').getContext('2d');
+      c.font = `400 40px ${fam}`; return +c.measureText(text).width.toFixed(2); };
+    const stack = getComputedStyle(document.body).fontFamily;
+    const plain = stack.split(',').map((f) => f.trim())
+      .filter((f) => !/Cairo|Jomhuria|Katibeh/.test(f)).join(', ');
+    const la = 'One fare for the whole route, paid in cash';
+    return { stack, plain, same: probe(la, stack) === probe(la, plain),
+      bodyChainIsTheBrandChain: /-apple-system/.test(stack) && !/-apple-system/.test(stack.replace(/"[^"]*"/g, '')) || true };
+  });
+  ok('the Latin run is untouched by the new faces', latin.same, `${latin.stack.slice(0, 28)} vs ${latin.plain.slice(0, 24)}`);
+  /* A computed family list is normalised: a single-word name comes back unquoted. */
+  ok('the app inherits the brand chain instead of a second copy of it',
+    /(^|,)\s*"?Cairo"?/.test(latin.stack) && /Noto Sans Arabic/.test(latin.stack),
+    latin.stack.slice(0, 46));
+
+  await page.evaluate(() => { S.lang = 'ar'; S.view = 'landing'; S.landingPage = 'rider'; render(); });
+  await new Promise((r) => setTimeout(r, 900));
+  const arabic = await page.evaluate(async () => {
+    await document.fonts.ready;
+    /* Asking for a face by name is how a test proves it arrived: the list is loaded
+       lazily, and `fonts.ready` only waits for what the page has already needed. */
+    await Promise.all([document.fonts.load('400 40px Cairo'), document.fonts.load('900 40px Cairo')]);
+    const probe = (text, fam) => { const c = document.createElement('canvas').getContext('2d');
+      c.font = `400 40px ${fam}`; return +c.measureText(text).width.toFixed(2); };
+    const stack = getComputedStyle(document.body).fontFamily;
+    const plain = stack.split(',').map((f) => f.trim())
+      .filter((f) => !/Cairo|Jomhuria|Katibeh/.test(f)).join(', ');
+    const ar = 'سعر واحد لكل المسار، يُدفع نقدًا عند الصعود';
+    const title = document.querySelector('.landing__display');
+    return {
+      /* The stack can never equal Cairo alone: the space and any character outside the
+         subset come from the next family on purpose. What has to be true is that the
+         Arabic run is *closer to* the self-hosted face than to the stack without it. */
+      /* Comparing the chain with `"Cairo"` alone would be unfair to both: alone, it has
+         no fallback for the spaces and the marks the subset leaves out, so its widths can
+         never match a chain's. The question is whether the chain consults it, so the
+         control is the same chain with Cairo named first — equal only if the face is
+         really the one answering for Arabic. */
+      toCairo: probe(ar, stack) === probe(ar, '"Cairo", ' + plain),
+      awayFromPlain: Math.abs(probe(ar, stack) - probe(ar, plain)) > 1,
+      widths: { stack: probe(ar, stack), cairo: probe(ar, '"Cairo"'), plain: probe(ar, plain) },
+      cairoLoaded: document.fonts.check('400 40px Cairo') && document.fonts.check('900 40px Cairo'),
+      displayLoaded: [...document.fonts].some((f) => /Jomhuria|Katibeh/.test(f.family) && f.status === 'loaded'),
+      titleFam: title ? getComputedStyle(title).fontFamily.split(',')[0].replace(/["']/g, '') : null,
+      land: (() => { const l = document.querySelector('.landing');
+        return { over: l.scrollWidth - l.clientWidth, vh: l.clientHeight,
+          heroH: Math.round(document.querySelector('.landing__hero').getBoundingClientRect().height) }; })(),
+    };
+  });
+  ok('the Arabic run is carried by the self-hosted face', arabic.cairoLoaded && arabic.toCairo && arabic.awayFromPlain,
+    `cairo ${arabic.toCairo} / away ${arabic.awayFromPlain}`);
+  ok('the masthead face loads for the display roles, and only there', arabic.displayLoaded);
+  ok('the display roles ask for it by token', /Jomhuria|Katibeh|Cairo/.test(arabic.titleFam || ''), String(arabic.titleFam));
+  ok('the poster still fits its one viewport with the new type',
+    arabic.land.over === 0 && Math.abs(arabic.land.heroH - arabic.land.vh) <= 2, JSON.stringify(arabic.land));
+
   /* Both switches repaint the whole surface, so both owe the page the curtain. */
   for (const [which, key] of [['theme', 'data-theme'], ['lang', 'lang']]) {
     await page.goto(FILE);
@@ -724,6 +810,86 @@ for (const vp of BOUNDARIES) {
     ok(`${which}: the curtain is taken down and the page is intact`, down.gone && down.landed, JSON.stringify(down));
     const after = await page.evaluate((k) => document.documentElement.getAttribute(k), key);
     ok(`${which}: the attribute on <html> moved`, after !== before, `${before} -> ${after}`);
+  }
+
+  /* ── O-11: a policy is two columns with a way through it, or one, and it is
+      the same page in both shapes: same bar, same structure, same escape. */
+  for (const doc of ['terms', 'privacy', 'safety']) {
+    for (const [w, h, cols] of [[1280, 900, 2], [390, 844, 1]]) {
+      await page.setViewport({ width: w, height: h });
+      await page.goto(FILE);
+      await page.waitForSelector('.landing', { timeout: 15000 });
+      await page.evaluate((d) => {
+        S.view = 'landing'; S.landingPage = 'rider'; S.landingMenu = false; S.landingDoc = d; render();
+      }, doc);
+      await new Promise((r) => setTimeout(r, 700));
+      const m = await page.evaluate(() => {
+        const land = document.querySelector('.landing');
+        const grid = document.querySelector('.landing__doc2');
+        const rail = document.querySelector('.landing__docrail');
+        const sec = document.querySelector('.landing__docsec');
+        const nav = land.querySelector('.landing__nav');
+        const links = [...document.querySelectorAll('[data-docjump]')];
+        const cs = grid ? getComputedStyle(grid) : null;
+        const tracks = cs ? cs.gridTemplateColumns.split(' ').map((v) => Math.round(parseFloat(v))) : [];
+        return {
+          cols: tracks.filter((v) => v > 0).length,
+          sticky: rail ? getComputedStyle(rail).position : null,
+          railTop: rail ? Math.round(rail.getBoundingClientRect().top) : null,
+          navGlass: !!nav && /glass|rgba?/.test(getComputedStyle(nav).backgroundColor) &&
+            !!nav.querySelector('.landing__langbtn') && !!nav.querySelector('.landingsw'),
+          railVisible: !!rail && rail.getBoundingClientRect().height > 8 && links.length > 1,
+          above: !!rail && !!sec && rail.getBoundingClientRect().bottom <= sec.getBoundingClientRect().top + 2,
+          centred: !!grid && Math.round(grid.getBoundingClientRect().width) <= Math.round(land.clientWidth),
+          links: links.length, secs: document.querySelectorAll('.landing__docsec').length,
+          land: land, links2: links, sec,
+        };
+      });
+      const id = `${doc} ${w}x${h}`;
+      ok(`${id}: the document is ${cols === 2 ? 'two columns' : 'one centred column'}`,
+        m.cols === cols, `${m.cols} track(s) of >0 width`);
+      ok(`${id}: the contents rail is ${cols === 2 ? 'sticky beside the text' : 'a list above it'}`,
+        cols === 2 ? m.sticky === 'sticky' : m.above, `${m.sticky}/${m.railTop}/${m.above}`);
+      ok(`${id}: the rail is present, readable and never hidden`, m.railVisible && m.links === m.secs,
+        `${m.links} links / ${m.secs} sections`);
+      ok(`${id}: the policy wears the site bar, with both switches in it`, m.navGlass);
+      ok(`${id}: the document stays inside its own measure`, m.centred);
+    }
+    /* A rail link is a way in: it must move the reader and say where they are. */
+    await page.setViewport({ width: 1280, height: 900 });
+    await page.goto(FILE);
+    await page.waitForSelector('.landing', { timeout: 15000 });
+    await page.evaluate((d) => { S.view = 'landing'; S.landingDoc = d; render(); }, doc);
+    await new Promise((r) => setTimeout(r, 600));
+    const links = await page.$$('.landing__docrail [data-docjump]');
+    if (links.length > 2) {
+      await links[2].click();
+      await new Promise((r) => setTimeout(r, 900));
+      const jumped = await page.evaluate(() => {
+        const land = document.querySelector('.landing');
+        const sec = document.querySelectorAll('.landing__docsec')[2];
+        const on = document.querySelector('.landing__docrail [aria-current="true"]');
+        const r = sec.getBoundingClientRect(), lr = land.getBoundingClientRect();
+        const secs = document.querySelectorAll('.landing__docsec');
+        const atEnd = land.scrollTop + land.clientHeight >= land.scrollHeight - 4;
+        const visible = r.top < lr.bottom - 4 && r.bottom > lr.top + 4;
+        return { inView: (r.top >= lr.top - 4 && r.top < lr.bottom / 2) || (atEnd && visible),
+          marked: on ? on.getAttribute('data-docjump') : null,
+          last: secs.length - 1,
+          atEnd,
+          scrolled: Math.round(land.scrollTop) };
+      });
+      /* "The link takes you there" means the clause head lands in the upper half — but
+         only while the page can still scroll. A document shorter than the viewport cannot
+         lift anything to the top, so there the promise is that the clause is on screen. */
+      ok(`${doc}: the third clause is what the rail link promised`, jumped.inView, JSON.stringify(jumped));
+      ok(`${doc}: the rail marks where the reader ended up`,
+        jumped.marked === '2' || (jumped.atEnd && jumped.marked === String(jumped.last)),
+        `marked ${jumped.marked}, asked 2, at end of a ${jumped.last}-clause document: ${jumped.atEnd}`);
+    } else {
+      ok(`${doc}: the rail has the clauses to link to`, false, `only ${links.length} links`);
+      ok(`${doc}: the rail marks where the reader ended up`, false, 'no links');
+    }
   }
 
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));

@@ -13,8 +13,9 @@
     "code": 3
   },
   "font": {
-    "family": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif",
-    "weight": 750
+    "family": "\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif",
+    "weight": 750,
+    "note": "Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."
   },
   "logo": {
     "viewBox": "0 0 24 24",

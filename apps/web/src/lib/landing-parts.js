@@ -169,6 +169,34 @@ function mkJourney(cuts, opts) {
   return section;
 }
 
+/* ── the intro: one rule, every surface ─────────────────────────────────
+   Every landing page opens the same way — the rule field, the display type, the
+   promise under it — and exactly one rule makes that true: `.landing__hero` is one
+   viewport tall at least, never a fixed height, so the copy can be long or short
+   and the poster is never cropped. A page that wrote its own `min-height` would
+   drift from the others the first time anyone measured a phone, which is what the
+   guard in tests/unit.test.js refuses.
+   `lines` is the display type (one line on a page, three on the poster); `kick`,
+   `lede`, `prose` and `actions` are all optional, because a help page has no
+   promise to make and a driver page has one thing to press. */
+function mkIntro(o) {
+  const head = $("div", { class: "landing__introhead" },
+    o.kick ? mkEyebrow(o.kick) : null,
+    mkDisplay(o.lines)
+  );
+  const foot = $("div", { class: "landing__hero-foot" },
+    ...(o.lede ? [mkLede(o.lede)] : []),
+    ...(o.prose && o.prose.length ? [mkProse(o.prose)] : []),
+    ...(o.actions && o.actions.length ? [mkActions(o.actions)] : [])
+  );
+  return $("section", { class: "landing__hero" },
+    mkRuleField(),
+    mkHeadTop(),
+    head,
+    foot
+  );
+}
+
 /* ── the inverted slab, its steps, the chapters ──────────────────────── */
 function mkSlab(kickKey, titleKey, kids, opts) {
   const o = opts || {};
@@ -183,10 +211,13 @@ function mkSlab(kickKey, titleKey, kids, opts) {
    which the compact-suite regression test checks; `right` in the CSS is that
    choice, and it is intentional — the number is a printer's mark, not text. */
 function mkStep(n, titleKey, bodyKey) {
+  /* A step may be a single line — the driver requirements are facts, not arguments —
+     and then no paragraph is manufactured to fill the row: the body is only built when
+     the copy table has one for it. */
   return $("li", { class: "landing__step", attrs: { "data-rv": "" } },
     $("span", { class: "landing__stepnum ltr", text: String(n).padStart(2, "0") }),
     $("h3", { class: "landing__stept", text: t(titleKey) }),
-    $("p", { class: "landing__stepb", text: t(bodyKey) }));
+    bodyKey ? $("p", { class: "landing__stepb", text: t(bodyKey) }) : null);
 }
 
 function mkSteps(steps) {
@@ -270,11 +301,70 @@ function mkProse(keys) {
   return $("div", { class: "landing__prose" }, keys.map((k) => $("p", { class: "landing__p", text: t(k) })));
 }
 
+/* A policy is read, not scanned — but a reader who came for one clause still needs the
+   way through it. So the document is two columns above the width where two columns are
+   readable: the contents rail beside the text, holding its place under the fixed bar,
+   and the sections in one centred measure under it. The rail is never hidden on a small
+   screen, because a control that disappears takes its function with it: there it becomes
+   a list of ways in, above the text. */
 function mkDoc(sections) {
-  return $("div", { class: "landing__doc" }, sections.map(([h, p]) =>
-    $("div", { class: "landing__docsec" },
+  const secs = sections.map(([h, body], n) =>
+    $("section", { class: "landing__docsec", attrs: { id: "docsec-" + S.landingDoc + "-" + n } },
       $("h2", { class: "landing__h3", text: h }),
-      $("p", { class: "landing__p", text: p }))));
+      $("p", { class: "landing__p", text: body })));
+  const rail = $("nav", { class: "landing__docrail", attrs: { "aria-label": t("docRailLabel"), "data-docrail": "" } },
+    sections.map(([h], n) => $("button", {
+      class: "landing__railink", attrs: { type: "button", "data-docjump": String(n) }, text: h,
+      on: { click: () => docJumpTo(n) },
+    })));
+  return $("div", { class: "landing__doc2" }, rail, $("div", { class: "landing__doc" }, secs));
+}
+
+function docJumpTo(n) {
+  const el = document.getElementById("docsec-" + S.landingDoc + "-" + n);
+  const scroller = document.querySelector(".landing");
+  if (!el || !scroller) return;
+  scroller.scrollTo({ top: Math.max(0, Math.round(scroller.scrollTop +
+    el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - DOC_CLEAR)),
+    behavior: Motion.reduced() ? "auto" : "smooth" });
+}
+
+/* Which clause you are in is the rail's one live fact, so it is read from where the
+   sections are, not from a click log: an IntersectionObserver with a band across the
+   upper part of the viewport. A host without one (jsdom) simply never marks a row,
+   which is the honest degradation — every link still works. */
+let DOC_CLEAR = 96;
+function watchDocSecs(rail, secs) {
+  const links = [...rail.querySelectorAll("[data-docjump]")];
+  if (!links.length || typeof IntersectionObserver !== "function") return null;
+  const scroller = rail.closest(".landing");
+  if (!scroller || !secs.length) return null;
+  DOC_CLEAR = Math.round(parseFloat(getComputedStyle(scroller).getPropertyValue("--bar-clearance")) ||
+    (0.09 * scroller.clientHeight));
+  let current = -1;
+  const mark = () => links.forEach((b, n) => {
+    if (n === current) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+  });
+  /* Short sections can crowd the band at once, and an observer reports *changes*, so the
+     answer is never "whichever row arrived last" — it is the last clause whose head the
+     reader has already passed. The observer is the trigger; the geometry is the truth. */
+  const settle = () => {
+    /* The line the reader reads from is just under the bar, not a quarter down the
+       screen: a rail marks where you are, not roughly what is in front of you. And a
+       short document that cannot scroll any further has no clause left to reach, so the
+       last one is the truth at the end of the scroll. */
+    const line = scroller.getBoundingClientRect().top + DOC_CLEAR + 8;
+    let n = 0;
+    secs.forEach((el, i) => { if (el.getBoundingClientRect().top <= line) n = i; });
+    if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4) n = secs.length - 1;
+    if (n !== current) { current = n; mark(); }
+  };
+  const io = new IntersectionObserver(settle, { root: scroller,
+    rootMargin: "-" + DOC_CLEAR + "px 0px -20% 0px", threshold: 0 });
+  secs.forEach((el) => io.observe(el));
+  scroller.addEventListener("scroll", settle, { passive: true });
+  settle();
+  return () => { io.disconnect(); scroller.removeEventListener("scroll", settle); };
 }
 
 /* ── the two header controls the poster does its own way ────────────────
@@ -337,6 +427,14 @@ function bindLandingMotion(root) {
   offs.push(Motion.mountScrub(root, root));
   Array.prototype.forEach.call(root.querySelectorAll("[data-journey]"), (section) => {
     offs.push(Motion.journey({ section, scroller: root, geography: journeyGeography() }));
+  });
+  /* A document page carries its own contents rail, and the rail needs to know which
+     clause the reader is in. It is mounted here, with the rest of the page\u2019s
+     behaviour, because the nodes only have a scroller once they are in the document. */
+  root.querySelectorAll("[data-docrail]").forEach((rail) => {
+    const secs = [...rail.parentElement.querySelectorAll(".landing__docsec")];
+    const off = watchDocSecs(rail, secs);
+    if (off) offs.push(off);
   });
   return () => { offs.forEach((f) => { if (typeof f === "function") f(); }); };
 }

@@ -300,8 +300,10 @@ function bootSplash(){
     $("div",{class:"splash__name",text:t("brand")}));
 }
 
-/* Boot: show the splash, resolve any stored session, then land. The minimum
-   splash time is long enough to feel intentional, not long enough to fake. */
+/* Boot: show the splash, resolve any stored session, then land. Two numbers decide how
+   long the mark stays (SPLASH_FLOOR_MS, SPLASH_WATCHDOG_MS below): a floor long enough
+   to read the brand and short enough never to feel like waiting, and a ceiling so that a
+   request that never answers cannot hold the door shut. */
 /* The viewport, measured, in CSS pixels. A unit that a phone changes under the page
    (or that a browser zoom counts twice) cannot promise a masthead that is exactly one
    screen tall; a number read off the window can. It is published as `--view-h` and the
@@ -324,13 +326,24 @@ function boot(){
   loadMapsConfig();                             // fire-and-forget, never blocks boot
   flushFieldQueue();                            // field captures saved offline upload now
   if (typeof flushDriverOutbox === "function") flushDriverOutbox();
-  const minDelay = new Promise(r=>setTimeout(r, 1500));
-  /* The splash leaves when the page has actually loaded — never before, however
-     short the minimum is — so the first thing under the curtain is a painted app. */
-  const loaded = typeof document !== "undefined" && document.readyState === "complete"
-    ? Promise.resolve()
-    : new Promise(r => (typeof window !== "undefined"
-        ? window.addEventListener("load", () => r(), { once: true }) : r()));
+  const SPLASH_FLOOR_MS = 1000, SPLASH_WATCHDOG_MS = 6000;
+  const minDelay = new Promise(r=>setTimeout(r, SPLASH_FLOOR_MS));
+  /* The splash leaves when the page has actually loaded — never before, however short
+     the minimum is — and "loaded" means the document *and* the faces it will paint with:
+     type that arrives after the curtain is the one thing that makes a fast boot look
+     slow, because the reader watches the page reflow instead of reading it. A load that
+     never arrives is capped by the watchdog, and the app then boots on the fallback
+     stack: an intro is a courtesy, not a gate. */
+  const painted = new Promise((resolve) => {
+    const afterFonts = () => {
+      const ready = typeof document !== "undefined" && document.fonts && document.fonts.ready;
+      if (!ready) resolve(); else ready.then(() => resolve(), () => resolve());
+    };
+    if (typeof document !== "undefined" && document.readyState === "complete") afterFonts();
+    else if (typeof window !== "undefined") window.addEventListener("load", afterFonts, { once: true });
+    else afterFonts();
+  });
+  const loaded = Promise.race([painted, new Promise(r=>setTimeout(r, SPLASH_WATCHDOG_MS))]);
   const session = (typeof fetch === "function" ? resolveSession() : Promise.resolve(API.user()))
     .catch(()=>null);
   Promise.all([minDelay, session, loaded]).then(([, user])=>{

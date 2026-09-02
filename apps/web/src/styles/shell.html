@@ -9,6 +9,11 @@
 <title>__BRAND_TITLE__</title>
 <link rel="icon" type="image/svg+xml" href="__BRAND_FAVICON__">
 <style>
+/* The self-hosted Arabic faces, inlined by build.js from assets/fonts/ (a single
+   file cannot fetch a font). Every one of them is restricted to Arabic ranges, so
+   the Latin chain below is untouched — that is what lets the whole GUI be re-typed
+   for one script without a component knowing. */
+__FONT_FACES__
 /* ══════════════════════════════════════════════════════════════════════════
    RIDE SHARE — DESIGN SYSTEM
    Every visual decision is defined exactly once, here. To change a value
@@ -24,6 +29,10 @@
      x-large    >= 1600px  ultrawide               content capped, centred
    ══════════════════════════════════════════════════════════════════════════ */
 :root{
+  /* How far the fixed bar reaches into the page. One number, asked by the masthead's
+     top padding and by the sticky contents rail of a document, so the two can never
+     disagree about where the page begins under the glass. */
+  --bar-clearance:clamp(4.5rem,9vh,7.5rem);
   /* ── PRIMITIVES ─────────────────────────────────────────────────────────
      Raw values. Never referenced by a component; only by semantic tokens.
      Two-layer model per WCAG 2.2 palette guidance, and deliberately narrow:
@@ -105,6 +114,9 @@
   /* ── SPACING (4px base) ─────────────────────────────────────────────── */
   /* the wordmark font comes from the single brand source (packages/brand) */
   --brand-font:__BRAND_FONT__; --brand-font-weight:__BRAND_FONT_WEIGHT__;
+  /* The poster's display roles in Arabic; the stack is composed by build.js from
+     the faces fonts.json marks `display`, so adding a masthead is a manifest edit. */
+  --brand-font-display:__FONT_DISPLAY_STACK__;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px;
   --s6:24px; --s7:32px; --s8:40px; --s9:48px; --s10:64px;
 
@@ -263,8 +275,10 @@ html.native .btn{min-height:var(--tap)}
 html.native .sheet{padding-bottom:calc(var(--s5) + var(--safe-b))}
 .dlqr{width:220px;height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--bg-base);image-rendering:pixelated}
 body{background:var(--bg-page);color:var(--text-primary);
-  font:var(--fw-normal) var(--f-body)/var(--lh-body) -apple-system,BlinkMacSystemFont,
-       "Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans Arabic",sans-serif;
+  /* The family list is brand.json's, not a copy of it. This rule used to hold the same
+     eight names a second time, so a font change could only ever be half-applied: the
+     poster and the brand mark read the chain, the app read the copy. */
+  font:var(--fw-normal) var(--f-body)/var(--lh-body) var(--brand-font);
   -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;text-size-adjust:100%;-webkit-text-size-adjust:100%}
 button,input,select,textarea{font:inherit;color:inherit;margin:0}
@@ -927,6 +941,11 @@ html.native .intro{padding-top:var(--safe-t)}
    document — html/body stay overflow:hidden for the whole app. */
 .landing{width:100%;min-width:0;height:100%;overflow-y:auto;overflow-x:hidden;
   background:var(--paper);color:var(--ink);scroll-behavior:smooth;
+  /* The brand chain, asked by name: until now the poster rendered in whatever the
+     user agent happened to call its default face, which meant a different metric on
+     every device and no way to type Arabic at all. One chain for the page, and the
+     faces inside it decide per script through their own ranges. */
+  font-family:var(--brand-font);
   font-size:var(--f-lg);-webkit-font-smoothing:antialiased}
 /* One grid for the whole page: gutter · measure · gutter. A section that must
    print to both edges takes the full span and reintroduces the gutter itself. */
@@ -1128,7 +1147,7 @@ html.native .intro{padding-top:var(--safe-t)}
 /* ── the masthead: exactly one viewport, three printed lines ───────────── */
 .landing__hero{position:relative;grid-column:1/-1;width:100%;overflow:hidden;
   display:grid;grid-template-rows:auto 1fr auto;gap:var(--s3);
-  padding:clamp(4.5rem,9vh,7.5rem) var(--gutter) var(--s5);
+  padding:var(--bar-clearance) var(--gutter) var(--s5);
   /* One screen at least, and a screen exactly whenever the copy fits in it: the
      measured height is a floor, never a crop — `overflow:hidden` here holds the
      decorative grid, so a fixed height would cut the paragraph off instead. */
@@ -1146,6 +1165,10 @@ html.native .intro{padding-top:var(--safe-t)}
   gap:var(--s2);font-size:var(--f-cap);text-transform:uppercase;letter-spacing:.16em;
   color:var(--ink-mute);font-variant-numeric:tabular-nums;
   padding-bottom:0}
+/* The masthead's first cell: the bar's own top row, then the poster. The rows are
+   declared once here and every landing surface inherits them through .landing__hero —
+   that is the whole reason a page cannot opt out of the one-screen intro. */
+.landing__introhead{position:relative;z-index:1;display:grid;gap:var(--s3);align-content:center}
 .landing__display{position:relative;z-index:1;margin:0;display:grid;align-content:center;
   line-height:.82;letter-spacing:-.055em;text-transform:uppercase;
   font-weight:var(--fw-bold);color:var(--ink);
@@ -1388,6 +1411,40 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__qr svg{width:min(180px,52vw);height:auto;display:block}
 .landing__qr figcaption{font-size:var(--f-micro);color:var(--ink-mute);text-align:center}
 .landing__doc{max-width:60ch;display:grid;gap:var(--s2)}
+/* A policy: the text in one readable measure, and the way through it beside it. Above
+   the width where two columns are honest, the rail is sticky and holds its place under
+   the bar; below it, the rail sits over the text as a list of ways in — never hidden,
+   because a hidden control takes its function with it. */
+.landing__doc2{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);align-items:start}
+.landing__docrail{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);margin:0;padding:0}
+.landing__railink{appearance:none;background:none;border:0;padding:var(--s1) 0;margin:0;
+  font:inherit;font-size:var(--f-small);line-height:var(--lh-tight);color:var(--ink-soft);
+  text-align:start;cursor:pointer;border-bottom:1px solid transparent}
+.landing__railink:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.landing__railink[aria-current="true"]{color:var(--ink);font-weight:var(--fw-semi);
+  border-bottom-color:var(--ink)}
+@media (min-width:900px){
+  /* The measure the narrow column needs is not the measure a wide track needs: with a
+     rail beside it, the text is already confined by the grid, and re-capping it at 60ch
+     inside a 48rem track leaves a third of the page empty and the pair off-centre. */
+  /* The poster grid justifies its items to their content, so a nested grid with an `fr`
+     track would size that track from the text and collapse the pair to a narrow band.
+     Both the block and its column have to claim the measure before `fr` means anything. */
+  .landing__doc2{grid-template-columns:minmax(0,16rem) minmax(0,1fr);gap:var(--s7);justify-self:stretch;width:100%}
+  /* The narrow measure belongs on the text column, not on the wrapper that holds the
+     rail beside it: the outer .landing__doc caps at 60ch, and left to itself that cap
+     clamps the pair — rail, gap and text — down to a band. */
+  .landing__doc:has(.landing__doc2){max-width:none}
+  .landing__doc2{max-width:min(100%,72rem);margin-inline:auto}
+  .landing__doc2 .landing__doc{max-width:70ch;width:100%}
+  .landing__docrail{position:sticky;top:calc(var(--bar-clearance) + var(--s3));
+    display:grid;gap:var(--s2);flex-wrap:nowrap}
+  /* The tap box keeps its height in the wide layout too: 24px is the floor the
+     suite measures, and an underline is a decoration, not a hit area. */
+  .landing__railink{font-size:var(--f-body);border-bottom:0;padding-block:var(--s1);min-height:24px}
+  .landing__railink:hover,.landing__railink[aria-current="true"]{border-bottom:0;
+    text-decoration:underline;text-underline-offset:.28em}
+}
 .landing__doc .landing__note{font-style:italic;margin-block:var(--s1) var(--s5)}
 .landing__docsec h2{margin:var(--s5) 0 var(--s1);font-size:var(--f-head);font-weight:var(--fw-bold);
   text-transform:uppercase;letter-spacing:.02em}
@@ -1436,6 +1493,14 @@ html.native .intro{padding-top:var(--safe-t)}
 [dir="rtl"] .landing__kick,[dir="rtl"] .journey__caption,
 [dir="rtl"] .journey__rule,[dir="rtl"] .landing__featuren,[dir="rtl"] .landing__stepnum{
   text-transform:none;letter-spacing:0}
+/* Arabic has no uppercase and no light weight to lean on for poster impact, so the
+   display roles get their own face here and nowhere else: Jomhuria (or whichever face
+   fonts.json marks `display`) answers only inside the RTL tree, at the size the face
+   needs to hold the same visual weight as the Latin beside it (size-adjust, in the
+   @font-face — one number, measured, not a clamp per component). */
+[dir="rtl"] .landing__display,[dir="rtl"] .landing__displayline>span,
+[dir="rtl"] .journey__word,[dir="rtl"] .landing__slab-t,[dir="rtl"] .landing__title,
+[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t{font-family:var(--brand-font-display)}
 [dir="rtl"] .landing__displayline--out>span{-webkit-text-stroke-width:1.2px}
 /* auth — centered card over the page background. width:100% for the same
    #root-flex reason as .landing. */

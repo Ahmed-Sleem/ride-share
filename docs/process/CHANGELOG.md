@@ -1,5 +1,81 @@
 # CHANGELOG
 
+## 2026-09-03 — renewal round 5: Arabic gets a real face, and the last six owner items close
+
+R4 (`dbf28ef`) was pushed first and verified live; this round is the type work the owner opened
+(Jomhuria and Katibeh offered as options) plus everything still owed from the sixteen. Plan of
+record: [planning/LANDING_CHECKLIST.md](../planning/LANDING_CHECKLIST.md).
+
+**The type was never asked for (G-081).** `brand.json` names the font chain, `body` in
+`shell.html` carried a *second literal copy* of the same eight names, and `.landing` had no
+`font-family` at all — the poster had been rendering in whatever the user agent called its default
+face, with different metrics per device, and any font change could only be half-applied. Both now
+read `var(--brand-font)`. Measured proof that the change is surgical: the Latin advance width is
+identical with and without the new faces (498.07 px on the probe string), while Arabic moves to
+Cairo (350.78 px against 362.56 without it).
+
+**Arabic is self-hosted, inlined, and routed by range.** `assets/fonts/fonts.json` owns the faces;
+`build.js` verifies each one (exists, is woff2, matches its recorded sha256, fits its budget and
+the bundle's, keeps its OFL licence beside it, stays inside the declared Arabic ranges) and inlines
+it as a data URI, because one file cannot fetch a font. Cairo variable, 200–1000 on `wght`, subset
+to 29,816 B: every weight in the system becomes a real outline instead of an emboldened 400 —
+which is what "the Arabic is never bold" actually was. Jomhuria (36,532 B) carries the poster's
+display roles in RTL only, at `size-adjust:124%`: measured at 96 px its ink box is 0.64 em against
+the fallback's 1.05 em, so the compensation is one number in the face, not a size fudge per
+component. **Katibeh is in the tree and out of the bundle** — the manifest marks one face
+`display:true`, and the build holds back anything the chain does not name, so an option costs zero
+bytes until it is chosen. Ink per area on the same string: fallback 2.31 %, Cairo 900 3.47 %,
+Jomhuria 1.09 %, Katibeh 1.10 %. Bundle 962.8 KB → 1,060.5 KB, budget 200 KB declared and enforced.
+
+**The build now refuses an unparsable bundle.** A stray parenthesis in a builder reached
+`dist-preview.html` and surfaced as a jsdom `SyntaxError` buried in a 640-assertion suite; the
+bundle is a classic script with no top-level await, so `new Function(js)` is a complete check and
+runs before anything is written.
+
+**O-2, the dwell.** The splash held on a bare 1500 ms timer. It holds on a 1000 ms floor, never
+releases before `load` *and* `document.fonts.ready` (type arriving after the curtain is what makes
+a fast boot look slow — the reader watches a reflow instead of reading), and a 6 s watchdog caps
+the wait so a request that never answers cannot hold the door. Chrome measures the whole dwell from
+navigation start.
+
+**O-10, the ways out.** One key per destination: `landingBack` is "Back to home" (and the document
+page now actually goes there, clearing `landingDoc` and landing on the rider home), `authBack` is
+"Back to sign in", `backToList` is "Back to the list" for the three ops detail screens that had
+been borrowing the landing's label, and `back` for one step inside the auth flow. `backBtn` moved
+from `screens/auth.js` to `lib/components.js` — three modules used it, one owned it — and lost a
+`|| t("changeEmail")` default: two call sites passed no label at all, and the guard that walks the
+parentheses (a regex stops at the first `)` of the arrow function) is what caught them.
+
+**O-11, the policies.** Terms, privacy and safety now open with the site's own bar instead of a
+bespoke header — and `landingGo` clears `landingDoc`, because a nav name means "read that page",
+which includes putting the document down. Above 900 the page is two columns with a sticky contents
+rail; below it one centred column with the rail as a list over the text, never hidden. The rail
+marks the clause you are in, observed by an IntersectionObserver mounted by `mountLanding`: wiring
+it in the builder meant `rail.closest(".landing")` was null and the rail silently never marked
+anything. The wide layout's `padding:0` on the rail links also took the tap box to 16 px, which
+the existing battery caught at once.
+
+**O-12, one intro on every surface.** `mkIntro` is the only builder of `.landing__hero`, and rider,
+drive, about, help and download all open with it; the bar's clearance became `--bar-clearance`,
+shared by the hero's padding and the sticky rail. **O-14:** the driver requirements are the page's
+own numbered rows, which needed `mkStep` to stop manufacturing a paragraph the copy does not have.
+
+Suites on this tree: **unit 643 · a11y 14 · layout 8,185 · landing 2,7xx (see below) — 0 failed**,
+`scripts/verify-repo.sh` green, `dist-preview.html` byte-identical to a fresh build.
+
+> **Round 5 finished, 2026-09-03 (same day).** Four guard corrections and one visual defect
+> closed after the first full run: the type assertions now measure what they claim (a subset can
+> never match a full stack to a pixel, so Arabic is tested as *strictly closer to `"Cairo"`* and
+> the face is awaited with `document.fonts.check` rather than trusted from a `status` string); the
+> contents rail marks the clause whose head passed the line under the bar, or the last clause at
+> the end of the scroll, instead of whichever intersection event arrived last; `build.js` refuses
+> to write an unparsable bundle; and the policy page's two columns were occupying 467 px of a
+> 1178 px measure because the wrapper's `60ch` cap sized the `fr` track — the cap now lifts at the
+> wide breakpoint, giving `256 + 868` px tracks and a 70ch measure. Landing suite 2590 → 2736
+> assertions, all green: unit 643, a11y 14, layout 8185, landing 2736, `verify-repo.sh` ✓, build
+> 1062.3 KB. Still open: **O-5** (production audit), **L2** (CI green + `verify-gui` cache path),
+> **L1** (both break harnesses re-anchored).
+
 ## 2026-09-02 — renewal round 4 (R4): the owner's six, in one pass
 
 Plan and evidence: [planning/LANDING_CHECKLIST.md](../planning/LANDING_CHECKLIST.md) (the live

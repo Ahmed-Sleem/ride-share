@@ -1,0 +1,67 @@
+{
+  "$comment": [
+    "The faces this app ships, in one place. The deliverable is a single file with no network, so a",
+    "font cannot be a <link>: build.js reads each `file`, checks its sha256 and its budget, and inlines",
+    "it as a data URI. `brand.json` owns the STACK (which family a role asks for); this file owns the",
+    "FILES (what is actually in the bundle) — one fact, one home.",
+    "Every face here is ARABIC-ONLY BY SUBSET and says so in `unicodeRange`: Latin runs must keep falling",
+    "through to the system stack, or the brand's Latin letterforms would change. That single rule is why",
+    "the whole Arabic GUI can be re-typed without touching a component.",
+    "`display:true` offers the face to the poster's display roles in RTL only (the `[dir=rtl]` block in",
+    "shell.html). `sizeAdjust` is the compensation an Arabic display face needs to hold the same visual",
+    "size as the Latin beside it — Jomhuria's ink box is 0.64 em against the fallback's 1.05 em, so it",
+    "is measured here rather than guessed in a clamp().",
+    "Both mastheads the owner offered are kept in the directory: flip `display` to ship Katibeh instead.",
+    "Re-subset with: pyftsubset SRC.ttf --unicodes=\"<arabicRanges>\" --layout-features='*' --flavor=woff2",
+    "--no-hinting --desubroutinize --output-file=face.woff2   (then re-record sha256 — never overwrite it)"
+  ],
+  "arabicRanges": "U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+2010-201F,U+2026,U+2022,U+00A0,U+0660-0669,U+06F0-06F9,U+25CC",
+  "budgetBytes": 200000,
+  "faces": [
+    {
+      "family": "Cairo",
+      "file": "cairo-wght.woff2",
+      "weight": "200 1000",
+      "display": false,
+      "sizeAdjust": null,
+      "unicodeRange": "U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F,U+2010-201F,U+2026,U+2022,U+00A0,U+0660-0669,U+06F0-06F9,U+25CC",
+      "budgetBytes": 90000,
+      "sha256": "4596faf0e21af028a2223b1f0c5a154c3b258d76f74a394c190269f01de8bcdf",
+      "license": "OFL-1.1",
+      "licenseFile": "OFL-Cairo.txt",
+      "attribution": "Copyright 2009 The Cairo Project Authors (https://github.com/Gue3bara/Cairo)",
+      "source": "https://fonts.google.com/specimen/Cairo",
+      "note": "Variable: one file carries 200-1000, so `--fw-*` weights are real outlines and no browser emboldens a glyph."
+    },
+    {
+      "family": "Jomhuria",
+      "file": "jomhuria.woff2",
+      "weight": "400 900",
+      "display": true,
+      "sizeAdjust": 1.24,
+      "unicodeRange": "U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+2010-201F,U+2026,U+00A0,U+0660-0669",
+      "budgetBytes": 90000,
+      "sha256": "46e462cc786fb5791c85b514fe4d9de586e64ef8d1b3e443fb4226bbe86f2e31",
+      "license": "OFL-1.1",
+      "licenseFile": "OFL-Jomhuria.txt",
+      "attribution": "Copyright 2015 KB-Studio (https://www.k-b-studio.com) and Copyright 2015 Lasse Fister, with Reserved Font Name Jomhuria",
+      "source": "https://fonts.google.com/specimen/Jomhuria",
+      "note": "The Egyptian newspaper masthead face: display roles only, never body text — its counters close up below poster size."
+    },
+    {
+      "family": "Katibeh",
+      "file": "katibeh.woff2",
+      "weight": "400 900",
+      "display": false,
+      "sizeAdjust": 1.14,
+      "unicodeRange": "U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+2010-201F,U+2026,U+00A0,U+0660-0669",
+      "budgetBytes": 90000,
+      "sha256": "4645e83032c139ee60aa6d465013bd27e48cd13e6f2ea37b797d210e1c20d84a",
+      "license": "OFL-1.1",
+      "licenseFile": "OFL-Katibeh.txt",
+      "attribution": "Copyright 2015, 2016 KB-Studio (https://www.k-b-studio.com) and Copyright 2015 Lasse Fister, with Reserved Font Name Katibeh",
+      "source": "https://fonts.google.com/specimen/Katibeh",
+      "note": "The other masthead the owner offered: calligraphic, lighter ink, wider. Flip `display` here and off on Jomhuria to ship it instead."
+    }
+  ]
+}

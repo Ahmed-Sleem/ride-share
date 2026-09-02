@@ -9,7 +9,7 @@
    tokens and (b) injects `const BRAND = …` that the copy table and the logo
    component read. To rename the product or change the logo, edit brand.json
    only.                                                              */
-const fs = require("fs"), path = require("path");
+const fs = require("fs"), path = require("path"), crypto = require("crypto");
 
 const SRC   = path.join(__dirname, "src");
 const OUT   = path.join(__dirname, "dist-preview.html");
@@ -65,6 +65,67 @@ const faviconSvg =
   `<path fill='${BRAND.logo.color.light}' fill-rule='evenodd' d='${BRAND.logo.path}'/></svg>`;
 const faviconDataUri = "data:image/svg+xml," + encodeURIComponent(faviconSvg);
 
+/* ── type ───────────────────────────────────────────────────────────────────
+   The deliverable is one file with no network, so a font is not a <link>: the
+   face is read from `assets/fonts/`, verified, and inlined as a data URI.
+   `packages/brand/brand.json` owns the STACK (what a role asks for) and
+   `assets/fonts/fonts.json` owns the FILES (what is in the bundle) — one fact,
+   one home, and this is where the two are proved to agree.
+   Refused at build time, rather than shipping a page that quietly falls back: a
+   missing file, a file that is not woff2, bytes that do not match the recorded
+   sha256, a face whose `unicodeRange` does not cover Arabic (it would steal the
+   Latin run and change the brand's letterforms), a face without its licence, a
+   face over its own budget, the bundle over its total, and a family that no
+   stack names yet still costs payload. A face kept in the directory as a
+   declared option and not named by the brand stack is held back, never carried. */
+const FONT_DIR   = path.join(__dirname, "assets", "fonts");
+const FONTS      = JSON.parse(fs.readFileSync(path.join(FONT_DIR, "fonts.json"), "utf8"));
+const brandStack = BRAND.font.family;
+const shipped = [];
+const held = [];
+for (const face of FONTS.faces) {
+  const fail = (m) => { console.error("FAIL: fonts.json — " + face.family + ": " + m); process.exit(1); };
+  if (!/^[A-Za-z0-9 ."'()&+-]+$/.test(face.family)) fail("`family` must be a plain font name");
+  const named = brandStack.indexOf('"' + face.family + '"') >= 0 || brandStack.indexOf(face.family) >= 0;
+  if (!face.display && !named) { held.push(face.family); continue; }
+  if (!/^\d+(\.\d+)? \d+(\.\d+)?$/.test(face.weight)) fail("`weight` must be a range like `200 1000`");
+  if (!/U\+0600-06FF/.test(face.unicodeRange)) fail("`unicodeRange` must cover U+0600-06FF, or the face steals the Latin");
+  /* A face may carry LESS than the full Arabic ranges (a masthead has no need of the
+     zero-width marks), never MORE: anything outside them could take a run away from
+     the brand stack, which is the one thing this whole step exists to prevent. */
+  const allowed = new Set(FONTS.arabicRanges.split(",").map((r) => r.trim()));
+  for (const r of face.unicodeRange.split(",")) {
+    const r0 = r.trim();
+    if (!allowed.has(r0)) fail("`unicodeRange` carries " + r0 + ", outside the Arabic ranges the file was subset to");
+  }
+  const file = path.join(FONT_DIR, face.file);
+  if (!fs.existsSync(file)) fail(face.file + " is missing — re-subset it (the command is in fonts.json)");
+  const buf = fs.readFileSync(file);
+  if (buf.subarray(0, 4).toString("latin1") !== "wOF2") fail(face.file + " is not a woff2 payload");
+  const sum = crypto.createHash("sha256").update(buf).digest("hex");
+  if (sum !== face.sha256) fail(face.file + " changed (recorded " + face.sha256.slice(0, 12) + "…, found " + sum.slice(0, 12) + "…) — re-subset and re-record, never overwrite");
+  if (buf.length > face.budgetBytes) fail(face.file + " is " + buf.length + " B, over its " + face.budgetBytes + " B budget");
+  if (!face.license || !fs.existsSync(path.join(FONT_DIR, face.licenseFile))) fail("an OFL face must ship its licence file beside it");
+  shipped.push({ family: face.family, weight: face.weight, range: face.unicodeRange,
+    adjust: face.sizeAdjust || 0, b64: buf.toString("base64"), display: !!face.display });
+}
+const fontBytes = shipped.reduce((n, f) => n + Math.ceil(f.b64.length * 3 / 4), 0);
+if (fontBytes > FONTS.budgetBytes) {
+  console.error("FAIL: fonts — " + fontBytes + " B inlined, over the " + FONTS.budgetBytes + " B budget for the single file");
+  process.exit(1);
+}
+const FONT_FACE_CSS = shipped.map((f) =>
+  "@font-face{font-family:\"" + f.family + "\";font-style:normal;font-weight:" + f.weight + ";" +
+  (f.adjust ? "size-adjust:" + (f.adjust * 100).toFixed(1) + "%;" : "") +
+  "src:url(data:font/woff2;base64," + f.b64 + ") format(\"woff2\");" +
+  "unicode-range:" + f.range + ";font-display:block}").join("\n");
+/* The poster's display roles ask for one family in front of the brand stack, and
+   only faces marked `display` may answer there. The ranges, not the components,
+   do the routing — which is why no screen, no rule and no component has to know
+   which script it is showing: the same `--brand-font` chain serves both. */
+const FONT_DISPLAY_STACK = shipped.filter((f) => f.display).map((f) => '"' + f.family + '"')
+  .concat([brandStack]).join(", ");
+
 const SHELL_TOKENS = {
   "__BRAND_TITLE__": BRAND.name.en,
   "__BRAND_DESCRIPTION__": BRAND.description,
@@ -73,14 +134,16 @@ const SHELL_TOKENS = {
   "__BRAND_FAVICON__": faviconDataUri,
   "__BRAND_FONT__": BRAND.font.family,
   "__BRAND_FONT_WEIGHT__": String(BRAND.font.weight),
+  "__FONT_FACES__": FONT_FACE_CSS,
+  "__FONT_DISPLAY_STACK__": FONT_DISPLAY_STACK,
 };
 
 let shell = fs.readFileSync(path.join(SRC, "styles", "shell.html"), "utf8");
 for (const [token, value] of Object.entries(SHELL_TOKENS)) {
   shell = shell.split(token).join(value);
 }
-if (/__BRAND_[A-Z_]+__/.test(shell)) {
-  console.error("FAIL: unresolved brand token in shell.html");
+if (/__BRAND_[A-Z_]+__|__FONT_[A-Z_]+__/.test(shell)) {
+  console.error("FAIL: unresolved brand or font token in shell.html");
   process.exit(1);
 }
 
@@ -170,7 +233,20 @@ if (!shell.includes(MARK)) { console.error("FAIL: injection point not found"); p
    `$&` means "the matched text" and would corrupt the bundle with
    "<div id=\"root\"></div>" spliced into the middle of the library. */
 const html = shell.replace(MARK, () => MARK + "\n<script>\n" + js + stickerJS + "\n</script>");
+/* A bundle that does not parse is a blank page, and every guard in the suite would
+   then report an absence rather than a fault. The classic script has no top-level
+   await, so `new Function` is a complete syntax check of what the browser will run —
+   and it is done here, before anything is written. */
+try { new Function(js); }
+catch (e) {
+  console.error("FAIL: the bundle does not parse — " + e.message);
+  process.exit(1);
+}
 fs.writeFileSync(OUT, html);
 fs.mkdirSync(path.join(__dirname, "dist"), { recursive: true });
 fs.writeFileSync(path.join(__dirname, "dist", "index.html"), html);
+console.log(`fonts: ${shipped.length} inlined (${Math.round(fontBytes/1024)} KB), ` +
+  `${shipped.filter((f) => f.display).length} display face(s), ` +
+  (held.length ? `${held.length} held as an option: ${held.join(", ")}` : "no unused faces") +
+  ` — ${Math.round(html.length/1024)} KB total`);
 console.log(`built ${path.relative(process.cwd(), OUT)} — ${(html.length/1024).toFixed(1)} KB, ${PARTS.length} modules`);

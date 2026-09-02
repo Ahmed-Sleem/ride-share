@@ -80,27 +80,106 @@ Two things this round taught the harness, and they are now rules here:
    hero while claiming to shoot the slab, because `scrollIntoView` on the `<section>` does nothing to
    `.landing`. Scroll the scroller, then clip the viewport.
 
-## Still open from the sixteen (the owner's standing list)
+### Round 5 — the remaining owner items, closed with the same rule
 
-- [ ] **O-2 — the intro's dwell.** Floor 1000 ms, never released before `load` + fonts settle,
-      6 s watchdog. *Check:* frame timings + the splash's release time in Chrome.
-- [ ] **O-5 — the full production audit.** `docs/audits/LANDING_PRODUCTION_AUDIT.md`, every rule and
-      every owner item mapped to file + test + live-URL evidence. *Check:* the audit itself.
-- [ ] **O-8 (already asked again as R4-5)** — closed by R4-5.
-- [ ] **O-10 — "Back to sign in" → "Back to home"** in both languages, routing to `#/`.
-      *Check:* the copy guard + the "way out of the page" assert.
-- [ ] **O-11 — Terms / Privacy / Safety**: same bar on all three, two columns with a sticky contents
-      rail at ≥900, one centred column below, fully adaptive. *Check:* the deep battery on the three
-      docs + a rail-owns-clause assert.
-- [ ] **O-12 — the one-screen intro on every surface** (rider, drive, about, help, download) from one
-      shared rule, not a per-page `min-height`. *Check:* the hero-floor assert iterates views.
-- [ ] **O-14 — "What you need"** rebuilt from the shared primitives. *Check:* the shared-scale guard.
-- [ ] **O-15b — a real bold Arabic face**: self-hosted Cairo subset, inlined, validated in `build.js`.
-      *Check:* the font-stack guard + a measured AR display weight.
-- [ ] **L2 — green CI**: `Verify (repo + api + web unit)` broke at the renewal's own push.
-      *Check:* the job, on the newest commit.
-- [ ] **L1 — both break harnesses to completion** after the CSS settles (anchors keep moving).
-      *Check:* `breaks.sh` 113 + `layout-breaks.sh` 11, zero missed.
+- [x] **O-2 — the intro dwells, and is never the thing you wait for.** Floor
+      `SPLASH_FLOOR_MS = 1000`, release never before `load` **and** `document.fonts.ready`,
+      cap `SPLASH_WATCHDOG_MS = 6000` so a request that never answers cannot hold the door.
+      *Check (unit):* both constants, the race, and the old bare `setTimeout(r, 1500)` gone.
+      *Check (Chrome):* the dwell measured from navigation start, in a 950–3200 ms band, with
+      first contentful paint already recorded and no `.splash` left in the document.
+- [x] **O-10 — a way out names where it goes.** `landingBack` "Back to home", `authBack`
+      "Back to sign in", `backToList` "Back to the list", `back` for one step inside the auth
+      flow — one key per destination, in both languages, no key carrying two meanings.
+      `backBtn` moved to `lib/components.js` (three modules used it while one owned it) and
+      lost `|| t("changeEmail")`, a default that would have spoken for any button whose copy
+      was forgotten. *Check:* each label matched against its own destination in both languages;
+      the three are distinct sentences; a paren-walk proves every call site passes a label; and
+      jsdom *clicks* the document page's way out and asserts it lands on the rider home.
+- [x] **O-11 — the three policies are one page, in two shapes.** Same `landingNav()` bar on
+      terms, privacy and safety (a document opened from the footer is still the site, so it
+      offers the same way back out, in the same place); two columns above 900 with the contents
+      rail sticky under the bar's clearance; one centred column below, the rail a list over the
+      text — never hidden, because a hidden control takes its function with it. *Check:* per
+      document, per shape: the counted non-zero grid tracks, `position:sticky`, the rail above
+      the first clause when narrow, links = sections, the bar's glass and both switches inside
+      it, the whole thing inside its own measure — and a real click on the third link must move
+      the reader there *and* mark it `aria-current` — where the document is short enough that no
+      further scroll exists, the promise being tested is that the clause is on screen, not that
+      it sits in the top half, because a page cannot lift what already fits.
+- [x] **O-12 — one intro rule, five surfaces.** `mkIntro` in `lib/landing-parts.js` is the only
+      place `.landing__hero` is built; rider, drive, about, help and download all open with it,
+      so the one-viewport floor, the rule field and the display type are shared by construction.
+      The bar's clearance is now `--bar-clearance`, asked by the hero's padding *and* the
+      document rail's sticky offset — two places that must not disagree about where a page
+      begins under the glass. *Check:* the string `class: "landing__hero"` occurs exactly once;
+      each page renders and its first body child is the hero with a display heading, with no
+      section heading competing in the same page.
+- [x] **O-14 — "What you need" in the page's own voice.** The three requirements are
+      `mkSteps` rows, not a sentence to parse out of a paragraph; `mkStep(n, t, null)` now omits
+      the body instead of inventing one. *Check:* the shared-scale guard, and the copy table
+      carrying `driveReq1T..3T` in both languages.
+
+- [x] **R5-A — Arabic typography, self-hosted.** Payload is measured, not assumed:
+  66.3 KB of woff2 (Cairo 29.8 + Jomhuria 36.5) inlined → bundle 962.8 → 1,060.5 KB,
+  and the budget in `fonts.json` (200 KB) is what stops it growing silently. Ink per em,
+  at 96 px on the same string: fallback 2.31 %, Cairo 900 3.47 %, Jomhuria 1.09 % at
+  0.64 em tall, Katibeh 1.10 % at 0.92 em — the reason the masthead face needs a
+  size-adjust and the body text does not need a new family at all.
+- [x] **R5-B — `build.js` refuses an unparsable bundle.** A stray parenthesis in a
+  builder reached `dist-preview.html` and only surfaced as a jsdom `SyntaxError` in a
+  suite that had 600 other things to say. The bundle is a classic script with no
+  top-level await, so `new Function(js)` is a complete check, and it now runs before
+  anything is written.
+- [x] **R5-C — `G-081`: the app had a second copy of the brand font stack in `body`,
+  and the poster had none.** Found because a font that should have appeared, did not.
+
+- [x] **R5-D — the document pair finally claims its measure.** With the rail wired, the
+  two columns occupied 467 px of a 1178 px measure: `.landing__doc` (the *wrapper* the page
+  builds around the pair) carries `max-width:60ch`, and `fr` tracks sized from content simply
+  obeyed it. Lifting that cap at the wide breakpoint only (`:has(.landing__doc2)`) and centring
+  the pair gives `256px + 868px` tracks, a 545 px (70ch) text measure, and `x=64` on a 1280 px
+  viewport. *Check:* the counted grid tracks and the centring already in the O-11 battery.
+
+Gate as shipped: `node build.js` → **1062.3 KB / 19 modules**, unit **643/0**, a11y **14/0**,
+layout **8185/0**, landing **2736/0**, `scripts/verify-repo.sh` green, and the committed
+`dist-preview.html` byte-identical to a fresh build.
+
+Six lessons the harness took, so they are not taken again:
+
+1. **A guard that greps the whole bundle for placeholder words will find them inside
+   identifiers** — `jumpToDocSec(n)` reads as `TODO` case-insensitively. Word boundaries now
+   guard real placeholders, and the payload is stripped first.
+2. **A guard that renders a page must hand the state back.** Leaving the window on the
+   Help page turned every later assertion about the poster into an assertion about
+   nothing; the O-12 loop now re-renders the rider home when it finishes.
+3. **Never wire behaviour inside a builder.** `rail.closest(".landing")` is null before
+   the node is in the document, so the contents rail never marked anything; behaviour
+   belongs to `mountLanding`, which also owns the teardown.
+4. **Counting a call's arguments with a regex stops at the first `)` of an arrow
+   function.** The `backBtn` label guard walks the parentheses instead — and that is how
+   two call sites with no label at all were found, which the previous default would have
+   rendered as empty buttons.
+5. **A layout fix can make a short document shorter than the viewport.** Widening the policy
+   column from a 183 px band to 545 px removed most of its height, and with it the *ability* to
+   land a clause in the upper half: the jump assertion went red on correct behaviour. Reachable
+   state again — see R4 lesson 1 — and this time the guard learned to ask what the geometry
+   permits, using the same `atEnd` escape the marking assertion already had.
+6. **Measure the ancestry before arguing with the cascade.** Three guesses about why the pair
+   collapsed were worth less than one walk up the DOM printing width, `justify-self` and
+   `grid-template-columns` per ancestor: the cap was on an element the selector never named.
+   `/tmp` probes that print the chain are cheap; CSS edits made from a theory are not.
+
+## Round 5 open (nothing else from the owner's lists is pending)
+
+- [ ] **O-5 — the full production audit** (`docs/audits/LANDING_PRODUCTION_AUDIT.md`): every
+      rule, every owner item, file + test + live URL. Type and layout moved since the last
+      pass, so the audit is worth taking after this lands.
+- [ ] **L2 — green CI** on the newest commit, and `verify-gui` given the same Chrome/cache
+      path as before (the job has been red since the renewal's own push).
+- [ ] **L1 — both break harnesses**: `breaks.sh` (113) and `layout-breaks.sh` (11) re-anchored
+      after R4-6/O-11 moved the rules, plus a case that puts a hairline back to prove the
+      component guard bites.
 
 ## Closed earlier (kept here so nothing is re-broken)
 
