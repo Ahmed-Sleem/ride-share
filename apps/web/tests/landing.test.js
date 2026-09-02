@@ -511,22 +511,68 @@ async function survey(view, lang, key, doc) {
         smallPrimary.push(name(el) + ' ' + Math.round(b.width) + '\u00d7' + Math.round(b.height));
       }
     });
+    /* The bar: three regions that must never touch, measured as drawn, in whatever
+       direction the document is in. The defect this replaces was an `inset-inline-start:50%`
+       anchor with a `translateX(-50%)` shift — exact in LTR, one element width off in RTL,
+       which laid the page names on top of the auth group at 1280px. */
+    const nav = land.querySelector('.landing__nav');
+    let barOverlap = 0, barCentreErr = -1, barParts = [];
+    if (nav) {
+      const parts = ['.landing__brand', '.landing__links', '.landing__actions', '.landing__menu']
+        .map((q) => nav.querySelector(q))
+        .filter((el) => el && getComputedStyle(el).display !== 'none')
+        .map((el) => ({ el, cls: el.className.split(' ')[0], r: el.getBoundingClientRect() }));
+      barParts = parts.map((q) => `${q.cls}:${Math.round(q.r.left)}..${Math.round(q.r.right)}`);
+      for (let a = 0; a < parts.length; a++) {
+        for (let b = a + 1; b < parts.length; b++) {
+          const ov = Math.min(parts[a].r.right, parts[b].r.right) - Math.max(parts[a].r.left, parts[b].r.left);
+          if (ov > barOverlap) barOverlap = Math.round(ov);
+        }
+      }
+      const links = nav.querySelector('.landing__links');
+      if (links && getComputedStyle(links).display !== 'none') {
+        const lr = links.getBoundingClientRect();
+        barCentreErr = Math.round(Math.abs((lr.left + lr.width / 2) - de.clientWidth / 2));
+      }
+    }
     const rv = [...land.querySelectorAll('[data-rv]')];
     /* On a phone the bar's menu is the reader's way out of a page. A document is the
        one view that answers with a Back control instead, so either is a way out. */
     const mb2 = land.querySelector('.landing__menu')
       || [...land.querySelectorAll('.landing .btn')].find((e) => e.textContent.trim() === T[S.lang].landingBack) || null;
-    return {
+    const base = {
       over: de.scrollWidth - de.clientWidth, landOver: land.scrollWidth - land.clientWidth,
       escapes: escapes.slice(0, 3), clipped: clipped.slice(0, 3), offRhythm: offRhythm.slice(0, 3),
       burst: burst.slice(0, 3), clippedAway: clippedAway.slice(0, 3),
-      onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
+      barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
       smallPrimary: smallPrimary.slice(0, 3),
       hidden: rv.filter((el) => Number(getComputedStyle(el).opacity) < 0.05).length,
       phone,
       menu: mb2 ? { shown: getComputedStyle(mb2).display !== 'none',
         box: mb2.getBoundingClientRect().height } : null,
     };
+    /* The sheet, opened. LAST on purpose: opening it re-renders the landing, and every
+       measurement above would otherwise be read off a detached tree (that is how one probe
+       here turned into 270 failures over a bar that measured perfectly by hand. So the whole
+       survey is frozen into `base` first, and this is the last thing the page does. */
+    let sheet = null;
+    const navNow = document.querySelector('.landing__nav');
+    const mb0 = navNow && navNow.querySelector('.landing__menu');
+    if (mb0 && getComputedStyle(mb0).display !== 'none') {
+      mb0.click();
+      const panel = document.querySelector('.landing__menu-panel');
+      const navRef = document.querySelector('.landing__nav');
+      if (panel && navRef) {
+        const pcs = getComputedStyle(panel), ncs = getComputedStyle(navRef);
+        const al = (x) => +((x.match(/[\d.]+/g) || [0, 0, 0, 1])[3]);
+        sheet = { alpha: al(pcs.backgroundColor), navAlpha: al(ncs.backgroundColor),
+          blur: pcs.backdropFilter || pcs.webkitBackdropFilter || 'none',
+          navBlur: ncs.backdropFilter || ncs.webkitBackdropFilter || 'none',
+          rows: panel.querySelectorAll('.landing__menulink').length };
+      }
+    }
+    base.sheet = sheet;
+    return base;
   });
 }
 
@@ -546,6 +592,17 @@ for (const vp of BOUNDARIES) {
       ok(`${id}: the rhythm is the flow tokens`, m.offRhythm.length === 0, m.offRhythm.join(' | '));
       ok(`${id}: every block is revealed by the scroll`, m.hidden === 0, `${m.hidden} still transparent`);
       ok(`${id}: tap targets are at least 24px`, m.small.length === 0, m.small.join(' | '));
+      ok(`${id}: the bar's regions never touch`, m.barOverlap <= 0, `${m.barOverlap}px — ${m.barParts.join(' ')}`);
+      if (m.sheet) {
+        ok(`${id}: the open sheet is the bar's own glass`,
+          m.sheet.blur !== 'none' && m.sheet.alpha <= 0.7 && m.sheet.navBlur !== 'none' &&
+          Math.abs(m.sheet.alpha - m.sheet.navAlpha) < 0.01, JSON.stringify(m.sheet));
+        ok(`${id}: the sheet carries every page name`, m.sheet.rows >= 5, String(m.sheet.rows));
+      }
+      if (m.barCentreErr >= 0) {
+        ok(`${id}: the page names sit on the poster's own axis`, m.barCentreErr <= 2,
+          `${m.barCentreErr}px off centre`);
+      }
       if (m.boxErr >= 0) {   /* only pages that carry the map own these promises */
         ok(`${id}: the map box is the section box — no letterbox, no clipped corridor`,
           m.boxErr <= 1, `${m.boxErr}px of disagreement`);

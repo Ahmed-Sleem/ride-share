@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## 2026-09-02 — renewal round 3 (M3a): the bar is a grid, the sheet is glass, the poster has no buttons
+
+Plan of record: [planning/LANDING_REWORK.md](../planning/LANDING_REWORK.md). Items 4, 6, 9, 13 and
+16 of the owner's sixteen, plus one defect found on the way. **All five were measured on the deployed
+page before being touched**, which is what made 16 cheap: four of them were one or two lines of CSS.
+
+**The Arabic bar (16).** The centring was `position:absolute; inset-inline-start:50%;
+transform:translateX(-50%)` — a logical anchor married to a physical transform. Measured in Chrome:
+0 px off in LTR, **exactly one element width off in RTL** (−200 px of a 200 px box), which is how the
+page names came to lie 115 px on top of the auth group at 1280 px. Replaced by a real three-region
+grid (`minmax(0,1fr) auto minmax(0,1fr)`, links `justify-self:center`): equal outer tracks centre the
+names on the poster's axis in either direction, and a grid cannot overlap its own tracks. Now
+**0 px overlap and 0 px off-axis** at 1280 in both languages.
+
+**The same bug, twice more (found, not reported by the owner).** `.sheet` and `.toast` used the
+identical pairing, so every desktop sheet and toast in the app is shifted a full width left in
+Arabic. Both now centre with `inset-inline:0; margin-inline:auto` — and the `pop` keyframe no longer
+needs `translateX(-50%)` inside it, which was silently re-imposing the same offset for 200 ms.
+
+**320 px (16, second half).** With the bar a grid, the tightest width still wanted 315 px of the 288
+the padding leaves — mark, two switches, Sign up, menu — so it painted its own ends over each other
+in *both* directions (15 px EN, 13 px AR). Below 380 the filled auth button now leaves the row, as
+the bare one already did below 700: the panel's first rows are those two actions, so nothing is lost,
+only unduplicated in a row that cannot hold it.
+
+**The sheet (4)** is `var(--glass)`, the bar's own 62 % wash, instead of `--glass-solid` — it already
+had the bar's `backdrop-filter`, at an alpha that made the blur invisible, which is why it read as
+"the effect is missing". **The masthead (6)** loses its Create account / Sign in / Get the app row:
+the bar owns those, and its foot is now two texts on one baseline (30 rem lede, 26 rem paragraph at
+≥900). **The two lines (9, 13)** were one rule — the hairline above `.landing__steps` — and it is
+gone with its padding weld: the slab's own surface change was already saying "edge".
+
+**"Get the app" (7)** is an outlined pill with a filled dot, `data-cta="app"` written in the markup so
+the CSS owns the look, scoped to `.landing__links` so the panel's row for the same destination stays
+plain. **The 1000 px boundary** is now `max-width:999px` against `min-width:1000px`; the two used to
+both claim the boundary.
+
+**Verified**: unit 600 / 0 · landing **2,570 / 0** (+330 assertions: bar regions never touch, names on
+the axis, the sheet is the bar's glass and carries every page name — at 26 viewports × both languages
+× every marketing page) · a11y 14 / 0 · layout 8,185 / 0 · `scripts/verify-repo.sh` green.
+
+**The harness lesson**, because it cost a full debugging cycle: the first version of the sheet probe
+clicked the menu *before* the survey's return literal, and `render()` detached every node that literal
+still held — rects 0, `backdrop-filter: none`, 12 blocks "still transparent". 130 failures, a product
+that measured clean by hand, and a 20-line replay of the exact scroll sequence to prove which one was
+lying. The survey now freezes into `base`, and the probe is the last thing the page does.
+
 ## 2026-09-02 — renewal round 3 (M1): the map was letterboxed, and the poster words came back
 
 Plan of record: [planning/LANDING_REWORK.md](../planning/LANDING_REWORK.md) — the owner's sixteen

@@ -818,12 +818,16 @@ select.input{cursor:pointer}
 .sheet__grip{width:38px;height:4px;border-radius:var(--r-full);
   background:var(--line-strong);margin:0 auto var(--s3);flex:none}
 @media (min-width:600px){
-  .sheet{inset-inline:auto;inset-inline-start:50%;transform:translateX(-50%);
-    bottom:auto;top:50%;translate:0 -50%;width:min(480px,92%);
+  /* Centred by the inline box, not by an anchor and a transform: measured in Chrome,
+     `inset-inline-start:50%` with `translateX(-50%)` lands a full element-width off to the
+     left in RTL (−200px of a 200px box), because the anchor is logical and the transform is
+     physical. `inset-inline:0` + `margin-inline:auto` is 0px in both directions. */
+  .sheet{inset-inline:0;margin-inline:auto;bottom:auto;top:50%;translate:0 -50%;
+    width:min(480px,92%);
     border-radius:var(--r-lg);border:1px solid var(--line);
     max-height:min(82%,720px);animation:pop var(--med) var(--ease)}
   .sheet__grip{display:none}
-  @keyframes pop{from{opacity:0;transform:translateX(-50%) scale(.97)}}
+  @keyframes pop{from{opacity:0;transform:scale(.97)}}
 }
 
 /* toast */
@@ -836,7 +840,10 @@ select.input{cursor:pointer}
 .toast svg{width:var(--icon-md);height:var(--icon-md);flex:none;fill:none;
   stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (min-width:600px){
-  .toast{inset-inline:auto;inset-inline-start:50%;translate:-50% 0;
+  /* The same measured rule as the sheet above; `width:fit-content` is what lets the auto
+     margins centre it, since an absolutely positioned box with both insets and auto width
+     stretches instead of centring. */
+  .toast{inset-inline:0;margin-inline:auto;width:fit-content;
     min-width:300px;max-width:420px;justify-content:center}
 }
 
@@ -965,7 +972,8 @@ html.native .intro{padding-top:var(--safe-t)}
    Frosted glass deliberately replaces blend-mode tricks: a panel that inverts
    against what is behind it cannot also be a translucent panel. */
 .landing__nav{position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
-  display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;
+  column-gap:var(--s3);
   padding:var(--s2) var(--gutter);background:var(--glass);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   border-bottom:1px solid var(--glass-line);color:var(--ink)}
@@ -976,8 +984,21 @@ html.native .intro{padding-top:var(--safe-t)}
   padding:0;cursor:pointer;color:inherit;font:inherit;font-weight:var(--fw-semi);
   letter-spacing:-.02em;text-decoration:none;font-size:var(--f-lg)}
 .landing__brand svg{width:19px;height:19px;flex:none}
+/* The three regions are placed, not floated into each other. The outer tracks are
+   `minmax(0,1fr)`: equal by definition in either direction, which is what puts the page
+   names on the poster's own axis, and they can shrink to nothing instead of letting the
+   centre lean on a neighbour. The earlier attempt here was `position:absolute;
+   inset-inline-start:50%;transform:translateX(-50%)` — a logical anchor and a physical
+   transform, which in RTL moved the block a full half-width to the left of where it was
+   anchored and laid it on top of the auth group (measured: 115 px of overlap at 1280 px).
+   A grid cannot overlap its own tracks, in either direction, at any label length. Chrome
+   says the same of the pattern everywhere: that pairing is 0 px off in LTR and exactly one
+   element width (−200 px of a 200 px box) off in RTL. `.sheet` and `.toast` were the same
+   mistake and are fixed the same way in the same commit. */
+.landing__brand{grid-column:1;justify-self:start;min-width:0}
+.landing__actions{grid-column:3;justify-self:end}
 .landing__links{display:flex;gap:clamp(1rem,2.4vw,2.2rem);font-size:var(--f-cap);
-  letter-spacing:-.005em;margin-inline-start:auto;min-width:0}
+  letter-spacing:-.005em;min-width:0;justify-self:center}
 .landing__link{display:inline-flex;align-items:center;min-block-size:var(--tap);
   /* The word in the bar is the target: Arabic's shortest label ("عنّا") is 14 px
      of glyph, which is a tap area a thumb misses. Padding on the link, not on the
@@ -985,17 +1006,21 @@ html.native .intro{padding-top:var(--safe-t)}
      hit box at least as wide as it is tall. */
   flex:none;padding-block:0;padding-inline:var(--s2);border:0;background:none;cursor:pointer;font:inherit;color:var(--ink);
   opacity:.72;transition:opacity var(--med) var(--ease)}
-/* Centred in the bar, not merely between its ends: only wide has room to put the page
-   names on the axis the whole poster is built around, and below that the row keeps its
-   own company. `inset-inline` so RTL centres from the correct edge; the transform is
-   geometry, not direction. */
-@media (min-width:1000px){
-  .landing__links{position:absolute;inset-inline-start:50%;transform:translateX(-50%)}
-}
 .landing__link:hover,.landing__link:focus-visible{opacity:1}
+/* The one thing in the bar a reader should find without hunting for it: an outlined pill
+   with a filled dot, which is the ink ramp's own vocabulary (a ring plus a solid mark,
+   the same pair the logo is) rather than a new colour. Padding sits on the pill so the
+   tap floor does not move; `[data-cta]` is written in the markup, so the panel's row for
+   the same destination stays a plain row — one emphasis per list, or it is not emphasis. */
+.landing__links .landing__link[data-cta]{opacity:1;border:1px solid var(--ink);border-radius:var(--r-full);
+  padding-block:.3rem;margin-block:.2rem 0;display:inline-flex;gap:.45rem;font-weight:var(--fw-semi)}
+.landing__links .landing__link[data-cta]::before{content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--ink);flex:none}
+.landing__links .landing__link[data-cta]:hover{background:var(--ink);color:var(--paper)}
+.landing__links .landing__link[data-cta]:hover::before{background:var(--paper)}
 .landing__link--on{opacity:1;font-weight:var(--fw-semi);text-decoration:underline;
   text-underline-offset:6px;text-decoration-thickness:1.5px}
-.landing__actions{display:flex;align-items:center;gap:var(--s2)}
+.landing__actions{display:flex;align-items:center;gap:var(--s2);min-width:0}
 /* The switches on one side, the two ways in on the other: half a step apart they read
    as one crowd of small controls, and the bar is the place a reader decides. */
 .landing__actions>.btn{margin-inline-start:var(--s3)}
@@ -1011,6 +1036,12 @@ html.native .intro{padding-top:var(--safe-t)}
   .landing__brand{gap:0;min-inline-size:var(--tap);justify-content:center}
   .landing__actions{gap:var(--s1)}
   .landing__nav .btn{padding:.45rem .7rem}
+  /* And the filled button leaves the row too. Measured at 320 px: the mark (44) + the two
+     switches and Sign up (203) + the menu (44) + the gaps want 315 px of the 288 the
+     padding leaves, so the bar painted its own ends over each other — 15 px in English,
+     13 in Arabic. Below 700 the panel's first rows already ARE Log in and Sign up, so the
+     control is not lost, only not duplicated in a row that cannot hold it. */
+  .landing__actions .btn{display:none}
 }
 .landing__langbtn{border:0;background:none;cursor:pointer;font:inherit;color:var(--ink);
   font-size:var(--f-cap);font-weight:var(--fw-semi);letter-spacing:.01em;
@@ -1018,7 +1049,7 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__langbtn:hover{text-decoration:underline;text-underline-offset:4px}
 /* Three dots and nothing else. The tap target stays --tap-sm even though the
    chrome is gone: an invisible 44px square is still a 44px square to a thumb. */
-.landing__menu{display:none;border:0;background:transparent;color:var(--ink);
+.landing__menu{display:none;grid-column:3;justify-self:end;border:0;background:transparent;color:var(--ink);
   width:var(--tap);height:var(--tap);align-items:center;justify-content:center;
   cursor:pointer;flex:none;opacity:.8;transition:opacity var(--med) var(--ease)}
 .landing__menu svg{width:22px;height:22px;fill:currentColor;stroke:none}
@@ -1027,9 +1058,12 @@ html.native .intro{padding-top:var(--safe-t)}
    entrance rather than a pop. It animates on mount because a re-render replaces the
    node — a transition on a node that has never been painted would be skipped. */
 .landing__menu-panel{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;
-  gap:1px;background:var(--glass-solid);
-  /* The same blur as the bar, on a surface a shade closer to opaque: over the
-     poster's own display type a 62% wash turns the words behind it into noise. */
+  gap:1px;background:var(--glass);
+  /* Exactly the bar's glass, on purpose: the panel IS the bar continued, and a sheet that
+     is 96% opaque while its own header is 62% reads as two different materials. The blur
+     alone was already there — invisible at that alpha, which is why it looked like the
+     effect had been dropped. Where backdrop-filter is missing the fallback below still
+     gives a solid surface, so the panel is never unreadable, only less frosted. */
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
   border-bottom:1px solid var(--glass-line);box-shadow:var(--sh-3);
   padding:var(--s3) var(--gutter) var(--s4);transform-origin:top center;
@@ -1072,9 +1106,15 @@ html.native .intro{padding-top:var(--safe-t)}
   background:var(--ink);transition:transform var(--med) var(--ease)}
 .landingsw[aria-checked="true"] .landingsw__knob{transform:translateX(21px)}
 .landing__nav .btn{padding:.5rem .95rem}
-@media (max-width:1000px){
+/* 999, not 1000: the centring above turns on at `min-width:1000px`, and two ranges that
+   both claim 1000 px is the boundary give a browser two answers at once. */
+@media (max-width:999px){
   .landing__links{display:none}
   .landing__menu{display:inline-flex}
+  /* One region per track: the menu button is the last thing in the bar, and the actions
+     keep the track to its left rather than sharing a cell with it. */
+  .landing__nav{grid-template-columns:minmax(0,1fr) auto auto}
+  .landing__actions{grid-column:2}
 }
 @media (max-width:700px){
   /* The bar drops its own "Log in" here because the panel's first rows are Log in
@@ -1115,8 +1155,14 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__displayline--out>span{color:transparent;-webkit-text-stroke:2px var(--ink)}
 .landing__hero-foot{position:relative;z-index:1;display:grid;gap:var(--s3);
   border-top:1px solid var(--line);padding-top:var(--s2)}
-.landing__hero-cta{display:flex;flex-wrap:wrap;gap:var(--s2);justify-content:flex-end;align-self:start}
-@media (min-width:900px){.landing__hero-foot{grid-template-columns:minmax(0,34rem) auto;align-items:end}}
+/* Two texts, one baseline: with the bar holding the calls to action, the foot's second
+   column is the paragraph that explains the promise rather than a row of buttons, so the
+   masthead reads as a title block instead of a form. Its own rule went with the buttons: a
+   selector no markup produces is a selector the next reader will trust and edit. */
+@media (min-width:900px){
+  .landing__hero-foot{grid-template-columns:minmax(0,30rem) minmax(0,26rem);
+    column-gap:var(--s7);align-items:end}
+}
 /* Short viewports: give the head height back so the three lines still fit one
    screen whole. The poster yields, it does not crop. */
 @media (max-height:760px){
@@ -1240,8 +1286,9 @@ html.native .intro{padding-top:var(--safe-t)}
   opacity:.55;margin:0}   /* the space under it is the weld's, not its own */
 .landing__slab-t{font-size:var(--f-poster);line-height:.98;letter-spacing:-.04em;
   font-weight:var(--fw-bold);max-width:18ch;margin:0}
-.landing__steps{list-style:none;display:grid;gap:var(--s3);margin:0;padding:var(--s3) 0 0;
-  border-top:1px solid var(--stage-line)}
+.landing__steps{list-style:none;display:grid;gap:var(--s3);margin:0;padding:0}
+/* No rule above the steps, at either quoted heading. The slab's own colour change is the
+   separator — a hairline on top of a background change says "edge" twice. */
 .landing__step{position:relative;min-width:0}
 .landing__stepnum{display:block;font-size:var(--f-cap);letter-spacing:.16em;opacity:.5;
   font-variant-numeric:tabular-nums;margin-bottom:var(--s1)}
@@ -6889,8 +6936,11 @@ function landingNav() {
 
 function landingLink(k, lbl) {
   return $("button", {
+    /* The one emphasised item in the bar, marked in the markup so the sheet's CSS owns
+       the look and the panel's plain row for the same destination is untouched. */
     class: "landing__link" + (S.landingPage === k ? " landing__link--on" : ""),
-    attrs: { type: "button", "aria-current": S.landingPage === k ? "page" : null },
+    attrs: { type: "button", "aria-current": S.landingPage === k ? "page" : null,
+      "data-cta": k === "download" ? "app" : null },
     text: t(lbl),
     on: { click: () => landingGo(k) },
   });
@@ -6956,10 +7006,12 @@ function riderLanding() {
   return root;
 }
 
-/* The masthead. Three lines of display type on the rule field, the promise as a
-   lede under a hairline, the calls to action on the same baseline. It is exactly
-   one viewport tall by construction: the type size is measured against both
-   viewport axes, so it never crops and never needs a scroll to meet the brand. */
+/* The masthead: three lines of display type on the rule field, the promise as a lede and
+   one paragraph of how it behaves. It is exactly one viewport tall by construction — the
+   type size is measured against both viewport axes, so it never crops and never needs a
+   scroll to meet the brand — and it carries no buttons: signing in, creating an account
+   and getting the app are the bar's job, and a poster that repeats its own header has two
+   places to be wrong. The masthead's own way forward is the road below it. */
 function heroMasthead() {
   return $("section", { class: "landing__hero" },
     mkRuleField(),
@@ -6971,11 +7023,7 @@ function heroMasthead() {
       mkLede("landingHero"),
       /* One paragraph past the slogan: the lede says what the product is, this says how
          it behaves — the timetable, the one fare, the cash at the door. */
-      mkProse(["landingHeroB"]),
-      $("div", { class: "landing__hero-cta" },
-        mkActions([{ k: "landingCtaStart", go: "signup" },
-          { k: "landingCtaSignIn", go: "signin", bare: true },
-          { k: "navDownload", go: "download", bare: true }]))));
+      mkProse(["landingHeroB"])));
 }
 
 /* The journey. Four chapters that are the product's own argument, each one a

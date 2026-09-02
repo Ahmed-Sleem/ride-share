@@ -1154,8 +1154,34 @@ group("RENEWAL — one name, one curtain, one screen per surface");
   ok("the measured height is re-read when the window changes",
      /addEventListener\("resize", set\)/.test(SRC) && /visualViewport/.test(SRC));
   ok("the intro is measured on both axes", /--f-intro:clamp\(1\.45rem,min\(7vw,6\.2vh\)/.test(SHELL));
-  ok("the page names are centred in the bar where there is room",
-     /@media \(min-width:1000px\)\{\s*\n\s*\.landing__links\{position:absolute;inset-inline-start:50%/.test(SHELL));
+  /* Centring has to be a property of the layout, not of a transform: `inset-inline-start:50%`
+     with `translateX(-50%)` pairs a logical anchor with a physical shift, and Chrome measures
+     that one element width off in RTL. The grid's equal `1fr` tracks are exact in both. */
+  ok("the page names are centred by equal tracks, in either direction",
+     /\.landing__nav\{[^}]*display:grid;grid-template-columns:minmax\(0,1fr\) auto minmax\(0,1fr\)/.test(SHELL) &&
+     /\.landing__links\{[^}]*justify-self:center/.test(SHELL) &&
+     !/\.landing__links\{position:absolute/.test(SHELL));
+  ok("no overlay is centred by an anchor and a transform",
+     !/\.sheet\{inset-inline:auto;inset-inline-start:50%/.test(SHELL) &&
+     !/\.toast\{inset-inline:auto;inset-inline-start:50%/.test(SHELL) &&
+     /\.sheet\{inset-inline:0;margin-inline:auto/.test(SHELL) &&
+     /\.toast\{inset-inline:0;margin-inline:auto/.test(SHELL));
+  /* Only the panel's own rule: the `@supports not (backdrop-filter…)` fallback below it
+     deliberately goes solid, and a guard that forbids that would forbid the fallback. */
+  ok("the menu sheet is the bar's own glass",
+     /\.landing__menu-panel\{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;\s*\n\s*gap:1px;background:var\(--glass\);/.test(SHELL));
+  ok("the download entry is the one marked item in the bar",
+     /"data-cta": k === "download" \? "app" : null/.test(SRC) &&
+     /\.landing__links \.landing__link\[data-cta\]::before\{content:""/.test(SHELL));
+  ok("the masthead carries no buttons of its own",
+     !/landing__hero-cta/.test(SRC) && !/\.landing__hero-cta\{/.test(SHELL));
+  ok("the steps are separated by the slab's own surface, not by a hairline",
+     !/\.landing__steps\{[^}]*border-top/.test(SHELL));
+  /* One boundary, claimed once: the links are replaced by the menu below 1000 and the
+     centring is unconditional, so no rule may also say `min-width:1000px`. */
+  ok("the bar hands the links over to the menu at exactly one width",
+     /@media \(max-width:999px\)\{[\s\S]{0,220}\.landing__links\{display:none\}/.test(SHELL) &&
+     !/@media \(min-width:1000px\)/.test(SHELL));
   ok("the auth pair is set apart from the switches", /\.landing__actions>\.btn\{margin-inline-start:var\(--s3\)\}/.test(SHELL));
   /* The map and its projection are one mechanism. lib/motion.js measures the SECTION and
      paints a viewBox of that size, so a <svg> with a box of its own silently letterboxes the

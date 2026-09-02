@@ -129,8 +129,11 @@ function landingNav() {
 
 function landingLink(k, lbl) {
   return $("button", {
+    /* The one emphasised item in the bar, marked in the markup so the sheet's CSS owns
+       the look and the panel's plain row for the same destination is untouched. */
     class: "landing__link" + (S.landingPage === k ? " landing__link--on" : ""),
-    attrs: { type: "button", "aria-current": S.landingPage === k ? "page" : null },
+    attrs: { type: "button", "aria-current": S.landingPage === k ? "page" : null,
+      "data-cta": k === "download" ? "app" : null },
     text: t(lbl),
     on: { click: () => landingGo(k) },
   });
@@ -196,10 +199,12 @@ function riderLanding() {
   return root;
 }
 
-/* The masthead. Three lines of display type on the rule field, the promise as a
-   lede under a hairline, the calls to action on the same baseline. It is exactly
-   one viewport tall by construction: the type size is measured against both
-   viewport axes, so it never crops and never needs a scroll to meet the brand. */
+/* The masthead: three lines of display type on the rule field, the promise as a lede and
+   one paragraph of how it behaves. It is exactly one viewport tall by construction — the
+   type size is measured against both viewport axes, so it never crops and never needs a
+   scroll to meet the brand — and it carries no buttons: signing in, creating an account
+   and getting the app are the bar's job, and a poster that repeats its own header has two
+   places to be wrong. The masthead's own way forward is the road below it. */
 function heroMasthead() {
   return $("section", { class: "landing__hero" },
     mkRuleField(),
@@ -211,11 +216,7 @@ function heroMasthead() {
       mkLede("landingHero"),
       /* One paragraph past the slogan: the lede says what the product is, this says how
          it behaves — the timetable, the one fare, the cash at the door. */
-      mkProse(["landingHeroB"]),
-      $("div", { class: "landing__hero-cta" },
-        mkActions([{ k: "landingCtaStart", go: "signup" },
-          { k: "landingCtaSignIn", go: "signin", bare: true },
-          { k: "navDownload", go: "download", bare: true }]))));
+      mkProse(["landingHeroB"])));
 }
 
 /* The journey. Four chapters that are the product's own argument, each one a
