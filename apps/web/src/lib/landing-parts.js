@@ -153,7 +153,16 @@ function mkJourney(cuts, opts) {
          rider page puts seven claims on the road, and a label above each would be
          an eighth way of saying what the line already says. */
       c.n ? $("span", { text: t(c.n) }) : null),
-    $("h2", { class: "journey__word", attrs: { "data-word": "" }, text: t(c.t) }),
+    /* The word is the poster of the cut, and a poster sets one word to a line: the split
+       happens here, in the markup, so the h2 still holds the whole phrase as one text node
+       for anything that reads the document rather than paints it. */
+    $("h2", { class: "journey__word", attrs: { "data-word": "" } },
+      ...(strings => strings.map((w, i) =>
+        /* The space belongs to the word before it, not between the elements: a text node
+           between two blocks collapses to nothing in `textContent`, and a claim set read
+           back as "Verifieddrivers" is a claim set no test or screen reader can match. */
+        $("span", { class: "journey__wordline", text: i < strings.length - 1 ? w + " " : w })
+      ))(String(t(c.t)).split(/\s+/).filter(Boolean))),
     $("p", { class: "journey__body", text: t(c.b) })));
   });
   section.append(list);
@@ -161,8 +170,10 @@ function mkJourney(cuts, opts) {
 }
 
 /* ── the inverted slab, its steps, the chapters ──────────────────────── */
-function mkSlab(kickKey, titleKey, kids) {
-  return $("section", { class: "landing__slab", attrs: { "aria-label": t(titleKey) } },
+function mkSlab(kickKey, titleKey, kids, opts) {
+  const o = opts || {};
+  return $("section", { class: "landing__slab" + (o.mid ? " landing__slab--mid" : ""),
+    attrs: { "aria-label": t(titleKey) } },
     $("p", { class: "landing__slab-k", text: t(kickKey) }),
     $("h2", { class: "landing__slab-t", text: t(titleKey) }),
     ...kids);

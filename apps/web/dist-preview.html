@@ -938,8 +938,9 @@ html.native .intro{padding-top:var(--safe-t)}
   grid-template-columns:minmax(var(--gutter),1fr) minmax(0,var(--landing-max)) minmax(var(--gutter),1fr);
   align-content:start;position:relative}
 .landing__body>*{grid-column:2;min-width:0}
-.landing__section{grid-column:2;min-width:0;padding-block:clamp(4rem,12vh,9rem);
-  border-top:1px solid var(--line)}
+/* No rule between sections: the section's own padding (12vh of it) was always the
+   separator, and a hairline on top of that asks the eye to read a border as content. */
+.landing__section{grid-column:2;min-width:0;padding-block:clamp(4.5rem,13vh,9.5rem)}
 .landing__section--bleed{grid-column:1/-1;padding-inline:var(--gutter)}
 .landing__section--first{border-top:0;padding-block-start:clamp(6rem,16vh,10rem)}
 .landing__body--page>.landing__section{border-top:0}
@@ -1007,17 +1008,17 @@ html.native .intro{padding-top:var(--safe-t)}
   flex:none;padding-block:0;padding-inline:var(--s2);border:0;background:none;cursor:pointer;font:inherit;color:var(--ink);
   opacity:.72;transition:opacity var(--med) var(--ease)}
 .landing__link:hover,.landing__link:focus-visible{opacity:1}
-/* The one thing in the bar a reader should find without hunting for it: an outlined pill
-   with a filled dot, which is the ink ramp's own vocabulary (a ring plus a solid mark,
-   the same pair the logo is) rather than a new colour. Padding sits on the pill so the
-   tap floor does not move; `[data-cta]` is written in the markup, so the panel's row for
-   the same destination stays a plain row — one emphasis per list, or it is not emphasis. */
-.landing__links .landing__link[data-cta]{opacity:1;border:1px solid var(--ink);border-radius:var(--r-full);
-  padding-block:.3rem;margin-block:.2rem 0;display:inline-flex;gap:.45rem;font-weight:var(--fw-semi)}
+/* The one thing in the bar a reader should find without hunting for it: a solid dot and
+   the weight, no box. The owner asked for the border to go and the dot to stay, and the
+   result is the better of the two — a filled pill competes with the ink it sits on, while
+   a dot is a mark the logo already uses. Full opacity and the semibold weight carry the rest;
+   hover behaves exactly like every other name in the row, because emphasis that changes
+   the rules on interaction is a different control, not a louder one. `[data-cta]` comes
+   from the markup, so the panel's row for the same destination stays a plain row. */
+.landing__links .landing__link[data-cta]{opacity:1;gap:.45rem;font-weight:var(--fw-semi)}
 .landing__links .landing__link[data-cta]::before{content:"";width:6px;height:6px;border-radius:50%;
-  background:var(--ink);flex:none}
-.landing__links .landing__link[data-cta]:hover{background:var(--ink);color:var(--paper)}
-.landing__links .landing__link[data-cta]:hover::before{background:var(--paper)}
+  background:var(--ink);flex:none;align-self:center}
+.landing__links .landing__link[data-cta]:hover::before{transform:scale(1.35)}
 .landing__link--on{opacity:1;font-weight:var(--fw-semi);text-decoration:underline;
   text-underline-offset:6px;text-decoration-thickness:1.5px}
 .landing__actions{display:flex;align-items:center;gap:var(--s2);min-width:0}
@@ -1132,7 +1133,7 @@ html.native .intro{padding-top:var(--safe-t)}
      measured height is a floor, never a crop — `overflow:hidden` here holds the
      decorative grid, so a fixed height would cut the paragraph off instead. */
   min-height:var(--view-h,100dvh);
-  max-width:none;border-bottom:1px solid var(--line);isolation:isolate}
+  max-width:none;isolation:isolate}
 .landing__hero-inner{position:relative;z-index:1;display:contents}
 /* The Swiss rule field: twelve hairlines, honest, visible. Drawn as cells so the
    columns are the grid, not a background image that would need its own gutters. */
@@ -1144,7 +1145,7 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__head-top{position:relative;z-index:1;display:flex;justify-content:space-between;
   gap:var(--s2);font-size:var(--f-cap);text-transform:uppercase;letter-spacing:.16em;
   color:var(--ink-mute);font-variant-numeric:tabular-nums;
-  border-bottom:1px solid var(--line);padding-bottom:var(--s1)}
+  padding-bottom:0}
 .landing__display{position:relative;z-index:1;margin:0;display:grid;align-content:center;
   line-height:.82;letter-spacing:-.055em;text-transform:uppercase;
   font-weight:var(--fw-bold);color:var(--ink);
@@ -1153,8 +1154,7 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__displayline>span{display:block;font-variation-settings:"wght" 420;
   will-change:font-variation-settings}
 .landing__displayline--out>span{color:transparent;-webkit-text-stroke:2px var(--ink)}
-.landing__hero-foot{position:relative;z-index:1;display:grid;gap:var(--s3);
-  border-top:1px solid var(--line);padding-top:var(--s2)}
+.landing__hero-foot{position:relative;z-index:1;display:grid;gap:var(--s3);padding-top:0}
 /* Two texts, one baseline: with the bar holding the calls to action, the foot's second
    column is the paragraph that explains the promise rather than a row of buttons, so the
    masthead reads as a title block instead of a form. Its own rule went with the buttons: a
@@ -1194,7 +1194,7 @@ html.native .intro{padding-top:var(--safe-t)}
    becomes a stop it passes. The section is not sticky and does not scroll-jack:
    the road is long, the copy is normal document flow, and the bus is a mark of
    progress rather than an animation you have to wait for. */
-.journey{position:relative;grid-column:1/-1;border-top:1px solid var(--line)}
+.journey{position:relative;grid-column:1/-1}
 /* The map covers the section it belongs to — `inset:0`, not a band of its own height.
    The projection in lib/motion.js is measured from the *section* box, so any other box
    here silently letterboxes the whole drawing: a viewBox of 1440×1031 painted into a
@@ -1250,7 +1250,7 @@ html.native .intro{padding-top:var(--safe-t)}
    last thing a line of type touches is the gutter, not the corridor. `data-side` is written
    by lib/landing-parts.js from the cut's index — the alternation is content, not a media query,
    so a reader on a phone still gets the same order as one on a 30-inch display. */
-@media (max-width:899px){.journey__cut{padding-inline-end:3rem;border-bottom:1px solid var(--line)}}
+@media (max-width:899px){.journey__cut{padding-inline-end:3rem}}
 @media (min-width:900px){
   .journey__cut{width:52%;max-width:none;padding-block:clamp(6rem,17vh,13rem)}
   .journey__cut[data-side="right"]{margin-inline-start:auto;align-items:flex-end;text-align:end}
@@ -1260,11 +1260,17 @@ html.native .intro{padding-top:var(--safe-t)}
   letter-spacing:.16em;color:var(--ink-mute);font-variant-numeric:tabular-nums}
 .journey__rule span:first-child{font-weight:var(--fw-semi);color:var(--ink)}
 .journey__word{margin:0;font-size:clamp(1.8rem,6.5vw,5rem);line-height:.85;letter-spacing:-.05em;
-  margin-inline-start:-.05em;
+  margin-inline-start:-.05em;display:block;
   text-transform:uppercase;font-variation-settings:"wght" 430;
   /* --near (0…1) is written by the scrub as the word crosses the middle of the
      viewport; the opacity is the second half of the same gesture. */
   opacity:calc(.55 + var(--near,0) * .45);will-change:font-variation-settings,opacity}
+/* One word per line, always: `display:block` on each line is written by the markup rather
+   than left to `word-break`, because the phrase must stay one string for a screen reader and
+   for search, and because a hyphenated "veri- fied" at 5rem is not a design decision. The
+   count of lines is the count of words — two for "Verified drivers", four for "Cash at the
+   door" — and Arabic, where the same phrase is two words, stacks the same way. */
+.journey__wordline{display:block;hyphens:none;text-wrap:nowrap}
 .journey__body{font-size:var(--f-body);line-height:1.5;max-width:44ch;color:var(--ink-soft);margin:0}
 /* One column, deliberately: the claims alternate down a single spine so each one can be
    lit by the spotlight as the bus reaches it. Two columns would put two words at the same
@@ -1286,6 +1292,18 @@ html.native .intro{padding-top:var(--safe-t)}
   opacity:.55;margin:0}   /* the space under it is the weld's, not its own */
 .landing__slab-t{font-size:var(--f-poster);line-height:.98;letter-spacing:-.04em;
   font-weight:var(--fw-bold);max-width:18ch;margin:0}
+/* The centred slab: what the page most wants acted on gets the axis, the poster title and
+   the inverted surface — black on the light sheet, paper on the dark one, the same pair the
+   steps use. A kick, a title, one lede, one button, and nothing else. */
+.landing__slab--mid{text-align:center}
+.landing__slab--mid .landing__slab-t,.landing__slab--mid .landing__slab-k{margin-inline:auto}
+.landing__slab--mid .landing__lede{margin-inline:auto;max-width:56ch}
+.landing__slab--mid .landing__acts{justify-content:center}
+/* A primary button is ink on paper. Dropped on the slab it would be ink on ink: the pair
+   turns over with the section, and the hover keeps the same relationship instead of
+   inventing a third look for one button. */
+.landing__slab .btn:not(.btn--bare){background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.landing__slab .btn:not(.btn--bare):hover{background:var(--paper);color:var(--ink);opacity:.9}
 .landing__steps{list-style:none;display:grid;gap:var(--s3);margin:0;padding:0}
 /* No rule above the steps, at either quoted heading. The slab's own colour change is the
    separator — a hairline on top of a background change says "edge" twice. */
@@ -1303,7 +1321,7 @@ html.native .intro{padding-top:var(--safe-t)}
 
 /* ── the chapters: numbered rows, never a card checkerboard ─────────── */
 .landing__feature{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s2);min-width:0;
-  padding-block:var(--s4);border-top:1px solid var(--line);
+  padding-block:var(--s5);
   transition:transform var(--slow) var(--bounce),background var(--med) var(--ease)}
 .landing__feature:hover{transform:translateY(-2px);background:var(--bg-raised)}
 .landing__featuren{font-size:var(--f-cap);letter-spacing:.16em;text-transform:uppercase;
@@ -1318,15 +1336,14 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__cta-t{font-size:var(--f-end);line-height:1.1;letter-spacing:-.035em;
   font-weight:var(--fw-semi);max-width:20ch;margin:0;text-wrap:balance}
 .landing__cta-t span{color:var(--ink-mute);font-weight:var(--fw-normal)}
-.landing__cta-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);
-  border-top:1px solid var(--line);padding-top:var(--s3)}
+.landing__cta-row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding-top:0}
 .landing__cta-note{font-size:var(--f-cap);color:var(--ink-mute)}
 
 /* ── the foot: padding-block only ─────────────────────────────────────
    The shorthand would reset the gutter the page grid relies on and push the
    links flush to the viewport edge — the demo shipped that bug; this does not. */
-.landing__foot{grid-column:1/-1;border-top:1px solid var(--line);
-  padding:var(--s4) var(--gutter) var(--s3);display:grid;gap:var(--s3);font-size:var(--f-cap)}
+.landing__foot{grid-column:1/-1;
+  padding:var(--s6) var(--gutter) var(--s4);display:grid;gap:var(--s3);font-size:var(--f-cap)}
 .landing__footrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s2)}
 .landing__footrow a,.landing__policylink{color:var(--ink-soft);text-decoration:none;
   background:none;border:0;padding:0;cursor:pointer;font:inherit}
@@ -2202,7 +2219,7 @@ en:{
   safetyComingBody:"Live SOS, emergency contacts and ride sharing arrive with safety & support (M4).",
   reportComingBody:"In-app reporting arrives with safety & support (M4).",
   /* landing */
-  landingHero:"A shared ride you can plan around: the stops and times are published, the fare is fixed the moment you book, and the seat is held before you leave home.",
+  landingHero:"Smart transport that keeps to a timetable: shared rides along published routes, one fare for the whole distance, and a seat held in your name before you leave home.",
   landingHeroSub:"A shared ride you can plan around — published stops, published times, a flat fare per route, and a seat you booked before you left home. Built for any city, one corridor at a time.",
   landingCtaStart:"Create account",
   landingCtaSignIn:"Sign in",
@@ -2296,7 +2313,8 @@ en:{
   driveHeroT:"Drive on your schedule. Earn weekly.",
   driveHeroB:"Claim a published departure in two taps and run it. No route drawing, no pricing, no guessing — just drive.",
   driverF4T:"Choose your hours", driverF4B:"Claim only the departures that fit your day. Release early, it's free.",
-  landingHeroB:"Every route runs a published timetable for one fare, printed on the route card. You book a seat on a departure, pay the driver in cash when you board, and the price does not move because it rained.",
+  landingHeroB:"Pick a departure and pay the driver in cash when you board. The price is printed on the route card, not on a meter \u2014 so traffic, rain and the hour you travel change nothing about what you owe.",
+  driveInviteK:"The other side of the road",
   driveInviteT:"Want to drive with us?",
   driveInviteB:"Operators publish the routes and the fares. You choose the days you work, and every trip on your route pays the same flat amount.",
   driveInviteGo:"See the driver board",
@@ -2642,7 +2660,7 @@ ar:{
   safetyComingBody:"الاستغاثة المباشرة وجهات الطوارئ ومشاركة الرحلة تأتي مع الأمان والدعم (M4).",
   reportComingBody:"الإبلاغ داخل التطبيق يأتي مع الأمان والدعم (M4).",
   /* landing */
-  landingHero:"ركوبة مشتركة تقدر تخطط عليها: المحطات والمواعيد منشورة، والسعر يُثبّت لحظة الحجز، ومقعدك محجوز قبل ما تخرج من البيت.",
+  landingHero:"نقل ذكي يلتزم بجدول المواعيد: ركوبات مشتركة على مسارات منشورة، وسعر واحد للمسار كله، ومقعدك محفوظ باسمك قبل ما تخرج من البيت.",
   landingHeroSub:"ركوبة مشتركة تقدر تخطط عليها — محطات منشورة، مواعيد منشورة، أجرة ثابتة لكل مسار، ومقعد حجزته قبل ما تخرج من البيت. مصممة لأي مدينة، مسار بعد مسار.",
   landingCtaStart:"أنشئ حسابًا",
   landingCtaSignIn:"تسجيل الدخول",
@@ -2731,7 +2749,8 @@ ar:{
   driveHeroT:"قُد على جدولك. واكسب أسبوعيًا.",
   driveHeroB:"احجز موعدًا منشورًا بنقرتين وشغّله. لا رسم مسارات ولا تسعير ولا تخمين — قُد فقط.",
   driverF4T:"اختر ساعاتك", driverF4B:"احجز فقط المواعيد التي تناسب يومك. والإلغاء المبكر مجاني.",
-  landingHeroB:"كل مسار يعمل وفق جدول أوقات منشور وسعر واحد مكتوب على بطاقة المسار. تحجز مقعدًا في موعد، وتدفع للسائق نقدًا عند الصعود، ولا يتغيّر السعر لأن السماء أمطرت.",
+  landingHeroB:"اختر موعدك وادفع للسائق نقدًا عند الصعود. السعر مطبوع على بطاقة المسار، لا على عدّاد — فالزحمة والمطر ووقت رحلتك لا يغيرون شيئًا مما عليك.",
+  driveInviteK:"الجهة الثانية من الطريق",
   driveInviteT:"هل تريد أن تقود معنا؟",
   driveInviteB:"المشغّلون ينشرون المسارات والأسعار. أنت تختار أيام عملك، وكل رحلة على مسارك تدفع المبلغ الثابت نفسه.",
   driveInviteGo:"اطّلع على لوحة السائقين",
@@ -6186,9 +6205,15 @@ const PageFx = (() => {
 
   /* The route, as the reader would name it: the page they are on, not the field they
      typed in. Two renders with the same key are one view, so the curtain never goes up
-     under a keystroke, a countdown tick or a sheet. */
+     under a keystroke, a countdown tick or a sheet.
+     Language and theme are in the name on purpose. Neither is a page, and both are a
+     decision the reader makes deliberately — and the whole surface changes colour or
+     direction when they do it, which is the most visible repaint on the site. Without a
+     curtain the theme flip is a hard cut and the Arabic flip is a page that rebuilds
+     itself mid-frame; with it, both ride the same ink the pages ride. */
   function routeKey(S) {
-    return [S.view, S.page, S.landingPage, S.landingDoc || "", S.authMode || "", S.role || ""].join("|");
+    return [S.view, S.page, S.landingPage, S.landingDoc || "", S.authMode || "", S.role || "",
+            S.lang, S.theme || ""].join("|");
   }
 
   /* Take the paint if a curtain is owed one. Returns true when this module now owns the
@@ -6413,7 +6438,16 @@ function mkJourney(cuts, opts) {
          rider page puts seven claims on the road, and a label above each would be
          an eighth way of saying what the line already says. */
       c.n ? $("span", { text: t(c.n) }) : null),
-    $("h2", { class: "journey__word", attrs: { "data-word": "" }, text: t(c.t) }),
+    /* The word is the poster of the cut, and a poster sets one word to a line: the split
+       happens here, in the markup, so the h2 still holds the whole phrase as one text node
+       for anything that reads the document rather than paints it. */
+    $("h2", { class: "journey__word", attrs: { "data-word": "" } },
+      ...(strings => strings.map((w, i) =>
+        /* The space belongs to the word before it, not between the elements: a text node
+           between two blocks collapses to nothing in `textContent`, and a claim set read
+           back as "Verifieddrivers" is a claim set no test or screen reader can match. */
+        $("span", { class: "journey__wordline", text: i < strings.length - 1 ? w + " " : w })
+      ))(String(t(c.t)).split(/\s+/).filter(Boolean))),
     $("p", { class: "journey__body", text: t(c.b) })));
   });
   section.append(list);
@@ -6421,8 +6455,10 @@ function mkJourney(cuts, opts) {
 }
 
 /* ── the inverted slab, its steps, the chapters ──────────────────────── */
-function mkSlab(kickKey, titleKey, kids) {
-  return $("section", { class: "landing__slab", attrs: { "aria-label": t(titleKey) } },
+function mkSlab(kickKey, titleKey, kids, opts) {
+  const o = opts || {};
+  return $("section", { class: "landing__slab" + (o.mid ? " landing__slab--mid" : ""),
+    attrs: { "aria-label": t(titleKey) } },
     $("p", { class: "landing__slab-k", text: t(kickKey) }),
     $("h2", { class: "landing__slab-t", text: t(titleKey) }),
     ...kids);
@@ -6993,13 +7029,14 @@ function riderLanding() {
         mkEyebrow("panelKick"),
         mkPanels(RIDER_PANELS),
       ]),
-      mkSection([
-        /* The other side of the same marketplace, one link away: the reader who likes
-           what they have just read is the one person worth asking to drive. */
-        mkEyebrow("driveInviteT"),
+      /* The other side of the same marketplace, one link away — and it is said the way the
+         page says the things it most wants you to act on: the inverted slab, black on light
+         and paper on dark, the title at poster size, centred. A caption and a paragraph at
+         the end of a long page are easy to read as a footnote. */
+      mkSlab("driveInviteK", "driveInviteT", [
         mkLede("driveInviteB"),
         mkActions([{ k: "driveInviteGo", go: "drive" }]),
-      ]),
+      ], { mid: true }),
       mkEnd("mkEndT", "mkEndB", "landingFoot",
         [{ k: "landingCtaStart", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
     landingFooter());

@@ -186,13 +186,14 @@ function riderLanding() {
         mkEyebrow("panelKick"),
         mkPanels(RIDER_PANELS),
       ]),
-      mkSection([
-        /* The other side of the same marketplace, one link away: the reader who likes
-           what they have just read is the one person worth asking to drive. */
-        mkEyebrow("driveInviteT"),
+      /* The other side of the same marketplace, one link away — and it is said the way the
+         page says the things it most wants you to act on: the inverted slab, black on light
+         and paper on dark, the title at poster size, centred. A caption and a paragraph at
+         the end of a long page are easy to read as a footnote. */
+      mkSlab("driveInviteK", "driveInviteT", [
         mkLede("driveInviteB"),
         mkActions([{ k: "driveInviteGo", go: "drive" }]),
-      ]),
+      ], { mid: true }),
       mkEnd("mkEndT", "mkEndB", "landingFoot",
         [{ k: "landingCtaStart", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
     landingFooter());

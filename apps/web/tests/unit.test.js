@@ -29,6 +29,7 @@ function boot(){
    A. SHELL — full viewport, one scroller, nothing scrolls away
    ───────────────────────────────────────────────────────────────── */
 const CSS = SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
+const PAGEFX = fs.readFileSync(path.join(__dirname, "..", "src", "lib", "pagefx.js"), "utf8");
 const rule = (sel) => {
   const m = CSS.match(new RegExp("\\n" + sel.replace(/[.#]/g,"\\$&") + "\\{([^}]*)\\}"));
   return m ? m[1] : null;
@@ -795,9 +796,62 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
 
   // the poster prints in one ink: no hue-blocked cards, no sticker accents
   ok("the chapters are ink on paper, never a colour block",
-     /\.landing__feature\{[^}]*border-top:1px solid var\(--line\)/.test(CSS) &&
      !/\.landing__feature\{[^}]*background:var\(--stage\)/.test(CSS) &&
      !/--sticker-accent/.test(CSS) && !/\.stackpanel/.test(CSS));
+
+  /* ── round 4: one ink, no rules between blocks, and the two switches that repaint ── */
+  ok("no landing block is separated from the next by a hairline",
+     !/\.landing__(section|hero|hero-foot|cta-row|foot|feature)\{[^}]*(border-top|border-bottom):1px solid var\(--line\)/.test(CSS) &&
+     !/\.journey\{[^}]*border-top:1px solid var\(--line\)/.test(CSS) &&
+     !/\.journey__cut\{[^}]*border-bottom:1px solid var\(--line\)/.test(CSS));
+  ok("the only landing rules that keep a hairline are the glass and the FAQ rows",
+     /\.landing__faq\{border-top:1px solid var\(--line\)/.test(CSS) &&
+     /\.landing__nav\{[\s\S]{0,320}border-bottom:1px solid var\(--glass-line\)/.test(CSS));
+  ok("the marked bar item is a dot and a weight, not a box",
+     /\.landing__links \.landing__link\[data-cta\]\{opacity:1;gap:\.45rem;font-weight:var\(--fw-semi\)\}/.test(CSS) &&
+     !/\.landing__link\[data-cta\]\{[^}]*border:/.test(CSS) &&
+     /\.landing__links \.landing__link\[data-cta\]::before\{content:"";width:6px;height:6px/.test(CSS));
+  ok("a map word sets one word to a line, and keeps its spaces",
+     /\.journey__wordline\{display:block/.test(CSS) &&
+     /journey__wordline/.test(SRC) &&
+     /i < strings\.length - 1 \? w \+ " " : w/.test(SRC));
+  ok("the driver invite is the page's own inverted slab, centred",
+     /mkSlab\("driveInviteK", "driveInviteT", \[/.test(SRC) &&
+     /\.landing__slab--mid\{text-align:center\}/.test(CSS) &&
+     /\.landing__slab \.btn:not\(\.btn--bare\)\{background:var\(--paper\);color:var\(--ink\)/.test(CSS));
+  ok("the curtain is armed for language and theme as well as for pages",
+     /S\.lang, S\.theme \|\| ""/.test(PAGEFX));
+  /* R4-3: the masthead has two jobs — name the product, then explain the mechanic.
+     What it must not do is say the same claim twice, so each claim word may appear
+     once across both paragraphs (the lede sells the idea, the body pays for it). */
+  /* R4-3: the masthead has two jobs — name the product, then pay for it with the
+     mechanic. It must not tell you the same thing twice, so a claim word may occur
+     once across the two paragraphs, and the body alone answers money and surge. */
+  for (const lang of ["en", "ar"]) {
+    const mast = t.w.T[lang];
+    const both = `${mast.landingHero} ${mast.landingHeroB}`;
+    /* Per claim, not per paragraph: two different claims may sit side by side, the
+       same claim may not be told twice. */
+    const claims = (lang === "en"
+      ? ["fixed price", "fixed fare", "does not move", "published", "one fare", "no surge", "same price"]
+      : ["ثابت", "لا يتغي", "منشور", "سعر واحد", "بدون زيادة"]);
+    const worst = Math.max(...claims.map((c) => (both.match(new RegExp(c, "gi")) || []).length));
+    const named = lang === "en" ? /transport|shared ride|timetable/i.test(mast.landingHero)
+                                : /نقل|مواصلات|رحلة|جدول/.test(mast.landingHero);
+    const mechanic = lang === "en" ? /cash|meter|board/i.test(mast.landingHeroB)
+                                   : /نقد|عدّاد|السعود/.test(mast.landingHeroB);
+    ok(`${lang}: the lede names the product, the body answers the mechanic`,
+      named && mechanic && mast.landingHero.length > 40 && mast.landingHeroB.length > 40,
+      mast.landingHero.slice(0, 48));
+    ok(`${lang}: no claim is told twice in the masthead`, worst <= 1, `${worst}x`);
+    ok(`${lang}: the price claim is made once, and it is falsifiable`,
+      /one fare|printed|not on a meter/i.test(both) === (lang === "en") ||
+      /مطبوع|سعر واحد|عدّاد/.test(both), both.slice(0, 60));
+    ok(`${lang}: the drive slab speaks for itself, not as an echo of the rider masthead`,
+      !!mast.driveInviteK && !!mast.driveInviteT &&
+      mast.driveInviteK !== mast.landingHero && mast.driveInviteT !== mast.landingHero,
+      String(mast.driveInviteK));
+  }
   ok("only the slab inverts, and dark inverts the slab",
      /--stage:var\(--ink-900\)/.test(CSS) &&
      /\[data-theme="dark"\]\{[\s\S]*--stage:var\(--ink-0\)/.test(CSS));

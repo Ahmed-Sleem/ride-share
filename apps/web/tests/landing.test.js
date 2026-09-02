@@ -85,6 +85,7 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
       const cuts = document.querySelectorAll('.journey__cut');
       const lines = document.querySelectorAll('.landing__displayline');
       const done = document.querySelector('.journey__done');
+      const line = document.querySelector('.journey__line');
       const lb = landing ? landing.getBoundingClientRect() : null;
       const hb = hero ? hero.getBoundingClientRect() : null;
       return {
@@ -98,7 +99,11 @@ const ok = (n, c, d) => { if (c) pass++; else { fail++; console.log('  FAIL  ' +
         cuts: cuts.length,
         hasJourney: !!journey,
         journeyH: journey ? Math.round(journey.getBoundingClientRect().height) : 0,
-        routeLen: done && done.getAttribute('d') ? done.getAttribute('d').length : 0,
+        /* "Drawn, not declared" measured at scrollTop 0: the reader has not reached the road
+           yet, so what must exist here is the geometry itself (`.journey__line`), while the
+           inked progress (`.journey__done`) belongs to the scrolled survey below, where it is
+           true to say 0 if the bus never moved. */
+        routeLen: line && line.getAttribute('d') ? line.getAttribute('d').length : 0,
         bandW: Math.round(document.querySelector('.landing__marquee-in').getBoundingClientRect().width),
         /* The masthead is sized from a measured viewport, so it can be checked against
            the window it was given; and nothing may be clipped inside it, because the
@@ -544,6 +549,8 @@ async function survey(view, lang, key, doc) {
       over: de.scrollWidth - de.clientWidth, landOver: land.scrollWidth - land.clientWidth,
       escapes: escapes.slice(0, 3), clipped: clipped.slice(0, 3), offRhythm: offRhythm.slice(0, 3),
       burst: burst.slice(0, 3), clippedAway: clippedAway.slice(0, 3),
+      doneLen: (() => { const d = land.querySelector('.journey__done');
+        return d && d.getAttribute('d') ? d.getAttribute('d').length : 0; })(),
       barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
       smallPrimary: smallPrimary.slice(0, 3),
       hidden: rv.filter((el) => Number(getComputedStyle(el).opacity) < 0.05).length,
@@ -585,6 +592,9 @@ for (const vp of BOUNDARIES) {
       const m = await survey(page, lang, pg.k, pg.doc || null);
       const id = `${vp.w}\u00d7${vp.h} ${lang}/${pg.doc ? pg.doc + ' doc' : pg.k}`;
       ok(`${id}: no horizontal overflow`, m.over <= 1 && m.landOver <= 1, `${m.over}/${m.landOver}`);
+      if (m.doneLen >= 0 && m.hasJourney) {
+        ok(`${id}: the bus inks the road as the reader reaches it`, m.doneLen > 200, `${m.doneLen}`);
+      }
       ok(`${id}: nothing escapes the window`, m.escapes.length === 0, m.escapes.join(' | '));
       ok(`${id}: no control is clipped out of the window`, m.clippedAway.length === 0, m.clippedAway.join(' | '));
       ok(`${id}: copy is never clipped`, m.clipped.length === 0, m.clipped.join(' | '));
@@ -627,6 +637,94 @@ for (const vp of BOUNDARIES) {
     }
   }
 }
+
+  /* ── round 4: the map's lines, the slab, the hairlines, and the two switches ───── */
+  for (const lang of ['en', 'ar']) {
+    await page.setViewport({ width: 1280, height: 900 });
+    await page.goto(FILE);
+    await page.waitForSelector('.landing', { timeout: 15000 });
+    await page.evaluate((lg) => {
+      S.lang = lg; S.view = 'landing'; S.landingPage = 'rider'; S.landingDoc = null;
+      S.landingMenu = false; render();
+    }, lang);
+    await new Promise((r) => setTimeout(r, 600));
+    const w = await page.evaluate(() => {
+      const words = [...document.querySelectorAll('.journey__word')].map((h) => {
+        const lines = [...h.querySelectorAll('.journey__wordline')].map((el) => el.getBoundingClientRect());
+        return { n: lines.length, tops: lines.map((r) => Math.round(r.top)),
+          text: h.textContent.trim().replace(/\s+/g, ' ').slice(0, 22) };
+      });
+      const slab = document.querySelector('.landing__slab--mid');
+      const cs = slab ? getComputedStyle(slab) : null;
+      const btn = slab ? slab.querySelector('.btn') : null;
+      const bcs = btn ? getComputedStyle(btn) : null;
+      const lum = (c) => { const m = ((c || '').match(/[\d.]+/g) || [0, 0, 0]).slice(0, 3).map(Number);
+        const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+      const ratio = (a, b) => { const hi = Math.max(lum(a), lum(b)), lo = Math.min(lum(a), lum(b));
+        return +((hi + 0.05) / (lo + 0.05)).toFixed(2); };
+      const sels = ['.landing__section', '.landing__feature', '.journey', '.landing__foot',
+        '.landing__hero', '.landing__hero-foot', '.landing__cta-row'];
+      let maxRule = 0;
+      for (const sel of sels) {
+        for (const el of document.querySelectorAll(sel)) {
+          const c = getComputedStyle(el);
+          maxRule = Math.max(maxRule, parseFloat(c.borderTopWidth) || 0, parseFloat(c.borderBottomWidth) || 0);
+        }
+      }
+      const mast = [document.querySelector('.landing__lede'), document.querySelector('.landing__prose')]
+        .map((el) => (el ? el.textContent : '')).join(' ');
+      return { words, maxRule, mast,
+        slab: slab ? { align: cs.textAlign, kids: slab.children.length,
+          ratio: bcs ? ratio(bcs.color, bcs.backgroundColor) : -1,
+          slabText: cs.color, slabBg: cs.backgroundColor,
+          slabRatio: ratio(cs.color, cs.backgroundColor),
+          invert: cs.backgroundColor } : null };
+    });
+    ok(`${lang}: every map word stacks one word to a line`,
+      w.words.length > 0 && w.words.every((x) => x.tops.every((t, i) => i === 0 || t > x.tops[i - 1])),
+      JSON.stringify(w.words.map((x) => x.n)));
+    ok(`${lang}: a multi-word claim is as many lines as it has words`,
+      w.words.some((x) => x.n >= 2), w.words.map((x) => `${x.text}=${x.n}`).join(' / '));
+    ok(`${lang}: the driver invite is the centred inverted slab`,
+      !!w.slab && w.slab.align === 'center' && w.slab.kids >= 3, JSON.stringify(w.slab));
+    ok(`${lang}: the slab's own button stays legible on its face`,
+      !!w.slab && w.slab.ratio >= 4.5, `${w.slab && w.slab.ratio}:1`);
+    ok(`${lang}: the slab keeps its own text legible on the inverted surface`,
+      !!w.slab && w.slab.slabRatio >= 4.5, `${w.slab && w.slab.slabRatio}:1`);
+    ok(`${lang}: no landing block is separated by a hairline`, w.maxRule === 0, `${w.maxRule}px`);
+    /* The masthead must not tell you the same thing twice. */
+    const rep = (re) => (w.mast.match(new RegExp(re, 'gi')) || []).length;
+    ok(`${lang}: the masthead states each claim once`,
+      rep(lang === 'en' ? 'fixed|published|one fare|does not move' : 'منشور|ثاب|لا يتغي|لا يغيّر') <= 2,
+      w.mast.slice(0, 60));
+  }
+
+  /* Both switches repaint the whole surface, so both owe the page the curtain. */
+  for (const [which, key] of [['theme', 'data-theme'], ['lang', 'lang']]) {
+    await page.goto(FILE);
+    await page.waitForSelector('.landing', { timeout: 15000 });
+    await new Promise((r) => setTimeout(r, 500));
+    const sel = which === 'theme' ? '.landingsw' : '.landing__langbtn';
+    const before = await page.evaluate((k) => document.documentElement.getAttribute(k), key);
+    /* A real pointer, because a scripted click is exactly what the curtain refuses to
+       honour: `armed()` demands a trusted gesture, so that automation, deep links and the
+       other suites can flip a switch without waiting 700 ms for a wipe that is only there
+       for a human hand. */
+    await page.click(sel);
+    const mid = await page.evaluate(async () => {
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return { fx: !!document.querySelector('.pagefx'), path: !!document.querySelector('.pagefx__path') };
+    });
+    ok(`${which}: the switch draws the same curtain as a page does`, mid.fx && mid.path, JSON.stringify(mid));
+    const down = await page.evaluate(async () => {
+      await new Promise((r) => setTimeout(r, 2200));
+      return { gone: !document.querySelector('.pagefx'), landed: !!document.querySelector('.landing') };
+    });
+    ok(`${which}: the curtain is taken down and the page is intact`, down.gone && down.landed, JSON.stringify(down));
+    const after = await page.evaluate((k) => document.documentElement.getAttribute(k), key);
+    ok(`${which}: the attribute on <html> moved`, after !== before, `${before} -> ${after}`);
+  }
 
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 

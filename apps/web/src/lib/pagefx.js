@@ -97,9 +97,15 @@ const PageFx = (() => {
 
   /* The route, as the reader would name it: the page they are on, not the field they
      typed in. Two renders with the same key are one view, so the curtain never goes up
-     under a keystroke, a countdown tick or a sheet. */
+     under a keystroke, a countdown tick or a sheet.
+     Language and theme are in the name on purpose. Neither is a page, and both are a
+     decision the reader makes deliberately — and the whole surface changes colour or
+     direction when they do it, which is the most visible repaint on the site. Without a
+     curtain the theme flip is a hard cut and the Arabic flip is a page that rebuilds
+     itself mid-frame; with it, both ride the same ink the pages ride. */
   function routeKey(S) {
-    return [S.view, S.page, S.landingPage, S.landingDoc || "", S.authMode || "", S.role || ""].join("|");
+    return [S.view, S.page, S.landingPage, S.landingDoc || "", S.authMode || "", S.role || "",
+            S.lang, S.theme || ""].join("|");
   }
 
   /* Take the paint if a curtain is owed one. Returns true when this module now owns the

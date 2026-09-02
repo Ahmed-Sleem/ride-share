@@ -1,5 +1,68 @@
 # CHANGELOG
 
+## 2026-09-02 — renewal round 4 (R4): the owner's six, in one pass
+
+Plan and evidence: [planning/LANDING_CHECKLIST.md](../planning/LANDING_CHECKLIST.md) (the live
+checklist — every item below was closed by the check written next to it, not by eye).
+
+**1 · "Get the app" is a dot, not a pill (R4-1).** The outlined box this round had given the marked
+bar item is gone: `opacity:1`, the semibold weight, and a 6 px `::before` dot that scales to 1.35 on
+hover — emphasis from ink and a mark, not from a container. Reverses the compact-pill decision
+recorded earlier in this round, as the owner asked. Guard: the rule for `[data-cta]` must contain
+`::before{content:"";width:6px` and must not contain a `border:` declaration.
+
+**2 · The curtain now belongs to the two switches as well (R4-2).** `PageFx.routeKey` gained
+`S.lang` and `S.theme`, so a language flip and a dark↔light flip draw the same wipe the pages get —
+no new call sites, because both switches already end in `render()`, and `render()` asks `armed()`
+first. Measured in Chrome: a real first click on either switch puts `.pagefx` over the landing with
+**0 px of overhang** at 1280×900 (6/6 cold loads), and the node is gone 2.2 s later with the page
+intact. `armed()` still demands a *trusted* pointer within 500 ms — a scripted `el.click()`
+deliberately gets no curtain, so automation and deep links never wait 700 ms for a wipe no human
+asked for; that asymmetry is now asserted, not discovered.
+
+**3 · The masthead says each thing once (R4-3).** `landingHero` names the category ("smart transport
+that keeps to a timetable: shared rides along published routes, one fare for the whole distance, a
+seat held in your name before you leave home"); `landingHeroB` pays for it with the mechanic (cash to
+the driver on boarding, the price printed on the route card rather than on a meter, traffic/rain/hour
+changing nothing). Arabic carries the same two jobs. No fact was dropped and no claim is repeated —
+enforced per *claim*, not per paragraph, since two different claims may legitimately sit side by side.
+
+**4 · A map word always sets one word to a line (R4-4).** `mkJourney` now splits the cut title into
+`<span class="journey__wordline">` children with `display:block`, so "ONE FIXED PRICE" is three lines
+and "Verified drivers" is two, in either language, with the type still sized to the section. The
+spaces are appended *inside* each span: a text node split into elements loses the whitespace between
+them, which had the guard reading "Verifieddrivers" for a minute. Measured by line box: each word's
+lines stack strictly, never share a band.
+
+**5 · "Want to drive with us?" is a section (R4-5).** It was a plain block under the map; it is now
+the page's own inverted slab (`mkSlab(..., { mid: true })`) with a kick, the poster title, the lede and
+the button — centred, and **`rgb(10,10,10)` in light mode / `rgb(255,255,255)` in dark**, measured from
+the renderer. Because the slab inverts, its primary button inverts with it (paper face, ink label) so
+the one control that matters can never be black-on-black; the suite asserts the label sits at ≥ 4.5:1
+on its own face in both themes.
+
+**6 · No block is separated by a hairline any more (R4-6).** Nine rules went, all of them at the
+component rather than at the instance: `.landing__section`, `.landing__hero`, the display kick,
+`.landing__hero-foot`, `.journey`, `.journey__cut` (<900), `.landing__feature`, `.landing__cta-row`,
+`.landing__foot` — with the rhythm the line was doing kept by the shared scale (section padding
+`clamp(4.5rem, 13vh, 9.5rem)`, features `--s5`, footer `--s6`). The line the owner pointed at, under
+"One price. A seat. No queue.", was a symptom; the fix is that no landing block may carry one. Kept on
+purpose, because they are not section separators: the FAQ's row rules (a list), and the glass edges
+under the bar and its panel.
+
+**One test was wrong, and said so.** `the route is drawn, not declared` measured the *inked* progress
+(`.journey__done`) at `scrollTop: 0`, where a reader has not reached the road yet — so it passed only
+where the map happened to be on screen at load and went red at every phone width once the map grew
+taller. The unscrolled case now asserts the geometry exists (`.journey__line`), and the inked length
+moved to the scrolled battery where a zero really does mean the bus never moved. Strictly more
+coverage than before.
+
+Suites on this tree: **unit 614 · landing 2,590 · a11y 14 · layout 8,185 — 0 failed**, build
+`dist-preview.html` 962.8 KB (19 modules), `scripts/verify-repo.sh` ✓. Still open from the sixteen:
+the intro's dwell (O-2), the production audit (O-5), "Back to home" (O-10), the policy pages (O-11),
+the one-screen rule on every surface (O-12), "What you need" (O-14), Cairo (O-15b).
+
+
 ## 2026-09-02 — renewal round 3 (M3a): the bar is a grid, the sheet is glass, the poster has no buttons
 
 Plan of record: [planning/LANDING_REWORK.md](../planning/LANDING_REWORK.md). Items 4, 6, 9, 13 and
