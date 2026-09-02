@@ -14,6 +14,11 @@ SCRATCH="$BREAKS_TMP"
 INFLIGHT=""
 _breaks_restore () {
   [ -n "$INFLIGHT" ] || return 0
+  # A signal can reach the parent before this trap does, and the parent's cleanup has
+  # already removed the scratch dir — then the restore silently writes nothing and the
+  # product file stays mutated for the next person. Recreating the path is cheap; a
+  # half-broken stylesheet left in the tree is not.
+  mkdir -p "$BREAKS_TMP" 2>/dev/null
   cp "$BREAKS_TMP/${INFLIGHT//\//_}" "$INFLIGHT" 2>/dev/null
   INFLIGHT=""
 }

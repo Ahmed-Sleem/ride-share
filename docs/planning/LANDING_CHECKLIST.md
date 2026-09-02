@@ -175,10 +175,29 @@ Six lessons the harness took, so they are not taken again:
 - [ ] **O-5 — the full production audit** (`docs/audits/LANDING_PRODUCTION_AUDIT.md`): every
       rule, every owner item, file + test + live URL. Type and layout moved since the last
       pass, so the audit is worth taking after this lands.
-- [ ] **L2 — green CI** on the newest commit, and `verify-gui` given the same Chrome/cache
-      path as before (the job has been red since the renewal's own push).
-- [ ] **L1 — both break harnesses**: `breaks.sh` (113) and `layout-breaks.sh` (11) re-anchored
-      after R4-6/O-11 moved the rules, plus a case that puts a hairline back to prove the
+- [ ] **L2 — green CI** on the newest commit. Two causes were open; one is closed:
+      **`verify-gui` never ran at all** because git recorded every `.sh` in the repo as
+      `100644`, so `./verify.sh` died with *Permission denied* (exit 126) before the browser
+      suite — 23 scripts are mode `100755` now (`57c9f2d`), and the Chrome/puppeteer cache step
+      was already correct. **Still red, and not GUI:** `pnpm verify` fails on nine `apps/api`
+      journey-lifecycle tests (`an approved driver claims a slot`, `a driver cannot release
+      another driver's claim`, `openForBooking transitions CLAIMED → OPEN_FOR_BOOKING`, start/
+      complete legality, rider position rules, the batch-of-points rule, and the UNIQUE-violation
+      race), `# pass 237 / # fail 9` on `node --test dist/`. That is phase 3's bug list, not the
+      landing; `Verify database` passes, so it is logic, not environment.
+- [ ] **L1 — both break harnesses**: one anchor was stale and is fixed (`57c9f2d` → `08f1ac8`:
+      the bar-centring case sed-replaced a rule the bar no longer uses, so it reported
+      *BROKEN-BREAK*, and `verify.sh` runs `breaks.sh` — a single stale anchor fails the GUI job).
+      Measured since: **22 of 113 cases ran, 22 CAUGHT, 0 missed**, before the run was stopped on
+      purpose. Worth the sentence it costs: a first local run of the whole battery reported
+      *0 caught, 113 missed*, which is not drift at all but the sandbox — `breaks.sh` calls
+      `node tests/unit.test.js`, which needs jsdom, so the harness has to be run with
+      `NODE_PATH=/home/user/.vtest/node_modules` here; every "missed" was the suite failing to
+      start. A second lesson the hard way: interrupting the battery mid-case leaves the break
+      *applied* (the trap's scratch dir is removed before the restore writes), so
+      `_breaks_restore` now recreates the path, and any interrupted run must be answered with
+      `git status` before anything is trusted. Remaining: finish the full run (≈35 min) and the
+      hairline case below.
       component guard bites.
 
 ## Closed earlier (kept here so nothing is re-broken)
