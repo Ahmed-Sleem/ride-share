@@ -512,9 +512,12 @@ run_break "the bar puts every control on one line" src/styles/shell.html \
   's@.landing__actions>.btn{margin-inline-start:var(--s3)}@.landing__actions>.btn{margin-inline-start:0}@' \
   "the auth pair is set apart from the switches"
 
+# Re-anchored 2026-09-03: the bar stopped centring with `position:absolute` and a transform
+# (a logical anchor with a physical shift, one element width off in RTL), so the pair the case
+# must disturb is now `justify-self:center` on the grid item — and the guard was renamed with it.
 run_break "the page names leave the centre of the bar" src/styles/shell.html \
-  's@.landing__links{position:absolute;inset-inline-start:50%;transform:translateX(-50%)}@.landing__links{transform:translateX(-50%)}@' \
-  "the page names are centred in the bar where there is room"
+  's@letter-spacing:-.005em;min-width:0;justify-self:center}@letter-spacing:-.005em;min-width:0}@' \
+  "the page names are centred by equal tracks, in either direction"
 
 run_break "the foot line goes back to the slogan" src/screens/landing.js \
   's@t("rights")@t("landingFoot")@' \
