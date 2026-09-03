@@ -184,7 +184,9 @@ Six lessons the harness took, so they are not taken again:
       another driver's claim`, `openForBooking transitions CLAIMED → OPEN_FOR_BOOKING`, start/
       complete legality, rider position rules, the batch-of-points rule, and the UNIQUE-violation
       race), `# pass 237 / # fail 9` on `node --test dist/`. That is phase 3's bug list, not the
-      landing; `Verify database` passes, so it is logic, not environment.
+      landing; `Verify database` passes, so it is logic, not environment. Everything GUI-side
+      passes in CI on that commit — build, unit/a11y, layout and the whole landing suite — so the
+      only job failure left is the API's, plus whatever `layout-breaks` says once it runs.
 - [ ] **L1 — both break harnesses**: one anchor was stale and is fixed (`57c9f2d` → `08f1ac8`:
       the bar-centring case sed-replaced a rule the bar no longer uses, so it reported
       *BROKEN-BREAK*, and `verify.sh` runs `breaks.sh` — a single stale anchor fails the GUI job).
@@ -197,7 +199,15 @@ Six lessons the harness took, so they are not taken again:
       *applied* (the trap's scratch dir is removed before the restore writes), so
       `_breaks_restore` now recreates the path, and any interrupted run must be answered with
       `git status` before anything is trusted. Remaining: finish the full run (≈35 min) and the
-      hairline case below.
+      hairline case below. CI then measured the battery for real on `23d6a25`:
+      **112 caught / 1 missed** — and the miss was a *stale file* in the hero case (`class:
+      "landing__hero"` moved to `mkIntro` with O-12, so the sed changed nothing and the case
+      reported BROKEN-BREAK, the worst kind of green). Re-anchored to
+      `src/lib/landing-parts.js:192` (`c9cb13e`), verified 1 caught / 0 missed.
+      `layout-breaks.sh` has still had no verdict: with 11 browser-suite cases it overruns a
+      single sitting locally (and killing it mid-case leaves the break *applied* — `git status`
+      before trusting anything), so its answer comes from the CI run, which now runs alone:
+      the `concurrency` group cancelled the superseded run instead of queueing behind it.
       component guard bites.
 
 ## Closed earlier (kept here so nothing is re-broken)
