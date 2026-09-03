@@ -8,6 +8,17 @@ on:
   push:
     branches: [main]
 
+# One run per ref, newest wins. Four pushes in this session started four full
+# browser-suite runs against the same main, each queued behind the one ahead of
+# it, and only the newest commit's verdict can be acted on. A cancelled run
+# therefore carries no verdict for its own commit: that is the trade, and it is
+# the right one here, because Railway deploys from the push itself (live matched
+# the committed artifact 45s after a push while CI was still running). No deploy
+# waits on CI, and the head of main is always the state that gets checked.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     name: Verify (repo + api + web unit)
