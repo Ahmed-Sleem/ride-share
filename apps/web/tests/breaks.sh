@@ -310,7 +310,10 @@ run_break "splash loses its container" src/shell/app.js \
   's|return \$("div",{class:"splash"|return $("div",{class:"nosplash"|' \
   "boot shows the splash"
 
-run_break "landing loses its hero" src/screens/landing.js \
+# Re-anchored 2026-09-03, from CI: 112 caught / 1 missed, and the miss was this case's *file*.
+# O-12 moved hero construction into mkIntro, so `landing.js` no longer contains the string and
+# the sed changed nothing — a break that cannot break is worse than no break, it reports green.
+run_break "landing loses its hero" src/lib/landing-parts.js \
   's|class: "landing__hero"|class: "landing__heroX"|' \
   "landing renders the hero"
 
