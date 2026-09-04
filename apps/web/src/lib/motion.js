@@ -166,20 +166,25 @@ const Motion = (function () {
                     dest: { x: 0, y: 0 }, nodes: [], particles: [], arrived: false,
                     ro: null, rt: null };
 
-    const polyPath = (arrs, S, ox, oy, close) => {
+    /* Two scales, because the section is far taller than any screen. A single height-driven
+       scale multiplies the corridor's sideways wander by the same factor — on a 4,000px
+       section the road leaves the page and the reader follows nothing. Page coordinates are
+       written here, into the path data, so an uneven scale moves the geography without bending
+       the pen: strokes, dot radii and the spot gradient keep one width in both directions. */
+    const polyPath = (arrs, sx, sy, ox, oy, close) => {
       let d = "";
       for (const flat of arrs) {
         for (let i = 0; i < flat.length; i += 2) {
-          const x = ox + flat[i] * S, y = oy + flat[i + 1] * S;
+          const x = ox + flat[i] * sx, y = oy + flat[i + 1] * sy;
           d += (i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
         }
         if (close) d += "Z ";
       }
       return d;
     };
-    const ptsPage = (flat, S, ox, oy) => {
+    const ptsPage = (flat, sx, sy, ox, oy) => {
       const out = [];
-      for (let i = 0; i < flat.length; i += 2) out.push([ox + flat[i] * S, oy + flat[i + 1] * S]);
+      for (let i = 0; i < flat.length; i += 2) out.push([ox + flat[i] * sx, oy + flat[i + 1] * sy]);
       return out;
     };
     function smoothD(pts) {
@@ -261,19 +266,27 @@ const Motion = (function () {
         if (x < rx0) rx0 = x; if (x > rx1) rx1 = x;
         if (y < ry0) ry0 = y; if (y > ry1) ry1 = y;
       }
-      const topM = state.H * 0.06, botM = state.H * 0.10;
-      const S = (state.H - topM - botM) / (ry1 - ry0);
-      const ox = state.W / 2 - ((rx0 + rx1) / 2) * S;
-      const oy = topM - ry0 * S;
+      /* Vertically, the road belongs to the copy it carries: from the first cut's centre to the
+         last, so no paragraph sits past the end of the route. Horizontally it belongs to the
+         screen: it must reach each side without running off it. The margins are proportions, so
+         the fit is the same on a 320px phone and a 2560px display. */
+      const sideM = Math.max(24, state.W * 0.07);
+      const ys = cutY.filter((v) => Number.isFinite(v));
+      const y0 = ys.length ? Math.min(...ys) : state.H * 0.06;
+      const y1 = ys.length ? Math.max(...ys) : state.H * 0.94;
+      const SY = Math.max(1e-3, (y1 - y0) / (ry1 - ry0));
+      const SX = Math.max(1e-3, (state.W - sideM * 2) / Math.max(1, rx1 - rx0));
+      const ox = state.W / 2 - ((rx0 + rx1) / 2) * SX;
+      const oy = y0 - ry0 * SY;
       const spotR = Math.max(150, Math.min(340, state.W * 0.19));
 
-      const seaD = polyPath([geo.sea], S, ox, oy, true);
-      const coastD = polyPath(geo.coast, S, ox, oy, false);
-      const canalD = polyPath(geo.canal, S, ox, oy, false);
-      const roadD = [0, 1, 2, 3].map(k => polyPath(geo.roads[k] || [], S, ox, oy, false));
-      const routeD = smoothD(ptsPage(route, S, ox, oy));
+      const seaD = polyPath([geo.sea], SX, SY, ox, oy, true);
+      const coastD = polyPath(geo.coast, SX, SY, ox, oy, false);
+      const canalD = polyPath(geo.canal, SX, SY, ox, oy, false);
+      const roadD = [0, 1, 2, 3].map(k => polyPath(geo.roads[k] || [], SX, SY, ox, oy, false));
+      const routeD = smoothD(ptsPage(route, SX, SY, ox, oy));
       const marksSVG = (geo.marks || []).map(m => {
-        const x = ox + m.x * S, y = oy + m.y * S;
+        const x = ox + m.x * SX, y = oy + m.y * SY;
         return '<circle class="journey__mark" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3"/>' +
                '<text class="journey__mark-label" x="' + (x + 9).toFixed(1) +
                '" y="' + (y - 8).toFixed(1) + '">' + m.label + "</text>";
@@ -390,9 +403,12 @@ const Motion = (function () {
       const box = scroller.getBoundingClientRect();
       const vh = scroller.clientHeight || 1;
       state.tgt = clamp01((box.top + vh * 0.5 - r.top) / r.height);
+      wake();
     }
 
     function tick(now) {
+      /* The loop re-arms first and stops itself last: a throw inside paint then costs a frame,
+         not the section. */
       state.raf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, (now - state.last) / 1000);
       state.last = now;
@@ -410,8 +426,22 @@ const Motion = (function () {
           "translate(" + p.x.toFixed(1) + " " + p.y.toFixed(1) + ") rotate(" + p.rot.toFixed(1) + ")");
         p.el.setAttribute("opacity", o.toFixed(2));
       }
+      /* Sleep when there is nothing left to move. The loop used to run for as long as the page
+         was open — 60 writes a second, forever, on a settled section nobody is looking at, which
+         is what a reader on a phone feels as heat. `readScroll` wakes it, so the next scroll, the
+         next resize and the fonts arriving all restart it, and the final paint is written at the
+         exact target rather than an asymptote away from it. */
+      if (!state.particles.length && Math.abs(state.tgt - state.prog) < 0.0008) {
+        state.prog = state.tgt;
+        paint(state.prog);
+        cancelAnimationFrame(state.raf);
+        state.raf = null;
+      }
     }
 
+    const wake = () => {
+      if (state.raf === null) { state.last = performance.now(); state.raf = requestAnimationFrame(tick); }
+    };
     const onScroll = () => readScroll();
     const onResize = () => { clearTimeout(state.rt); state.rt = setTimeout(() => { layout(); readScroll(); }, 120); };
 

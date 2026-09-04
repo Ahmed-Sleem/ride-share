@@ -169,6 +169,95 @@ Six lessons the harness took, so they are not taken again:
    collapsed were worth less than one walk up the DOM printing width, `justify-self` and
    `grid-template-columns` per ancestor: the cap was on an element the selector never named.
    `/tmp` probes that print the chain are cheap; CSS edits made from a theory are not.
+7. **A break harness leaves the break behind if it is interrupted.** `breaks.sh` restores from an
+   `EXIT/INT/TERM` trap, but a signal can reach the parent before the trap writes: the run after
+   stopping it read one failure, and only a second run proved the tree clean. Re-run the guarded
+   suite before believing anything about the working tree, and never commit between the two.
+
+## Round 6 — owner's list of 2026-09-04 (Arabic space, the intro's teaching, the route, the policies)
+
+Seven items, each with the check that decides it. Nothing is ticked until its check has run.
+
+- [x] **R6-1 — Arabic gets the vertical room, and its dots survive.** The poster stack sets
+      `line-height:.82` and every line is a mask (`.landing__displayline{overflow:hidden}`) —
+      correct for Latin caps, wrong for Arabic, whose marks and descenders leave the em box, so
+      lines collide and the dots are cut. Fix is centralised, not per component: leading becomes
+      tokens the RTL tree widens, and the mask gains ink room via padding offset by a negative
+      margin so the layout does not move. *Check:* a probe that measures the real ink (canvas
+      `actualBoundingBox` at the used face and size, baseline from `fontBoundingBox`) against each
+      line's clip box — no ink outside the mask, no overlapping line boxes — on all five pages,
+      both languages, in the width battery. Rendered proof, not metrics arithmetic: before, the
+      three poster lines sat 10 px apart at 140 px and the driver page's sentence fused into ONE
+      218 px ink run; after, the rider's gaps are 55/53 px and the driver's 5/9/31 px with three
+      clean lines — Latin's numbers unchanged (16/14, 15/17), so the demo look is intact. Body copy
+      was measured and left alone (Arabic's gaps of 7 px already match Latin's 5-9); a mask-padding
+      rule added mid-flight was deleted because opening every mask in a screenshot diff showed 0 px
+      of lost ink in both languages. *Check:* unit guards on the token, on the face rule carrying
+      the leading, and on `.82` staying; landing asserts the computed ratio in both languages.
+
+- [x] **R6-2 — the intro teaches the service from zero, once.** `landingHero`, `landingHeroSub` and
+      `landingHeroB` restate the same three claims; a reader who has never heard of the service
+      learns no more than the poster says. *Check:* no claim word repeats across the intro's slots
+      (per-claim counting, both languages), and the copy answers what/who/where/
+      when/how-much/how-to-pay in that order. The lede now defines the service for someone who has
+      never heard of it and the paragraph answers the mechanic; the three poster lines joined the
+      repetition count, which the *shipped* copy failed (`سعر واحد` in the poster and again in the
+      lede) — the guard has teeth because it caught the old text, not the new. `landingHeroSub` was
+      found unread (G-082).
+
+- [x] **R6-3 — the route carries all its text and stays in sight.** The
+      path is drawn into a letterboxed box, so the first and last claim words sit off the road and
+      the line can end while the reading continues. *Check:* measured — the drawn route's length
+      spans from the first word's baseline point to the last, every word is within a set distance
+      of the route, and the route is painted in the viewport at the top, middle and bottom of the
+      section. Measured across 4 widths × 2 languages: the drawn route now spans the first cut's
+      centre to the last **exactly** (`routeY == cutsY`, tolerance ≤ 4 px asserted), and it uses
+      84-86 % of the section width instead of a 26 % ribbon down the middle at 1440; length grew 2
+      096 → 2 245 px at 390 and 3 893 → 5 639 at 1440. The `<svg>` box still equals the section box
+      (M1's promise, unchanged). Cause was one height-driven scale applied to a section 4 000 px
+      tall.
+
+- [x] **R6-4 — Terms / Privacy / Safety: one bar, centred multi-column, one way home.**
+      Audit against the poster's own rules: same `landingNav`, contents rail, centred measure, a
+      measure that breaks into columns when there is room, `landingBack` to home, adaptive at every
+      width, nothing hidden. *Check:* the existing per-shape battery plus new assertions for the
+      column count at wide sizes and the bar being byte-identical markup to the pages. The three
+      documents open with the shared `mkIntro` — same kick, poster face, measure, the same "Back to
+      home" action — with the clause list and its rail in a section under it. `doc: true` is the
+      one opt-out from the one-screen floor (it also drops 900 px of blank: the head is 522 px in
+      AR), and it may not touch type, which is asserted. The `:has()` workaround from R5-D was
+      deleted with the nesting that needed it.
+
+- [x] **R6-5 — the driver intro holds its screen like
+      the rider's.** Same `mkIntro`, same floor; no peek of the next section, and the same at every
+      width and on short viewports. *Check:* hero height vs `--view-h`, next section's top at or
+      below the fold, all five pages, the whole width battery. Measured at 1280×900: hero 900 =
+      viewport, next section starts at 972 (nothing peeks) on both rider and drive, in both
+      languages — and the drive poster is now the rider's composition (three lines, lede, prose),
+      which is what actually made it read as the same page.
+
+- [x] **R6-6 — "What you need" reads like
+      the rest of the page.** A bare eyebrow + prose + a list is the one section the poster does
+      not own. *Check:* it uses the page's own devices (slab/panels/steps), keeps the three facts,
+      and the shared-scale guard still passes. `What you need` is a `mkSlab` with numbered rows and
+      a body per row, the device the rider page uses for its own steps; the bare-list branch it
+      made unused is reported, not deleted (G-082).
+
+- [x] **R6-7 — fast and clean: the small audit.**
+      Scroll work is read-batched and rAF-throttled, `will-change` is scoped to what animates, no
+      forced layout in a loop, no listeners without teardown, no blocked first paint beyond the
+      fonts, reduced-motion honoured. *Check:* a measured pass (frame times while scrolling, long
+      tasks, first paint) plus greps for the patterns that cause them.
+      Numbers: `load` 71 ms, DOMContentLoaded 70 ms, **0 subresources**, 0 images/iframes, one inline
+      `<style>`, 0 long tasks, frames p50 16.8 ms / p95 26.9 ms while dragging the whole page. Two real
+      faults found and fixed: the journey's rAF loop never slept (worst frame 57.8 → 33.8 ms), and the
+      knockout line relied on `-webkit-text-stroke` with no fallback, which prints an *invisible* poster
+      line where the prefixed property is missing — now guarded by `@supports`. Scroll listeners were
+      already passive and rAF-throttled; a third fault came from the suite rather than the probe —
+      the curtain could stay up over a painted page where frames stop (G-084: one idempotent `settle()`
+      on a deadline summed from `PHASES`, proven by stubbing `rAF`) — and the two `console.*` calls
+      left in the source are error paths (`api.js` HMAC failure, the global error handler), not
+      debug output.
 
 ## Round 5 open (nothing else from the owner's lists is pending)
 
@@ -187,8 +276,14 @@ Six lessons the harness took, so they are not taken again:
       landing; `Verify database` passes, so it is logic, not environment. Everything GUI-side
       passes in CI on that commit — build, unit/a11y, layout and the whole landing suite — so the
       only job failure left is the API's, plus whatever `layout-breaks` says once it runs.
-- [ ] **L1 — both break harnesses**: one anchor was stale and is fixed (`57c9f2d` → `08f1ac8`:
-      the bar-centring case sed-replaced a rule the bar no longer uses, so it reported
+- [ ] **L1 — both break harnesses**: one anchor was stale and is fixed (`57c9f2d` → `08f1ac8`:      **Status after round 6 (2026-09-04):** the landing suites and every gate are green (`unit 663/0`,
+      `a11y 14/0`, `layout 8185/0`, `landing 2804/0`, `verify-repo 151 files / 0 hits`); `breaks.sh`
+      was run part-way and `layout-breaks.sh` not at all this round, because both edit `src/` in place
+      (113 cases × rebuild+unit ≈ 45 min) and the push gate needed a quiet tree. CI runs both, so the
+      verdict arrives with the pipeline. **New lesson (7), learned the hard way this round:** stopping
+      `breaks.sh` with SIGTERM let its restore trap race the parent — the tree still held a break, and
+      the next unit run read 662/1, not a mysterious pass. A break harness must therefore be followed
+      by the suite it guards before the tree is trusted; if that run is green, no break is live.
       *BROKEN-BREAK*, and `verify.sh` runs `breaks.sh` — a single stale anchor fails the GUI job).
       Measured since: **22 of 113 cases ran, 22 CAUGHT, 0 missed**, before the run was stopped on
       purpose. Worth the sentence it costs: a first local run of the whole battery reported

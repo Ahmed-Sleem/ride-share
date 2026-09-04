@@ -118,6 +118,12 @@
   /* The poster's display roles in Arabic; the stack is composed by build.js from
      the faces fonts.json marks `display`, so adding a masthead is a manifest edit. */
   --brand-font-display:"Jomhuria", "Cairo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", sans-serif;
+  /* Arabic's display leading, kept beside the face that needs it. Jomhuria's font box is
+     1.118 em and its ink 0.832 em: at the Latin poster's 0.82 stack the lines have -0.012 em
+     of clearance (they touch) and the mask crops 21 px per line at 140 px, which is where the
+     dots went. 1.18 fits the box and leaves a third of an em between lines. Latin never reads
+     this — the only consumer is [dir="rtl"]. Measured by lead.js, guarded in unit.test.js. */
+  --lead-display-rtl:1.18;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px;
   --s6:24px; --s7:32px; --s8:40px; --s9:48px; --s10:64px;
 
@@ -1178,6 +1184,17 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__displayline>span{display:block;font-variation-settings:"wght" 420;
   will-change:font-variation-settings}
 .landing__displayline--out>span{color:transparent;-webkit-text-stroke:2px var(--ink)}
+/* Knockout type is only as good as the property that draws its outline: where
+   -webkit-text-stroke is missing, a transparent fill would print nothing at all, and the
+   poster's third line is content, not decoration. So the fallback is the inked line. */
+@supports not (-webkit-text-stroke:1px black){
+  .landing__displayline--out>span{color:var(--ink)}
+}
+
+/* A document is read, not admired. The policy head keeps the shared poster type, the bar's
+   clearance and the measure, and gives up only the one-screen floor — the one opt-out the
+   suite allows, asserted as such so no page can quietly drop the rule. */
+.landing__hero--doc{min-height:0;padding-block-end:clamp(2rem,6vh,4rem)}
 .landing__hero-foot{position:relative;z-index:1;display:grid;gap:var(--s3);padding-top:0}
 /* Two texts, one baseline: with the bar holding the calls to action, the foot's second
    column is the paragraph that explains the promise rather than a row of buttons, so the
@@ -1432,10 +1449,9 @@ html.native .intro{padding-top:var(--safe-t)}
      track would size that track from the text and collapse the pair to a narrow band.
      Both the block and its column have to claim the measure before `fr` means anything. */
   .landing__doc2{grid-template-columns:minmax(0,16rem) minmax(0,1fr);gap:var(--s7);justify-self:stretch;width:100%}
-  /* The narrow measure belongs on the text column, not on the wrapper that holds the
-     rail beside it: the outer .landing__doc caps at 60ch, and left to itself that cap
-     clamps the pair — rail, gap and text — down to a band. */
-  .landing__doc:has(.landing__doc2){max-width:none}
+  /* The measure belongs on the text column: capped on the wrapper it clamps the pair — rail,
+     gap and text — down to a band. The document no longer nests inside a capped element, so
+     the workaround that lifted it is gone with the nesting. */
   .landing__doc2{max-width:min(100%,72rem);margin-inline:auto}
   .landing__doc2 .landing__doc{max-width:70ch;width:100%}
   .landing__docrail{position:sticky;top:calc(var(--bar-clearance) + var(--s3));
@@ -1501,7 +1517,10 @@ html.native .intro{padding-top:var(--safe-t)}
    @font-face — one number, measured, not a clamp per component). */
 [dir="rtl"] .landing__display,[dir="rtl"] .landing__displayline>span,
 [dir="rtl"] .journey__word,[dir="rtl"] .landing__slab-t,[dir="rtl"] .landing__title,
-[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t{font-family:var(--brand-font-display)}
+[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t{font-family:var(--brand-font-display);
+  /* The same list, the same rule: a role cannot get the Arabic display face without
+     also getting the leading the face needs. Two places would drift; one cannot. */
+  line-height:var(--lead-display-rtl)}
 [dir="rtl"] .landing__displayline--out>span{-webkit-text-stroke-width:1.2px}
 /* auth — centered card over the page background. width:100% for the same
    #root-flex reason as .landing. */
@@ -2285,7 +2304,7 @@ en:{
   safetyComingBody:"Live SOS, emergency contacts and ride sharing arrive with safety & support (M4).",
   reportComingBody:"In-app reporting arrives with safety & support (M4).",
   /* landing */
-  landingHero:"Smart transport that keeps to a timetable: shared rides along published routes, one fare for the whole distance, and a seat held in your name before you leave home.",
+  landingHero:"A shared ride is neither a taxi you hire nor a bus you hope to catch. Several people heading the same way travel in one car, along a set route, at times the operator commits to — the service is meant to be planned around, not waited for.",
   landingHeroSub:"A shared ride you can plan around — published stops, published times, a flat fare per route, and a seat you booked before you left home. Built for any city, one corridor at a time.",
   landingCtaStart:"Create account",
   landingCtaSignIn:"Sign in",
@@ -2313,6 +2332,10 @@ en:{
   safetyF3T:"Help nearby", safetyF3B:"SOS and live ride sharing arrive with the safety centre.",
   policies:"Policies", terms:"Terms", privacy:"Privacy", safetyPolicy:"Safety",
   policyTermsTitle:"Terms of service", policyPrivacyTitle:"Privacy", policySafetyTitle:"Safety",
+  policyKick:"The operator's documents",
+  policyTermsLede:"What you agree to when you ride: the account, the booking and the fare, conduct in the vehicle, and how a change is published.",
+  policyPrivacyLede:"What is recorded to run a ride, who is allowed to see it, how long it is kept, and how to ask for it to be corrected or removed.",
+  policySafetyLede:"How a driver and a vehicle are checked before a trip, what boarding by code proves, and what to do if something goes wrong on the way.",
   policyTemplateNote:"This is a template — the final legal wording is provided by the operator's legal team. The product only collects what it needs to run the ride.",
   policyTerms:[
     ["The service",BRAND.name.en+" runs shared rides on fixed routes at a fixed price. A rider boards at a published stop and may get off anywhere along the route."],
@@ -2376,10 +2399,11 @@ en:{
   mkJourneyLabel:"The ride, chapter by chapter, along one road",
   mkJourneyCaption:"The road is Alexandria's real coastline and street grid, drawn from OpenStreetMap — a poster, not a route guide. What you book is the published route and time.",
   mkLangTo:"العربية",
-  driveHeroT:"Drive on your schedule. Earn weekly.",
+  driveHeroT:"The routes, the times and the prices are the operator's to set. The hours you work are yours.",
+  driveDisplay1:"Pick a slot", driveDisplay2:"Drive it", driveDisplay3:"Get paid weekly",
   driveHeroB:"Claim a published departure in two taps and run it. No route drawing, no pricing, no guessing — just drive.",
   driverF4T:"Choose your hours", driverF4B:"Claim only the departures that fit your day. Release early, it's free.",
-  landingHeroB:"Pick a departure and pay the driver in cash when you board. The price is printed on the route card, not on a meter \u2014 so traffic, rain and the hour you travel change nothing about what you owe.",
+  landingHeroB:"You book a seat, not a car. The drivers are approved by the operator and each runs one route on a fixed schedule; you settle in cash as you board, or from a wallet balance, and nothing is added because the hour is busy.",
   driveInviteK:"The other side of the road",
   driveInviteT:"Want to drive with us?",
   driveInviteB:"Operators publish the routes and the fares. You choose the days you work, and every trip on your route pays the same flat amount.",
@@ -2391,6 +2415,10 @@ en:{
   driveStep3T:"Claim a departure", driveStep3B:"Two taps: pick a route, pick a slot, confirm.",
   driveStep4T:"Run the ride", driveStep4B:"Board riders by code, keep the published schedule, get paid.",
   driveReqT:"What you need", driveReqB:"A national ID, a valid driving licence and an approved vehicle.",
+  driveReqKick:"Before the first departure",
+  driveReq1B:"The operator confirms the person behind the application, not only the papers attached to it.",
+  driveReq2B:"It has to be valid for the vehicle you bring, and it is read rather than assumed.",
+  driveReq3B:"The vehicle is reviewed with the papers and approved before a first trip, exactly as its driver is.",
   driveReq1T:"A national ID", driveReq2T:"A valid driving licence", driveReq3T:"An approved vehicle",
   docRailLabel:"Contents",
   aboutKick:"About",
@@ -2731,7 +2759,7 @@ ar:{
   safetyComingBody:"الاستغاثة المباشرة وجهات الطوارئ ومشاركة الرحلة تأتي مع الأمان والدعم (M4).",
   reportComingBody:"الإبلاغ داخل التطبيق يأتي مع الأمان والدعم (M4).",
   /* landing */
-  landingHero:"نقل ذكي يلتزم بجدول المواعيد: ركوبات مشتركة على مسارات منشورة، وسعر واحد للمسار كله، ومقعدك محفوظ باسمك قبل ما تخرج من البيت.",
+  landingHero:"الركوبة المشتركة ليست سيارة تستأجرها ولا حافلة تنتظرها: عدة أشخاص يتجهون إلى الطريق نفسه يركبون سيارة واحدة، على مسار محدد وفي مواعيد يلتزم بها المشغّل — فهي مصمّمة لتخطّط عليها يومك، لا لتنتظرها.",
   landingHeroSub:"ركوبة مشتركة تقدر تخطط عليها — محطات منشورة، مواعيد منشورة، أجرة ثابتة لكل مسار، ومقعد حجزته قبل ما تخرج من البيت. مصممة لأي مدينة، مسار بعد مسار.",
   landingCtaStart:"أنشئ حسابًا",
   landingCtaSignIn:"تسجيل الدخول",
@@ -2759,6 +2787,10 @@ ar:{
   safetyF3T:"دعم قريب", safetyF3B:"الاستغاثة ومشاركة الرحلة المباشرة تأتيان مع مركز الأمان.",
   policies:"السياسات", terms:"الشروط", privacy:"الخصوصية", safetyPolicy:"الأمان",
   policyTermsTitle:"شروط الخدمة", policyPrivacyTitle:"الخصوصية", policySafetyTitle:"الأمان",
+  policyKick:"وثائق المشغّل",
+  policyTermsLede:"ما توافق عليه عند الرحلة: الحساب، والحجز والأجرة، والسلوك في السيارة، وكيف تُنشر أي تغيير.",
+  policyPrivacyLede:"ما يُسجَّل لتشغيل الرحلة، ومن يُسمح له برؤيته، ومدة حفظه، وكيف تطلب تصحيحه أو حذفه.",
+  policySafetyLede:"كيف يُراجَع السائق والسيارة قبل الرحلة، وما الذي يُثبته كود الركوب، وماذا تفعل إذا حدث أمر غير متوقع في الطريق.",
   policyTemplateNote:"هذه صفحة نموذجية — الصياغة القانونية النهائية يقدّمها الفريق القانوني للمشغّل. المنتج لا يجمع أكثر مما يحتاجه لتشغيل الرحلة.",
   policyTerms:[
     ["الخدمة","يقدّم «"+BRAND.name.ar+"» ركوبات مشتركة على مسارات ثابتة بسعر ثابت. يركب الراكب من محطة منشورة ويمكنه النزول في أي نقطة على المسار."],
@@ -2819,10 +2851,11 @@ ar:{
   mkJourneyLabel:"الرحلة فصلًا بعد فصل على طريق واحد",
   mkJourneyCaption:"الطريق هو ساحل الإسكندرية وشبكة شوارعها الحقيقية، مرسوم من OpenStreetMap — ملصق إعلاني لا دليل مسارات. ما تحجزه هو المسار الموعد المنشور.",
   mkLangTo:"English",
-  driveHeroT:"قُد على جدولك. واكسب أسبوعيًا.",
+  driveHeroT:"المسارات والمواعيد والأسعار يحددها المشغّل. أما ساعات عملك فهي قرارك وحدك.",
+  driveDisplay1:"اختر موعدًا", driveDisplay2:"قُد الرحلة", driveDisplay3:"استلم أسبوعيًا",
   driveHeroB:"احجز موعدًا منشورًا بنقرتين وشغّله. لا رسم مسارات ولا تسعير ولا تخمين — قُد فقط.",
   driverF4T:"اختر ساعاتك", driverF4B:"احجز فقط المواعيد التي تناسب يومك. والإلغاء المبكر مجاني.",
-  landingHeroB:"اختر موعدك وادفع للسائق نقدًا عند الصعود. السعر مطبوع على بطاقة المسار، لا على عدّاد — فالزحمة والمطر ووقت رحلتك لا يغيرون شيئًا مما عليك.",
+  landingHeroB:"أنت تحجز مقعدًا لا سيارة. السائقون معتمدون من المشغّل، وكلٌّ منهم يسير على مسار واحد في موعده المحدد؛ تدفع نقدًا عند الصعود أو من رصيد محفظتك، ولا تُضاف زيادة لأن الساعة مزدحمة.",
   driveInviteK:"الجهة الثانية من الطريق",
   driveInviteT:"هل تريد أن تقود معنا؟",
   driveInviteB:"المشغّلون ينشرون المسارات والأسعار. أنت تختار أيام عملك، وكل رحلة على مسارك تدفع المبلغ الثابت نفسه.",
@@ -2834,6 +2867,10 @@ ar:{
   driveStep3T:"احجز موعدًا", driveStep3B:"نقرتان: اختر المسار، اختر الموعد، أكّد.",
   driveStep4T:"شغّل الرحلة", driveStep4B:"أركب الركاب بالكود، التزم بالجدول المنشور، واستلم أجرك.",
   driveReqT:"ماذا تحتاج", driveReqB:"بطاقة رقم قومي، ورخصة قيادة سارية، ومركبة معتمدة.",
+  driveReqKick:"قبل أول موعد",
+  driveReq1B:"يتحقق المشغّل من شخص الطلب نفسه، لا من الأوراق المرفقة فقط.",
+  driveReq2B:"لا بد أن تكون سارية ومناسبة للمركبة التي تحضرها، وتُقرأ ولا تُؤخذ كمسلمات.",
+  driveReq3B:"تُراجع المركبة مع المستندات وتُعتمد قبل أول رحلة، كما يُعتمد سائقها تمامًا.",
   aboutKick:"عنّا",
   aboutTitle:"الحلّ الوسط بين الميكروباص وخدمات الركوب.",
   aboutP1:"الميكروباص ينقل معظم الإسكندرية فعلًا — رخيص وفي كل مكان، لكنك لا تعرف متى يتحرك ولا هل يوجد مقعد ولا كم ستدفع. وخدمات الركوب تحلّ ذلك لكنها تكلف أضعافًا.",
@@ -5912,20 +5949,25 @@ const Motion = (function () {
                     dest: { x: 0, y: 0 }, nodes: [], particles: [], arrived: false,
                     ro: null, rt: null };
 
-    const polyPath = (arrs, S, ox, oy, close) => {
+    /* Two scales, because the section is far taller than any screen. A single height-driven
+       scale multiplies the corridor's sideways wander by the same factor — on a 4,000px
+       section the road leaves the page and the reader follows nothing. Page coordinates are
+       written here, into the path data, so an uneven scale moves the geography without bending
+       the pen: strokes, dot radii and the spot gradient keep one width in both directions. */
+    const polyPath = (arrs, sx, sy, ox, oy, close) => {
       let d = "";
       for (const flat of arrs) {
         for (let i = 0; i < flat.length; i += 2) {
-          const x = ox + flat[i] * S, y = oy + flat[i + 1] * S;
+          const x = ox + flat[i] * sx, y = oy + flat[i + 1] * sy;
           d += (i === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
         }
         if (close) d += "Z ";
       }
       return d;
     };
-    const ptsPage = (flat, S, ox, oy) => {
+    const ptsPage = (flat, sx, sy, ox, oy) => {
       const out = [];
-      for (let i = 0; i < flat.length; i += 2) out.push([ox + flat[i] * S, oy + flat[i + 1] * S]);
+      for (let i = 0; i < flat.length; i += 2) out.push([ox + flat[i] * sx, oy + flat[i + 1] * sy]);
       return out;
     };
     function smoothD(pts) {
@@ -6007,19 +6049,27 @@ const Motion = (function () {
         if (x < rx0) rx0 = x; if (x > rx1) rx1 = x;
         if (y < ry0) ry0 = y; if (y > ry1) ry1 = y;
       }
-      const topM = state.H * 0.06, botM = state.H * 0.10;
-      const S = (state.H - topM - botM) / (ry1 - ry0);
-      const ox = state.W / 2 - ((rx0 + rx1) / 2) * S;
-      const oy = topM - ry0 * S;
+      /* Vertically, the road belongs to the copy it carries: from the first cut's centre to the
+         last, so no paragraph sits past the end of the route. Horizontally it belongs to the
+         screen: it must reach each side without running off it. The margins are proportions, so
+         the fit is the same on a 320px phone and a 2560px display. */
+      const sideM = Math.max(24, state.W * 0.07);
+      const ys = cutY.filter((v) => Number.isFinite(v));
+      const y0 = ys.length ? Math.min(...ys) : state.H * 0.06;
+      const y1 = ys.length ? Math.max(...ys) : state.H * 0.94;
+      const SY = Math.max(1e-3, (y1 - y0) / (ry1 - ry0));
+      const SX = Math.max(1e-3, (state.W - sideM * 2) / Math.max(1, rx1 - rx0));
+      const ox = state.W / 2 - ((rx0 + rx1) / 2) * SX;
+      const oy = y0 - ry0 * SY;
       const spotR = Math.max(150, Math.min(340, state.W * 0.19));
 
-      const seaD = polyPath([geo.sea], S, ox, oy, true);
-      const coastD = polyPath(geo.coast, S, ox, oy, false);
-      const canalD = polyPath(geo.canal, S, ox, oy, false);
-      const roadD = [0, 1, 2, 3].map(k => polyPath(geo.roads[k] || [], S, ox, oy, false));
-      const routeD = smoothD(ptsPage(route, S, ox, oy));
+      const seaD = polyPath([geo.sea], SX, SY, ox, oy, true);
+      const coastD = polyPath(geo.coast, SX, SY, ox, oy, false);
+      const canalD = polyPath(geo.canal, SX, SY, ox, oy, false);
+      const roadD = [0, 1, 2, 3].map(k => polyPath(geo.roads[k] || [], SX, SY, ox, oy, false));
+      const routeD = smoothD(ptsPage(route, SX, SY, ox, oy));
       const marksSVG = (geo.marks || []).map(m => {
-        const x = ox + m.x * S, y = oy + m.y * S;
+        const x = ox + m.x * SX, y = oy + m.y * SY;
         return '<circle class="journey__mark" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3"/>' +
                '<text class="journey__mark-label" x="' + (x + 9).toFixed(1) +
                '" y="' + (y - 8).toFixed(1) + '">' + m.label + "</text>";
@@ -6136,9 +6186,12 @@ const Motion = (function () {
       const box = scroller.getBoundingClientRect();
       const vh = scroller.clientHeight || 1;
       state.tgt = clamp01((box.top + vh * 0.5 - r.top) / r.height);
+      wake();
     }
 
     function tick(now) {
+      /* The loop re-arms first and stops itself last: a throw inside paint then costs a frame,
+         not the section. */
       state.raf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, (now - state.last) / 1000);
       state.last = now;
@@ -6156,8 +6209,22 @@ const Motion = (function () {
           "translate(" + p.x.toFixed(1) + " " + p.y.toFixed(1) + ") rotate(" + p.rot.toFixed(1) + ")");
         p.el.setAttribute("opacity", o.toFixed(2));
       }
+      /* Sleep when there is nothing left to move. The loop used to run for as long as the page
+         was open — 60 writes a second, forever, on a settled section nobody is looking at, which
+         is what a reader on a phone feels as heat. `readScroll` wakes it, so the next scroll, the
+         next resize and the fonts arriving all restart it, and the final paint is written at the
+         exact target rather than an asymptote away from it. */
+      if (!state.particles.length && Math.abs(state.tgt - state.prog) < 0.0008) {
+        state.prog = state.tgt;
+        paint(state.prog);
+        cancelAnimationFrame(state.raf);
+        state.raf = null;
+      }
     }
 
+    const wake = () => {
+      if (state.raf === null) { state.last = performance.now(); state.raf = requestAnimationFrame(tick); }
+    };
     const onScroll = () => readScroll();
     const onResize = () => { clearTimeout(state.rt); state.rt = setTimeout(() => { layout(); readScroll(); }, 120); };
 
@@ -6227,6 +6294,12 @@ const PageFx = (() => {
   ];
   const GESTURE_WINDOW = 500;
   const FALLBACK_SWAP_MS = 600;      /* the swap's deadline, whatever rAF decides to do */
+  /* And a deadline for the wipe itself. The phases are 940 ms of frames; if the frames stop
+     arriving — backgrounded, occluded, a window restored from minimise, a compositor under
+     load — the curtain used to stay up over a page that had already swapped. Sum the phases
+     so the number cannot drift from the animation it guards, then add slack for a compositor
+     that is alive but slow. */
+  const FALLBACK_WIPE_MS = PHASES.reduce((a, ph) => a + ph.ms, 0) + 400;
 
   let lastGesture = -1e9, busy = false, listened = false, lastKey = null;
 
@@ -6317,14 +6390,25 @@ const PageFx = (() => {
        never be left waiting on a paint that this module promised to deliver later. */
     if (!svg.getClientRects || !svg.getClientRects().length) { svg.remove(); return false; }
     busy = true;
-    let i = 0, t0 = now(), swapped = false;
+    let i = 0, t0 = now(), swapped = false, settled = false;
     const doSwap = () => { if (swapped) return; swapped = true; swap(); };
+    /* One path closes the curtain, whether the frames finished or the deadline did: the swap
+       is honoured, the layer leaves the document, and nothing is left `busy` for the next
+       navigation. Idempotent, because both owners can reach it first. */
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      doSwap();
+      busy = false;
+      svg.remove();
+    };
     const step = () => {
+      if (settled) return;
       const at = now();
       if (frame(svg, t0, at, PHASES[i])) {
         i += 1; t0 = at;
         if (i === 2) doSwap();                    /* painted while the screen is shut */
-        if (i >= PHASES.length) { busy = false; svg.remove(); return; }
+        if (i >= PHASES.length) { settle(); return; }
       }
       requestAnimationFrame(step);
     };
@@ -6332,6 +6416,7 @@ const PageFx = (() => {
     /* A rAF never arrives in a backgrounded tab, and a curtain must never be the reason
        a page does not appear. */
     setTimeout(doSwap, FALLBACK_SWAP_MS);
+    setTimeout(settle, FALLBACK_WIPE_MS);
     return true;
   }
 
@@ -6344,8 +6429,16 @@ const PageFx = (() => {
     if (!svg) { swap(); return; }
     busy = true;
     const cover = [PHASES[0], PHASES[1]];
-    let i = 0, t0 = now(), swapped = false;
+    let i = 0, t0 = now(), swapped = false, settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      if (!swapped) { swapped = true; swap(); }
+      busy = false;
+      svg.remove();
+    };
     const step = () => {
+      if (settled) return;
       const at = now();
       if (i < cover.length) {
         if (frame(svg, t0, at, cover[i])) {
@@ -6358,10 +6451,11 @@ const PageFx = (() => {
         if (frame(svg, t0, at, PHASES[i])) { i += 1; t0 = at; }
         requestAnimationFrame(step); return;
       }
-      busy = false; svg.remove();
+      settle();
     };
     requestAnimationFrame(step);
     setTimeout(() => { if (!swapped) { swapped = true; swap(); } }, FALLBACK_SWAP_MS);
+    setTimeout(settle, FALLBACK_WIPE_MS);
   }
 
   return { handoff, armed, routeKey };
@@ -6559,7 +6653,8 @@ function mkIntro(o) {
     ...(o.prose && o.prose.length ? [mkProse(o.prose)] : []),
     ...(o.actions && o.actions.length ? [mkActions(o.actions)] : [])
   );
-  return $("section", { class: "landing__hero" },
+  /* `doc` is the document's one departure: the shared head without the one-screen floor. */
+  return $("section", { class: "landing__hero" + (o.doc ? " landing__hero--doc" : "") },
     mkRuleField(),
     mkHeadTop(),
     head,
@@ -7289,7 +7384,13 @@ function driveLanding() {
   const root = $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body" },
-      mkIntro({ kick: "forDrivers", lines: [{ k: "driveHeroT" }], lede: "driveHeroB",
+      /* The rider's composition, not the rider's sentence: three short lines in the poster,
+         then the lede and the paragraph under it. A full sentence in the poster slot wrapped to
+         two visual lines at 140px and the tight stack fused them into one ink run — measured,
+         not guessed. */
+      mkIntro({ kick: "forDrivers",
+        lines: [{ k: "driveDisplay1" }, { k: "driveDisplay2" }, { k: "driveDisplay3", out: true }],
+        lede: "driveHeroT", prose: ["driveHeroB"],
         actions: [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }] }),
       mkSlab("driveStepsKick", "driveStepsT", [
         mkSteps([[1, "driveStep1T", "driveStep1B"],
@@ -7301,12 +7402,15 @@ function driveLanding() {
         mkEyebrow("driveBoardKick"),
         mkPanels(DRIVER_PANELS),
       ]),
-      /* The three things a driver must bring are the page’s own numbered rows, not a
-         sentence to parse out of a paragraph — same scale, same rhythm, no new style. */
-      mkSection([
-        mkEyebrow("driveReqT"),
+      /* What a driver must bring is a gate, and the page already owns the device for a gate:
+         the inverted slab with numbered rows the rider page uses for its own steps. Bare rows
+         under a small eyebrow read as a footnote; in the slab they read as the requirement
+         they are. Each row carries the sentence the old paragraph could not hold. */
+      mkSlab("driveReqKick", "driveReqT", [
+        mkSteps([[1, "driveReq1T", "driveReq1B"],
+          [2, "driveReq2T", "driveReq2B"],
+          [3, "driveReq3T", "driveReq3B"]]),
         mkProse(["driveReqB2"]),
-        mkSteps([[1, "driveReq1T", null], [2, "driveReq2T", null], [3, "driveReq3T", null]]),
       ]),
       mkEnd("driveEndT", "driveEndB", "landingFoot",
         [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
@@ -7443,22 +7547,29 @@ function policyLink(kind) {
 }
 
 function landingDoc() {
-  const key = ({ terms: "policyTerms", privacy: "policyPrivacy", safety: "policySafety" })[S.landingDoc] || "policyTerms";
-  const title = ({ terms: t("policyTermsTitle"), privacy: t("policyPrivacyTitle"), safety: t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
-  const sections = T[S.lang][key] || [];
+  const doc = POLICY[S.landingDoc] ? S.landingDoc : "terms";
+  const p = POLICY[doc];
   return $("div", { class: "landing" },
     /* The same bar as every other surface — a document opened from the footer is still
        the site, and it must offer the same way back out, in the same place. */
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      mkSection([
-        $("div", { class: "landing__doc" },
-          Btn({ label: t("landingBack"), kind: "ghost", icon: "back", on: () => { S.landingDoc = null; S.landingPage = "rider"; S.landingMenu = false; render(); } }),
-          $("h1", { class: "landing__title", text: title }),
-          $("p", { class: "landing__note", text: t("policyTemplateNote") }),
-          mkDoc(sections)),
-      ], { first: true })));
+      /* The head is the shared one: same kick, same poster face, same measure, same way
+         home. A document is opened to be read, so `doc` lifts the one-screen floor — the
+         only place that is allowed, and it is guarded as such — and everything else about
+         the page is the page the rest of the site uses. */
+      mkIntro({ kick: "policyKick", lines: [{ k: p.title }], lede: p.lede,
+        prose: ["policyTemplateNote"], actions: [{ k: "landingBack", go: "rider" }], doc: true }),
+      mkSection([mkDoc(T[S.lang][p.key] || [])], { first: true })));
 }
+
+/* Three documents, one template: the clause list is read from the copy table, so adding a
+   fourth is a copy change and a line here, never a second page builder. */
+const POLICY = {
+  terms: { key: "policyTerms", title: "policyTermsTitle", lede: "policyTermsLede" },
+  privacy: { key: "policyPrivacy", title: "policyPrivacyTitle", lede: "policyPrivacyLede" },
+  safety: { key: "policySafety", title: "policySafetyTitle", lede: "policySafetyLede" },
+};
 
 
 /* ══════════════════════════════════════════════════════════════════════

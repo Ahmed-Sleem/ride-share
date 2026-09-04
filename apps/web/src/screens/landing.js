@@ -263,7 +263,13 @@ function driveLanding() {
   const root = $("div", { class: "landing" },
     landingNav(),
     $("div", { class: "landing__body" },
-      mkIntro({ kick: "forDrivers", lines: [{ k: "driveHeroT" }], lede: "driveHeroB",
+      /* The rider's composition, not the rider's sentence: three short lines in the poster,
+         then the lede and the paragraph under it. A full sentence in the poster slot wrapped to
+         two visual lines at 140px and the tight stack fused them into one ink run — measured,
+         not guessed. */
+      mkIntro({ kick: "forDrivers",
+        lines: [{ k: "driveDisplay1" }, { k: "driveDisplay2" }, { k: "driveDisplay3", out: true }],
+        lede: "driveHeroT", prose: ["driveHeroB"],
         actions: [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }] }),
       mkSlab("driveStepsKick", "driveStepsT", [
         mkSteps([[1, "driveStep1T", "driveStep1B"],
@@ -275,12 +281,15 @@ function driveLanding() {
         mkEyebrow("driveBoardKick"),
         mkPanels(DRIVER_PANELS),
       ]),
-      /* The three things a driver must bring are the page’s own numbered rows, not a
-         sentence to parse out of a paragraph — same scale, same rhythm, no new style. */
-      mkSection([
-        mkEyebrow("driveReqT"),
+      /* What a driver must bring is a gate, and the page already owns the device for a gate:
+         the inverted slab with numbered rows the rider page uses for its own steps. Bare rows
+         under a small eyebrow read as a footnote; in the slab they read as the requirement
+         they are. Each row carries the sentence the old paragraph could not hold. */
+      mkSlab("driveReqKick", "driveReqT", [
+        mkSteps([[1, "driveReq1T", "driveReq1B"],
+          [2, "driveReq2T", "driveReq2B"],
+          [3, "driveReq3T", "driveReq3B"]]),
         mkProse(["driveReqB2"]),
-        mkSteps([[1, "driveReq1T", null], [2, "driveReq2T", null], [3, "driveReq3T", null]]),
       ]),
       mkEnd("driveEndT", "driveEndB", "landingFoot",
         [{ k: "applyToDrive", go: "signup" }, { k: "landingCtaSignIn", go: "signin", bare: true }])),
@@ -417,19 +426,26 @@ function policyLink(kind) {
 }
 
 function landingDoc() {
-  const key = ({ terms: "policyTerms", privacy: "policyPrivacy", safety: "policySafety" })[S.landingDoc] || "policyTerms";
-  const title = ({ terms: t("policyTermsTitle"), privacy: t("policyPrivacyTitle"), safety: t("policySafetyTitle") })[S.landingDoc] || t("policyTermsTitle");
-  const sections = T[S.lang][key] || [];
+  const doc = POLICY[S.landingDoc] ? S.landingDoc : "terms";
+  const p = POLICY[doc];
   return $("div", { class: "landing" },
     /* The same bar as every other surface — a document opened from the footer is still
        the site, and it must offer the same way back out, in the same place. */
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      mkSection([
-        $("div", { class: "landing__doc" },
-          Btn({ label: t("landingBack"), kind: "ghost", icon: "back", on: () => { S.landingDoc = null; S.landingPage = "rider"; S.landingMenu = false; render(); } }),
-          $("h1", { class: "landing__title", text: title }),
-          $("p", { class: "landing__note", text: t("policyTemplateNote") }),
-          mkDoc(sections)),
-      ], { first: true })));
+      /* The head is the shared one: same kick, same poster face, same measure, same way
+         home. A document is opened to be read, so `doc` lifts the one-screen floor — the
+         only place that is allowed, and it is guarded as such — and everything else about
+         the page is the page the rest of the site uses. */
+      mkIntro({ kick: "policyKick", lines: [{ k: p.title }], lede: p.lede,
+        prose: ["policyTemplateNote"], actions: [{ k: "landingBack", go: "rider" }], doc: true }),
+      mkSection([mkDoc(T[S.lang][p.key] || [])], { first: true })));
 }
+
+/* Three documents, one template: the clause list is read from the copy table, so adding a
+   fourth is a copy change and a line here, never a second page builder. */
+const POLICY = {
+  terms: { key: "policyTerms", title: "policyTermsTitle", lede: "policyTermsLede" },
+  privacy: { key: "policyPrivacy", title: "policyPrivacyTitle", lede: "policyPrivacyLede" },
+  safety: { key: "policySafety", title: "policySafetyTitle", lede: "policySafetyLede" },
+};

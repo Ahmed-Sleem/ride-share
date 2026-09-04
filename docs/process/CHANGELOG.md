@@ -1,5 +1,52 @@
 # CHANGELOG
 
+## 2026-09-04 — renewal round 6: Arabic gets room to breathe, and three pages stop being special cases
+
+The owner's list, in the order given: the Arabic type needed vertical space and its dots had to
+appear — especially in the intros; the rider intro had to teach the service from zero without
+saying it twice; the route under the intro had to be long enough to carry all of its text and stay
+in sight; terms/privacy/safety needed auditing and a redesign onto the shared surface; the driver
+page needed the rider's intro; `What you need` needed a design of its own; and the whole page
+needed a fast audit. Plan and per-item evidence:
+[planning/LANDING_CHECKLIST.md](../planning/LANDING_CHECKLIST.md), round 6.
+
+**Spacing was measured off the screen, not off the metrics table.** The poster stack sets
+`line-height:.82` and puts each line in an `overflow:hidden` mask, which is right for Latin caps
+and wrong for Arabic: Jomhuria's font box is 1.118 em, so at 140 px the three lines of the rider
+masthead sat 10 px apart, and the driver page — which had been given a whole *sentence* in the
+poster slot — fused two wrapped lines into a single 218 px ink run. Leading became one token
+(`--lead-display-rtl:1.18`) read by the *same rule that hands these roles their face*, so a
+heading cannot pick up Jomhuria and keep the Latin rhythm. Result, same instrument: rider gaps
+55 and 53 px, driver three clean lines, and Latin's 16/14 and 15/17 px unchanged. A mask-padding
+rule added along the way was deleted: opening every mask and diffing the pixels showed 0 px of
+lost ink in both languages, so it guarded nothing. Body copy was measured too and left alone —
+Arabic already clears 7 px between lines where Latin clears 5-9.
+
+**The route was fitted with one scale to a box four screens tall.** `motion.js` scaled the whole
+corridor by `H / routeHeight`, so at 1440 the road occupied 26 % of the width — a ribbon down the
+middle, ending 114 px before the last paragraph. It now fits the two axes separately, taking its
+vertical span from the cuts themselves; `routeY == cutsY` at every width tested (asserted within
+4 px) and the corridor uses 84-86 % of the section. Because the path is written into page
+coordinates, strokes and dot radii never bend.
+
+**The three documents are pages again.** They open with the shared `mkIntro` — kick, poster line,
+lede, the template note, and `Back to home` in the actions row — with the clause list and its
+sticky rail in a section under it, and one deliberate, guarded exception: `doc: true` drops the
+one-screen floor (a document is opened to be read), which cut 900 px of blank to 522. The `:has()`
+measure workaround from last round was deleted together with the nesting that needed it.
+
+**Audit numbers:** `load` 71 ms, 0 subresources, 0 long tasks, frames p50 16.8 ms while dragging
+the whole page. Two real faults: the journey's animation loop re-armed unconditionally and painted
+60 times a second while nothing moved (worst frame 57.8 → 33.8 ms, now it sleeps and wakes on any
+trigger), and the knockout poster line depended on `-webkit-text-stroke` with no fallback — where
+that property is absent the line is invisible — now guarded by `@supports`. Gate: unit **663/0**
+(647 → +16 guards), a11y, layout, landing and `verify-repo.sh` below; `landingHeroSub`, `driveReqB`
+and `mkStep`'s now-unreachable no-body branch are reported as **G-082**, not deleted. A third fault came out of the full landing run rather than out of a probe: the theme
+curtain is driven by `requestAnimationFrame`, and the deadline guarded only the swap, so a tab that
+stops receiving frames kept a fully painted page hidden underneath — both paths now share one
+idempotent `settle()` armed from the phase timings, and the suite proves it by stubbing `rAF` to a
+no-op (G-084).
+
 ## 2026-09-03 — renewal round 5: Arabic gets a real face, and the last six owner items close
 
 R4 (`dbf28ef`) was pushed first and verified live; this round is the type work the owner opened

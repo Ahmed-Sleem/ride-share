@@ -7,6 +7,7 @@ const fs=require("fs"), path=require("path");
 const {JSDOM}=require("jsdom");
 
 const FILE=path.join(__dirname,"..","dist-preview.html");
+const PAGESRC=fs.readFileSync(path.join(__dirname,"..","src","screens","landing.js"),"utf8");
 const SRC=fs.readFileSync(FILE,"utf8");
 
 let pass=0, fail=0;
@@ -29,6 +30,23 @@ function boot(){
    A. SHELL — full viewport, one scroller, nothing scrolls away
    ───────────────────────────────────────────────────────────────── */
 const CSS = SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
+/* ── R6-1: one number for Arabic's display leading, and it travels with the face ──
+   The defect was a Latin number applied to an Arabic face: the poster stack at 0.82 left 10 px
+   between lines of 140 px type and fused the driver page's two lines. The guard is not the
+   number itself but where it lives — one token, read by the same rule that hands these roles
+   their face, so a new heading cannot get Jomhuria without also getting its room. */
+{
+  const tok = CSS.match(/--lead-display-rtl:\s*([\d.]+)/);
+  const rtl = CSS.match(/\[dir="rtl"\][^{]*\{[^}]*--brand-font-display[^}]*\}/);
+  ok("the Arabic display leading is one measured token", !!tok && parseFloat(tok[1]) >= 1.1 &&
+     parseFloat(tok[1]) <= 1.35, tok && tok[1]);
+  ok("the rule that gives the display face also gives it the leading",
+     !!rtl && /line-height:var\(--lead-display-rtl\)/.test(rtl[0]), rtl && rtl[0].slice(-70));
+  ok("Latin's poster stack still says .82", /\.landing__display\{[^}]*line-height:\.82/.test(CSS));
+  ok("no RTL rule hardcodes a poster leading instead of using the token",
+     !/\[dir="rtl"[^{}]*landing__(display|title|slab-t|featuret|cta-t)[^{]*\{[^}]*line-height:\s*\.?\d/.test(CSS));
+}
+
 /* The inlined woff2 payloads are base64: 88 KB of it will contain `TODO`, `XXX`, even
    `lorem` by chance, and a guard that greps the whole bundle for such words would be
    red for a reason that means nothing. Text-shape guards read the bundle WITHOUT the
@@ -846,9 +864,13 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
   ok("the brand's own stack names the Arabic text face",
      BRANDJSON.font.family.includes("Cairo") && BRANDJSON.font.family.includes("sans-serif"),
      BRANDJSON.font.family.slice(0, 40));
+  /* The intent was never "one declaration per rule" — it is that the display family arrives from
+     the token, from exactly one rule, and with the leading the face needs in the same block, so
+     a heading cannot pick up Jomhuria and keep the Latin rhythm. */
   ok("the display role is one token, and no component names a family",
      /--brand-font-display:/.test(CSS) &&
-     /\[dir="rtl"\][^{]*\{font-family:var\(--brand-font-display\)\}/.test(CSS.replace(/\n\s*/g, "")) &&
+     /\[dir="rtl"\][^{]*\{[^}]*font-family:var\(--brand-font-display\)[^}]*line-height:var\(--lead-display-rtl\)[^}]*\}/
+       .test(CSS.replace(/\n\s*/g, "")) &&
      !/font-family:"(Jomhuria|Katibeh|Cairo)"/.test(SRC.replace(/@font-face\{[^}]*\}/g, "")));
   ok("the masthead face carries the size compensation the metric needs",
      /size-adjust:\d+(\.\d)?%/.test(FACES.find((f) => /font-family:"(Jomhuria|Katibeh)"/.test(f)) || ""),
@@ -869,21 +891,78 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      once across the two paragraphs, and the body alone answers money and surge. */
   for (const lang of ["en", "ar"]) {
     const mast = t.w.T[lang];
-    const both = `${mast.landingHero} ${mast.landingHeroB}`;
+    /* The poster is part of the masthead: "One fare" above and "one price for the whole
+       distance" below is the same claim told twice, whichever says it first. So the three display
+       lines join the count — and the copy that shipped before this failed it, which is the proof
+       the check has teeth rather than a new number to satisfy. */
+    /* Two mastheads, one rule each: the rider's promises and the driver's are counted
+       separately, because "published" belongs to both pages and to neither twice. */
+    const mastheads = [
+      [mast.mkDisplay1, mast.mkDisplay2, mast.mkDisplay3, mast.landingHero, mast.landingHeroB],
+      [mast.driveDisplay1, mast.driveDisplay2, mast.driveDisplay3, mast.driveHeroT, mast.driveHeroB],
+    ];
+    const both = mastheads[0].join(" ");
     /* Per claim, not per paragraph: two different claims may sit side by side, the
        same claim may not be told twice. */
     const claims = (lang === "en"
       ? ["fixed price", "fixed fare", "does not move", "published", "one fare", "no surge", "same price"]
       : ["ثابت", "لا يتغي", "منشور", "سعر واحد", "بدون زيادة"]);
-    const worst = Math.max(...claims.map((c) => (both.match(new RegExp(c, "gi")) || []).length));
+    const worst = Math.max(...mastheads.map((parts) => {
+      const text = parts.join(" ");
+      return Math.max(...claims.map((c) => (text.match(new RegExp(c, "gi")) || []).length));
+    }));
     const named = lang === "en" ? /transport|shared ride|timetable/i.test(mast.landingHero)
-                                : /نقل|مواصلات|رحلة|جدول/.test(mast.landingHero);
+                                : /نقل|مواصلات|رحلة|جدول|مشترك/.test(mast.landingHero);
     const mechanic = lang === "en" ? /cash|meter|board/i.test(mast.landingHeroB)
                                    : /نقد|عدّاد|السعود/.test(mast.landingHeroB);
     ok(`${lang}: the lede names the product, the body answers the mechanic`,
       named && mechanic && mast.landingHero.length > 40 && mast.landingHeroB.length > 40,
       mast.landingHero.slice(0, 48));
-    ok(`${lang}: no claim is told twice in the masthead`, worst <= 1, `${worst}x`);
+    /* The driver page gets the same two jobs: the lede says whose service it is, the paragraph
+       says what a driver actually does. */
+    const driveTold = lang === "en"
+      ? /operator|hours/i.test(mast.driveHeroT) && /taps|run it|route/i.test(mast.driveHeroB)
+      : /المشغّل|ساعات/.test(mast.driveHeroT) && /نقرتين|موعد/.test(mast.driveHeroB);
+    const driveLines = [mast.driveDisplay1, mast.driveDisplay2, mast.driveDisplay3]
+      .every((x) => typeof x === "string" && x.split(/\s+/).length <= 4);
+      /* R6-4/R6-6: the documents use the shared head, and the one thing they are allowed to give up
+     is the one-screen floor — never the bar's clearance, never the type. The opt-out exists in
+     exactly one builder call, so a page cannot discover it later. */
+  ok("only the document head may opt out of the one-screen floor",
+     (PAGESRC.match(/doc:\s*true/g) || []).length === 1 &&
+     /\.landing__hero--doc\{min-height:0/.test(CSS) &&
+     !/\.landing__hero--doc\{[^}]*(font-size|font-family|line-height)/.test(CSS),
+     (PAGESRC.match(/doc:\s*true/g) || []).length + " opt-outs");
+  ok("the document keeps the poster's clearance under the bar",
+     /\.landing__hero\{[^}]*padding:var\(--bar-clearance\)/.test(CSS));
+  ok("knockout type has a fallback where the stroke is missing",
+     /@supports not \(-webkit-text-stroke[^)]*\)\{\s*\.landing__displayline--out>span\{color:var\(--ink\)/
+       .test(CSS.replace(/\n\s*/g, "\n")));
+
+  /* The driver's requirements are the page's own device — the slab, with a body per row —
+     because a bare numbered list under an eyebrow is a footnote wearing a heading. */
+  ok("the driver requirements are a slab of complete rows",
+     /mkSlab\("driveReqKick", "driveReqT"/.test(PAGESRC) &&
+     /\[1, "driveReq1T", "driveReq1B"\]/.test(PAGESRC) &&
+     /\[3, "driveReq3T", "driveReq3B"\]/.test(PAGESRC));
+  /* Each row's body is real copy in both locales — the parity guard below already proves the
+     key exists twice, so this proves it is a sentence and not a stub. */
+  const REQ_KEYS = ["driveReq1B", "driveReq2B", "driveReq3B", "driveReqKick"];
+  const thin = REQ_KEYS.filter((k) => {
+    /* Arabic sets fewer characters per idea than Latin: a kick is a real label in both, so the
+       floor is per language rather than one number applied to both. */
+    const want = lang === "en" ? 14 : 8;
+    const vals = (SRC.match(new RegExp(k + ':"([^"]*)"', "g")) || [])
+      .map((m) => m.slice(m.indexOf(':"') + 2, -1));
+    /* The table is EN then AR, so the language under test reads its own value — one floor
+       applied to both would call honest Arabic thin because it sets fewer characters. */
+    return vals.length !== 2 || vals[lang === "en" ? 0 : 1].trim().length < want;
+  });
+  ok(`no requirement row is manufactured out of nothing (${lang})`, thin.length === 0, thin.join(" "));
+
+  ok(`${lang}: the driver masthead carries three short lines and explains them below`,
+      driveTold && driveLines, `${mast.driveDisplay1} / ${mast.driveDisplay2} / ${mast.driveDisplay3}`);
+    ok(`${lang}: no claim is told twice in either masthead`, worst <= 1, `${worst}x`);
     ok(`${lang}: the price claim is made once, and it is falsifiable`,
       /one fare|printed|not on a meter/i.test(both) === (lang === "en") ||
       /مطبوع|سعر واحد|عدّاد/.test(both), both.slice(0, 60));
@@ -1207,8 +1286,18 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   // a policy opens the honest structured doc and can go back
   t.all(".landing__policylink")[0].click();
   ok("a policy doc opens", t.q(".landing__doc") && t.w.S.landingDoc === "terms");
-  ok("policy doc states the legal text is the operator's", t.q(".landing__doc").textContent.includes("legal"));
-  t.q(".landing__doc .btn--ghost").click();
+  /* The page says whose text this is, wherever the layout puts it: the note belongs to the
+     head now (it is read before the clauses, not after them), so the claim is checked against
+     the page and against the exact sentence, not a substring of it. */
+  ok("policy doc states the legal text is the operator's",
+     t.q(".landing").textContent.includes(t.w.T.en.policyTemplateNote), t.w.T.en.policyTemplateNote.slice(0, 40));
+  ok("the document opens with the shared head and its contents rail",
+     !!t.q(".landing__hero .landing__display") && !!t.q(".landing__docrail [data-docjump]"));
+  /* The way out is found by what it says, not by a class: "Back to home" is the one control
+     that must land the reader on the rider page with the poster intact. */
+  const home = t.all(".landing button").find((b) => b.textContent.trim() === t.w.T.en.landingBack);
+  ok("the doc offers the way home by name", !!home, String(home && home.textContent));
+  if (home) home.click();
   ok("back returns to the landing", !t.w.S.landingDoc && !!t.q(".landing__hero"));
 })();
 
@@ -1433,8 +1522,16 @@ group("POLICIES ARE FILLED (terms/privacy/safety, EN + AR)");
     t.w.S.lang=lang; t.w.S.view="landing"; t.w.S.landingDoc="terms"; t.w.render();
     ok(`terms doc has real sections (${lang})`, t.all(".landing__docsec").length >= 6,
        String(t.all(".landing__docsec").length));
+    /* Whose text this is must be said on the document, in the reader's own language — the
+       sentence is taken from the copy table rather than a substring, so a paraphrase cannot
+       pass it, and it is read from the page because the note belongs to the head now. */
     ok(`terms doc keeps the operator's-legal note (${lang})`,
-       t.q(".landing__doc").textContent.includes(lang==="en" ? "legal" : "القانوني"));
+       t.q(".landing").textContent.includes(t.w.T[lang].policyTemplateNote),
+       t.w.T[lang].policyTemplateNote.slice(0, 44));
+    ok(`the doc head carries its own kick, title and one-line purpose (${lang})`,
+       t.q(".landing__hero .landing__display").textContent.includes(t.w.T[lang].policyTermsTitle) &&
+       t.q(".landing__hero").textContent.includes(t.w.T[lang].policyTermsLede) &&
+       t.q(".landing__hero").textContent.includes(t.w.T[lang].policyKick));
     t.w.S.landingDoc="privacy"; t.w.render();
     ok(`privacy doc has real sections (${lang})`, t.all(".landing__docsec").length >= 6);
     t.w.S.landingDoc="safety"; t.w.render();

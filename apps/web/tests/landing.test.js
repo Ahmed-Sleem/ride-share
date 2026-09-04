@@ -473,6 +473,11 @@ async function survey(view, lang, key, doc) {
        hold one half of the measure and the road weaves down the other half. */
     const svg = land.querySelector('.journey__svg');
     let onMap = -1, widestCut = 0, boxErr = -1, wordPx = 0, nCuts = 0, roadGap = -1;
+    /* R6-3: the road is the section's argument, so it has to reach every part of it. Two
+       numbers decide that, both read off the drawn path: does its length span the first
+       cut's centre to the last (nothing left past the end), and does its sideways wander
+       use the page instead of a ribbon down the middle. */
+    let roadSpanErr = -1, roadWidthPct = -1;
     if (svg) {
       const mb = svg.getBoundingClientRect();
       const sb = land.querySelector('.journey').getBoundingClientRect();
@@ -490,6 +495,18 @@ async function survey(view, lang, key, doc) {
         .map((e) => parseFloat(getComputedStyle(e).fontSize)));
       widestCut = Math.max(...[...land.querySelectorAll('.journey__cut')]
         .map((c) => c.getBoundingClientRect().width / sb.width));
+      {
+        const line = land.querySelector('.journey__line') || land.querySelector('.journey__done');
+        const cuts = [...land.querySelectorAll('.journey__cut')].map((el) => {
+          const r = el.getBoundingClientRect(); return r.top - sb.top + r.height / 2; });
+        if (line && line.getTotalLength && cuts.length > 1) {
+          const L = line.getTotalLength(), ys = [], xs = [];
+          for (let i = 0; i <= 48; i++) { const p = line.getPointAtLength(L * i / 48); ys.push(p.y); xs.push(p.x); }
+          roadSpanErr = Math.max(Math.abs(Math.min(...ys) - Math.min(...cuts)),
+                                 Math.abs(Math.max(...ys) - Math.max(...cuts)));
+          roadWidthPct = Math.round((Math.max(...xs) - Math.min(...xs)) / sb.width * 100);
+        }
+      }
       /* Below 900 the copy is one column and the road hugs the far edge behind it, so the
          promise is not "half the measure" but "the corridor is left clear" — measured on the
          end side, which is the reading side's opposite in either direction. */
@@ -551,7 +568,7 @@ async function survey(view, lang, key, doc) {
       burst: burst.slice(0, 3), clippedAway: clippedAway.slice(0, 3),
       doneLen: (() => { const d = land.querySelector('.journey__done');
         return d && d.getAttribute('d') ? d.getAttribute('d').length : 0; })(),
-      barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
+      barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, roadSpanErr, roadWidthPct, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
       smallPrimary: smallPrimary.slice(0, 3),
       hidden: rv.filter((el) => Number(getComputedStyle(el).opacity) < 0.05).length,
       phone,
@@ -619,6 +636,12 @@ for (const vp of BOUNDARIES) {
         ok(`${id}: every claim is drawn on the road, not filed under it`,
           m.onMap === 2 * m.nCuts + 1, `${m.onMap} of ${2 * m.nCuts + 1} text boxes over the drawing`);
         ok(`${id}: the poster word keeps its scale`, m.wordPx >= 28, `${m.wordPx}px`);
+        /* Measured 2026-09-04: a single height-driven scale left the last paragraph 51 px past
+           the end of the road and squeezed the corridor into 26 % of the width at 1440. */
+        ok(`${id}: the road runs the whole copy, first cut to last`, m.roadSpanErr >= 0 &&
+           m.roadSpanErr <= 4, `${m.roadSpanErr}px short of the cut span`);
+        ok(`${id}: the corridor uses the page, not a ribbon down the middle`,
+           m.roadWidthPct >= 70, `${m.roadWidthPct}% of the section width`);
         const wide = !m.phone;   /* the same 900px boundary the sheet uses */
         /* widestCut comes back as a percent — 52% of the measure plus a rounding allowance. */
         ok(`${id}: ${wide ? 'a cut takes half the measure and the road weaves down the other'
@@ -785,6 +808,96 @@ for (const vp of BOUNDARIES) {
   ok('the display roles ask for it by token', /Jomhuria|Katibeh|Cairo/.test(arabic.titleFam || ''), String(arabic.titleFam));
   ok('the poster still fits its one viewport with the new type',
     arabic.land.over === 0 && Math.abs(arabic.land.heroH - arabic.land.vh) <= 2, JSON.stringify(arabic.land));
+
+  /* R6-1, in the render rather than in the metrics table: Arabic's poster lines must be tall
+     enough to hold the face's own box — 0.82 was the Latin number, and it left the lines of the
+     masthead 10 px apart, with the driver page's two lines fused into a single ink run. Latin
+     keeps 0.82 by name, so the demo look cannot be "fixed" away by accident. */
+  const readSpace = () => page.evaluate(() => {
+    const rows = [];
+    document.querySelectorAll('.landing__display').forEach((d) => {
+      const ls = [...d.querySelectorAll('.landing__displayline')];
+      ls.forEach((ln, i) => {
+        const sp = ln.querySelector('span') || ln, cs = getComputedStyle(sp);
+        const size = parseFloat(cs.fontSize), r = ln.getBoundingClientRect();
+        const p = i ? ls[i - 1].getBoundingClientRect() : null;
+        rows.push({ size: Math.round(size), lh: +(parseFloat(cs.lineHeight) / size).toFixed(3),
+          gap: p ? +(r.top - p.bottom).toFixed(2) : null });
+      });
+    });
+    return rows;
+  });
+  const arSpace = await readSpace();
+  ok('Arabic poster lines hold the face box and never share a row',
+    arSpace.length > 2 && arSpace.every((o) => o.lh >= 1.1 && (o.gap === null || o.gap >= -0.5)),
+    arSpace.map((o) => `${o.size}px:${o.lh}/${o.gap}`).join(' '));
+  await page.evaluate(() => { S.lang = 'en'; render(); });
+  await new Promise((r) => setTimeout(r, 600));
+  const enSpace = await readSpace();
+  ok('the Latin poster keeps the leading the demo was measured with',
+    enSpace.length > 2 && enSpace.every((o) => Math.abs(o.lh - 0.82) < 0.001),
+    enSpace.map((o) => o.lh).join(' '));
+
+  /* R6-5: the driver page opens the way the rider's does, so it owes the same screen — exactly
+     one viewport of masthead, with nothing from below visible on the first screen. Measured at the
+     widths where the layout turns over, in both directions, because the driver's poster is Arabic
+     too. A policy document opts out of the floor on purpose, so it is measured the other way: the
+     clauses have to start on the first screen, and the head may not keep a full one. */
+  for (const [pg, lang] of [["rider", "en"], ["rider", "ar"], ["drive", "en"], ["drive", "ar"]]) {
+    for (const vp of [[1280, 900], [900, 800], [390, 844]]) {
+      await page.setViewport({ width: vp[0], height: vp[1] });
+      await page.evaluate((p, l) => {
+        S.lang = l; S.view = "landing"; S.landingDoc = null; S.landingPage = p; render();
+      }, pg, lang);
+      await new Promise((r) => setTimeout(r, 260));
+      const m = await page.evaluate(() => {
+        const hero = document.querySelector(".landing__hero"), land = document.querySelector(".landing");
+        const next = hero && hero.nextElementSibling;
+        return { hh: hero ? Math.round(hero.getBoundingClientRect().height) : -1,
+          vh: land ? land.clientHeight : -1, over: land ? land.scrollWidth - land.clientWidth : -1,
+          next: next ? Math.round(next.getBoundingClientRect().top) : -1 };
+      });
+      ok(`${pg} [${lang}] ${vp[0]}×${vp[1]}: the intro is the whole first screen`,
+        Math.abs(m.hh - m.vh) <= 2 && m.over === 0, `${m.hh}/${m.vh} over ${m.over}`);
+      ok(`${pg} [${lang}] ${vp[0]}×${vp[1]}: nothing under the intro peeks above the fold`,
+        m.next >= m.vh - 2, `next at ${m.next} of ${m.vh}`);
+    }
+  }
+  await page.setViewport({ width: 1280, height: 900 });
+  await page.evaluate(() => { S.lang = "ar"; S.view = "landing"; S.landingDoc = "terms"; render(); });
+  await new Promise((r) => setTimeout(r, 260));
+  const docHead = await page.evaluate(() => {
+    const h = document.querySelector(".landing__hero"), n = h && h.nextElementSibling;
+    return { hh: h ? Math.round(h.getBoundingClientRect().height) : -1,
+      vh: document.querySelector(".landing").clientHeight,
+      next: n ? Math.round(n.getBoundingClientRect().top) : -1,
+      min: h ? getComputedStyle(h).minHeight : "?" };
+  });
+  ok("a document head takes the screen it needs and no more",
+    docHead.hh > 0 && docHead.hh < docHead.vh && docHead.next <= docHead.vh,
+    `${docHead.hh} of ${docHead.vh}, min-height ${docHead.min}`);
+  await page.evaluate(() => { S.lang = "en"; S.landingDoc = null; render(); });
+
+  /* The bug the audit found: the wipe was driven by frames and only the *swap* had a deadline,
+     so a tab that stops receiving frames kept a live page under the curtain. Stubbing rAF is
+     the exact condition, and it is deterministic — no waiting on a loaded machine to reproduce
+     what a minimised window does on any machine. */
+  await page.goto(FILE);
+  await page.waitForSelector('.landing', { timeout: 15000 });
+  await new Promise((r) => setTimeout(r, 500));
+  await page.evaluate(() => {
+    window.__raf = window.requestAnimationFrame;
+    window.requestAnimationFrame = () => 0;
+  });
+  await page.click('.landingsw');
+  const starved = await page.evaluate(async () => {
+    await new Promise((r) => setTimeout(r, 1800));
+    return { fx: !!document.querySelector('.pagefx'), landed: !!document.querySelector('.landing'),
+      attr: document.documentElement.getAttribute('data-theme') };
+  });
+  ok('the curtain comes down even when no frame ever arrives',
+    !starved.fx && starved.landed, JSON.stringify(starved));
+  await page.evaluate(() => { window.requestAnimationFrame = window.__raf; delete window.__raf; });
 
   /* Both switches repaint the whole surface, so both owe the page the curtain. */
   for (const [which, key] of [['theme', 'data-theme'], ['lang', 'lang']]) {

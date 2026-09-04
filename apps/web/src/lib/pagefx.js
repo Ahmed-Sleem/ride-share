@@ -34,6 +34,12 @@ const PageFx = (() => {
   ];
   const GESTURE_WINDOW = 500;
   const FALLBACK_SWAP_MS = 600;      /* the swap's deadline, whatever rAF decides to do */
+  /* And a deadline for the wipe itself. The phases are 940 ms of frames; if the frames stop
+     arriving — backgrounded, occluded, a window restored from minimise, a compositor under
+     load — the curtain used to stay up over a page that had already swapped. Sum the phases
+     so the number cannot drift from the animation it guards, then add slack for a compositor
+     that is alive but slow. */
+  const FALLBACK_WIPE_MS = PHASES.reduce((a, ph) => a + ph.ms, 0) + 400;
 
   let lastGesture = -1e9, busy = false, listened = false, lastKey = null;
 
@@ -124,14 +130,25 @@ const PageFx = (() => {
        never be left waiting on a paint that this module promised to deliver later. */
     if (!svg.getClientRects || !svg.getClientRects().length) { svg.remove(); return false; }
     busy = true;
-    let i = 0, t0 = now(), swapped = false;
+    let i = 0, t0 = now(), swapped = false, settled = false;
     const doSwap = () => { if (swapped) return; swapped = true; swap(); };
+    /* One path closes the curtain, whether the frames finished or the deadline did: the swap
+       is honoured, the layer leaves the document, and nothing is left `busy` for the next
+       navigation. Idempotent, because both owners can reach it first. */
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      doSwap();
+      busy = false;
+      svg.remove();
+    };
     const step = () => {
+      if (settled) return;
       const at = now();
       if (frame(svg, t0, at, PHASES[i])) {
         i += 1; t0 = at;
         if (i === 2) doSwap();                    /* painted while the screen is shut */
-        if (i >= PHASES.length) { busy = false; svg.remove(); return; }
+        if (i >= PHASES.length) { settle(); return; }
       }
       requestAnimationFrame(step);
     };
@@ -139,6 +156,7 @@ const PageFx = (() => {
     /* A rAF never arrives in a backgrounded tab, and a curtain must never be the reason
        a page does not appear. */
     setTimeout(doSwap, FALLBACK_SWAP_MS);
+    setTimeout(settle, FALLBACK_WIPE_MS);
     return true;
   }
 
@@ -151,8 +169,16 @@ const PageFx = (() => {
     if (!svg) { swap(); return; }
     busy = true;
     const cover = [PHASES[0], PHASES[1]];
-    let i = 0, t0 = now(), swapped = false;
+    let i = 0, t0 = now(), swapped = false, settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      if (!swapped) { swapped = true; swap(); }
+      busy = false;
+      svg.remove();
+    };
     const step = () => {
+      if (settled) return;
       const at = now();
       if (i < cover.length) {
         if (frame(svg, t0, at, cover[i])) {
@@ -165,10 +191,11 @@ const PageFx = (() => {
         if (frame(svg, t0, at, PHASES[i])) { i += 1; t0 = at; }
         requestAnimationFrame(step); return;
       }
-      busy = false; svg.remove();
+      settle();
     };
     requestAnimationFrame(step);
     setTimeout(() => { if (!swapped) { swapped = true; swap(); } }, FALLBACK_SWAP_MS);
+    setTimeout(settle, FALLBACK_WIPE_MS);
   }
 
   return { handoff, armed, routeKey };
