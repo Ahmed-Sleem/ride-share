@@ -320,7 +320,11 @@ race) or, worse, passes without testing anything: both curtain tests now wait fo
 - [ ] **O-5 — the full production audit** (`docs/audits/LANDING_PRODUCTION_AUDIT.md`): every
       rule, every owner item, file + test + live URL. Type and layout moved since the last
       pass, so the audit is worth taking after this lands.
-- [ ] **L2 — green CI** on the newest commit. Two causes were open; one is closed:
+- [ ] **L2 — green CI** on the newest commit. Read from CI's own log for `083e4d3`: the only red is
+      `Verify (repo + api + web unit)` at `# pass 237 / # fail 9`, and all nine sit in
+      `apps/api/dist/modules/journeys/application/journeys.service.test.js` — the deferred API item, not
+      GUI work (`apps/web` unit failures there: 0). Round 7 and the dead-code removal are in run 132.
+      Nothing else about this line changed since it was opened. Two causes were open; one is closed:
       **`verify-gui` never ran at all** because git recorded every `.sh` in the repo as
       `100644`, so `./verify.sh` died with *Permission denied* (exit 126) before the browser
       suite — 23 scripts are mode `100755` now (`57c9f2d`), and the Chrome/puppeteer cache step
@@ -332,8 +336,14 @@ race) or, worse, passes without testing anything: both curtain tests now wait fo
       landing; `Verify database` passes, so it is logic, not environment. Everything GUI-side
       passes in CI on that commit — build, unit/a11y, layout and the whole landing suite — so the
       only job failure left is the API's, plus whatever `layout-breaks` says once it runs.
-- [ ] **L1 — both break harnesses**: one anchor was stale and is fixed (`57c9f2d` → `08f1ac8`:      **Status after round 6 (2026-09-04):** the landing suites and every gate are green (`unit 663/0`,
-      `a11y 14/0`, `layout 8185/0`, `landing 2804/0`, `verify-repo 151 files / 0 hits`); `breaks.sh`
+- [x] **L1 — both break harnesses**: RESOLVED by CI, not by the local run.
+      CI ran both batteries green on the pushed commits (`Verify GUI (full browser suite)` = **success** on
+      `083e4d3`, and that job is exactly `verify.sh`: build, unit+a11y, layout, landing, `breaks.sh` 113
+      cases, `layout-breaks.sh`). Locally the run stayed partial (`breaks.sh` was stopped mid-way, then
+      lesson 7 applied); CI's completion is what closes the row. The GUI job's success also confirms the
+      landing suite and the removed guards agree on the pushed tree.
+
+      What the row originally asked for, kept for the record: `a11y 14/0`, `layout 8185/0`, `landing 2804/0`, `verify-repo 151 files / 0 hits`); `breaks.sh`
       was run part-way and `layout-breaks.sh` not at all this round, because both edit `src/` in place
       (113 cases × rebuild+unit ≈ 45 min) and the push gate needed a quiet tree. CI runs both, so the
       verdict arrives with the pipeline. **New lesson (7), learned the hard way this round:** stopping
