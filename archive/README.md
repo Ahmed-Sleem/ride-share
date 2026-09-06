@@ -18,3 +18,12 @@ This directory preserves the legacy UI and design system of Ride Share prior to 
 - Git history remains the authoritative revert path; this zip is the portable, server-free record
   (`unzip` it and open `snapshot/apps/web/dist-preview.html` in a browser — no build, no network).
 - Generated: 2026-08-31, by the GUI-renewal preparation session.
+
+### Landing dead code, before removal (2026-09-04)
+- `landing-dead-code-before-removal-2026-09-04-8ce3b0a.zip`: `apps/web/**` and `packages/brand/**`,
+  captured with `git archive HEAD` at `8ce3b0a` — byte-exact tracked content, the last commit that
+  still carried what the next one removes: the `landingHeroSub` and `driveReqB` copy keys (both
+  languages, rendered by nothing), `mkStep`'s optional-body branch, and the `Katibeh` face with its
+  woff2 and OFL text. `manifest.json` inside lists every file with its sha256 plus the restore
+  commands; `README.txt` says how to open it and why the removal needed a backup at all.
+- Generated: 2026-09-04, on the owner's instruction to archive first and delete after.

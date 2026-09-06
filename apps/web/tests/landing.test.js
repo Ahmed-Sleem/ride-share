@@ -754,7 +754,7 @@ for (const vp of BOUNDARIES) {
       c.font = `400 40px ${fam}`; return +c.measureText(text).width.toFixed(2); };
     const stack = getComputedStyle(document.body).fontFamily;
     const plain = stack.split(',').map((f) => f.trim())
-      .filter((f) => !/Cairo|Jomhuria|Katibeh/.test(f)).join(', ');
+      .filter((f) => !/Cairo|Jomhuria/.test(f)).join(', ');
     const la = 'One fare for the whole route, paid in cash';
     return { stack, plain, same: probe(la, stack) === probe(la, plain),
       bodyChainIsTheBrandChain: /-apple-system/.test(stack) && !/-apple-system/.test(stack.replace(/"[^"]*"/g, '')) || true };
@@ -776,7 +776,7 @@ for (const vp of BOUNDARIES) {
       c.font = `400 40px ${fam}`; return +c.measureText(text).width.toFixed(2); };
     const stack = getComputedStyle(document.body).fontFamily;
     const plain = stack.split(',').map((f) => f.trim())
-      .filter((f) => !/Cairo|Jomhuria|Katibeh/.test(f)).join(', ');
+      .filter((f) => !/Cairo|Jomhuria/.test(f)).join(', ');
     const ar = 'سعر واحد لكل المسار، يُدفع نقدًا عند الصعود';
     const title = document.querySelector('.landing__display');
     return {
@@ -792,7 +792,7 @@ for (const vp of BOUNDARIES) {
       awayFromPlain: Math.abs(probe(ar, stack) - probe(ar, plain)) > 1,
       widths: { stack: probe(ar, stack), cairo: probe(ar, '"Cairo"'), plain: probe(ar, plain) },
       cairoLoaded: document.fonts.check('400 40px Cairo') && document.fonts.check('900 40px Cairo'),
-      displayLoaded: [...document.fonts].some((f) => /Jomhuria|Katibeh/.test(f.family) && f.status === 'loaded'),
+      displayLoaded: [...document.fonts].some((f) => /Jomhuria/.test(f.family) && f.status === 'loaded'),
       titleFam: title ? getComputedStyle(title).fontFamily.split(',')[0].replace(/["']/g, '') : null,
       land: (() => { const l = document.querySelector('.landing');
         return { over: l.scrollWidth - l.clientWidth, vh: l.clientHeight,
@@ -802,7 +802,7 @@ for (const vp of BOUNDARIES) {
   ok('the Arabic run is carried by the self-hosted face', arabic.cairoLoaded && arabic.toCairo && arabic.awayFromPlain,
     `cairo ${arabic.toCairo} / away ${arabic.awayFromPlain}`);
   ok('the masthead face loads for the display roles, and only there', arabic.displayLoaded);
-  ok('the display roles ask for it by token', /Jomhuria|Katibeh|Cairo/.test(arabic.titleFam || ''), String(arabic.titleFam));
+  ok('the display roles ask for it by token', /Jomhuria|Cairo/.test(arabic.titleFam || ''), String(arabic.titleFam));
   ok('the poster still fits its one viewport with the new type',
     arabic.land.over === 0 && Math.abs(arabic.land.heroH - arabic.land.vh) <= 2, JSON.stringify(arabic.land));
 

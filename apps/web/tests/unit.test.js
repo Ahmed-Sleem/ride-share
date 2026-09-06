@@ -910,14 +910,21 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      /--brand-font-display:/.test(CSS) &&
      /\[dir="rtl"\][^{]*\{[^}]*font-family:var\(--brand-font-display\)[^}]*line-height:var\(--lead-display-rtl\)[^}]*\}/
        .test(CSS.replace(/\n\s*/g, "")) &&
-     !/font-family:"(Jomhuria|Katibeh|Cairo)"/.test(SRC.replace(/@font-face\{[^}]*\}/g, "")));
+     !/font-family:"(Jomhuria|Cairo)"/.test(SRC.replace(/@font-face\{[^}]*\}/g, "")));
   ok("the masthead face carries the size compensation the metric needs",
-     /size-adjust:\d+(\.\d)?%/.test(FACES.find((f) => /font-family:"(Jomhuria|Katibeh)"/.test(f)) || ""),
-     (FACES.find((f) => /font-family:"(Jomhuria|Katibeh)"/.test(f)) || "").slice(0, 80));
-  ok("no face is carried that nothing asks for",
-     FONTSJSON.faces.every((f) => !SRC.includes(`font-family:"${f.family}"`) ||
-       f.display || BRANDJSON.font.family.includes(f.family)) &&
-     (FONTSJSON.faces.find((f) => f.family === "Katibeh") || {}).display !== true,
+     /size-adjust:\d+(\.\d)?%/.test(FACES.find((f) => /font-family:"Jomhuria"/.test(f)) || ""),
+     (FACES.find((f) => /font-family:"Jomhuria"/.test(f)) || "").slice(0, 80));
+  /* Every face the manifest carries must be asked for by a rule that names it, and the file it
+     points at must exist. The old form let an unreferenced family pass by writing
+     `!SRC.includes(...)`, which is the opposite of a demand — and when the held-out alternative was
+     removed the check went quiet instead of complaining. It is also the guard that made the removal
+     safe: manifest, files on disk and stylesheet have to agree, and nothing may be shipped "as an
+     option". The removed face has a byte-exact backup at
+     archive/landing-dead-code-before-removal-2026-09-04-8ce3b0a.zip. */
+  ok("every face in the manifest is named by a rule, and its file is on disk",
+     FONTSJSON.faces.length > 0 && FONTSJSON.faces.every((f) =>
+       SRC.includes(`font-family:"${f.family}"`) || BRANDJSON.font.family.includes(f.family)) &&
+     FONTSJSON.faces.every((f) => fs.existsSync(path.join(__dirname, "..", "assets", "fonts", f.file))),
      `${FACES.length} of ${FONTSJSON.faces.length} inlined`);
   ok("the font payload stays inside the budget the single file declares",
      (CSS.match(/base64,[A-Za-z0-9+/=]+/g) || []).reduce((n, m) => n + Math.ceil(m.length * 3 / 4), 0) <=

@@ -212,13 +212,14 @@ function mkSlab(kickKey, titleKey, kids, opts) {
    which the compact-suite regression test checks; `right` in the CSS is that
    choice, and it is intentional — the number is a printer's mark, not text. */
 function mkStep(n, titleKey, bodyKey) {
-  /* A step may be a single line — the driver requirements are facts, not arguments —
-     and then no paragraph is manufactured to fill the row: the body is only built when
-     the copy table has one for it. */
+  /* A step is a number, a line and a sentence. The optional-body form went once every row had
+     something to say: a builder that tolerates a missing body is a builder that will one day ship
+     a row made out of nothing, and it is the copy table — not the component — that decides what a
+     step says. */
   return $("li", { class: "landing__step", attrs: { "data-rv": "" } },
     $("span", { class: "landing__stepnum ltr", text: String(n).padStart(2, "0") }),
     $("h3", { class: "landing__stept", text: t(titleKey) }),
-    bodyKey ? $("p", { class: "landing__stepb", text: t(bodyKey) }) : null);
+    $("p", { class: "landing__stepb", text: t(bodyKey) }));
 }
 
 function mkSteps(steps) {

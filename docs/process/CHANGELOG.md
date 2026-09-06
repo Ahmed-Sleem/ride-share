@@ -43,6 +43,13 @@ the theme follows `prefers-color-scheme`, with an explicit choice stored and win
 is that where the OS signals nothing the surface guessed from the clock, so 03:00 opened dark. Light
 is now the default, always, guarded four ways.
 
+**The dead list is cleared, with a backup first, as the owner asked.** `archive/landing-dead-code-before-removal-2026-09-04-8ce3b0a.zip`
+holds `apps/web` and `packages/brand` at the last commit that carried them; the next commit removes
+`landingHeroSub` and `driveReqB` (both locales, rendered by nothing), `mkStep`'s optional-body branch,
+and the unused `Katibeh` face with its file and licence text. The manifest, the files on disk and the
+stylesheet are now required to agree — the guard that used to cover this passed *vacuously* once the
+face was gone, which is itself a lesson about guards written as `!includes(...)`. **G-082 closed.**
+
 Gate: unit **671/0**, a11y **14/0**, layout **8185/0**, landing **2766/0** after two test
 fixes the round itself required (both curtain tests now wait until the splash's handoff wipe is
 over — a page is not at rest merely because `.landing` exists — and one block that set

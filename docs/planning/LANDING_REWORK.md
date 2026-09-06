@@ -104,8 +104,8 @@ What remains, in the owner's order of preference (landing → app GUI → API/CI
 3. **L2 — green CI on the newest commit.** The nine `apps/api` journey tests are the known red (the
    owner placed API work after the GUI), and the GUI job is ≈1.5 h because it includes both batteries.
 4. **The owner's own list, and nothing else.** Every row of the decision table above is resolved —
-   including row 13, folded into 9, and row 11, which round 7 finished — so the landing has no
-   appearance question waiting on a pick. What is waiting is the **dead-code list** (G-082:
-   `landingHeroSub`, `driveReqB`, `mkStep`'s no-body branch, `Katibeh` held out of the bundle), which
-   is reported rather than deleted until the owner says otherwise.
+   row 13 folded into 9, row 11 finished by round 7 — so the landing has no appearance question
+   waiting on a pick, and the dead-code list (G-082) was cleared on 2026-09-04 after a byte-exact
+   backup in `archive/`. The landing is complete: what remains is O-5, the two break harnesses
+   (L1), green CI (L2) and phase 2.
 5. **Phase 2, the app GUI**, which waits on the owner's `ride-share-app.html` demo before a pixel moves.
