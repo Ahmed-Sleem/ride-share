@@ -86,9 +86,26 @@ one at a time until one speaks. The workflow runs' aggregate status is useless f
 every run since 2026-08-25 reads `failure` because the GUI job poisons it; only the per-commit
 check-runs endpoint separates the two.
 
-## Phases left
+## What is actually left (rewritten after round 7, because this list had gone stale)
 
-M2 (load dwell, curtain on theme + language), M3 (top bar geometry in both directions, the glass
-sheet, the button-less hero, the de-duplicated copy, Cairo, the "Get the app" pill, the intro rule
-on every surface), M4 (drive-view structure, "What you need", "Back to home", the policy pages, then
-the production audit), then **L1** (both break harnesses to completion) and **L2** (green CI).
+M1–M4 and the owner's rounds 4, 5, 6 and 7 are **done and guarded**: the load dwell and the curtain
+on theme and language, the top bar geometry in both directions with the glass sheet, the button-less
+hero, the de-duplicated copy, Cairo and Jomhuria, the "Get the app" pill, the intro rule on every
+surface, the drive page, "What you need" as a slab, "Back to home", and the policy pages as ordinary
+pages of the site.
+
+What remains, in the owner's order of preference (landing → app GUI → API/CI/audit):
+
+1. **O-5 — the production audit** (`docs/audits/LANDING_PRODUCTION_AUDIT.md`). Type, spacing and the
+   document pages all moved twice since it was last taken, so an audit pass now has something to bite on.
+2. **L1 — both break harnesses to completion.** `breaks.sh` is 113 cases and edits `src/` in place
+   (≈45 min); `layout-breaks.sh` is 11 and was verified with `NODE_PATH` only part-way. CI runs both,
+   so the verdict also arrives with the pipeline.
+3. **L2 — green CI on the newest commit.** The nine `apps/api` journey tests are the known red (the
+   owner placed API work after the GUI), and the GUI job is ≈1.5 h because it includes both batteries.
+4. **The owner's own list, and nothing else.** Every row of the decision table above is resolved —
+   including row 13, folded into 9, and row 11, which round 7 finished — so the landing has no
+   appearance question waiting on a pick. What is waiting is the **dead-code list** (G-082:
+   `landingHeroSub`, `driveReqB`, `mkStep`'s no-body branch, `Katibeh` held out of the bundle), which
+   is reported rather than deleted until the owner says otherwise.
+5. **Phase 2, the app GUI**, which waits on the owner's `ride-share-app.html` demo before a pixel moves.

@@ -190,7 +190,7 @@ function mkIntro(o) {
     ...(o.actions && o.actions.length ? [mkActions(o.actions)] : [])
   );
   /* `doc` is the document's one departure: the shared head without the one-screen floor. */
-  return $("section", { class: "landing__hero" + (o.doc ? " landing__hero--doc" : "") },
+  return $("section", { class: "landing__hero" },
     mkRuleField(),
     mkHeadTop(),
     head,

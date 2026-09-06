@@ -1,5 +1,53 @@
 # CHANGELOG
 
+## 2026-09-04 — renewal round 7: the owner's map back, documents as pages, and a wipe that keeps its frames
+
+Five items from the owner, one of them a reversal of the previous round. Plan and per-item
+evidence: [planning/LANDING_CHECKLIST.md](../planning/LANDING_CHECKLIST.md), round 7.
+
+**The widened corridor was wrong, and it is written down as a decision.** Round 6 refitted the
+journey's road to span the text it carries; the owner preferred the older single-scale map, which
+reads as a road rather than a spread. `motion.js` is back to `27328c9`'s geometry with only the
+sleeping-loop fix kept, and the routecheck instrument returns the pre-round-6 numbers exactly
+(`routeY=[228,3420]`, 3 611 px of path at 1280/en), with the map still uncropped and un-letterboxed
+at every width in both languages. The two guards that demanded the wider corridor are deleted with
+a comment naming the reason, and **G-085** exists so this is not "fixed" a third time.
+
+**Terms, Privacy and Safety are pages of the site now** — the shared bar, the shared one-screen
+floor (head 900 of 900 at 1280×900 Arabic; 844 of 844 at 390 English), the clauses and their rail,
+and the site's footer, which is where links to the other documents live. The `doc` flag, its class
+and its stylesheet rule are gone, and a guard asserts the opt-out does not exist anywhere.
+
+**Nothing on the landing admits that anything is unfinished.** `policyTemplateNote` is deleted in
+both locales and the same sentence's second home — a note on the about page — now reads
+`aboutOpsNote`, a sentence about how fares and timetables are published. Each document opens with a
+line about its own scope instead. A guard rejects the whole family of admissions in the rendered
+text of every page in both languages. Removing the key exposed a worse fault (**G-086**): `t()`
+falls back to printing the raw key, so the page would have shown the word `policyTemplateNote` to
+a customer and no test would have known — 75 keys in the landing builders are now checked against
+both locales.
+
+**The transition's lag had a mechanism, and it was not the one I first fixed.** The audit's first
+attempt (re-time the release after the swap) measured as *nothing*, so it was replaced by an
+instrument that could see the wipe: the phases advanced on the wall clock, and a blocked main thread
+spent the animation while no frame was delivered — **18 of the curtain's 59 frames lost to a 350 ms
+stall**, which is exactly "laggy… but very perfect as transition". The clock is now virtual (at most
+40 ms per callback), and the opposite failure — a tab that receives no frames at all — is caught by a
+700 ms stall guard rather than the fixed deadline that used to sit there, so a slow machine gets a
+longer curtain and a hidden one never gets a stuck one. Measured with real clicks: 58 of 59 frames
+kept under a stall (was 41) for 284 ms of extra hold, and with no stall nothing changes (59 frames,
+966 ms vs 967) — smoother, nothing lost. No splash was needed.
+
+**The device gap was in the fallback, not the detection.** Arabic follows `navigator.language` and
+the theme follows `prefers-color-scheme`, with an explicit choice stored and winning; what was wrong
+is that where the OS signals nothing the surface guessed from the clock, so 03:00 opened dark. Light
+is now the default, always, guarded four ways.
+
+Gate: unit **671/0**, a11y **14/0**, layout **8185/0**, landing **2766/0** after two test
+fixes the round itself required (both curtain tests now wait until the splash's handoff wipe is
+over — a page is not at rest merely because `.landing` exists — and one block that set
+`S.landingPage` now restores it), and `verify-repo.sh` 151 files and 0 hits.
+
 ## 2026-09-04 — renewal round 6: Arabic gets room to breathe, and three pages stop being special cases
 
 The owner's list, in the order given: the Arabic type needed vertical space and its dots had to

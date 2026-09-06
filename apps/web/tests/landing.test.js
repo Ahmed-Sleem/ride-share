@@ -477,7 +477,9 @@ async function survey(view, lang, key, doc) {
        numbers decide that, both read off the drawn path: does its length span the first
        cut's centre to the last (nothing left past the end), and does its sideways wander
        use the page instead of a ribbon down the middle. */
-    let roadSpanErr = -1, roadWidthPct = -1;
+    /* The corridor's reach is deliberately the old single-scale one (owner, round 7): the road
+       does not have to span the copy, it has to read as a road. What stays asserted below is
+       that the map shares one scale and that the svg is the section, not a letterbox in it. */
     if (svg) {
       const mb = svg.getBoundingClientRect();
       const sb = land.querySelector('.journey').getBoundingClientRect();
@@ -502,9 +504,6 @@ async function survey(view, lang, key, doc) {
         if (line && line.getTotalLength && cuts.length > 1) {
           const L = line.getTotalLength(), ys = [], xs = [];
           for (let i = 0; i <= 48; i++) { const p = line.getPointAtLength(L * i / 48); ys.push(p.y); xs.push(p.x); }
-          roadSpanErr = Math.max(Math.abs(Math.min(...ys) - Math.min(...cuts)),
-                                 Math.abs(Math.max(...ys) - Math.max(...cuts)));
-          roadWidthPct = Math.round((Math.max(...xs) - Math.min(...xs)) / sb.width * 100);
         }
       }
       /* Below 900 the copy is one column and the road hugs the far edge behind it, so the
@@ -568,7 +567,7 @@ async function survey(view, lang, key, doc) {
       burst: burst.slice(0, 3), clippedAway: clippedAway.slice(0, 3),
       doneLen: (() => { const d = land.querySelector('.journey__done');
         return d && d.getAttribute('d') ? d.getAttribute('d').length : 0; })(),
-      barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, roadSpanErr, roadWidthPct, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
+      barOverlap, barCentreErr, barParts, onMap, nCuts, wordPx, boxErr, roadGap, widestCut: Math.round(widestCut * 100), small: small.slice(0, 3),
       smallPrimary: smallPrimary.slice(0, 3),
       hidden: rv.filter((el) => Number(getComputedStyle(el).opacity) < 0.05).length,
       phone,
@@ -636,12 +635,10 @@ for (const vp of BOUNDARIES) {
         ok(`${id}: every claim is drawn on the road, not filed under it`,
           m.onMap === 2 * m.nCuts + 1, `${m.onMap} of ${2 * m.nCuts + 1} text boxes over the drawing`);
         ok(`${id}: the poster word keeps its scale`, m.wordPx >= 28, `${m.wordPx}px`);
-        /* Measured 2026-09-04: a single height-driven scale left the last paragraph 51 px past
-           the end of the road and squeezed the corridor into 26 % of the width at 1440. */
-        ok(`${id}: the road runs the whole copy, first cut to last`, m.roadSpanErr >= 0 &&
-           m.roadSpanErr <= 4, `${m.roadSpanErr}px short of the cut span`);
-        ok(`${id}: the corridor uses the page, not a ribbon down the middle`,
-           m.roadWidthPct >= 70, `${m.roadWidthPct}% of the section width`);
+        /* Round 6 widened the corridor to carry every paragraph; the owner's call in round 7 is
+           the older single-scale map, which reads better. So nothing here asks the road to span
+           the copy — what is still demanded, below and in M1's guards, is that the drawing uses
+           ONE scale and that its box is the section, not a letterbox placed inside it. */
         const wide = !m.phone;   /* the same 900px boundary the sheet uses */
         /* widestCut comes back as a percent — 52% of the measure plus a rounding allowance. */
         ok(`${id}: ${wide ? 'a cut takes half the measure and the road weaves down the other'
@@ -873,10 +870,21 @@ for (const vp of BOUNDARIES) {
       next: n ? Math.round(n.getBoundingClientRect().top) : -1,
       min: h ? getComputedStyle(h).minHeight : "?" };
   });
-  ok("a document head takes the screen it needs and no more",
-    docHead.hh > 0 && docHead.hh < docHead.vh && docHead.next <= docHead.vh,
-    `${docHead.hh} of ${docHead.vh}, min-height ${docHead.min}`);
-  await page.evaluate(() => { S.lang = "en"; S.landingDoc = null; render(); });
+  /* Round 7 reversed this on purpose: a document is a page of the site, so its head fills the
+     first screen like every other page's — that is the whole point, and it is asserted here rather
+     than trusted, because an opt-out class was one line away from being reintroduced. */
+  ok("a document head fills its first screen like any other page's",
+    docHead.hh > 0 && Math.abs(docHead.hh - docHead.vh) <= 2,
+    `${docHead.hh} of ${docHead.vh}`);
+  /* The height comes from the viewport floor, not from how much copy the head happens to carry —
+     computed `min-height` resolves to px, so the number itself is what can be compared. */
+  ok("and the floor is what holds it, not the length of the note",
+    parseFloat(docHead.min) >= docHead.vh - 2, `min-height ${docHead.min} vs ${docHead.vh}`);
+  ok("and the clauses begin under the fold, not in the empty half of a taller head",
+    docHead.next >= docHead.vh - 2, `next section at ${docHead.next} of ${docHead.vh}`);
+  /* Leave the harness as it was found: the blocks below assume the rider page in Latin, and a
+     page left on "drive" or in Arabic turns into a failure that has nothing to do with it. */
+  await page.evaluate(() => { S.lang = "en"; S.landingDoc = null; S.landingPage = "rider"; S.view = "landing"; render(); });
 
   /* The bug the audit found: the wipe was driven by frames and only the *swap* had a deadline,
      so a tab that stops receiving frames kept a live page under the curtain. Stubbing rAF is
@@ -884,7 +892,10 @@ for (const vp of BOUNDARIES) {
      what a minimised window does on any machine. */
   await page.goto(FILE);
   await page.waitForSelector('.landing', { timeout: 15000 });
-  await new Promise((r) => setTimeout(r, 500));
+  /* At rest first, or the handoff curtain is still up, `armed()` declines for a reason that has
+     nothing to do with this check, and the test would pass by not testing anything. */
+  await page.waitForFunction(() => !document.querySelector('.pagefx'), { timeout: 12000 });
+  await new Promise((r) => setTimeout(r, 250));
   await page.evaluate(() => {
     window.__raf = window.requestAnimationFrame;
     window.requestAnimationFrame = () => 0;
@@ -899,11 +910,20 @@ for (const vp of BOUNDARIES) {
     !starved.fx && starved.landed, JSON.stringify(starved));
   await page.evaluate(() => { window.requestAnimationFrame = window.__raf; delete window.__raf; });
 
-  /* Both switches repaint the whole surface, so both owe the page the curtain. */
+  /* Both switches repaint the whole surface, so both owe the page the curtain.
+     The reload is deliberate: `page.goto(FILE)` on a URL the page already holds is a
+     same-document navigation, which leaves the page's modules — and the curtain's own state —
+     exactly as the previous block left them. A thousand checks earlier that is not a detail. */
   for (const [which, key] of [['theme', 'data-theme'], ['lang', 'lang']]) {
+    await page.goto('about:blank');
     await page.goto(FILE);
     await page.waitForSelector('.landing', { timeout: 15000 });
-    await new Promise((r) => setTimeout(r, 500));
+    /* Wait for the page to be at rest. The splash hands over behind a curtain, and while that
+       wipe is running `busy` is true, so a second curtain is refused — correctly, because one
+       wipe is enough for a reader who has only just arrived. The round-7 clock makes the handoff
+       a little longer under load, and a click at a fixed 500 ms started landing inside it. */
+    await page.waitForFunction(() => !document.querySelector('.pagefx'), { timeout: 12000 });
+    await new Promise((r) => setTimeout(r, 250));
     const sel = which === 'theme' ? '.landingsw' : '.landing__langbtn';
     const before = await page.evaluate((k) => document.documentElement.getAttribute(k), key);
     /* A real pointer, because a scripted click is exactly what the curtain refuses to
@@ -913,9 +933,12 @@ for (const vp of BOUNDARIES) {
     await page.click(sel);
     const mid = await page.evaluate(async () => {
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      return { fx: !!document.querySelector('.pagefx'), path: !!document.querySelector('.pagefx__path') };
+      return { fx: !!document.querySelector('.pagefx'), path: !!document.querySelector('.pagefx__path'),
+        rest: !document.querySelector('.pagefx'), hidden: document.hidden,
+        reduced: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) };
     });
-    ok(`${which}: the switch draws the same curtain as a page does`, mid.fx && mid.path, JSON.stringify(mid));
+    ok(`${which}: the switch draws the same curtain as a page does`, mid.fx && mid.path,
+      JSON.stringify(Object.assign({ rest: mid.rest, hidden: mid.hidden, reduced: mid.reduced }, mid)));
     const down = await page.evaluate(async () => {
       await new Promise((r) => setTimeout(r, 2200));
       return { gone: !document.querySelector('.pagefx'), landed: !!document.querySelector('.landing') };

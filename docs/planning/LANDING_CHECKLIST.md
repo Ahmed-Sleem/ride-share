@@ -259,6 +259,62 @@ Seven items, each with the check that decides it. Nothing is ticked until its ch
       left in the source are error paths (`api.js` HMAC failure, the global error handler), not
       debug output.
 
+## Round 7 — owner's list of 2026-09-04 (the old map back, documents as pages, no admissions, the wipe's frames, the device)
+
+Five items. The first is a reversal, recorded so nobody "fixes" it again.
+
+- [x] **R7-1 — the star-shaped corridor is undone; the map the owner prefers is back.** Round 6 fitted
+      the route to the text it carries; the owner's verdict is that the older single-scale map simply
+      looks right, span or no span. `motion.js` is back to the version from `27328c9` for the geometry —
+      one shared scale, `topM`/`botM` margins — with only round 6's sleeping-loop fix kept. Measured with
+      the same instrument: `routeY=[228,3420]` and `routeX=[451,826]` at 1280/en with a path of 3 611 px,
+      identical to the pre-round-6 artifact, and `svgCoverDelta=0,0` at every width in both languages, so
+      the map is still not letterboxed and nothing is cropped. The two assertions that demanded the wider
+      corridor are deleted, with their comment left behind to say why nothing replaces them.
+- [x] **R7-2 — Terms / Privacy / Safety are ordinary pages.** They keep the shared bar, and now the
+      shared *floor*: the head fills the viewport like every other page's (900 of 900 at 1280×900 in
+      Arabic, 844 of 844 at 390 in English, no horizontal overflow), the clauses and their rail follow,
+      and the page ends in the site's own footer — which is where the links to the other documents live,
+      never in the top bar. The `doc` flag, the `landing__hero--doc` class and its stylesheet rule are
+      deleted outright, and a guard asserts that no such opt-out exists anywhere, so a page cannot reach
+      for it again.
+- [x] **R7-3 — nothing on the landing tells the reader the product is unfinished.** `policyTemplateNote`
+      ("This is a template — the final legal wording is provided by the operator's legal team…") is gone
+      from both locales, and so is the same sentence's second home on the about page, replaced by
+      `aboutOpsNote` — a sentence about how fares and timetables work, which is what that section is for.
+      Each document now opens with a note about its own scope. A guard rejects the whole family of
+      admissions (`template`, `placeholder`, `TBD`, `coming soon`, `not final`, `legal team`, نموذج,
+      غير نهائي, نص تجريبي…) in the rendered text of every page, in both languages. Removing the key also
+      exposed a worse fault: `t()` falls back to *printing the key*, so nothing failed — the page would
+      have shown the word `policyTemplateNote` to a customer. The copy-slot guard now requires every key
+      named in a landing builder to exist in both locales (75 checked).
+- [x] **R7-4 — the wipe keeps its frames when the machine hitches.** The audit's first theory (re-time
+      the release after the swap) measured as nothing, and the instrument that proved it also found the
+      real mechanism: the phases advanced on the wall clock, so a blocked main thread spent the animation
+      while no frame was being delivered — 18 of the curtain's 59 frames lost to a 350 ms stall, which is
+      the "laggy" the owner described. The clock is now *virtual*: one callback may advance it by at most
+      `FRAME_CAP` (40 ms), so a hitch costs frames, never progress, and the opposite failure — a tab that
+      never gets a frame at all — is caught by `STALL_GUARD_MS` (700 ms without one), which takes the
+      curtain down instead of leaving it over a live page. Measured, real trusted clicks: with a 350 ms
+      stall the curtain now paints 58 of 59 frames (was 41) at the cost of 284 ms of extra hold, and with
+      no stall nothing changes (59 frames, 966 ms vs 967 ms) — smoother, and nothing lost.
+- [x] **R7-5 — what the page assumes about the device.** Language already followed `navigator.language`
+      (Arabic where the device says Arabic, English otherwise) and the theme already followed
+      `prefers-color-scheme`, with an explicit choice stored and winning. What was wrong is the *gap*:
+      where the OS signals no preference the surface inferred it from the clock, so a reader at 03:00 got
+      dark and the same visit at noon got light — the default is light, always, and the four guards say so.
+      Nothing else moved: the switches, the stored keys and the reduced-motion path are untouched.
+
+Harness lessons from this round, each one costing a full 8-minute suite run to find:
+**an in-page scripted click is refused by the curtain** (`armed()` demands a trusted gesture), so a
+test that measures the wipe must click from outside; **a block that mutates shared state**
+(`S.landingPage`, `S.lang`) must restore it, or the next block fails for an unrelated reason; and
+**a page is not at rest when `.landing` exists** — the splash hands over behind a curtain, and while
+that wipe runs `busy` is true so `armed()` declines. A switch test that clicks on a fixed 500 ms
+timer therefore either fails (round 7 made the handoff measurably longer under load, which moved the
+race) or, worse, passes without testing anything: both curtain tests now wait for
+`!document.querySelector('.pagefx')` before they touch a control.
+
 ## Round 5 open (nothing else from the owner's lists is pending)
 
 - [ ] **O-5 — the full production audit** (`docs/audits/LANDING_PRODUCTION_AUDIT.md`): every

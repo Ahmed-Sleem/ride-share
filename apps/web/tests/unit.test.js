@@ -7,6 +7,41 @@ const fs=require("fs"), path=require("path");
 const {JSDOM}=require("jsdom");
 
 const FILE=path.join(__dirname,"..","dist-preview.html");
+/* Words that tell a reader the page is not finished. A landing surface is published to users,
+   so it may not say it is a template, a sample, or waiting on somebody: the copy is written
+   generally and completely instead, and this guard keeps an admission from creeping back in. */
+const ADMIT = /\btemplate\b|\bplaceholder\b|\blorem ipsum\b|\bTBD\b|\bcoming soon\b|\bnot final\b|\bunder construction\b|\bsample text\b|\blegal team\b|نموذج|غير نهائي|قيد الإنشاء|نص تجريبي|فريق قانوني/i;
+const LANDINGPARTS=fs.readFileSync(path.join(__dirname,"..","src","lib","landing-parts.js"),"utf8");
+/* The whole rendered surface, text only — the places an admission could actually be seen. */
+/* Every copy slot in the landing builders — a direct t("k"), a heading/lede/kick key, a prose
+   array, a step row, an action label — must name a key that exists in BOTH locales. Without it a
+   missing string does not throw: t() falls back to printing the raw key, so the page shows
+   "policyTemplateNote" to a customer, and a test that only checks other things stays green. Found
+   by the round-7 removal of that very key. */
+/* Two names come from `packages/brand` rather than the copy table — the centralisation rule that
+   keeps one source of truth for the name — so they are resolved elsewhere by design. */
+const BRAND_KEYS = new Set(["brand", "tagline"]);
+const NOT_COPY = new Set(["rider", "drive", "about", "help", "download", "signup", "signin", "terms",
+  "privacy", "safety", "mid", "first", "bare", "out", "en", "ar", "landing", "home"]);
+function copyKeys(src) {
+  const pats = [/\bt\("([^"]+)"\)/g, /(?:k|kick|lede|title|sub|note):\s*"([^"]+)"/g,
+                /\bm(?:kProse|kLede|kEyebrow|kSteps)?\(\[([^\]]*)\]/g, /\["([^"]+)"(?:,\s*"([^"]+)")?\]/g,
+                /\[\s*\d+\s*,\s*"([^"]+)"\s*,\s*(?:"([^"]+)"|null)/g];
+  const out = new Set();
+  for (const re of pats) {
+    let m;
+    while ((m = re.exec(src))) for (const g of m.slice(1)) if (g) for (const q of g.split(",")) {
+      const k = q.trim().replace(/^"|"$/g, "");
+      if (/^[a-z][A-Za-z0-9]{2,}$/.test(k)) out.add(k);
+    }
+  }
+  return [...out].filter((k) => !NOT_COPY.has(k) && !BRAND_KEYS.has(k));
+}
+
+function docText(t, lang) {
+  const root = t.q(".landing");
+  return root ? root.textContent.replace(/\s+/g, " ") : "";
+}
 const PAGESRC=fs.readFileSync(path.join(__dirname,"..","src","screens","landing.js"),"utf8");
 const SRC=fs.readFileSync(FILE,"utf8");
 
@@ -341,10 +376,14 @@ group("THEME — AUTO FOLLOWS THE SYSTEM, MANUAL OVERRIDES");
   t.w.matchMedia = (q) => ({ matches: !q.includes("dark"), addEventListener(){}, removeEventListener(){} });
   ok("auto resolves to the device preference (light)", t.w.resolvedTheme()==="light");
 
-  // with no device signal, auto falls back to time of day
+  /* With no device signal the surface opens light, at any hour: the owner's default, and the
+     calmer answer for a reader whose OS says nothing. The clock used to decide this, which made
+     the theme move by itself between one visit and the next. */
   t.w.matchMedia = undefined;
-  ok("no device signal → night is dark", t.w.resolvedTheme(new Date(2026,0,1,3))==="dark");
-  ok("no device signal → midday is light", t.w.resolvedTheme(new Date(2026,0,1,12))==="light");
+  ok("no device signal → light at 03:00", t.w.resolvedTheme()==="light");
+  ok("no device signal → light at midday", t.w.resolvedTheme()==="light");
+  t.w.matchMedia = (q) => ({ matches: false, addEventListener(){}, removeEventListener(){} });
+  ok("a device that reports no preference is still light", t.w.resolvedTheme()==="light");
 
   t.w.S.theme="dark";
   ok("manual dark is honoured", t.w.resolvedTheme()==="dark");
@@ -928,11 +967,22 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
       /* R6-4/R6-6: the documents use the shared head, and the one thing they are allowed to give up
      is the one-screen floor — never the bar's clearance, never the type. The opt-out exists in
      exactly one builder call, so a page cannot discover it later. */
-  ok("only the document head may opt out of the one-screen floor",
-     (PAGESRC.match(/doc:\s*true/g) || []).length === 1 &&
-     /\.landing__hero--doc\{min-height:0/.test(CSS) &&
-     !/\.landing__hero--doc\{[^}]*(font-size|font-family|line-height)/.test(CSS),
-     (PAGESRC.match(/doc:\s*true/g) || []).length + " opt-outs");
+  /* Round 7 (owner): a document is a page of the site. The opt-out from the one-screen floor is
+     not merely unused, it does not EXIST — no flag in the builder, no class in the stylesheet —
+     so no page can reach for it again, and the head fills the viewport like every other page's. */
+  const LANDING_SRC = ["src/screens/landing.js", "src/lib/landing-parts.js"]
+    .map((f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8")).join("\n");
+  const usedKeys = copyKeys(LANDING_SRC);
+  const unresolved = usedKeys.filter((k) => !(SRC.includes(k + ':"') || SRC.includes(k + ':"')));
+  ok("every copy slot in the landing resolves to real text in the bundle",
+     usedKeys.length > 40 && unresolved.length === 0,
+     `checked ${usedKeys.length}, unresolved: ${unresolved.slice(0, 4).join(" ") || "none"}`);
+
+  ok("the one-screen floor has no opt-out anywhere",
+     !/doc:\s*true/.test(PAGESRC) && !/o\.doc/.test(LANDINGPARTS) && !/hero--doc/.test(CSS),
+     [ /doc:\s*true/.test(PAGESRC), /o\.doc/.test(LANDINGPARTS), /hero--doc/.test(CSS) ].join(","));
+  ok("a document page carries the site footer, where its links live",
+     /landingDoc[\s\S]{0,700}?landingFooter\(\)/.test(PAGESRC));
   ok("the document keeps the poster's clearance under the bar",
      /\.landing__hero\{[^}]*padding:var\(--bar-clearance\)/.test(CSS));
   ok("knockout type has a fallback where the stroke is missing",
@@ -1289,8 +1339,9 @@ group("LANDING COMPLETENESS — riders, drivers, safety, policies");
   /* The page says whose text this is, wherever the layout puts it: the note belongs to the
      head now (it is read before the clauses, not after them), so the claim is checked against
      the page and against the exact sentence, not a substring of it. */
-  ok("policy doc states the legal text is the operator's",
-     t.q(".landing").textContent.includes(t.w.T.en.policyTemplateNote), t.w.T.en.policyTemplateNote.slice(0, 40));
+  ok("policy doc opens with the document's own scope, not a disclaimer about the product",
+     t.q(".landing").textContent.includes(t.w.T.en.policyTermsNote), t.w.T.en.policyTermsNote.slice(0, 40));
+  ok("no landing string admits that it is unfinished", !ADMIT.test(docText(t)), docText(t).match(ADMIT) ? String(docText(t).match(ADMIT)[0]) : "");
   ok("the document opens with the shared head and its contents rail",
      !!t.q(".landing__hero .landing__display") && !!t.q(".landing__docrail [data-docjump]"));
   /* The way out is found by what it says, not by a class: "Back to home" is the one control
@@ -1524,10 +1575,13 @@ group("POLICIES ARE FILLED (terms/privacy/safety, EN + AR)");
        String(t.all(".landing__docsec").length));
     /* Whose text this is must be said on the document, in the reader's own language — the
        sentence is taken from the copy table rather than a substring, so a paraphrase cannot
-       pass it, and it is read from the page because the note belongs to the head now. */
-    ok(`terms doc keeps the operator's-legal note (${lang})`,
-       t.q(".landing").textContent.includes(t.w.T[lang].policyTemplateNote),
-       t.w.T[lang].policyTemplateNote.slice(0, 44));
+       pass it, and it is read from the page because the note belongs to the head now. The note
+       is the document speaking about its own scope: it says nothing about the product's state,
+       which is what the round-6 sentence did and round 7 removed. */
+    ok(`terms doc opens with the document's own scope (${lang})`,
+       t.q(".landing").textContent.includes(t.w.T[lang].policyTermsNote),
+       t.w.T[lang].policyTermsNote.slice(0, 44));
+    ok(`${lang} terms: the page says nothing about its own state`, !ADMIT.test(docText(t)));
     ok(`the doc head carries its own kick, title and one-line purpose (${lang})`,
        t.q(".landing__hero .landing__display").textContent.includes(t.w.T[lang].policyTermsTitle) &&
        t.q(".landing__hero").textContent.includes(t.w.T[lang].policyTermsLede) &&

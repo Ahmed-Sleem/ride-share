@@ -324,7 +324,7 @@ function aboutLanding() {
       mkSection([
         mkEyebrow("aboutOpsT"),
         mkProse(["aboutOps1", "aboutOps2"]),
-        $("p", { class: "landing__note", text: t("policyTemplateNote") }),
+        $("p", { class: "landing__note", text: t("aboutOpsNote") }),
       ])),
     landingFooter());
 }
@@ -433,19 +433,20 @@ function landingDoc() {
        the site, and it must offer the same way back out, in the same place. */
     landingNav(),
     $("div", { class: "landing__body landing__body--page" },
-      /* The head is the shared one: same kick, same poster face, same measure, same way
-         home. A document is opened to be read, so `doc` lifts the one-screen floor — the
-         only place that is allowed, and it is guarded as such — and everything else about
-         the page is the page the rest of the site uses. */
+      /* A document is a page of the site, not a surface of its own: the shared bar, the
+         shared head at the shared floor (one viewport, filled the way every other page fills
+         one), the clauses with their rail, and the site's footer with the links that reach
+         the other documents — which is where those links live, never in the top bar. */
       mkIntro({ kick: "policyKick", lines: [{ k: p.title }], lede: p.lede,
-        prose: ["policyTemplateNote"], actions: [{ k: "landingBack", go: "rider" }], doc: true }),
-      mkSection([mkDoc(T[S.lang][p.key] || [])], { first: true })));
+        prose: [p.note], actions: [{ k: "landingBack", go: "rider" }] }),
+      mkSection([mkDoc(T[S.lang][p.key] || [])], { first: true })),
+    landingFooter());
 }
 
 /* Three documents, one template: the clause list is read from the copy table, so adding a
    fourth is a copy change and a line here, never a second page builder. */
 const POLICY = {
-  terms: { key: "policyTerms", title: "policyTermsTitle", lede: "policyTermsLede" },
-  privacy: { key: "policyPrivacy", title: "policyPrivacyTitle", lede: "policyPrivacyLede" },
-  safety: { key: "policySafety", title: "policySafetyTitle", lede: "policySafetyLede" },
+  terms: { key: "policyTerms", title: "policyTermsTitle", lede: "policyTermsLede", note: "policyTermsNote" },
+  privacy: { key: "policyPrivacy", title: "policyPrivacyTitle", lede: "policyPrivacyLede", note: "policyPrivacyNote" },
+  safety: { key: "policySafety", title: "policySafetyTitle", lede: "policySafetyLede", note: "policySafetyNote" },
 };

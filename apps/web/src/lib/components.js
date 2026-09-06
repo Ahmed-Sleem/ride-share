@@ -7,19 +7,21 @@ const storeGet = k => { try{ return localStorage.getItem(k); }catch(e){ return n
 const storeSet = (k,v) => { try{ localStorage.setItem(k,v); }catch(e){} };
 
 /* resolvedTheme: S.theme is a preference ("auto"|"light"|"dark"); the resolved
-   value is what the DOM actually renders. Auto = the device's prefers-color-
-   scheme when the OS signals it, otherwise the local time of day (06:00–18:00
-   light, night dark). An explicit choice always wins. */
-const resolvedTheme = (now = new Date()) => {
+   value is what the DOM actually renders. Auto is the device's own
+   prefers-color-scheme, read at paint time and again when it changes; where the
+   device signals nothing at all the surface opens LIGHT, which is the product's
+   default and the calmer way to meet a reader whose OS says nothing. Inferring a
+   theme from the clock was tried and is gone: a reader at 03:00 is not asking to
+   be surprised, and a theme that moves by itself cannot be trusted. An explicit
+   choice always wins, and is stored. */
+const resolvedTheme = () => {
   if (S.theme === "auto") {
     try {
       if (window.matchMedia) {
         if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
-        if (window.matchMedia("(prefers-color-scheme: light)").matches) return "light";
       }
-    } catch (e) { /* no matchMedia — fall through to time */ }
-    const h = now.getHours();
-    return (h >= 6 && h < 18) ? "light" : "dark";
+    } catch (e) { /* no matchMedia — the default below */ }
+    return "light";
   }
   return S.theme;
 };

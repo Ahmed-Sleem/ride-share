@@ -34,12 +34,16 @@ const PageFx = (() => {
   ];
   const GESTURE_WINDOW = 500;
   const FALLBACK_SWAP_MS = 600;      /* the swap's deadline, whatever rAF decides to do */
-  /* And a deadline for the wipe itself. The phases are 940 ms of frames; if the frames stop
-     arriving — backgrounded, occluded, a window restored from minimise, a compositor under
-     load — the curtain used to stay up over a page that had already swapped. Sum the phases
-     so the number cannot drift from the animation it guards, then add slack for a compositor
-     that is alive but slow. */
-  const FALLBACK_WIPE_MS = PHASES.reduce((a, ph) => a + ph.ms, 0) + 400;
+  /* The wipe runs on a virtual clock: each callback may advance it by at most one frame, so a
+     blocked main thread — a long paint, a GC, a window being restored — costs the animation
+     *frames*, never *progress*. Driving it off the wall clock is what read as lag: the phases kept
+     their deadlines while no frame was delivered, so when the thread came back the curtain had run
+     out of animation and opened in two jumps. A curtain that hitches simply lasts a little longer,
+     which is the trade asked for; a curtain that teleports is a broken one.
+     STALL_GUARD_MS is the other half: if no frame arrives for that long the tab is hidden or
+     frozen, and the curtain comes down rather than staying over a live page. */
+  const FRAME_CAP = 40;
+  const STALL_GUARD_MS = 700;
 
   let lastGesture = -1e9, busy = false, listened = false, lastKey = null;
 
@@ -130,7 +134,8 @@ const PageFx = (() => {
        never be left waiting on a paint that this module promised to deliver later. */
     if (!svg.getClientRects || !svg.getClientRects().length) { svg.remove(); return false; }
     busy = true;
-    let i = 0, t0 = now(), swapped = false, settled = false;
+    let i = 0, vt = 0, vph = 0, last = now(), lastFrame = now();
+    let swapped = false, settled = false;
     const doSwap = () => { if (swapped) return; swapped = true; swap(); };
     /* One path closes the curtain, whether the frames finished or the deadline did: the swap
        is honoured, the layer leaves the document, and nothing is left `busy` for the next
@@ -145,18 +150,25 @@ const PageFx = (() => {
     const step = () => {
       if (settled) return;
       const at = now();
-      if (frame(svg, t0, at, PHASES[i])) {
-        i += 1; t0 = at;
-        if (i === 2) doSwap();                    /* painted while the screen is shut */
+      vt += Math.min(FRAME_CAP, Math.max(0, at - last));
+      last = at; lastFrame = at;
+      if (frame(svg, vph, vt, PHASES[i])) {
+        i += 1; vph = vt;
+        if (i === 2) doSwap();                     /* painted while the screen is shut */
         if (i >= PHASES.length) { settle(); return; }
       }
       requestAnimationFrame(step);
+    };
+    const guard = () => {
+      if (settled) return;
+      if (now() - lastFrame > STALL_GUARD_MS) { settle(); return; }
+      setTimeout(guard, 250);
     };
     requestAnimationFrame(step);
     /* A rAF never arrives in a backgrounded tab, and a curtain must never be the reason
        a page does not appear. */
     setTimeout(doSwap, FALLBACK_SWAP_MS);
-    setTimeout(settle, FALLBACK_WIPE_MS);
+    setTimeout(guard, STALL_GUARD_MS);
     return true;
   }
 
@@ -169,7 +181,8 @@ const PageFx = (() => {
     if (!svg) { swap(); return; }
     busy = true;
     const cover = [PHASES[0], PHASES[1]];
-    let i = 0, t0 = now(), swapped = false, settled = false;
+    let i = 0, vt = 0, vph = 0, last = now(), lastFrame = now();
+    let swapped = false, settled = false;
     const settle = () => {
       if (settled) return;
       settled = true;
@@ -180,22 +193,29 @@ const PageFx = (() => {
     const step = () => {
       if (settled) return;
       const at = now();
+      vt += Math.min(FRAME_CAP, Math.max(0, at - last));
+      last = at; lastFrame = at;
       if (i < cover.length) {
-        if (frame(svg, t0, at, cover[i])) {
-          i += 1; t0 = at;
+        if (frame(svg, vph, vt, cover[i])) {
+          i += 1; vph = vt;
           if (i === cover.length && !swapped) { swapped = true; swap(); }
         }
         requestAnimationFrame(step); return;
       }
       if (i < PHASES.length) {
-        if (frame(svg, t0, at, PHASES[i])) { i += 1; t0 = at; }
+        if (frame(svg, vph, vt, PHASES[i])) { i += 1; vph = vt; }
         requestAnimationFrame(step); return;
       }
       settle();
     };
+    const guard = () => {
+      if (settled) return;
+      if (now() - lastFrame > STALL_GUARD_MS) { settle(); return; }
+      setTimeout(guard, 250);
+    };
     requestAnimationFrame(step);
     setTimeout(() => { if (!swapped) { swapped = true; swap(); } }, FALLBACK_SWAP_MS);
-    setTimeout(settle, FALLBACK_WIPE_MS);
+    setTimeout(guard, STALL_GUARD_MS);
   }
 
   return { handoff, armed, routeKey };
