@@ -102,11 +102,19 @@ untouched until the owner signs the look off.
   `9bee41f4df721b23…` / 1,130,591 B, while `versionName 0.1.0` and `versionCode 3` stay put — the hash
   moves and the stamp does not, which is precisely what `server.js`'s `bundleMeta()` (sha256 per
   request) is for. No second bundling step was added anywhere. Numbers in `APP_GUI.md` §11.
-- [ ] **D-6.2** Push to `main`, let Railway redeploy, then `cmp` the served bundle against
-  `apps/web/dist-preview.html` (the round-6/7 method, ≈80 s for the redeploy). **Blocked:**
-  `/tmp/.tok` no longer exists, so the owner must re-create it; local `main` is 5 commits ahead of
-  live (`6dc6ac4`).
-- [ ] **D-6.3** Owner decision (G-099): move `--paper`/`--ink`/`--muted`/`--hairline` into
+- [x] **D-6.2** Pushed to `main`: `6f4b9a6` (round 9) and `ad9b98f` (round 9c). Railway redeployed and the served
+  page carries the renewal — `--topbar-h` **absent**, `--lead-display` / `--f-word` / `position:sticky` /
+  `--glass-blur` **present**, `@font-face` 3 and 88,482 base64 bytes identical to the local build.
+  **Method note, because it cost me a false alarm:** byte-`cmp` against `apps/web/dist-preview.html` is not a fair
+  cross-environment test — the page inlines `const BRAND = …` from `packages/brand/brand.json`, so a build made
+  after the brand file moved differs by exactly that (measured 1,138,124 local vs 1,137,573 live = one line, the
+  new `palette` key). Either compare markers, or compare bytes only when the brand file is identical.
+
+- [x] **D-6.3** Owner decision taken (2026-09-06, "yes"): `palette.{light,dark}` now lives in
+  `packages/brand/brand.json`; the boot page's colours are injected from it and its own hex literals are
+  gone (**0** left in `apps/mobile/offline.html`), and `unit.test.js` guards the app stylesheet against the
+  same four numbers in both themes. Measured drift this closed: muted `#525252` vs the app's `#5C5C5C`.
+  G-099 closed.
   `packages/brand/brand.json` so the baked boot page and the app share one colour source instead of
   mirroring each other by hand. Recommendation: yes — 6 keys, and it deletes the last duplicated
   palette; it is an owner decision because the API build reads `brand.json` too.

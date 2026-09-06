@@ -216,7 +216,7 @@ page), together with the generated `capacitor.config.json` (native `SplashScreen
 | What changed this round | Plane | Reaches installed devices? |
 |---|---|---|
 | Page head, poster title, one rhythm, glass, splash/auth/intro skins | A | yes, on next open |
-| `offline.html` ink palette + themed boot | B | only fresh installs (its *colours* also travel as Plane-A copy for the cached-boot path? no — the boot file is baked) |
+| `offline.html` palette, faces, dark block (all generated from `brand.json`) | B | only fresh installs — the baked boot page is what changes, so a device that already cached a bundle keeps its old boot page |
 | `capacitor.config.json` | generated, B | untouched: editing it by hand is drift, see G-095 |
 | Landing download button, `brand.json` dead field | A / config | landing is the web app, so yes |
 
@@ -326,3 +326,12 @@ The lesson recorded here is that attribute-level assertions cannot see a missing
 what the new guard now checks. `--topbar-h` 0 references, 0 hand-written
 `letter-spacing:-.04em` declarations, 0 gradients and 0 violet hexes in `offline.html`,
 `brand.json logo.gradient` deleted.
+
+### Two owner decisions taken after the code (2026-09-06, same day)
+
+- **`brand.json` palette (G-099): yes.** The four ink values now live in the brand file and are injected
+  into the boot page, with a guard holding the app stylesheet to them. Chosen because hand-mirroring had
+  already drifted by a grey step.
+- **Arabic display face: Jomhuria, as shipped.** The head grows 87→94 px on a phone against Cairo 900, and
+  a display face is what a poster wants. This closes the last open question in §6 on type; `--brand-font-display`
+  and `--lead-display-rtl` stay as they are, applied from one list (§3/G-091).

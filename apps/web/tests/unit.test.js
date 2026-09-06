@@ -111,6 +111,60 @@ group("SHELL OCCUPIES EXACTLY ONE VIEWPORT");
   ok("main contains its overscroll", !!main && /overscroll-behavior:contain/.test(main));
 }
 
+group("THE BRAND PALETTE IS THE ONLY SOURCE FOR PAPER, INK, MUTED, HAIRLINE (G-099)");
+{
+  /* apps/mobile/offline.html cannot read this stylesheet, so scripts/build.js injects these four
+     numbers from packages/brand/brand.json into the boot page in both themes. That makes the brand
+     file the only place they exist — but only if the app is held to it as well, or the two drift
+     back apart, which is exactly what happened while the boot page mirrored them by hand (its
+     muted was #525252 against the app's #5C5C5C). So both directions are checked. */
+  const BPAL = JSON.parse(fs.readFileSync(
+    path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json"), "utf8")).palette;
+  ok("brand.json declares palette.light and palette.dark",
+     !!(BPAL && BPAL.light && BPAL.dark), BPAL ? Object.keys(BPAL).join(",") : "none");
+  const valueOf = (block, token) => {
+    if (!block) return null;
+    const at = block.indexOf(token + ":");
+    if (at < 0) return null;
+    let end = block.length;
+    for (const stop of [";", "}"]) { const q = block.indexOf(stop, at); if (q >= 0 && q < end) end = q; }
+    return block.slice(at + token.length + 1, end).trim();
+  };
+  const deref = (v) => {                       // one hop through var(--x), which is how the
+    if (!v || !v.startsWith("var(")) return v; // stylesheet's aliases resolve today
+    const name = v.slice(4, v.indexOf(")")).trim();
+    return valueOf(CSS, name) || v;
+  };
+  // rule() only escapes `.` and `#`, so a bracketed selector cannot go through it — the dark block
+  // is taken the way this file already takes it elsewhere: a slice up to its closing brace.
+  // There is more than one [data-theme="dark"] block in the sheet — an early one for glass/tokens
+  // and the semantic one that re-declares the surfaces — so the block is chosen by the token it
+  // must contain, not by whichever comes first.
+  const darkBlocks = [];
+  for (let at = CSS.indexOf('[data-theme="dark"]{'); at >= 0; at = CSS.indexOf('[data-theme="dark"]{', at + 1)) {
+    const end = CSS.indexOf("\n}", at);
+    if (end < 0) break;
+    darkBlocks.push(CSS.slice(at + 20, end));
+  }
+  const blocks = {
+    light: rule(":root"),
+    dark: darkBlocks.find((b) => b.includes("--bg-base:")) || darkBlocks[0] || null,
+  };
+  const want = { "--bg-base": "paper", "--text-primary": "ink",
+                 "--text-secondary": "muted", "--line": "hairline" };
+  for (const theme of ["light", "dark"]) {
+    for (const [token, key] of Object.entries(want)) {
+      const got = deref(valueOf(blocks[theme], token));
+      const wantV = BPAL && BPAL[theme] ? BPAL[theme][key] : null;
+      ok(`${theme}: ${token} equals brand.json palette.${key}`,
+         !!got && !!wantV && got.toLowerCase() === String(wantV).toLowerCase(),
+         `stylesheet ${got} vs brand ${wantV}`);
+    }
+  }
+  ok("the boot page no longer carries its own colours",
+     !/  --bg:/.test(fs.readFileSync(path.join(__dirname, "..", "..", "mobile", "offline.html"), "utf8")));
+}
+
 group("EVERY TOKEN RESOLVES (a name nothing defines drops a declaration in silence)");
 {
   // definitions = "--x:" anywhere in the stylesheet or in a JS inline style, plus

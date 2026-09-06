@@ -1,3 +1,49 @@
+## 2026-09-06 — renewal round 9c: the palette lands, and CI's GUI job turns out never to have run
+
+Round 9's two owner answers are in, and pushing them exposed something larger than either.
+
+`packages/brand/brand.json` now owns `palette.{light,dark}{paper,ink,muted,hairline}`.
+`apps/mobile/scripts/build.js` injects the three values the boot page actually reads (plus `--brand`/`--on`, both
+themes) into `www/offline.html`; `hairline` stays in the brand file for the guard and is deliberately not injected,
+because nothing on that page consumes it — that is how `--brand-2` came to sit unread in the same file for a release.
+`apps/mobile/offline.html` now declares **no colour at all** (0 hex literals), which ends a drift that had already
+happened under hand-mirroring: its muted was `#525252` against the app's `--text-secondary:#5C5C5C`, dark
+`#A3A3A3` against `#B8B8B8`. A `unit` group holds the app stylesheet to the same four numbers in both themes
+(**686 pass / 0 fail**, 10 of them new), choosing the semantic dark block by the token it must contain, since the
+sheet carries two `[data-theme="dark"]` blocks and `rule()` escapes only `.` and `#` — a null-silent mistake my own
+guard made once before it was right. a11y 14/0, layout 7570/0, landing 2773/0, mobile config 4/0. Measured on the
+generated boot page: light `rgb(255,255,255)`/`rgb(10,10,10)`, dark `rgb(10,10,10)`/`rgb(242,242,242)`,
+`document.fonts.size === 2`. One of my probes was wrong in the other direction too and is recorded so nobody reuses
+it: `download="ride-share.apk"` is absent from *any* built HTML because the anchor is created at runtime by
+`landing.js`, so grepping the bundle for it proves nothing about the button.
+
+Then the push. GitHub's GUI job went red in 21 s with **exit 126** — not a failing assertion but "cannot execute".
+`apps/web` verifies as `./verify.sh`, which ends with `./tests/breaks.sh` and `./tests/layout-breaks.sh`, and all
+23 `*.sh` files in this repo are committed 100644; the jobs that call `bash scripts/x.sh` never notice. So the
+app's whole browser suite, including both break-detection passes, has never run in CI. Fixed by
+`git update-index --chmod=+x` across the set (verified 100755 × 23). The other red job is unchanged and still open:
+`apps/api` 237 pass / **9 fail** in `journeys.service.test.js` — which the ordering in `pnpm -r` has been hiding
+behind, job by job, ever since.
+
+## 2026-09-06 — renewal round 9b (owner decisions): the palette gains one source, and the Arabic face is settled
+
+Two answers came back the same day the round landed on `main` (`6f4b9a6`), and one of them removed a duplication
+that had already drifted. `packages/brand/brand.json` now carries `palette.{light,dark}{paper,ink,muted,hairline}`;
+`apps/mobile/scripts/build.js` injects the three values the boot page actually reads — plus `--brand/--on` — into
+`www/offline.html` for both themes, and `apps/mobile/offline.html` no longer declares a single colour itself
+(**0** hex literals left, verified by rendering the generated file: light `rgb(255,255,255)`/`rgb(10,10,10)`,
+dark `rgb(10,10,10)`/`rgb(242,242,242)`). `hairline` is in the brand file for the app to be measured against but is
+deliberately not injected, because nothing on the boot page consumes it — that is how `--brand-2` came to sit
+unread in this same file for a release. The drift this ended was real: the boot page's muted was `#525252` where
+`apps/web` says `--text-secondary:#5C5C5C` (dark `#A3A3A3` against `#B8B8B8`), a grey step out of step in the one
+surface no browser test reaches, since it ships inside the APK. A new `unit` group holds the stylesheet itself to
+the brand values in both themes, so neither side can move alone (G-099 closed, G-094's residual closed with it).
+The second answer settled the last open type question: Arabic display titles stay **Jomhuria** — measured, the head
+grows 87→94 px on a phone against Cairo 900, which is the honest cost of a face with real display proportions.
+Architecture unchanged: only `apps/mobile/scripts/build.js`, `apps/mobile/offline.html`, `packages/brand/brand.json`
+and a test moved, so nothing new is baked that the generator does not own, and the web GUI still arrives over the
+air with `versionCode 3` untouched.
+
 ## 2026-09-06 — renewal round 9 (app, in the repo): the head is page content, and the boot page joined the system
 
 Skin v2 left the demo and went into `apps/web/src`. `.topbar` became a two-row head grid rendered as the

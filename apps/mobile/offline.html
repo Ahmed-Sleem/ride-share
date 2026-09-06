@@ -11,17 +11,14 @@
    paper, ink, hairline grey — and the font stack is injected by scripts/build.js from
    packages/brand/brand.json, so the typeface is never a second source of truth. Keep the
    colours below in step with apps/web/src/styles/shell.html if either changes. */
+/* Colours are deliberately NOT declared here. paper/ink/muted/hairline live in
+   packages/brand/brand.json, and scripts/build.js injects them — in both themes — at the marker
+   inside the :root below. Hand-mirroring them is what left this page a grey step out of step with
+   the app it boots into, which is the reason the palette now has one source. */
 :root{
-  --bg:#FFFFFF; --ink:#0A0A0A; --muted:#525252;
-  --brand:#0A0A0A; --on:#FFFFFF;
   --s4:16px; --s5:20px; --s6:24px; --tap:44px; --r:14px;
   --ease:cubic-bezier(.2,.7,.3,1);
-  /*__RS_BRAND__*/  /* the two brand declarations, injected by scripts/build.js */
-}
-@media (prefers-color-scheme: dark){
-  /* The app has two themes, so the boot page has two too: a white page that then hands
-     over to a dark app is a flash, not a splash. */
-  :root{ --bg:#0A0A0A; --ink:#F2F2F2; --muted:#A3A3A3; --brand:#F2F2F2; --on:#0A0A0A; }
+  /*__RS_BRAND__*/
 }
 html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
   font:400 15px/1.5 var(--brand-font, ui-sans-serif, system-ui, sans-serif)}

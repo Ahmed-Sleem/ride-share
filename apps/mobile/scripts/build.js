@@ -82,9 +82,25 @@ if (!faces) throw new Error("web build contains no @font-face block — refusing
    Two markers, two positions, both asserted. */
 const FACES_MARK = "/*__RS_FACES__*/";
 if (!boot.includes(FACES_MARK)) throw new Error("apps/mobile/offline.html: faces marker missing");
-boot = boot.replace(FACES_MARK, "<style>" + faces + "</style>");
-boot = boot.replace(BRAND_CSS_MARK,
-  "--brand-font:" + BRAND.font.family + ";--brand-font-weight:" + BRAND.font.weight);
+/* The palette comes from brand.json, not from this file's opinion: `apps/web` holds its colours
+   in --bg-base/--text-primary/--text-secondary/--line, and a page baked into the binary cannot read
+   them, so they are injected here — with the dark half in a media query, because the app has two
+   themes and a splash that only knows one of them flashes. The faces ride along in the same
+   element: an @font-face inside a :root block is invalid and is dropped in silence. */
+const PAL = BRAND.palette;
+if (!PAL || !PAL.light || !PAL.dark) throw new Error("packages/brand/brand.json has no palette{light,dark}");
+/* Only the four the page actually reads. hairline stays in brand.json (the web unit guard holds
+   --line to it) but is not injected: a declaration nothing consumes is a token waiting to be
+   mistaken for a live one, which is how --brand-2 came to sit in this file for a whole release. */
+const layer = (p) =>
+  "--bg:" + p.paper + ";--ink:" + p.ink + ";--muted:" + p.muted +
+  ";--brand:" + p.ink + ";--on:" + p.paper +
+  ";--brand-font:" + BRAND.font.family + ";--brand-font-weight:" + BRAND.font.weight;
+boot = boot.replace(FACES_MARK,
+  "<style>" + faces +
+  ":root{" + layer(PAL.light) + "}" +
+  "@media (prefers-color-scheme: dark){:root{" + layer(PAL.dark) + "}}</style>");
+boot = boot.replace(BRAND_CSS_MARK, "");
 if (boot.includes("</head>")) boot = boot.replace("</head>", inject + "</head>");
 else boot = inject + boot;
 fs.writeFileSync(path.join(www, "index.html"), boot);
