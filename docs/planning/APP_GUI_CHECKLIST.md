@@ -73,6 +73,12 @@ untouched until the owner signs the look off.
   navigation *with the bar absolute*; a bar that leaves the flow must not change `routeKey` behaviour.
   *Check:* the landing suite's stuck-curtain proof, extended to one app screen.
 
+- [x] **D-1.7 (demo side)** The bar becomes a page head. In the skin: `.topbar` as a two-row grid inside the reading column — controls above, poster underneath. Measured on all 172 surfaces: `headFloor 56`, `headH 219 → 123`, title `--f-poster` 71.68 px / `--fw-heavy` / uppercase, Arabic `--lead-display-rtl`, `overflow 0`, `titleClip false`. The `ar title` button compares Jomhuria against Cairo 900 so the face choice is made from two renderings, not from my preference.
+- [x] **D-1.8 (demo side)** One rhythm: `.main__inner > *{margin-block:0}` and a margin reset on the head title. All 172 surfaces now report `gapTokens: --flow` except 12 whose 44 px sits beside a zero-height placeholder awaiting data (proved by dumping the column children: `{c:"DIV", h:0, mt:0}` — that is the empty-data artifact, not a spacing rule).
+- [ ] **D-1.9 (repo)** `app.js` renders `pageHead({title, back, right})` **inside** `.main__inner` as its first block and `topbar()` retires; `headerActions()` keeps its place in the controls row; the safe-area floor moves from the bar to the head (`padding-block-start:calc(var(--s2) + var(--safe-t))`). *Check:* the layout suite's "chrome is outside the scroller" intent is re-stated — the controls still never scroll away on `wide` screens only if we want that, so decide sticky-vs-not with the owner; the 172-render scan must still read 0 overflow and `headFloor == 56`.
+- [ ] **D-1.10 (repo)** One component library for both surfaces (G-097): the app consumes the landing's `mk*` builders and every screen head goes through `Section()` (G-093). *Check:* `grep -c 'class:"t-head"' src/screens/*.js` → 0 outside `components.js`, and a unit guard that fails if a builder in `landing-parts.js` gains a landing-only selector that the app cannot use.
+- [ ] **D-1.11 (repo)** Promote the three carried literals to tokens (`--track-poster:-.04em`, `--lh-poster:.94`, `--measure-head:18ch`) with the reason beside each, so the app does not inherit the landing's habit of restating negative tracking per component (§3.3). *Check:* `grep -c -- "-.04em" src/styles/shell.html` → 1 (the token).
+
 ## D-2 · the owner's round (sign-off)
 
 - [ ] **D-2.1** Contact sheet of all 43 pages × light/dark × en/ar (86 views) + the clickable

@@ -1,4 +1,31 @@
 # CHANGELOG
+## 2026-09-06 — renewal round 8 (app, demo): the top bar is gone and the page opens with its title
+
+The owner reviewed the phase-2 demo and gave two notes, both of which turned out to be measurable
+rather than matters of taste. *No top bar — the page starts with a big rush title*; *spacing must be
+consistent, and the app must be centralised and built from the same components as the landing*.
+`ink-skin.css` v2: `.topbar` loses its border, fill, `min-height` and `nowrap/ellipsis` and becomes a
+two-row grid inside the reading column — controls above, `--f-poster` 71.68 px title underneath at
+`--fw-heavy` uppercase with `-.04em` tracking, Arabic taking Jomhuria with `--lead-display-rtl` (and a
+`ar title` button to compare it against Cairo 900, because that is a decision to be made from two
+renderings). Measured across all 172 surfaces: the head/band/card inline edges now agree at 298 px (they
+were 123 vs 298 — 175 px of mismatch, and the real source of the "cramped" reading), every gap between
+blocks reports the single token `--flow` (22 px), and the head itself went 219 → 123 px once the h1's
+user-agent `0.67em` top margin — 48 px at poster size, invisible inside the old flex bar, honoured by a
+grid — was reset. The 12 remaining 44 px gaps sit beside zero-height placeholders waiting for data
+(`{c:"DIV", h:0}`), so they are the empty-offline artifact, not a spacing rule: the same argument for the
+fetch harness (D-1.1) that the wallet screenshot makes on its own.
+
+**A discovery that changes how every app number must be read:** the app already carries a density scale
+(DEC-200, `--density` at ≥840 px) which rescales the shared steps themselves — `--s6` 24→22, `--s5`
+20→18, `--s8` 40→36, `--content-max` 840→756, `--rail-collapsed` 80→72. The skin therefore adds no
+numbers: the rhythm is inherited. Three literals were carried from the landing's own convention
+(`-.04em`, `.94`, `18ch`) and D-1.11 promotes them to tokens so the habit stops spreading. **G-096**
+records the bar-as-chrome defect with its measurements; **G-097** records the centralisation instruction
+as a code task — 22 `mk*` builders serving only the landing while the app has 17 `Section()` calls
+against 20 hand-rolled heads — and notes that shared components inherit the density scale for free,
+which is the payoff. `apps/web/src/` remains untouched: D-1.9/D-1.10 are the repo-side shape, after the
+owner signs the look off.
 ## 2026-09-06 — phase 2 opened: the app GUI studied, measured, planned (no code)
 
 Per the owner's instruction, this session prepared only: the current app GUI was inventoried, its

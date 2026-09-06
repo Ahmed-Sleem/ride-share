@@ -152,3 +152,38 @@ rule files and the landing demo. Local `main` is one **docs-only** commit ahead 
 (`0492d68`, the L1/L2 checklist tick); pushing it needs the PAT re-supplied, since `/tmp/.tok` was
 shredded last session and `/tmp` was rehydrated — nothing user-facing is pending, because the live URL
 already equals `6dc6ac4`.
+
+## 8. Skin v2 — the owner's review applied (2026-09-06)
+
+Their notes were two, and both were measurable:
+
+**"No top bar — the page starts with a big rush title."** `.topbar` is no longer chrome: no border,
+no fill, no `min-height`, no `nowrap/ellipsis`. It is a two-row grid placed as the first block of the
+reading column — controls row on top, poster title underneath, spanning both cells (`--f-poster`
+71.68 px at 1280, `--fw-heavy`, uppercase, `letter-spacing -.04em`, `line-height .94`; Arabic takes
+Jomhuria with `--lead-display-rtl`). A review button (`ar title`) flips the Arabic poster to Cairo 900
+for comparison, because that is a decision, not a defect.
+
+**"Spacing consistent and suitable — the search bar and the top bar and so on."** Measured, not styled
+by eye, over all 172 surfaces:
+
+| What | Before (v1 skin) | Now (v2) |
+| --- | --- | --- |
+| inline edge of head / band / card | 123 / 123 / 298 — a **175 px** mismatch: the head spanned the padded box while the cards sat in the capped column | **298 / 298 / 298** (and 123/123/123 on `wide` staff pages, where the column is uncapped) |
+| gap between every pair of blocks in the column | 22 on some, 30 on `driver.work` (its hand-rolled head brings `margin-top:13.28px`) | **22 everywhere** = `--flow`; the 12 remaining 44 s sit next to a zero-height placeholder `<div>` waiting for data (child dump: `{c:"DIV", h:0}`), so they disappear once the screen is populated |
+| head height on a page with actions | 219 px — 96 of it was the `h1`'s user-agent `0.67em` top margin (48 px at 71.68 px type), which the old flex bar swallowed and a grid honours | **123 px** (floor 8 + controls 40 + row-gap 8) — `headFloor:56`, exact |
+| margins on column children | mixed | **0** — `.main__inner > *{margin-block:0}`, so the gap is the rhythm and no block adds to it |
+
+**Found on the way, and it changes how every number must be read:** the app already has a **density
+scale** (DEC-200, `--density` at ≥840 px). It rescales the spacing steps themselves — `--s6` 24→**22**,
+`--s5` 20→**18**, `--s8` 40→**36**, `--content-max` 840→**756**, `--rail-collapsed` 80→**72**. So the
+skin carries no new numbers: the rhythm is inherited, which is what "centralised" means here. Only
+three literals were carried over from the landing's own convention (`-.04em`, `line-height .94`,
+`max-width 18ch`), and D-3.1 turns those into named tokens so the habit stops spreading.
+
+**"Same components code design like the landing page."** Recorded as G-097, because it is a code task,
+not a stylesheet one: the landing's 22 `mk*` builders (`mkSection`, `mkEyebrow`, `mkLede`, `mkSteps`,
+`mkSlab`, `mkPanel`, `mkActions`, `mkDoc`…) serve only the landing, while the app has 17 `Section()`
+calls against 20 hand-rolled headings (G-093) and its own card/table/row families. The durable shape is
+one component library consumed by both surfaces — the app importing the builders, or the builders
+absorbing the app's needs — with the guard that no screen hand-rolls what a builder already owns.
