@@ -23,6 +23,10 @@ therefore specified as a render-and-scan, not a literal scan) · the display fac
 "strictly look-alike" needs a reference decision (Q-1). A stale markdown structure defect in
 `AUDIT_AND_TODO.md` was repaired on the way: G-082 and G-083 shared one line.
 
+
+**The phase-2 demo exists, and it is a skin rather than a rewrite.** `~/preview/app-ink/app-ink.html` is the real built app (1,137,073 B from 1,130,591 B, 3 `@font-face` blocks preserved) with one stylesheet spliced in before `</head>` plus an `ink skin: on/off` switch: chrome as glass, one display voice, paper not plastic. Re-running the 172-render scan against the demo keeps every counter at 0 (throws, raw keys, unnamed controls, dead ends, overflow), so the presentation-only claim is measured. Two defects were caught by measurement and fixed: the Latin bar title clipped at `line-height:.9` and the Arabic display title overflowed the 60 px bar at 1.45x (44 / 1.18 = 37.3 px cap → 1.25x). One is open on purpose: the glass cannot be shown passing over content while `file://` leaves the API unreachable — `rider.profile` measured `scrollable: 0` — so D-1.1 (a fetch stub shaped from the API's own fixtures) comes before any taste discussion. **G-093** opened: 17 `Section()` calls vs 20 hand-rolled heads, which is why the skin's head rule missed one screen.
+Plan and per-item checks: [planning/APP_GUI_CHECKLIST.md](../planning/APP_GUI_CHECKLIST.md).
+
 **Nothing was pushed as work-in-progress.** Local `main` is one docs-only commit ahead of the live
 tree; the PAT file was shredded last session and `/tmp` was rehydrated, so the push waits for a
 re-supplied token. The live URL already equals `6dc6ac4`, so no user-visible state changed.
