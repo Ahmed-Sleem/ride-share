@@ -13,6 +13,36 @@ you write).
 
 ---
 
+## 0. Where the app GUI actually is (the service map, verified 2026-09-06)
+
+The owner's correction was right in one respect and the demo was wrong in another, so the map is
+stated from the files rather than from memory:
+
+| Piece | Path | What it is |
+| --- | --- | --- |
+| **The app GUI code** | `apps/web/src/{shell,lib,screens,styles,data}` | 43 page entries across 6 roles in one `PAGES` table, 9 `SHEETS`, 18-component kit, the 1,608-line sheet. This IS the app — not a second codebase. |
+| **The web service** | Railway `web`, built from `apps/web` | serves the landing **and** the signed-in app from the same bundle |
+| **The mobile component** | `apps/mobile` (`server.js` 185, `offline.html` 220, `capacitor.config.json`, `scripts/`, 4 test files) | **an app API, not a website**: `/` is JSON 403, `/v1/*` proxies to the private Nest API, plus `/v1/mobile/update` and `/v1/mobile/bundle` for OTA |
+| **The APK** | Capacitor Android project, `webDir: www` | `apps/mobile/scripts/build.js` assembles `www/` "from the ONE web build … **Never fork screens**" — verified in its header comment |
+| **Native chrome** | `packages/platform/src/index.js` | `Platform.applyChrome` sets the status-bar style per theme (line 204-207); screens never import `@capacitor/*` |
+
+Consequences, each of which the owner's "different component in railway" is about:
+1. **Skinning `apps/web` is skinning the app**, because the APK bakes that same build — and a browser
+   visit to the `mobile` origin serves it too. There is no third GUI to renew.
+2. **The app never appears in the built file unless you are signed in.** `boot()` resolves a session and
+   otherwise calls `guestHome()` → the landing. The first demo therefore showed the landing: the review
+   harness now boots straight into the app (measured after boot: `{view:"app",role:"rider",page:"home",
+   authed:true,landing:false}`) with role/skin/lang/theme buttons.
+3. **Two surfaces live outside `apps/web` and are still pre-renewal.** `apps/mobile/offline.html` ships
+   its own palette (12 hard-coded hexes; the primary action is a `linear-gradient(135deg,#6C63FF,
+   #5A4FD9)` violet gradient — measured on the rendered button: `background-image: linear-gradient
+   (135deg, rgb(108, 9…` and `background-color: rgba(0,0,0,0)`), and `capacitor.config.json` sets
+   `SplashScreen.backgroundColor` to `#6C63FF`, so the first pixels in the APK are off-system while the
+   web splash is `background:var(--paper);color:var(--ink)`. Logged as G-094 and G-095.
+4. `MOBILE_PUBLIC_ORIGIN` is referenced twice in `.github/workflows/ci.yml` (136, 170) but whether the
+   Actions **variable** is populated cannot be checked without the PAT; if unset, an installed APK keeps
+   its baked `www/` and does not live-update. Marked unverified rather than assumed.
+
 ## 1. What the app GUI actually is (inventory, all counted today)
 
 | Layer | Where | Size | Notes |
@@ -62,6 +92,8 @@ changes what "done" should mean here (see §5).
 | A-5 | A comment that misdescribes the code: `SHEETS` says "Safety & support actions arrive in M4 — honest placeholders, no fake calls", but `sosSheet()` composes a real `Banner` + checkbox + `sendSos()`, and `reportSheet`/`shareRideSheet` are wired the same way. Either the comment is stale or the sheets are half-real; must be checked end-to-end against `api.js` before anything else. | `src/shell/app.js:3-6`, `src/screens/rider.js:696-706` |
 | A-6 | 71 raw `px` values in the app's stylesheet region (lines 881→1,608) vs 146 in the first 880 — the landing half was tokenised during the renewal, the app half was not audited. Some are legitimate (hairlines, radii); each needs the §3.3 test. | counted |
 | A-7 | RTL is still hand-written per component for the app: `[dir="rtl"]` and logical overrides exist for `.sheet`, `.toast`, `.qrcode` etc., whereas the landing now centralises direction through tokens (`--lead-display-rtl`, inset/inline-start geometry). | stylesheet survey |
+| A-9 | **`offline.html` duplicates a whole design system** (12 hexes, a violet brand ramp, a gradient button) instead of consuming the ink tokens. *Durable fix:* `apps/mobile/scripts/build.js` already assembles `www/` from the web build — let it inline the token block (and the `@font-face`s) into `offline.html` at build time, so the offline screen cannot drift. A mock of the result is in the demo (`app-ink-offline.html`): flat `rgb(10,10,10)` action on `rgb(255,255,255)` paper, no gradient. |
+| A-10 | `capacitor.config.json` pins `SplashScreen.backgroundColor: "#6C63FF"` while `apps/web`'s splash uses ink tokens; the config is static so it cannot read `brand.json`. *Fix:* generate the file from `packages/brand/brand.json` in the mobile build (the script already loads BRAND), or set it to the ink value, and extend `apps/mobile/tests/config.test.js` — which already reads this file — to pin the colour. |
 | A-8 | The app's intro is a second implementation of what `mkIntro` now does for the landing (`introSlides()` returns `{ic,k,t,b}` records rendered by `introView()`). Not a defect — a convergence opportunity, since both consume the same key shapes. | `src/screens/landing.js:375-379` |
 
 ## 4. Reference material — and the gap

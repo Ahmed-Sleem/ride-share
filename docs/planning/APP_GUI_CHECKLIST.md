@@ -43,6 +43,8 @@ untouched until the owner signs the look off.
   `titleFitsBar:false`) → 1.25× = 35 px/41.3 px, `titleFitsBar:true` on all six shots.
 - [x] **D-0.7** Gaps logged: G-087…G-092 (in `AUDIT_AND_TODO.md`) plus G-093 below.
 
+- [x] **D-0.8** **Consolidation, after the owner's correction.** Their objection was that the demo showed the landing — and it did, because `boot()` sends an unauthenticated visitor there; the app surface only exists when a session resolves. The demo now boots into it (measured: `{view:"app",role:"rider",page:"home",authed:true,landing:false}`) with role/skin/lang/theme buttons, and the service map is written down in `APP_GUI.md` §0 from the files: `apps/mobile/scripts/build.js` assembles the APK's `www/` **"from the ONE web build … Never fork screens"**, so `apps/web/src/**` is confirmed as the app GUI's code and the `mobile` Railway service is its API + packaging. Two surfaces outside `apps/web` turned out to be pre-renewal and are now G-094 (offline.html's violet system, 12 hexes, gradient action — measured on the rendered button) and G-095 (`SplashScreen.backgroundColor:#6C63FF`). One thing stays **unverified**: whether the `MOBILE_PUBLIC_ORIGIN` Actions *variable* is set (ci.yml references it at 136 and 170), because that needs the token.
+
 ## D-1 · make the look judgeable — NEXT session, before any taste is discussed
 
 - [ ] **D-1.1** **The data harness.** Offline (`file://`) the API is unreachable, so data-bearing
@@ -64,6 +66,7 @@ untouched until the owner signs the look off.
 - [ ] **D-1.4** Glass over content, proven on the pixels: bar crop at two scroll positions of a
   *scrolling* screen must differ (my first attempt read `scrollable:0` and was therefore inconclusive —
   not a pass, not a fail).
+- [ ] **D-1.4b** Bring the two mobile surfaces into the renewal: rebuild `offline.html` on the injected ink tokens (G-094) and generate `capacitor.config.json`'s splash colour from `brand.json` (G-095). *Check:* `grep -c '#[0-9A-Fa-f]\{6\}' apps/mobile/offline.html` → 0 outside the injected block, and `config.test.js` pins the splash colour to the brand's ink.
 - [ ] **D-1.5** Staff tables and `wide` density: `--density`/DEC-200 with a sticky head, row height,
   hairline rules only, no shadows; the `.table th` eyebrow treatment already in the skin.
 - [ ] **D-1.6** Motion: confirm `pagefx.js` (already the app's choke point) still arms on every
