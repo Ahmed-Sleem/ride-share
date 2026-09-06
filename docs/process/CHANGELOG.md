@@ -1,4 +1,31 @@
 # CHANGELOG
+## 2026-09-06 — phase 2 opened: the app GUI studied, measured, planned (no code)
+
+Per the owner's instruction, this session prepared only: the current app GUI was inventoried, its
+rules re-read, and its health measured rather than assumed. Plan of record:
+[planning/APP_GUI.md](../planning/APP_GUI.md).
+
+**The app is sound; the gap is design language, not defects.** A new instrument
+(`.vtest/appscan.js`, scratch, outside the repo) renders every surface of the *built* file —
+43 `PAGES` entries across 6 roles × en/ar × light/dark = **172 screens** — and walks visible text
+nodes and focusable controls: **0** render throws, **0** raw copy keys, **0** `undefined`/`NaN`/
+`[object`, **0** unnamed controls, **0** "coming soon" dead ends, **0** horizontal overflow, **0**
+scrollers that miss their own height. The first run reported 4 unnamed controls; all four were
+`<input type="hidden">`, so the probe was wrong and was fixed — the app was not.
+
+**Six findings opened (G-087…G-092).** Two map primitives where `map.js` forbids a second one
+(`RouteMap` 9 calls vs `MapView` 4, staff only) · two orphan screens no nav reaches
+(`comingSoonRider`, `opsStops`) with their copy keys · a `SHEETS` comment claiming the safety
+sheets are "honest placeholders" next to a real `sendSos()` · 643 `t()` sites with **no**
+completeness guard and 20 runtime-built keys the landing's guard cannot see (the guard is
+therefore specified as a render-and-scan, not a literal scan) · the display face used in
+**1** selector of 1,608 and only on the landing · and no app demo in the workspace at all, so
+"strictly look-alike" needs a reference decision (Q-1). A stale markdown structure defect in
+`AUDIT_AND_TODO.md` was repaired on the way: G-082 and G-083 shared one line.
+
+**Nothing was pushed as work-in-progress.** Local `main` is one docs-only commit ahead of the live
+tree; the PAT file was shredded last session and `/tmp` was rehydrated, so the push waits for a
+re-supplied token. The live URL already equals `6dc6ac4`, so no user-visible state changed.
 
 ## 2026-09-04 — renewal round 7: the owner's map back, documents as pages, and a wipe that keeps its frames
 
