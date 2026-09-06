@@ -1028,6 +1028,49 @@ for (const vp of BOUNDARIES) {
     }
   }
 
+  /* A link that only exists as markup. The download anchor was built through $(), whose
+     namespace heuristic put "a" in SVG_TAGS, so the element was a valid SVG anchor with the
+     right class, href and `download` — and no box inside HTML. Every attribute-level assertion
+     passed while the button painted nothing. So the check is namespace plus height, and it
+     insists the QR is still there: the owner asked for a button in addition to the code, not
+     instead of it. */
+  {
+    await page.setViewport({ width: 390, height: 844 });
+    await page.goto(FILE);
+    await settled();
+    const dl = await page.evaluate(() => {
+      S.lang = 'en'; S.theme = 'light'; S.view = 'landing'; S.landingPage = 'download';
+      S.landingMenu = false; S.landingDoc = null; render();
+      const SVG = 'http://www.w3.org/2000/svg';
+      const anchors = [...document.querySelectorAll('a')];
+      const a = anchors.find((n) => n.hasAttribute('download'));
+      const r = a ? a.getBoundingClientRect() : null;
+      const qr = document.querySelector('.landing__qr');
+      const svgControls = [...document.querySelectorAll('.landing .btn, .landing .card, .landing .row')]
+        .filter((n) => n.namespaceURI === SVG);
+      return {
+        anchors: anchors.length,
+        html: !!a && a.namespaceURI !== SVG,
+        box: r ? { w: Math.round(r.width), h: Math.round(r.height) } : null,
+        href: a ? a.getAttribute('href') : null,
+        download: a ? a.getAttribute('download') : null,
+        named: a ? (a.textContent || '').trim().length > 2 : false,
+        qr: !!qr,
+        svgControls: svgControls.map((n) => n.tagName),
+      };
+    });
+    ok('the download page has an anchor to click', dl.anchors > 0, dl.anchors + ' anchors');
+    ok('the download anchor is an HTML link, not an SVG element', dl.html, JSON.stringify(dl.svgControls));
+    ok('the download anchor has a box a finger can hit', !!dl.box && dl.box.h >= 24 && dl.box.w >= 80,
+      JSON.stringify(dl.box));
+    ok('the download anchor names its file and its version',
+      dl.download === 'ride-share.apk' && /\?v=\d+$/.test(dl.href || ''), `${dl.href} ${dl.download}`);
+    ok('the download anchor is labelled', dl.named);
+    ok('the QR is still there beside the button', dl.qr);
+    ok('no landing control is built in the SVG namespace', dl.svgControls.length === 0,
+      dl.svgControls.join(','));
+  }
+
   ok('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
   console.log(`\n──────── landing: ${pass} passed, ${fail} failed ────────`);

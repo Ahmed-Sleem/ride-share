@@ -94,12 +94,22 @@ function mkLede(key) {
 /* Buttons, from keys: { k, go: "signup" | "signin" | <page>, bare }. A page
    action and an auth action are the same shape here so no page builds its own
    click handler and drifts from the routing rules. */
+/* One row of actions, two kinds of action: an internal destination (go) and a real
+   link (href — the APK download, which must be an anchor with a `download` attribute,
+   not a button that pretends). Both render through the same Btn/anchor markup so the
+   site has exactly one action button, on every page, in both languages. */
 function mkActions(acts) {
   return $("div", { class: "landing__acts" }, acts.map((a) => {
+    if (a.href) {
+      return $("a", { class: "btn btn--" + (a.kind || "primary"),
+        attrs: { href: a.href, download: a.download || null } },
+        a.icon ? icon(a.icon) : null, $("span", { text: t(a.k) }));
+    }
     const run = a.go === "signup" ? () => authGo("signup")
       : a.go === "signin" ? () => authGo("signin")
       : () => landingGo(a.go);
-    return Btn({ label: t(a.k), kind: a.bare ? "bare" : (a.kind || "primary"), on: run });
+    return Btn({ label: t(a.k), kind: a.bare ? "bare" : (a.kind || "primary"),
+      icon: a.icon, on: run });
   }));
 }
 
@@ -184,11 +194,14 @@ function mkIntro(o) {
     o.kick ? mkEyebrow(o.kick) : null,
     mkDisplay(o.lines)
   );
-  const foot = $("div", { class: "landing__hero-foot" },
+  const footKids = [
     ...(o.lede ? [mkLede(o.lede)] : []),
     ...(o.prose && o.prose.length ? [mkProse(o.prose)] : []),
     ...(o.actions && o.actions.length ? [mkActions(o.actions)] : [])
-  );
+  ];
+  /* An empty foot is not free: it carries a clamp()ed top margin, so a hero with nothing
+     to say under the title would reserve 2-4rem of blank page. Built only with content. */
+  const foot = footKids.length ? $("div", { class: "landing__hero-foot" }, ...footKids) : null;
   /* `doc` is the document's one departure: the shared head without the one-screen floor. */
   return $("section", { class: "landing__hero" },
     mkRuleField(),
@@ -263,8 +276,7 @@ function mkDownloadCards(opts) {
     $("div", { class: "landing__dlcard", attrs: { "data-rv": "" } },
       $("span", { class: "landing__dlcard-t", text: t("j_dlAndroid") }),
       $("p", { class: "landing__dlcard-s", text: t(o.bodyKey || "j_dlSub") }),
-      $("a", { class: "btn btn--primary", attrs: { href: url, download: BRAND.download.apk } },
-        icon("doc"), $("span", { text: t("j_dlAndroid") })),
+      mkActions([{ k: "j_dlAndroid", href: url, download: BRAND.download.apk, icon: "doc" }]),
       mkInstallQr(url),
       $("div", { class: "landing__dlmeta" },
         code != null ? $("span", { class: "ltr", text: "v" + BRAND.version.name + " (" + code + ")" }) : null,

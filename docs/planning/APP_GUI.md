@@ -187,3 +187,142 @@ not a stylesheet one: the landing's 22 `mk*` builders (`mkSection`, `mkEyebrow`,
 calls against 20 hand-rolled headings (G-093) and its own card/table/row families. The durable shape is
 one component library consumed by both surfaces — the app importing the builders, or the builders
 absorbing the app's needs — with the guard that no screen hand-rolls what a builder already owns.
+
+
+## 9. The auto-update contract, and what a GUI round may touch (2026-09-06, read from the files)
+
+The owner's condition was explicit: *the app is fixed, and once open it calls the server to
+download the GUI — update only the GUI without breaking this architecture*. It was verified by
+reading `apps/mobile/scripts/build.js`, `apps/mobile/server.js` and `apps/mobile/offline.html`
+rather than inferred. There are two planes, and they have different update paths.
+
+**Plane A — delivered over the air, no new binary.** `apps/web/**` → `apps/web/build.js` →
+`apps/mobile/scripts/build.js` takes that HTML and writes it to `apps/mobile/dist/www/index.html`
+with one added tag injecting `window.__RS_SURFACE / __RS_PUBLIC_ORIGIN / __RS_APP_ID /
+__RS_APP_SECRET`. The Railway `mobile` service serves exactly that file at
+`GET /v1/mobile/bundle` (`cache-control: no-store`, `x-rs-sha256`, `x-rs-version-code`), answers
+`GET /v1/mobile/update` with `{versionCode, versionName, sha256, bytes}` (503 `BUNDLE_MISSING`
+when absent), gates both behind `appProof(req)` (HMAC over `appId\nts\nmethod\npath`), keeps `/`
+at 403 `NOT_A_WEBSITE`, maps `/v1/config` to `platform/surface:"mobile"` and proxies `/v1/*` to
+Nest. `bundleMeta()` (server.js:70-84) **hashes the bytes on every request**, so a changed GUI is
+picked up with **no version bump and no second bundling step** — which is why this round added
+neither. The WebView's hop to the live copy is `location.replace(__RS_PUBLIC_ORIGIN)`.
+
+**Plane B — baked into the APK, needs a new binary.** `www/index.html` inside the APK is
+`offline.html` plus the injection tag (that is why an offline device never shows Android's error
+page), together with the generated `capacitor.config.json` (native `SplashScreen.backgroundColor`,
+`androidScheme`, `allowNavigation`), the launcher icons and the permissions.
+
+| What changed this round | Plane | Reaches installed devices? |
+|---|---|---|
+| Page head, poster title, one rhythm, glass, splash/auth/intro skins | A | yes, on next open |
+| `offline.html` ink palette + themed boot | B | only fresh installs (its *colours* also travel as Plane-A copy for the cached-boot path? no — the boot file is baked) |
+| `capacitor.config.json` | generated, B | untouched: editing it by hand is drift, see G-095 |
+| Landing download button, `brand.json` dead field | A / config | landing is the web app, so yes |
+
+The one honest caveat: the **native** splash colour is a single value from `brand.json`
+(`browserThemeColor.light`), so a dark-mode device still flashes paper-white before the boot page
+paints. That is fixed in Android `values-night`, i.e. in the binary, not here.
+
+## 10. Round 9 — the renewal applied to the repo (2026-09-06)
+
+Skin v2 was moved out of `/home/user/preview/app-ink/ink-skin.css` and into
+`apps/web/src/styles/shell.html` + `src/shell/app.js`, with the demo's numbers as the target:
+
+- **The bar is gone as chrome.** `.topbar` is now a two-row head grid — controls above, title
+  below — rendered by the shell as the **first block of `.main__inner`**; `background:transparent`
+  and `border-bottom:0` at rest, `position:sticky;top:0` with `var(--glass)` +
+  `var(--glass-blur)`, and the negative inline margin that lets the blur span the gutter so content
+  emerges from under glass rather than a hard edge. `--topbar-h` is deleted (0 references left).
+- **Poster head.** `--f-poster` / `--fw-heavy` / uppercase / `--lh-poster` / `--measure-poster`,
+  Arabic added to the single display-face list so the head, the auth step title and the intro title
+  take Jomhuria with `--lead-display-rtl`.
+- **One rhythm.** `.main`/`.main__inner` now use `padding-inline:var(--gutter)`,
+  `gap:var(--flow)` and `.main__inner > * { margin-block:0 }`, so head, band and cards share both
+  the inline edge and the block gap (demo: 298/298/298 px edges, every gap `--flow` = 22 px).
+- **Splash, auth, intro**: `.splash__name` on `--f-word`, `.metric` hairline, `.sheet` on glass,
+  `.authmain`/`.authfoot` on `--gutter`, `.authmain .t-head` as a poster head. Measured in the repo
+  build, not only the demo: see §11.
+- **Three literals promoted** (`--track-poster`, `--lh-poster`, `--measure-poster`) and the three
+  components that restated the tracking by hand now read the token:
+  `grep -c "letter-spacing:-.04em" src/styles/shell.html` → **0**.
+- **The download button, and the bug behind it**: the page had the markup and not the control.
+  `SVG_TAGS` in `components.js` claimed `"a"`, so `$()` built an SVG anchor — 0×0 in an HTML document,
+  attributes intact, invisible. Dropping `"a"` from the set (drawing tags only) makes it `238×44`, and
+  `mkActions` now owns the link branch so the card's button and the QR are generated from the same
+  `apkDownloadUrl()`. The hero version was measured and removed (`350×0`), along with the lede that
+  repeated the card's sentence. See G-101 and D-5.1.
+- **Boot page**: `apps/mobile/offline.html` dropped its violet palette, its gradient button and its
+  SVG gradient def (the logo now follows `currentColor`, the way the web logo does), gained a
+  dark-theme block, and takes its typeface from `brand.json` through an **asserted** marker
+  injection in `scripts/build.js`.
+- **Guards**: 2 assertions were re-anchored because their subject legitimately moved, and 4 new
+  ones were added so the new design is pinned rather than assumed — see the commit note.
+
+## 11. Measured on the repo build (not the demo), 2026-09-06
+
+**D-6.1, the OTA proof in two lines.** After the renewal: `apps/mobile/dist/www/index.html` =
+`14cd55544176a1e0…`, 1,137,282 B. What is live now (HEAD's bundle): `9bee41f4df721b23…`,
+1,130,591 B. The bytes changed; `versionName 0.1.0` / `versionCode 3` did not, because
+`bundleMeta()` hashes the file per request rather than trusting a stamp. That is the whole answer to
+"update only the GUI without breaking this arch": no version bump, no new APK, no bundling step
+added — the next open fetches the new HTML. The boot page inside the binary is 98,895 B with the
+two injected `@font-face` blocks, and `document.fonts.size === 2` measured on it.
+
+
+Every number below was read out of `apps/web/dist-preview.html` and
+`apps/mobile/www/offline.html` by `/home/user/.vtest/{finalshots,headbox,glassproof,authtree}.js`
+after `node apps/web/build.js`. The probes are scratch, outside the repo, by design.
+
+| What | Phone 390×844 | Desktop 1280 | How |
+|---|---|---|---|
+| Head height | 87 px EN · 94 px AR | 123 px EN · 141 px AR | `.topbar` rect |
+| Poster size | 28.8 px (clamp floor) | 71.68 px | computed `font-size` |
+| Title transform | uppercase, 850, −1.092 px tracking, 25.662 px leading | same | `--fw-heavy`, `--track-poster`, `--lh-poster` |
+| Inline edges head / band / card | **20 / 20 / 20** | **298 / 298 / 298** | text-box left (RTL-aware) |
+| Column gap | `--flow` 24 px, uniform | 22 px (DEC-200 density) | every consecutive child pair |
+| Head material | `rgba(255,255,255,.62)` + `blur(20px) saturate(1.8)` | same | computed `background`/`backdrop-filter` |
+| Auth title | 27.3 px, uppercase, 850, −1.092 px | — | `.authwrap__card .t-title` |
+| Auth card inset | 20 px (`--gutter`), native border-width 0 | — | `.authwrap` padding |
+| Boot page (in the APK) | light `#FFFFFF`/`#0A0A0A`, dark `#0A0A0A`/`#F2F2F2`, logo fill `rgb(10,10,10)` | — | computed on `www/offline.html` |
+
+Two things the measurement caught that reasoning had missed, both fixed in the same pass:
+
+1. **The head's text was 14 px out of line at desktop** (312 against the band's 298). The
+   cause was not my grid but a pre-existing rule 1,150 lines later —
+   `@media (min-width:1200px){ .topbar{padding-inline:var(--s4)} }`, where `--s4` resolves
+   to 14 px — a leftover of when `.topbar` was chrome whose controls needed edge padding.
+   Setting it to 0 puts head, band and cards on one edge at every width. The full-bleed
+   glass idea was dropped for the same reason it was measured: nothing scrolls outside the
+   756 px column, so a wider strip blurs empty space.
+2. **`.authmain` / `.authfoot` named nothing.** The auth view builds `.authwrap >
+   .authwrap__card` with `h1.t-title` (`src/screens/auth.js:112-118`), so the auth rules my
+   first patch wrote were dead code. Retargeted to `.authwrap__card .t-title` and the two
+   unused rules deleted — which is also why `--hairline` appears nowhere: the app's real
+   hairline token is `--line` (`--ink-200`, `#DEDEDE` / `#262626`), and the auth layer reads
+   the same system as the app rather than a legacy one.
+
+**Token audit** (new guard, `unit` group "EVERY TOKEN RESOLVES"): 189 custom properties are
+used by the app CSS, 212 are declared, and exactly **one** had no definition — `--f-small` on
+`.landing__railink`, the policy rail's link label. The declaration resolved to nothing and the
+label inherited the surrounding body size instead of the scale's small step. Fixed to
+`--f-cap` (13 px, 12 px under density). The name was introduced by **my own round 5**
+(`git log -S"--f-small"` → `059bcef`), which is the point of the guard: no test could see it,
+because a dropped `font-size` still leaves readable text. Logged as G-100.
+
+**Glass, proven rather than asserted**: on `rider/plan` at 1280, scrolled 126 px (that page's
+full overflow), two blocks sit inside the head's box and `elementsFromPoint` at its centre
+returns `topbar__title → topbar → stack → main__inner → main`; cropping the head with the
+blur and fill removed differs by 10,774 PNG bytes. D-1.4's pixel proof, closed.
+
+**Suites on this build**: landing **2773/0** (2766 + the 7 namespace/box assertions) · `unit` 676/0 ·
+`layout` 7570/0 · `a11y` 14/0 · mobile `config.test.js` ok · `node apps/mobile/scripts/build.js` clean,
+`www/offline.html` 98.9 KB with 2 `@font-face` blocks and `document.fonts.size === 2` measured on it.
+
+**One more correction to my own earlier claims, stated plainly.** I wrote, an hour ago, that the card's
+button "was already there" and that the round's job was only to share a builder between the two. That was
+wrong in the way that matters: the button did not work, and the reason was the element factory itself.
+The lesson recorded here is that attribute-level assertions cannot see a missing box — which is exactly
+what the new guard now checks. `--topbar-h` 0 references, 0 hand-written
+`letter-spacing:-.04em` declarations, 0 gradients and 0 violet hexes in `offline.html`,
+`brand.json logo.gradient` deleted.

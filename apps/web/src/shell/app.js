@@ -232,23 +232,31 @@ function renderUnsafe(){
   const col=$("div",{class:"appcol"});
   const isRoot = def.dock === true;
 
-  col.append(topbar({
+  const head=topbar({
     title: def.title ? t(def.title) : t("nav."+def.k),
     back: isRoot ? null : back,
     right: isRoot ? headerActions() : null
-  }));
+  });
   /* Every screen returns a .main. The reading-width wrapper is applied here,
      once, rather than in each of the thirty screen functions. Staff tables
      opt out of the cap because wide data needs the room. The search band is
      the first element inside the scroller, so it scrolls with the page. */
+  /* The head is page content, not chrome. It is the first block of the reading column,
+     then the band, then the screen — so the page opens with its title, all three share
+     one measure and one gap, and nothing is ever hidden under a bar. A screen that
+     returns something other than a .main still gets the head, above it in the column,
+     so no surface can lose its title by construction. */
   const body=def.fn();
   if(body.classList.contains("main")){
     const inner=$("div",{class:"main__inner"});
+    inner.append(head);
     while(body.firstChild) inner.append(body.firstChild);
-    body.append(inner);
-    if(def.wide) body.classList.add("main--wide");
     const band=searchBand();
-    if(band) body.prepend(band);
+    if(band) inner.insertBefore(band, inner.children[1]||null);
+    if(def.wide) body.classList.add("main--wide");
+    body.append(inner);
+  } else {
+    col.append(head);
   }
   col.append(body);
 

@@ -66,7 +66,7 @@ untouched until the owner signs the look off.
 - [ ] **D-1.4** Glass over content, proven on the pixels: bar crop at two scroll positions of a
   *scrolling* screen must differ (my first attempt read `scrollable:0` and was therefore inconclusive —
   not a pass, not a fail).
-- [ ] **D-1.4b** Bring the two mobile surfaces into the renewal: rebuild `offline.html` on the injected ink tokens (G-094) and generate `capacitor.config.json`'s splash colour from `brand.json` (G-095). *Check:* `grep -c '#[0-9A-Fa-f]\{6\}' apps/mobile/offline.html` → 0 outside the injected block, and `config.test.js` pins the splash colour to the brand's ink.
+- [x] **D-1.4b** Bring the two mobile surfaces into the renewal. `offline.html`: violet palette, gradient button and SVG gradient def deleted (the logo follows `currentColor`), dark-theme block added, typeface injected from `packages/brand/brand.json` through an asserted `/*__RS_BRAND__*/` marker in `scripts/build.js`. `capacitor.config.json`: **not hand-edited** — `build.js` generates it from `brand.json`, so the committed `#6C63FF` was stale drift; running the generator brought the committed file into agreement with its source (`backgroundColor:"#FFFFFF"` today), which closes the drift half of G-095 and leaves only the native single-value half. *Checks that pass now:* no `gradient`, no `#6C63FF`/`#8571FF` anywhere in `apps/mobile/offline.html`; its remaining hexes are exactly the app's `#FFFFFF`/`#0A0A0A`/`#525252`; `node --check apps/mobile/scripts/build.js` clean; `apps/mobile/tests/config.test.js` green. *Residual, binary only:* native `SplashScreen.backgroundColor` is single-valued, so a dark-mode cold start flashes paper before the boot page paints (Android `values-night`).
 - [ ] **D-1.5** Staff tables and `wide` density: `--density`/DEC-200 with a sticky head, row height,
   hairline rules only, no shadows; the `.table th` eyebrow treatment already in the skin.
 - [ ] **D-1.6** Motion: confirm `pagefx.js` (already the app's choke point) still arms on every
@@ -75,9 +75,41 @@ untouched until the owner signs the look off.
 
 - [x] **D-1.7 (demo side)** The bar becomes a page head. In the skin: `.topbar` as a two-row grid inside the reading column — controls above, poster underneath. Measured on all 172 surfaces: `headFloor 56`, `headH 219 → 123`, title `--f-poster` 71.68 px / `--fw-heavy` / uppercase, Arabic `--lead-display-rtl`, `overflow 0`, `titleClip false`. The `ar title` button compares Jomhuria against Cairo 900 so the face choice is made from two renderings, not from my preference.
 - [x] **D-1.8 (demo side)** One rhythm: `.main__inner > *{margin-block:0}` and a margin reset on the head title. All 172 surfaces now report `gapTokens: --flow` except 12 whose 44 px sits beside a zero-height placeholder awaiting data (proved by dumping the column children: `{c:"DIV", h:0, mt:0}` — that is the empty-data artifact, not a spacing rule).
-- [ ] **D-1.9 (repo)** `app.js` renders `pageHead({title, back, right})` **inside** `.main__inner` as its first block and `topbar()` retires; `headerActions()` keeps its place in the controls row; the safe-area floor moves from the bar to the head (`padding-block-start:calc(var(--s2) + var(--safe-t))`). *Check:* the layout suite's "chrome is outside the scroller" intent is re-stated — the controls still never scroll away on `wide` screens only if we want that, so decide sticky-vs-not with the owner; the 172-render scan must still read 0 overflow and `headFloor == 56`.
+- [x] **D-1.9 (repo)** The shell renders the head **inside** `.main__inner` as its first block (same `topbar()` builder, so `headerActions()` keeps its row and the back control stays one component), with the safe-area floor moved onto the head. Sticky-vs-not, which this item left to the owner, was decided: **sticky inside the scroller** — the poster stays on screen and the back/account controls can never scroll away, which is what the old 'chrome is outside the scroller' group was really guarding. `--topbar-h` deleted (0 refs). *Checks:* `unit` 674/0 including 4 new head pins (first-block, `position:sticky` + `top:0`, glass painted, band-not-pinned); `layout`'s overlap assertion re-anchored from `main.t>=top.b` to `band.t>=top.b-1` at every viewport.
 - [ ] **D-1.10 (repo)** One component library for both surfaces (G-097): the app consumes the landing's `mk*` builders and every screen head goes through `Section()` (G-093). *Check:* `grep -c 'class:"t-head"' src/screens/*.js` → 0 outside `components.js`, and a unit guard that fails if a builder in `landing-parts.js` gains a landing-only selector that the app cannot use.
-- [ ] **D-1.11 (repo)** Promote the three carried literals to tokens (`--track-poster:-.04em`, `--lh-poster:.94`, `--measure-head:18ch`) with the reason beside each, so the app does not inherit the landing's habit of restating negative tracking per component (§3.3). *Check:* `grep -c -- "-.04em" src/styles/shell.html` → 1 (the token).
+- [x] **D-1.11 (repo)** The three carried literals are tokens (`--track-poster:-.04em`, `--lh-poster:.94`, `--measure-poster:18ch`, declared once in `:root` with the reason beside them) and the three components that restated the tracking by hand (`.intro__t`, one landing display rule, `.landing__slab-t`) now read `var(--track-poster)` — identical computed value, so no landing pixel moves. *Check:* `grep -c 'letter-spacing:-.04em' apps/web/src/styles/shell.html` → **0** (the literal survives only in the token definition). The original '→ 1' was written before the comment that names it was counted, so the check is stated as zero hand-restatements instead.
+
+## D-5 — the landing's app-download action (owner's request, round 8)
+
+- [x] **D-5.1** A download button on the app-download page, **in addition to** the QR (the QR stays —
+  it is the route for a phone across the room, and `lib/qr.js` exists because a code that cannot scan is a
+  lie). **What was actually wrong:** the button was in the code all along but invisible — `$("a", …)`
+  resolved to the SVG namespace through `SVG_TAGS`, so the anchor had a `0×0` box. `components.js` no
+  longer treats `"a"` as a drawing tag; the card's link is now produced by the shared `mkActions`
+  (`href`/`download` branch) from the same `apkDownloadUrl()` the QR encodes, so label, version stamp and
+  file name cannot drift. Measured at 390: `238×44`, `href=/download/android?v=3`,
+  `download=ride-share.apk`, directly above the QR. **Considered and rejected:** the hero as its home —
+  `.landing__hero-foot` at ≤899 is a two-column text grid whose implicit row measured `350×0`, and the
+  landing keeps its calls to action in the bar by an earlier decision. The hero's `j_dlSub` lede was
+  dropped with it: the card one screen below says that sentence already.
+  *Checks:* 7 new assertions in `landing.test.js` (namespace, box ≥24px, `?v=` stamp, label, QR present,
+  no `.btn/.card/.row` in the SVG namespace) · landing **2773/0** · `grep -c '$("a"' apps/web/src/lib/landing-parts.js` → 1.
+
+## D-6 — OTA proof and delivery
+
+- [x] **D-6.1** OTA proof, done: `node apps/web/build.js && node apps/mobile/scripts/build.js` →
+  `apps/mobile/dist/www/index.html` is `14cd55544176a1e0…` / 1,137,282 B against the live
+  `9bee41f4df721b23…` / 1,130,591 B, while `versionName 0.1.0` and `versionCode 3` stay put — the hash
+  moves and the stamp does not, which is precisely what `server.js`'s `bundleMeta()` (sha256 per
+  request) is for. No second bundling step was added anywhere. Numbers in `APP_GUI.md` §11.
+- [ ] **D-6.2** Push to `main`, let Railway redeploy, then `cmp` the served bundle against
+  `apps/web/dist-preview.html` (the round-6/7 method, ≈80 s for the redeploy). **Blocked:**
+  `/tmp/.tok` no longer exists, so the owner must re-create it; local `main` is 5 commits ahead of
+  live (`6dc6ac4`).
+- [ ] **D-6.3** Owner decision (G-099): move `--paper`/`--ink`/`--muted`/`--hairline` into
+  `packages/brand/brand.json` so the baked boot page and the app share one colour source instead of
+  mirroring each other by hand. Recommendation: yes — 6 keys, and it deletes the last duplicated
+  palette; it is an owner decision because the API build reads `brand.json` too.
 
 ## D-2 · the owner's round (sign-off)
 

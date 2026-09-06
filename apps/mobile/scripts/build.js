@@ -64,6 +64,27 @@ if (!fs.existsSync(bootSrc)) {
 }
 const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
 let boot = fs.readFileSync(bootSrc, "utf8");
+/* The boot page is inside the binary and cannot fetch the app's stylesheet, so the
+   typeface is handed to it here, from the same brand.json the web build reads. The
+   marker is asserted on purpose: a silently missed injection would leave the splash on
+   a system font, and nobody would notice until two screens were compared. */
+const BRAND_CSS_MARK = "/*__RS_BRAND__*/";
+if (!boot.includes(BRAND_CSS_MARK)) throw new Error("apps/mobile/offline.html: brand CSS marker missing");
+/* @font-face blocks are taken from the web build's own output, where they are already
+   base64-inlined. That is deliberate: naming a family the APK never ships would leave the
+   boot page on Roboto and look like a match without being one, and pointing at a path
+   build.js invented would be a second source of truth about where the fonts live. */
+const faces = (fs.readFileSync(webHtml, "utf8").match(/@font-face\s*\{[^}]*\}/g) || []).join("");
+if (!faces) throw new Error("web build contains no @font-face block — refusing to ship a boot page on a system font");
+/* The declarations go inside the boot page's :root, the @font-face blocks must NOT: an
+   at-rule nested in a style rule is invalid and is dropped in silence, which is how the
+   first version of this injection shipped a boot page that named Cairo and loaded nothing.
+   Two markers, two positions, both asserted. */
+const FACES_MARK = "/*__RS_FACES__*/";
+if (!boot.includes(FACES_MARK)) throw new Error("apps/mobile/offline.html: faces marker missing");
+boot = boot.replace(FACES_MARK, "<style>" + faces + "</style>");
+boot = boot.replace(BRAND_CSS_MARK,
+  "--brand-font:" + BRAND.font.family + ";--brand-font-weight:" + BRAND.font.weight);
 if (boot.includes("</head>")) boot = boot.replace("</head>", inject + "</head>");
 else boot = inject + boot;
 fs.writeFileSync(path.join(www, "index.html"), boot);

@@ -111,17 +111,48 @@ group("SHELL OCCUPIES EXACTLY ONE VIEWPORT");
   ok("main contains its overscroll", !!main && /overscroll-behavior:contain/.test(main));
 }
 
+group("EVERY TOKEN RESOLVES (a name nothing defines drops a declaration in silence)");
+{
+  // definitions = "--x:" anywhere in the stylesheet or in a JS inline style, plus
+  // setProperty("--x") for the runtime tokens (viewport height, reveal delays).
+  const declared=new Set();
+  for (const src of [CSS, SRC])
+    for (const m of src.matchAll(/(--[a-z0-9]+(?:-[a-z0-9]+)*)\s*:/g)) declared.add(m[1]);
+  for (const m of SRC.matchAll(/setProperty\(\s*"?(--[a-z0-9-]+)"?/g)) declared.add(m[1]);
+  const used=[...new Set([...CSS.matchAll(/var\(\s*(--[a-z0-9]+(?:-[a-z0-9]+)*)/g)].map(m=>m[1]))];
+  const missing=used.filter(n=>!declared.has(n));
+  ok("every var() in the app CSS has a source", missing.length===0, missing.join(",")||"clean");
+  ok("the audit is not vacuous (tokens are actually counted)", used.length>80, used.length+" tokens used");
+}
+
 group("CHROME IS OUTSIDE THE SCROLLER (nothing scrolls away)");
 {
   const t=boot();
   t.go("rider","home");
   const main=t.q(".main"), app=t.q(".app");
-  for(const [name,sel] of [["top bar",".topbar"],["navigation",".nav"]]){
+  /* Round 9 moved the page head INTO the page (the owner asked for a page that opens
+     with its title, not a bar). Reachability was the point of this group, and it is now
+     delivered differently: the navigation is still outside the scroller, and the head is
+     pinned with position:sticky inside it. So each control is checked the way it is now
+     guaranteed — and both checks can still fail. */
+  const headRule=rule(".topbar");
+  for(const [name,sel] of [["navigation",".nav"]]){
     const el=t.q(sel);
     ok(`${name} exists`, !!el);
     ok(`${name} is NOT inside the scrolling region`, !!el && !main.contains(el));
   }
   ok("top bar cannot shrink",   /flex:none/.test(rule(".topbar")||""));
+  {
+    const t=boot(); t.go("rider","home");
+    const inner=t.q(".main__inner"), head=t.q(".main__inner > .topbar");
+    ok("the page head is the first block of the page", !!inner && inner.firstElementChild===head);
+    ok("the head is pinned inside the scroller (sticky, not fixed)",
+       /position:sticky/.test(rule(".topbar")||"") && /top:0/.test(rule(".topbar")||""));
+    ok("the head paints, so scrolled content never collides with the title",
+       /background:var\(--glass\)/.test(rule(".topbar")||"") &&
+       /backdrop-filter:var\(--glass-blur\)/.test(rule(".topbar")||""));
+    ok("nothing but the head precedes it", !!head && !head.previousElementSibling);
+  }
   ok("navigation cannot shrink", /flex:none/.test(rule(".nav")||""));
   ok("navigation is a direct child of the app", t.q(".nav").parentElement===app);
   ok("no fixed/absolute positioning on the nav", !/position:\s*(fixed|absolute)/.test(rule(".nav")||""));
@@ -139,9 +170,19 @@ group("SEARCH BAND IS THE FIRST THING IN THE PAGE (scrolls with content)");
   const band=t.q(".searchband");
   ok("search band exists", !!band);
   ok("band is inside the scrolling region", !!band && !!main && main.contains(band));
-  ok("band is the first element of the page",
-     !!band && !!main && main.firstElementChild===band,
-     (main && main.firstElementChild && main.firstElementChild.className)||"none");
+  // The head is the first block of the page now; the band is the first CONTENT block,
+  // directly after it and still scrolling with the page (the defect this guard exists for
+  // is a band that was pinned as chrome, or buried under the list).
+  ok("band follows the page head in the column",
+     !!band && !!band.previousElementSibling &&
+     band.previousElementSibling.classList.contains("topbar"));
+  /* Round 9: the head is the page's first block, so "first element of the page" is
+     carried by "band follows the page head in the column" (same file, chrome group) —
+     a duplicate of the same fact would only double the maintenance. What stays guarded
+     here is the other half of the original defect: a band promoted to chrome. It must
+     scroll with the page it belongs to. */
+  ok("band is content, not pinned chrome",
+     !!band && !/position:\s*(sticky|fixed)/.test(rule(".searchband")||""));
   ok("no divider under the band", !/border-bottom/.test(rule(".searchband")||""));
   const sb=t.q(".searchband .searchbar");
   ok("the band holds a search control", !!sb);

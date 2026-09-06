@@ -164,10 +164,15 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
         if(vp.nav==="rail-wide")
           ok(`${id}: expanded rail shows labels`, m.labelShown);
 
-        // 5. chrome does not overlap the scroller
-        if(m.top && m.main)
-          ok(`${id}: top bar does not overlap content`,
-             m.main.t>=m.top.b-1, `main.t=${m.main.t} top.b=${m.top.b}`);
+        // 5. the head is the page's first block, so nothing may sit under it.
+        //    Round 9 retired "the scroller starts below a fixed bar" (m.main.t>=m.top.b):
+        //    the head moved into the column, so that comparison is now the wrong contract.
+        //    The guarantee it existed for is measured directly instead â€” the first block
+        //    of content begins at or below the head's bottom on every viewport. If the
+        //    head ever stopped reserving its own height, this number catches it.
+        if(m.top && m.band)
+          ok(`${id}: content starts below the page head`,
+             m.band.t>=m.top.b-1, `band.t=${m.band.t} top.b=${m.top.b}`);
         if(m.band && m.main)
           ok(`${id}: search band sits inside the scroller`,
              m.band.t>=m.main.t-1 && m.band.b<=m.main.b+1,

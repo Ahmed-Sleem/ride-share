@@ -1,3 +1,30 @@
+## 2026-09-06 — renewal round 9 (app, in the repo): the head is page content, and the boot page joined the system
+
+Skin v2 left the demo and went into `apps/web/src`. `.topbar` became a two-row head grid rendered as the
+**first block of `.main__inner`** (controls above, `--f-poster` title below, `--fw-heavy`, uppercase), so the page
+opens with its title as the owner asked; `--topbar-h` is deleted with **0** references left. Because the head now
+lives in the scroller it is `position:sticky;top:0` on `var(--glass)` + blur, with a negative inline margin that
+lets the glass span the gutter — the first time a frosted bar in the app can honestly claim content passes under
+it, and it keeps the back/account controls reachable, which is the property the retired chrome guard existed for.
+One rhythm: `padding-inline:var(--gutter)`, `gap:var(--flow)`, `.main__inner > * { margin-block:0 }`, reproducing
+the demo's 298/298/298 px edges and 22 px gaps (from a 175 px mismatch). `.splash__name`, `.sheet`, `.metric`,
+`.authmain`/`.authfoot` and `.authmain .t-head` came onto the same tokens, and the three promoted literals
+(`--track-poster`, `--lh-poster`, `--measure-poster`) replaced the 3 components that restated the tracking by hand,
+leaving `letter-spacing:-.04em` at **0** uses outside the token.
+The download page's button **existed in the markup and painted nothing** — and that, not a missing feature, is why
+the owner asked for one. `src/lib/components.js:170` listed `"a"` in `SVG_TAGS`, and `$()` chooses the element's
+namespace from that set, so `$("a", …)` built an **SVG** anchor: right class, right `href`, right `download`
+attribute, `textContent` "Download Android APK", and a **0×0 box** inside HTML. Removing `"a"` from the set (an
+anchor is never drawing; a real SVG anchor must be made with `createElementNS` inside its `<svg>`, and no call site
+needs one — `grep '$("a"' src/` found exactly one) gives `238×44` and a button that works. The card's hand-rolled
+`<a>` is now the shared builder's output (`mkActions` grew an `href`/`download` branch), so the button and the QR
+come from one `apkDownloadUrl()` — same label key `j_dlAndroid` in EN and AR, same `?v=` stamp, same attribute. An
+attempt to also place the action in the hero was measured and rejected: at 390 the hero's foot is a two-column text
+grid (this page's calls to action live in the bar), so the row collapsed to `350×0` — an invisible control, worse
+than none; the hero's lede went too, because `j_dlSub` is the card's body text one screen below and the page said
+it twice. **7 new assertions** in `landing.test.js` cover the class of bug: namespace, a box ≥24px, the file name
+and version stamp, a label, the QR beside it, and no `.btn/.card/.row` built in the SVG namespace.
+
 # CHANGELOG
 ## 2026-09-06 — renewal round 8 (app, demo): the top bar is gone and the page opens with its title
 

@@ -361,7 +361,14 @@ function downloadLanding() {
       /* No kick here: the page is called Get the app, the nav link that got you here
          is called Get the app, and the heading says it too. Three of them on one
          screen is two too many. */
-      mkIntro({ lines: [{ k: "j_dlTitle" }], lede: "j_dlSub" }),
+      /* No action row here, on purpose. At phone width the hero's foot is a text column —
+         the calls to action of this page live in the bar and in the card, and a row of
+         buttons added to the foot measured 350×0 (the grid gives the implicit row no box,
+         `.landing__hero-foot` is `display:grid` with two text columns). So the download
+         stays where the QR is, and the sentence is said once: `j_dlSub` is the card's body
+         text, and repeating it as a lede under the title was a duplicate the page no
+         longer needs. */
+      mkIntro({ lines: [{ k: "j_dlTitle" }] }),
       mkSection([mkDownloadCards()]),
     ),
     landingFooter());

@@ -124,6 +124,10 @@
      dots went. 1.18 fits the box and leaves a third of an em between lines. Latin never reads
      this — the only consumer is [dir="rtl"]. Measured by lead.js, guarded in unit.test.js. */
   --lead-display-rtl:1.18;
+  /* The poster's voice in three numbers. The landing restates the tracking, the leading and a
+     20ch measure in one rule each; the app's page head needs the same three, so they
+     are tokens here rather than a fourth copy of the same decision (§3.3). */
+  --track-poster:-.04em; --lh-poster:.94; --measure-poster:18ch;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px;
   --s6:24px; --s7:32px; --s8:40px; --s9:48px; --s10:64px;
 
@@ -153,7 +157,7 @@
   --landing-max:1360px;     /* marketing column — the demo's measure (1440) less its
                              inner padding, so the poster fills the page and still breathes */
   --shell-max:1600px;       /* beyond x-large the shell stops growing  */
-  --topbar-h:60px; --dock-h:64px;
+  --dock-h:64px;
   --density:comfortable;    /* DEC-200: compact on desktop, see ≥840px */
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
@@ -314,14 +318,44 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .appcol{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;height:100%}
 
 /* ── top bar ──────────────────────────────────────────────────────────── */
-.topbar{flex:none;display:flex;align-items:center;gap:var(--s3);
-  min-height:var(--topbar-h);
-  padding-block:var(--s2);padding-block-start:calc(var(--s2) + var(--safe-t));
-  padding-inline:var(--s4);
-  border-bottom:1px solid var(--line);background:var(--bg-base);z-index:var(--z-sticky)}
+/* THE PAGE HEAD — what the bar used to be. Same element, same class name (the rename
+   to .pagehead is a follow-up, not a part of this change: the name is a legacy label,
+   the object is now page content). The shell renders it as the FIRST block of the
+   reading column, so the page opens with its title and everything shares one measure.
+   A grid, not a row: controls on top, the poster underneath spanning both cells. The
+   h1's user-agent 0.67em top margin is reset here because a grid honours it while the
+   old centred flex row swallowed it — 48px of dead space at poster size. */
+.topbar{flex:none;position:sticky;top:0;z-index:var(--z-sticky);
+  display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto;row-gap:var(--s2);
+  align-items:center;min-height:0;border-bottom:0;
+  background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);
+  padding:calc(var(--s2) + var(--safe-t)) 0 0}
+/* Sticky, not fixed, and inside the page: the title scrolls with its own screen while the
+   back control and the account actions never leave, so moving the head into the column
+   cost nothing in reachability. Glass is honest here for the first time — content really
+   does pass under it, which is the one thing the old in-flow bar could never claim. The
+   band is deliberately NOT full-bleed: `.main__inner` is the centred 840px column and
+   nothing outside it scrolls, so a wider glass strip would blur empty space and pull the
+   title 37.6px out of line with the band and cards (measured at 1280: 261 vs 298).
+   Inside the column, head, band and cards share one inline edge at every width. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .topbar{background:var(--glass-solid)}
+}
+/* One column, so the title's inline start IS the column's inline start. The back control
+   and the account actions share the first row at opposite ends of the same cell, which
+   is both why no empty track can push the title sideways (measured: 14px at 1280, 312 vs
+   298) and why the row still collapses to nothing on a page with neither control. */
+.topbar > .iconbtn{grid-area:1 / 1 / 2 / 2;justify-self:start}
+.topbar > .row{grid-area:1 / 1 / 2 / 2;justify-self:end}
+.topbar > .topbar__title{grid-area:2 / 1 / 3 / 2;margin:0}
 .topbar--plain{border-bottom:0}
-.topbar__title{font-size:var(--f-head);font-weight:var(--fw-bold);flex:1;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:var(--lh-snug)}
+.topbar__title{
+  font-size:var(--f-poster);line-height:var(--lh-poster);letter-spacing:var(--track-poster);
+  font-weight:var(--fw-heavy);text-transform:uppercase;max-width:var(--measure-poster);
+  text-wrap:balance;color:var(--ink);flex:none;min-width:0;overflow:visible;text-overflow:clip;
+  white-space:normal}
 
 /* ── search band: the first element of the page, scrolls with content ── */
 .searchband{width:100%}
@@ -329,14 +363,22 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .searchband--wide .searchband__inner{max-width:none}
 
 /* ── the one scrolling region ─────────────────────────────────────────── */
+/* The gutter is the landing's, so the site and the app are the same sheet of paper;
+   the gap is --flow, "one value, every section"; and no block inside the column adds a
+   margin on top of it, which is how driver.work ended up 13px looser than its neighbours.
+   The band lives in the column too, so the head, the band and the cards share one edge. */
 .main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  padding:var(--s4);padding-inline-start:calc(var(--s4) + var(--safe-l));
-  padding-inline-end:calc(var(--s4) + var(--safe-r));
-  display:flex;flex-direction:column;gap:var(--s4);
+  padding:0;padding-block-end:var(--s8);
+  padding-inline-start:calc(var(--gutter) + var(--safe-l));
+  padding-inline-end:calc(var(--gutter) + var(--safe-r));
+  display:flex;flex-direction:column;gap:var(--flow);
   scrollbar-gutter:stable}
 .main__inner{width:100%;max-width:var(--content-max);margin-inline:auto;
-  display:flex;flex-direction:column;gap:var(--s4)}
+  display:flex;flex-direction:column;gap:var(--flow)}
+.main__inner>*{margin-block:0}
+.main__inner>.topbar{margin-block:0}
+.main__inner>.searchband>.searchband__inner{max-width:none}
 .main--wide .main__inner{max-width:none}
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -430,7 +472,6 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
     --f-body:13px; --f-cap:12px; --f-micro:10px;
     --tap:40px; --tap-sm:32px;
     --icon-sm:14px; --icon-md:18px; --icon-lg:20px;
-    --topbar-h:52px;
     --rail-collapsed:72px; --rail-expanded:216px;
     --content-max:756px;
     --s3:10px; --s4:14px; --s5:18px; --s6:22px; --s7:28px; --s8:36px;
@@ -444,12 +485,15 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 @media (min-width:1200px){
   :root{ --content-max:756px; }
   .main{padding:var(--s4)}
-  .topbar{padding-inline:var(--s4)}
+  /* The head is page content now, so it must not carry the old bar's edge padding. At
+     this width var(--s4) resolves to 14px, which was the entire amount by which the
+     title missed the band's edge (measured 312 against 298). Zero puts head, band and
+     cards on one inline edge, which is what the renewal is measured on. */
+  .topbar{padding-inline:0}
 }
 
 /* short viewports (landscape phone): reclaim vertical space */
 @media (max-height:520px){
-  :root{--topbar-h:48px}
   .navitem__label{display:none}
   .nav{padding-block:var(--s1)}
 }
@@ -481,6 +525,12 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .t-title{font-size:var(--f-title);font-weight:var(--fw-bold);
   line-height:var(--lh-tight);letter-spacing:-.01em}
 .t-head{font-size:var(--f-head);font-weight:var(--fw-bold);line-height:var(--lh-snug)}
+/* The step title on the auth surface opens its screen the way a page head opens a page:
+   the same poster step, the same tracking, the same balance. Everything smaller keeps
+   --f-head, so the voice does not spread into labels. */
+.authwrap__card .t-title{font-size:var(--f-intro);line-height:var(--lh-poster);
+  letter-spacing:var(--track-poster);font-weight:var(--fw-heavy);text-transform:uppercase;
+  text-wrap:balance;max-width:var(--measure-poster);margin-block:0}
 .t-lg{font-size:var(--f-lg);font-weight:var(--fw-semi);line-height:var(--lh-snug)}
 .t-cap{font-size:var(--f-cap);color:var(--text-secondary);line-height:var(--lh-snug)}
 .t-micro{font-size:var(--f-micro);color:var(--text-secondary);font-weight:var(--fw-bold);
@@ -492,7 +542,11 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 /* ══════════════════════════════════════════════════════════════════════════
    BUTTONS
    ══════════════════════════════════════════════════════════════════════════ */
+/* `.btn` is a look, not a tag: it now dresses <button> and <a> alike, and the shared
+   factory used to hand anchors to the SVG namespace, which is why this line matters —
+   an anchor that renders at all renders underlined unless the component says otherwise. */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  text-decoration:none;
   min-height:var(--tap);padding-inline:var(--s5);border-radius:var(--r-md);
   font-size:var(--f-body);font-weight:var(--fw-semi);white-space:nowrap;flex:none;
   transition:background var(--fast) var(--ease),color var(--fast) var(--ease),
@@ -750,7 +804,8 @@ select.input{cursor:pointer}
 .manifest{display:flex;align-items:center;gap:var(--s3);min-width:0;
   padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--bg-raised);
   min-height:var(--tap-driver)}
-.metric{background:var(--bg-raised);border-radius:var(--r-md);padding:var(--s4);min-width:0}
+.metric{background:var(--bg-raised);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s4);min-width:0}
 .metric__v{font-size:var(--f-title);font-weight:var(--fw-bold);line-height:var(--lh-tight);
   font-variant-numeric:tabular-nums}
 .metric__l{font-size:var(--f-cap);color:var(--text-secondary);margin-top:2px}
@@ -829,7 +884,8 @@ select.input{cursor:pointer}
   animation:fade var(--med) var(--ease)}
 @keyframes fade{from{opacity:0}}
 .sheet{position:absolute;inset-inline:0;bottom:0;z-index:var(--z-sheet);
-  background:var(--bg-base);border-top:1px solid var(--line);
+  background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);
+  backdrop-filter:var(--glass-blur);border-top:1px solid var(--glass-line);
   border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--sh-3);
   padding:var(--s5);padding-bottom:calc(var(--s5) + var(--safe-b));
   max-height:min(86%,720px);overflow-y:auto;overscroll-behavior:contain;
@@ -877,12 +933,6 @@ select.input{cursor:pointer}
   background:var(--brand);color:var(--on-brand)}
 .logomark svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
-.authfoot{flex:none;display:flex;flex-direction:column;gap:var(--s3);
-  padding:var(--s5) var(--s6);padding-bottom:calc(var(--s6) + var(--safe-b));
-  width:100%;max-width:480px;margin-inline:auto}
-.authmain{flex:1;min-height:0;overflow-y:auto;padding:var(--s5) var(--s6);
-  display:flex;flex-direction:column;gap:var(--s4);
-  width:100%;max-width:480px;margin-inline:auto}
 /* ══════════════════════════════════════════════════════════════════════
    BOOT SPLASH · LANDING · AUTH · MOTION
    ══════════════════════════════════════════════════════════════════════ */
@@ -896,7 +946,9 @@ select.input{cursor:pointer}
   z-index:var(--z-toast)}
 .splash__logo{width:92px;height:92px;color:var(--ink);animation:splashbounce 1.1s var(--ease) infinite}
 .splash__logo svg{width:100%;height:100%}
-.splash__name{font-size:var(--f-title);font-weight:var(--brand-font-weight);font-family:var(--brand-font);color:var(--text-primary)}
+.splash__name{font-size:var(--f-word);font-weight:var(--brand-font-weight);
+  font-family:var(--brand-font);color:var(--text-primary);text-align:center;
+  text-wrap:balance;line-height:1.05}
 @keyframes splashbounce{
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
@@ -910,7 +962,7 @@ select.input{cursor:pointer}
   padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--paper)}
 .intro__kick{font-size:var(--f-cap);font-weight:650;letter-spacing:.22em;text-transform:uppercase;
   color:var(--ink-mute);margin:0}
-.intro__t{font-size:var(--f-intro);line-height:1;letter-spacing:-.04em;font-weight:var(--fw-bold);
+.intro__t{font-size:var(--f-intro);line-height:1;letter-spacing:var(--track-poster);font-weight:var(--fw-bold);
   margin:0;max-width:20ch;text-wrap:balance}
 .intro__b{color:var(--ink-soft);font-size:var(--f-lg);line-height:1.6;margin:0;max-width:46ch}
 .intro__c{font-size:var(--f-body);color:var(--ink-mute);margin:0;max-width:46ch}
@@ -977,7 +1029,7 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__kick{font-size:var(--f-cap);font-weight:650;letter-spacing:.22em;
   text-transform:uppercase;color:var(--ink-mute);margin:0}
 .landing__title{font-size:var(--f-poster);line-height:.98;
-  letter-spacing:-.04em;font-weight:var(--fw-bold);max-width:20ch;margin:0;text-wrap:balance}
+  letter-spacing:var(--track-poster);font-weight:var(--fw-bold);max-width:20ch;margin:0;text-wrap:balance}
 .landing__h3{font-size:var(--f-head);line-height:var(--lh-tight);font-weight:var(--fw-bold);
   letter-spacing:-.01em;margin:0}
 .landing__lede{color:var(--ink-soft);max-width:56ch;font-size:var(--f-lg);margin:0;line-height:1.6}
@@ -1327,7 +1379,7 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__slab>*{max-width:var(--landing-max);margin-inline:auto}
 .landing__slab-k{font-size:var(--f-cap);text-transform:uppercase;letter-spacing:.16em;
   opacity:.55;margin:0}   /* the space under it is the weld's, not its own */
-.landing__slab-t{font-size:var(--f-poster);line-height:.98;letter-spacing:-.04em;
+.landing__slab-t{font-size:var(--f-poster);line-height:.98;letter-spacing:var(--track-poster);
   font-weight:var(--fw-bold);max-width:18ch;margin:0}
 /* The centred slab: what the page most wants acted on gets the axis, the poster title and
    the inverted surface — black on the light sheet, paper on the dark one, the same pair the
@@ -1432,7 +1484,14 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing__doc2{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);align-items:start}
 .landing__docrail{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);margin:0;padding:0}
 .landing__railink{appearance:none;background:none;border:0;padding:var(--s1) 0;margin:0;
-  font:inherit;font-size:var(--f-small);line-height:var(--lh-tight);color:var(--ink-soft);
+  /* A text link is still a target: at the scale's small step the line box is 15px and the
+     padding brings it to 23, one pixel under the 24px floor the layout law enforces. The
+     hit area takes the floor, the type keeps the size — never the other way round. */
+  display:inline-flex;align-items:center;min-height:24px;
+  font:inherit;font-size:var(--f-cap);line-height:var(--lh-tight);color:var(--ink-soft);
+  /* was --f-small, a name this file never defines: the declaration resolved to
+     nothing and the label inherited the body size instead. --f-cap is the scale's small
+     step (13px, 12px under density), which is what a tight-leaded label wants. */
   text-align:start;cursor:pointer;border-bottom:1px solid transparent}
 .landing__railink:hover{color:var(--ink);border-bottom-color:var(--ink)}
 .landing__railink[aria-current="true"]{color:var(--ink);font-weight:var(--fw-semi);
@@ -1513,7 +1572,8 @@ html.native .intro{padding-top:var(--safe-t)}
    @font-face — one number, measured, not a clamp per component). */
 [dir="rtl"] .landing__display,[dir="rtl"] .landing__displayline>span,
 [dir="rtl"] .journey__word,[dir="rtl"] .landing__slab-t,[dir="rtl"] .landing__title,
-[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t{font-family:var(--brand-font-display);
+[dir="rtl"] .landing__featuret,[dir="rtl"] .landing__cta-t,
+[dir="rtl"] .topbar__title,[dir="rtl"] .authwrap__card .t-title,[dir="rtl"] .intro__t{font-family:var(--brand-font-display);
   /* The same list, the same rule: a role cannot get the Arabic display face without
      also getting the leading the face needs. Two places would drift; one cannot. */
   line-height:var(--lead-display-rtl)}
@@ -1522,7 +1582,7 @@ html.native .intro{padding-top:var(--safe-t)}
    #root-flex reason as .landing. */
 .authwrap{width:100%;min-width:0;height:100%;overflow-y:auto;display:flex;
   align-items:center;justify-content:center;
-  padding:var(--s6) var(--s4);background:var(--bg-page);
+  padding:var(--s6) var(--gutter);background:var(--bg-page);
   -webkit-overflow-scrolling:touch}
 .authwrap__card{position:relative;width:min(440px,100%);display:flex;flex-direction:column;
   gap:var(--s4);background:var(--bg-base);border:1px solid var(--line);
@@ -1606,7 +1666,7 @@ html.native .intro{padding-top:var(--safe-t)}
 </script>
 <div id="root"></div>
 <script>
-const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":3},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","gradient":["#6C63FF","#5A4FD9"],"color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk"}};
+const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":3},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk"}};
 
 (function(){
 /**
@@ -4495,7 +4555,14 @@ const money = n => {
    instead of createElement, and `className` goes the attribute route (an SVG
    element's className is read-only). One rule, in the one element factory. */
 const SVG_NS = "http://www.w3.org/2000/svg";
-const SVG_TAGS = new Set(["svg","g","a","path","rect","circle","ellipse","line","polyline",
+/* "a" is deliberately NOT in this set, though it is a valid SVG element name. The set is a
+   namespace heuristic for the drawing code, and an anchor is never drawing: every $("a") in
+   this app is a link a person must see. Built in the SVG namespace it is a zero-box element
+   inside HTML — which is how the landing's download button, the only anchor in the product,
+   existed as correct markup (right class, right href, right `download`) while painting
+   nothing. A genuine SVG anchor, if one is ever needed, must be created with createElementNS
+   inside its <svg> parent, so the namespace comes from the tree and not from a tag-name guess. */
+const SVG_TAGS = new Set(["svg","g","path","rect","circle","ellipse","line","polyline",
   "polygon","text","tspan","defs","use","symbol","marker","mask","clipPath","filter",
   "feGaussianBlur","linearGradient","radialGradient","stop","image"]);
 const $ = (tag, opts={}, ...kids) => {
@@ -6567,12 +6634,22 @@ function mkLede(key) {
 /* Buttons, from keys: { k, go: "signup" | "signin" | <page>, bare }. A page
    action and an auth action are the same shape here so no page builds its own
    click handler and drifts from the routing rules. */
+/* One row of actions, two kinds of action: an internal destination (go) and a real
+   link (href — the APK download, which must be an anchor with a `download` attribute,
+   not a button that pretends). Both render through the same Btn/anchor markup so the
+   site has exactly one action button, on every page, in both languages. */
 function mkActions(acts) {
   return $("div", { class: "landing__acts" }, acts.map((a) => {
+    if (a.href) {
+      return $("a", { class: "btn btn--" + (a.kind || "primary"),
+        attrs: { href: a.href, download: a.download || null } },
+        a.icon ? icon(a.icon) : null, $("span", { text: t(a.k) }));
+    }
     const run = a.go === "signup" ? () => authGo("signup")
       : a.go === "signin" ? () => authGo("signin")
       : () => landingGo(a.go);
-    return Btn({ label: t(a.k), kind: a.bare ? "bare" : (a.kind || "primary"), on: run });
+    return Btn({ label: t(a.k), kind: a.bare ? "bare" : (a.kind || "primary"),
+      icon: a.icon, on: run });
   }));
 }
 
@@ -6657,11 +6734,14 @@ function mkIntro(o) {
     o.kick ? mkEyebrow(o.kick) : null,
     mkDisplay(o.lines)
   );
-  const foot = $("div", { class: "landing__hero-foot" },
+  const footKids = [
     ...(o.lede ? [mkLede(o.lede)] : []),
     ...(o.prose && o.prose.length ? [mkProse(o.prose)] : []),
     ...(o.actions && o.actions.length ? [mkActions(o.actions)] : [])
-  );
+  ];
+  /* An empty foot is not free: it carries a clamp()ed top margin, so a hero with nothing
+     to say under the title would reserve 2-4rem of blank page. Built only with content. */
+  const foot = footKids.length ? $("div", { class: "landing__hero-foot" }, ...footKids) : null;
   /* `doc` is the document's one departure: the shared head without the one-screen floor. */
   return $("section", { class: "landing__hero" },
     mkRuleField(),
@@ -6736,8 +6816,7 @@ function mkDownloadCards(opts) {
     $("div", { class: "landing__dlcard", attrs: { "data-rv": "" } },
       $("span", { class: "landing__dlcard-t", text: t("j_dlAndroid") }),
       $("p", { class: "landing__dlcard-s", text: t(o.bodyKey || "j_dlSub") }),
-      $("a", { class: "btn btn--primary", attrs: { href: url, download: BRAND.download.apk } },
-        icon("doc"), $("span", { text: t("j_dlAndroid") })),
+      mkActions([{ k: "j_dlAndroid", href: url, download: BRAND.download.apk, icon: "doc" }]),
       mkInstallQr(url),
       $("div", { class: "landing__dlmeta" },
         code != null ? $("span", { class: "ltr", text: "v" + BRAND.version.name + " (" + code + ")" }) : null,
@@ -7492,7 +7571,14 @@ function downloadLanding() {
       /* No kick here: the page is called Get the app, the nav link that got you here
          is called Get the app, and the heading says it too. Three of them on one
          screen is two too many. */
-      mkIntro({ lines: [{ k: "j_dlTitle" }], lede: "j_dlSub" }),
+      /* No action row here, on purpose. At phone width the hero's foot is a text column —
+         the calls to action of this page live in the bar and in the card, and a row of
+         buttons added to the foot measured 350×0 (the grid gives the implicit row no box,
+         `.landing__hero-foot` is `display:grid` with two text columns). So the download
+         stays where the QR is, and the sentence is said once: `j_dlSub` is the card's body
+         text, and repeating it as a lede under the title was a duplicate the page no
+         longer needs. */
+      mkIntro({ lines: [{ k: "j_dlTitle" }] }),
       mkSection([mkDownloadCards()]),
     ),
     landingFooter());
@@ -10668,23 +10754,31 @@ function renderUnsafe(){
   const col=$("div",{class:"appcol"});
   const isRoot = def.dock === true;
 
-  col.append(topbar({
+  const head=topbar({
     title: def.title ? t(def.title) : t("nav."+def.k),
     back: isRoot ? null : back,
     right: isRoot ? headerActions() : null
-  }));
+  });
   /* Every screen returns a .main. The reading-width wrapper is applied here,
      once, rather than in each of the thirty screen functions. Staff tables
      opt out of the cap because wide data needs the room. The search band is
      the first element inside the scroller, so it scrolls with the page. */
+  /* The head is page content, not chrome. It is the first block of the reading column,
+     then the band, then the screen — so the page opens with its title, all three share
+     one measure and one gap, and nothing is ever hidden under a bar. A screen that
+     returns something other than a .main still gets the head, above it in the column,
+     so no surface can lose its title by construction. */
   const body=def.fn();
   if(body.classList.contains("main")){
     const inner=$("div",{class:"main__inner"});
+    inner.append(head);
     while(body.firstChild) inner.append(body.firstChild);
-    body.append(inner);
-    if(def.wide) body.classList.add("main--wide");
     const band=searchBand();
-    if(band) body.prepend(band);
+    if(band) inner.insertBefore(band, inner.children[1]||null);
+    if(def.wide) body.classList.add("main--wide");
+    body.append(inner);
+  } else {
+    col.append(head);
   }
   col.append(body);
 

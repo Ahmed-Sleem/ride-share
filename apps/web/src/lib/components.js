@@ -167,7 +167,14 @@ const money = n => {
    instead of createElement, and `className` goes the attribute route (an SVG
    element's className is read-only). One rule, in the one element factory. */
 const SVG_NS = "http://www.w3.org/2000/svg";
-const SVG_TAGS = new Set(["svg","g","a","path","rect","circle","ellipse","line","polyline",
+/* "a" is deliberately NOT in this set, though it is a valid SVG element name. The set is a
+   namespace heuristic for the drawing code, and an anchor is never drawing: every $("a") in
+   this app is a link a person must see. Built in the SVG namespace it is a zero-box element
+   inside HTML — which is how the landing's download button, the only anchor in the product,
+   existed as correct markup (right class, right href, right `download`) while painting
+   nothing. A genuine SVG anchor, if one is ever needed, must be created with createElementNS
+   inside its <svg> parent, so the namespace comes from the tree and not from a tag-name guess. */
+const SVG_TAGS = new Set(["svg","g","path","rect","circle","ellipse","line","polyline",
   "polygon","text","tspan","defs","use","symbol","marker","mask","clipPath","filter",
   "feGaussianBlur","linearGradient","radialGradient","stop","image"]);
 const $ = (tag, opts={}, ...kids) => {
