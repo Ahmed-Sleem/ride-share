@@ -603,7 +603,10 @@ function riderProfile(){                                      // R-80
     Row({icon:"bell",  title:t("notifications"), right:switchEl(true)})));
   w.append($("div",{class:"rowgroup"},
     Row({icon:"card",  title:t("wallet"), chev:true, on:()=>go("wallet")}),
-    Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")})));
+    Row({icon:"safety",title:t("safetyCentre"), chev:true, on:()=>go("safety")}),
+    // App only: on the website the view machine sends `intro` to the landing page, so a row that
+    // does nothing there would be a control that pretends. `$(...)` drops the null.
+    isAppSurface() ? Row({icon:"bus", title:t("j_introReplay"), chev:true, on:()=>replayIntro()}) : null));
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));
   return w;

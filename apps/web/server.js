@@ -28,6 +28,15 @@ const BRAND = (() => {
 })();
 const DL_PATH = (BRAND.download && BRAND.download.path) || '/download/android';
 const DL_APK = (BRAND.download && BRAND.download.apk) || 'app.apk';
+/* The release asset a redirect target is derived from brand.json alone: the asset name IS
+   BRAND.download.apk, so the file the browser saves, the name in the QR's own URL and the asset in
+   the release cannot drift into three different names the way two hard-coded strings can. */
+function apkRedirectUrl() {
+  if (process.env.ANDROID_APK_URL) return process.env.ANDROID_APK_URL;
+  const R = BRAND.download && BRAND.download.release;
+  if (!R || !R.repository || !R.tag) return '';
+  return `https://github.com/${R.repository}/releases/download/${R.tag}/${DL_APK}`;
+}
 
 const DIST = path.join(__dirname, 'dist', 'index.html');
 const LEGACY = path.join(__dirname, 'dist-preview.html');
@@ -157,7 +166,19 @@ async function handler(req, res) {
       path.join(__dirname, '..', '..', 'uploads', 'app-debug.apk'),
     ].filter(Boolean);
     const file = candidates.find((p) => { try { return fs.existsSync(p) && fs.statSync(p).isFile(); } catch { return false; } });
-    if (!file) return json(res, 404, { ok: false, code: 'APK_NOT_STAGED', hint: `Serve the installer from apps/web/downloads/${DL_APK} or set ANDROID_APK_PATH` }, req);
+    if (!file) {
+      // Nothing staged beside the site is normal: the installer is published to the brand's
+      // release tag by CI. Redirecting there keeps one address true forever — the QR that is
+      // already printed, in the app's own download card and in any screenshot, points at
+      // /download/android, and only the target ever needs to move. ANDROID_APK_URL overrides it
+      // for a deployment that hosts the bytes somewhere else; with neither, say so plainly.
+      const to = apkRedirectUrl();
+      if (to) {
+        res.writeHead(302, { location: to, 'cache-control': 'no-store' });
+        return res.end();
+      }
+      return json(res, 404, { ok: false, code: 'APK_NOT_STAGED', hint: `Stage the installer at apps/web/downloads/${DL_APK}, set ANDROID_APK_PATH, or give brand.json a download.release{repository,tag}` }, req);
+    }
     res.writeHead(200, {
       'content-type': 'application/vnd.android.package-archive',
       'content-disposition': `attachment; filename="${DL_APK}"`,

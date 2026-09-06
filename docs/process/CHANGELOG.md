@@ -1,3 +1,53 @@
+## 2026-09-06 — renewal round 10: the installer becomes downloadable, the CI test-suite stops being red, and the tutorial rejoins the system
+
+Both of the owner's reports were true, and reading the serving code instead of inferring from the page is what proved each one.
+
+**The download (G-103).** `apps/web/server.js` answers `/download/android` from three staging candidates —
+`ANDROID_APK_PATH`, `apps/web/downloads/android.apk`, `uploads/app-debug.apk` — and a deployment has none of them, so the route
+returned JSON, measured on live as **HTTP 404**: the button and the QR were wired to a real path with no bytes behind it. CI did
+build an APK, but its job is `needs: verify` and `verify` was red, so the job was *skipped*; and an artifact is the wrong answer
+anyway, because it needs a GitHub login to fetch, which makes a QR a control that pretends. Now the `apk` job takes
+`permissions: contents: write` and publishes the debug build to a rolling `android-debug` prerelease, under the name brand.json
+already owns (`download.apk` → `ride-share.apk`), with `gh release upload --clobber` and no third-party action, gated to pushes to
+main; the server 302s there, `ANDROID_APK_URL` overrides it for any deployment that hosts the bytes elsewhere, and the honest
+`APK_NOT_STAGED` JSON stays for a build with neither. The landing page needed no change at all — its QR and button always pointed
+at our own path, which is exactly why the target can move without reprinting anything. `server.test.js` had no download test, the
+actual reason this survived a release; it has four now (staged 200 with attachment headers, the `.apk` alias, the brand-derived
+302, the override), and its response fake became a real `Writable` because `Readable.pipe` had been throwing straight into
+`.catch(() => {})` and hanging three tests instead of failing them — a suite that cannot fail is worse than one that does.
+
+**The CI red, at its source.** The 9 `apps/api` failures were `ConflictException`, all of them from `journeys.service.ts`
+refusing a slot whose departure is in the past — correct production behaviour, and every fixture in that file was pinned to
+`2026-09-01 12:00`. The day after it passed, the suite began failing in CI and nowhere else. Fixed by writing time the way one
+test in the same file already wrote it (`cairoWall`, promoted to `futureSlot()`), not by loosening the guard, and a guard now
+scans the file for any date literal in the future: a fixed past date is safe (a departed slot must stay departed), a fixed future
+date is a fuse. `apps/api` is **247 pass / 0 fail**, `tsc` and `eslint` clean. The GUI job's own mystery from round 9c is closed
+too: it failed in 21 s with exit 126 because all 23 `*.sh` files are committed 100644, so `./verify.sh` could not execute and the
+app's whole browser suite had never run in CI.
+
+**The tutorial (G-104).** The slider was never deleted: `introView()` is a four-slide first-open tour, gated by `rs.intro.v1` and
+by `isAppSurface()` — whose comment records the decision that intro slides belong to the mobile product and never to the public
+website (phone browser included), which is why the site shows none. Measured, it had fallen out of the system: 27.3 px mixed-case
+at weight 750 while every page head is an uppercase 850 poster; a 1280 px footer against a 480 px stage; a head box that grew
+51→83 px between slides, moving the headline 26 px on a phone and 11 px on desktop; and a swipe that did nothing
+(`S.introSlide` stayed 0). The headline now takes the poster's case, weight, tracking and leading while keeping `--f-intro`
+for size (`--f-poster` is 71.68 px at desktop, which wraps these sentences badly in a 480 px column); one `--intro-col` is shared
+by the stage and by the footer's `padding-inline:max(…)`, so the buttons measure 400→880 at 1280 against the stage's 400→880;
+both text slots reserve height under `@supports (min-block-size:1lh)`, which makes the head top constant (338 phone EN, 332 phone
+AR, 363 desktop — all four slides) instead of centring a block whose height changes with the copy; `touch-action:pan-y` plus
+pointer handlers turn a page on a horizontal drag of ≥24 px that beats the vertical component, and are a no-op past the last
+slide so a slipping thumb cannot press Get started. The driver slide's fifth element (`j_intro4C`) was folded into its body copy
+in English and Arabic so no slide carries a part the others lack, and `.intro__c` was deleted rather than left unreferenced. A
+**How the ride works** row sits in the rider and driver profiles (not staff — the four slides are rider/driver copy), rendered
+only on the app surface so it is never a control that does nothing on the web, and it deliberately does not mark the tour seen.
+`unit` is **705 pass / 0 fail**, with 13 new assertions; two existing intro guards were re-pointed at the merged key because their
+premise legitimately disappeared, which is the only kind of guard edit this project allows itself, and it is recorded here.
+
+Architecture untouched: `apps/web/src/**`, `apps/web/server.js`, its tests, `apps/mobile/scripts/build.js`, one workflow file and
+one api test file. The OTA bundle hash changes because the GUI changed; `versionCode` stays at 3, so this still arrives over the
+air with no new APK. Two things remain honestly open: the release asset has to be measured after CI runs once (D-7.4), and
+`breaks.sh`/`layout-breaks.sh` have never completed in CI, so their new `verify-breaks` job carries an unevidenced first verdict.
+
 ## 2026-09-06 — renewal round 9c: the palette lands, and CI's GUI job turns out never to have run
 
 Round 9's two owner answers are in, and pushing them exposed something larger than either.

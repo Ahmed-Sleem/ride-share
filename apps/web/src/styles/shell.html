@@ -952,19 +952,42 @@ select.input{cursor:pointer}
   0%,100%{transform:translateY(0) scale(1)}
   50%{transform:translateY(-14px) scale(1.05)}}
 
-.intro{width:100%;min-width:0;height:100%;display:flex;flex-direction:column;
+.intro{--intro-col:480px;width:100%;min-width:0;height:100%;display:flex;flex-direction:column;
   background:var(--paper);color:var(--ink)}
 .intro__stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;gap:var(--f-introgap);padding:var(--f-introgap) var(--s6);
-  max-width:480px;margin-inline:auto;width:100%}
+  max-width:var(--intro-col);margin-inline:auto;width:100%;touch-action:pan-y}
+/* One column, declared once. The measured fault this removes: at 1280 the stage sat in a 480 px
+   column at x=400 while the footer ran the full 1280 px, so the buttons and the sentence they
+   belong to had different edges — the same law every other surface is held to. max() collapses
+   to the phone gutter below the column width, so nothing moves on a phone. */
 .intro__foot{flex:none;display:flex;align-items:center;gap:var(--s3);padding:var(--s4) var(--s5);
+  padding-inline:max(var(--s5), calc(50% - var(--intro-col) / 2));
   padding-bottom:calc(var(--s5) + var(--safe-b));border-top:1px solid var(--line);background:var(--paper)}
 .intro__kick{font-size:var(--f-cap);font-weight:650;letter-spacing:.22em;text-transform:uppercase;
   color:var(--ink-mute);margin:0}
-.intro__t{font-size:var(--f-intro);line-height:1;letter-spacing:var(--track-poster);font-weight:var(--fw-bold);
+.intro__t{
+  /* The head is the poster, at the scale a 480 px column can carry: --f-poster is 71.68 px at
+     desktop, which wraps these four sentences into three or four lines, so only the SIZE is
+     dedicated — the case, tracking, leading and weight come from the same tokens .topbar__title
+     uses, which is what "the same components" means. Measured before: 27.3 px, weight 750,
+     mixed case, line-height 1. */
+  font-size:var(--f-intro);line-height:var(--lh-poster);letter-spacing:var(--track-poster);
+  font-weight:var(--fw-heavy);text-transform:uppercase;
   margin:0;max-width:20ch;text-wrap:balance}
+/* Four slides, four different title lengths: the head's box grew and shrank by 17-24 px between
+   them and the whole block visibly jumped. Reserving two lines holds the title in one place,
+   and 1lh tracks the element's own leading, so Arabic's taller display leading is reserved too. */
+@supports (min-block-size: 1lh){
+  .intro__t{min-block-size:2lh}
+  /* The body slot reserves the tallest sentence in the set, four lines at a phone's 46ch measure —
+     measured, not guessed: with two lines reserved the driver slide still lifted its headline by
+     26 px on a phone, 11 px on desktop, because its own copy ran longer than the other three.
+     Reserve the max and the centred block has one height for every slide, so the headline cannot
+     move. 1lh is the element's own line box, so Arabic's taller leading is reserved in Arabic. */
+  .intro__b{min-block-size:4lh}
+}
 .intro__b{color:var(--ink-soft);font-size:var(--f-lg);line-height:1.6;margin:0;max-width:46ch}
-.intro__c{font-size:var(--f-body);color:var(--ink-mute);margin:0;max-width:46ch}
 .intro__foot .btn--primary{flex:1}
 .intro__ic{width:56px;height:56px;display:grid;place-items:center;border-radius:var(--r-sm);
   background:var(--bg-inset);color:var(--ink)}

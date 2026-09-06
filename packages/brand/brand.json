@@ -44,7 +44,12 @@
   },
   "download": {
     "path": "/download/android",
-    "apk": "ride-share.apk"
+    "apk": "ride-share.apk",
+    "release": {
+      "note": "Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.",
+      "repository": "Ahmed-Sleem/ride-share",
+      "tag": "android-debug"
+    }
   },
   "palette": {
     "note": "The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.",

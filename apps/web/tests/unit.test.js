@@ -111,6 +111,85 @@ group("SHELL OCCUPIES EXACTLY ONE VIEWPORT");
   ok("main contains its overscroll", !!main && /overscroll-behavior:contain/.test(main));
 }
 
+group("THE INSTALLER'S PUBLISHED HOME IS WELL-FORMED (G-103)");
+{
+  /* The landing page's button and QR both aim at apps/web's own /download/android, and that route
+     redirects to the release named here. A typo in `repository` or `tag` is invisible on every
+     screen — the page looks right and only a phone tapping it fails — so the shape is checked
+     where the rest of brand.json is. */
+  const BRAND_FILE = JSON.parse(fs.readFileSync(
+    path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json"), "utf8"));
+  const D = BRAND_FILE.download || {};
+  const R = D.release || {};
+  ok("download.release names an owner/repo slug",
+     typeof R.repository === "string" && /^[^/\s]+\/[^/\s]+$/.test(R.repository), R.repository);
+  ok("download.release names a tag", typeof R.tag === "string" && /^[a-z0-9._-]{3,}$/.test(R.tag), R.tag);
+  ok("the release asset is the same name the browser is offered",
+     typeof D.apk === "string" && D.apk === "ride-share.apk", D.apk);
+  ok("the route the page points at is the route the server answers",
+     SRC_TEXT.includes(D.path) && fs.readFileSync(path.join(__dirname, "..", "server.js"), "utf8")
+       .includes("DL_PATH"));
+  ok("the CI job publishes to the tag brand.json names",
+     fs.readFileSync(path.join(__dirname, "..", "..", "..", ".github", "workflows", "ci.yml"), "utf8")
+       .includes('brand.json").download.release.tag'));
+}
+
+group("THE FIRST-OPEN TUTORIAL IS THE SAME SYSTEM, AND IT ANSWERS TO A SWIPE (G-104)");
+{
+  const intro = (idx) => {
+    const { w, d } = boot();
+    w.__RS_SURFACE = "mobile";
+    w.S.authed = false; w.S.view = "intro"; w.S.introSlide = idx || 0;
+    w.render();
+    return { w, d };
+  };
+  const t = rule(".intro__t") || "";
+  ok("the intro headline takes the poster's case, weight, tracking and leading",
+     /text-transform:\s*uppercase/.test(t) && /font-weight:\s*var\(--fw-heavy\)/.test(t) &&
+     /letter-spacing:\s*var\(--track-poster\)/.test(t) && /line-height:\s*var\(--lh-poster\)/.test(t),
+     t.replace(/\s+/g, " ").slice(0, 120));
+  ok("its size stays the column's own, not the page poster", /font-size:\s*var\(--f-intro\)/.test(t));
+  ok("no slide carries a fifth content element", !/\.intro__c\{/.test(CSS) &&
+     !/intro__c/.test(fs.readFileSync(path.join(__dirname, "..", "src", "screens", "landing.js"), "utf8")));
+  ok("the stage and the footer share one column token",
+     /\.intro\{[^}]*--intro-col:/.test(CSS) &&
+     /\.intro__stage\{[^}]*max-width:var\(--intro-col\)/.test(CSS) &&
+     /\.intro__foot\{[^}]*padding-inline:max\(var\(--s5\), calc\(50% - var\(--intro-col\) \/ 2\)\)/.test(CSS));
+  ok("both text slots are height-reserved so the headline cannot jump",
+     /@supports \(min-block-size:\s*1lh\)\s*\{[\s\S]*?\.intro__t\{min-block-size:\s*2lh\}[\s\S]*?\.intro__b\{min-block-size:\s*4lh\}/.test(CSS));
+  ok("the stage lets a vertical scroll through while it watches for a swipe",
+     /touch-action:\s*pan-y/.test(rule(".intro__stage") || ""));
+
+  const drag = (w, from, to, y1, y2) => {
+    const st = w.document.querySelector(".intro__stage");
+    const ev = (type, x, y) => { const e = new w.Event(type, { bubbles: true }); e.clientX = x; e.clientY = y; e.pointerId = 1; e.pointerType = "touch"; return e; };
+    st.dispatchEvent(ev("pointerdown", from, y1));
+    st.dispatchEvent(ev("pointerup", to, y2));
+  };
+  {
+    const { w } = intro(0);
+    drag(w, 300, 120, 400, 404);
+    ok("a left swipe turns to the next slide", w.S.introSlide === 1, "S.introSlide " + w.S.introSlide);
+  }
+  {
+    const { w } = intro(2);
+    drag(w, 100, 300, 400, 396);
+    ok("a right swipe goes back", w.S.introSlide === 1, "S.introSlide " + w.S.introSlide);
+  }
+  {
+    const { w } = intro(3);
+    drag(w, 300, 60, 400, 400);
+    ok("past the last slide a swipe does nothing — it cannot press Get started by accident",
+       w.S.introSlide === 3 && w.S.view === "intro", `${w.S.introSlide}/${w.S.view}`);
+  }
+  {
+    const { w } = intro(0);
+    drag(w, 200, 190, 300, 640);
+    ok("a vertical drag is a scroll, not a turn", w.S.introSlide === 0, "S.introSlide " + w.S.introSlide);
+  }
+  // The replay row itself is tested where the intro's copy is tested: the INTRO + DOWNLOAD group.
+}
+
 group("THE BRAND PALETTE IS THE ONLY SOURCE FOR PAPER, INK, MUTED, HAIRLINE (G-099)");
 {
   /* apps/mobile/offline.html cannot read this stylesheet, so scripts/build.js injects these four
@@ -2278,14 +2357,46 @@ group("PATH A — phase 1a embeddings: boarding map + fleet map honesty");
 group("INTRO + DOWNLOAD — first-open slides and versioned APK URL");
 {
   const t=boot();
-  ["j_intro1T","j_intro4T","j_intro4C","j_offlineTitle","j_offlineRetry"].forEach((k)=>{
+  ["j_intro1T","j_intro4T","j_introReplay","j_offlineTitle","j_offlineRetry"].forEach((k)=>{
     t.w.S.lang="en"; const en=t.w.eval("t("+JSON.stringify(k)+")");
     t.w.S.lang="ar"; const ar=t.w.eval("t("+JSON.stringify(k)+")");
     t.w.S.lang="en";
     ok(k+" both languages", en!==k && ar!==k && en!==ar);
   });
   ok("last slide is Start Driving", t.w.T.en.j_intro4T==="Start Driving & Get Paid");
-  ok("last slide requires a separate Driver Account", /Driver Account/.test(t.w.T.en.j_intro4B) && /Driver Account/.test(t.w.T.en.j_intro4C));
+  // The driver slide used to carry a fifth element for its second sentence, which moved that
+  // slide's headline 26 px and made the whole block jump; the sentence now lives in the body copy,
+  // so the guard checks both halves of the message in the one string the slide renders.
+  ok("last slide requires a separate Driver Account, and says what to do about it",
+     /separate Driver Account/.test(t.w.T.en.j_intro4B) && /start driving and earning/.test(t.w.T.en.j_intro4B));
+  ok("no slide declares a fifth content part",
+     !t.w.eval("introSlides()").some((s) => "c" in s), "introSlides() carries c:");
+  {
+    // The replay entry: offered inside the app, withheld on the website, and it must not mark the
+    // tour seen — someone who watches it and walks away is still a new user.
+    t.w.__RS_SURFACE = "mobile";
+    Object.assign(t.w.S, { view: "app", authed: true, role: "rider", page: "profile", stack: [], sheet: null, view: "app" });
+    t.w.render();
+    const row = [...t.d.querySelectorAll(".main .row, .main button")].find((e) => /How the ride works/.test(e.textContent || ""));
+    ok("the tutorial can be watched again from the rider profile", !!row, row ? "found" : "no replay row");
+    if (row) {
+      // Re-render before clicking: the intro view's own teardown moved us off the profile, and
+      // the row must be looked up in the page it actually lives in. (window.localStorage is NOT an
+      // option here — jsdom hands these windows an opaque origin, so touching it throws a
+      // DOMException that escapes the app's guarded storeGet/storeSet and aborts the whole file.)
+      t.w.S.view = "app"; t.w.render();
+      const again = [...t.d.querySelectorAll(".main .row, .main button")].find((e) => /How the ride works/.test(e.textContent || ""));
+      (again.closest("button") || again).dispatchEvent(new t.w.Event("click", { bubbles: true }));
+      ok("tapping it opens the first slide without marking the tour seen",
+         t.w.S.view === "intro" && t.w.S.introSlide === 0 && t.w.eval("introSeen()") === false,
+         `${t.w.S.view}/${t.w.S.introSlide}`);
+    }
+    t.w.__RS_SURFACE = "web";
+    Object.assign(t.w.S, { view: "app", authed: true, role: "rider", page: "profile", stack: [], sheet: null });
+    t.w.render();
+    ok("and the row is not offered on the website, where the tour is not the product",
+       !/How the ride works/.test((t.q(".main") || t.d.body).textContent || ""));
+  }
   t.w.__RS_SURFACE = "mobile";
   t.w.S.view="intro"; t.w.S.introSlide=3; t.w.S.authed=false; t.w.render();
   ok("intro last slide renders", !!t.q(".intro") && /Start Driving/.test(t.q(".intro").textContent));

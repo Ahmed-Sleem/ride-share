@@ -170,3 +170,18 @@ untouched until the owner signs the look off.
    other had not.
 6. Node cannot `await requestAnimationFrame`, and a killed `timeout` run prints nothing at all: both of
    my hung probes were harness bugs, not app bugs.
+
+## D-7 — round 10 (owner's two reports)
+
+- [x] **D-7.1** `/download/android` verified end to end on the *serving* code, not by inference: HTTP 404 measured live,
+  the three staging candidates read from `apps/web/server.js`, and the CI job's real reason for being skipped
+  (`needs: verify`) confirmed from the workflow. Now: CI publishes the debug build to the `android-debug` release, the
+  server redirects to it, `ANDROID_APK_URL` overrides, and the route has four tests it never had.
+- [x] **D-7.2** First-open tutorial: poster-consistent headline (uppercase, 850, `--lh-poster`, `--track-poster`), one
+  `--intro-col` shared by stage and footer (buttons measured at 400→880 at 1280, exactly the stage's column), constant
+  head top across slides, swipe with a vertical-drag veto and a last-slide no-op, no fifth slide element, 13 assertions.
+- [x] **D-7.3** Replay path: `How the ride works` in the rider and driver profiles, app-surface only, does not mark seen.
+- [ ] **D-7.4** After this pushes and CI runs `apk`, tap the live QR and install: the release asset must answer
+  `HTTP 200` with `content-type: application/vnd.android.package-archive`. Reported as pending until measured.
+- [ ] **D-7.5** `breaks.sh` / `layout-breaks.sh` have their own CI job now (`verify-breaks`, with `RS_SKIP_BREAKS=1` on
+  the GUI job). Their first real run in CI is still unevidence; read the verdict before trusting either pass.

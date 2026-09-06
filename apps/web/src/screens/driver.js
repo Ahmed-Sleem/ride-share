@@ -389,7 +389,8 @@ function driverProfile(){                                     // D-40
   w.append(emailSection());
   w.append($("div",{class:"rowgroup"},
     Row({icon:"globe", title:t("language"), right:langSeg()}),
-    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}))); 
+    Row({icon:"moon",  title:t("theme"),    right:themeSeg()}),
+    isAppSurface() ? Row({icon:"bus", title:t("j_introReplay"), chev:true, on:()=>replayIntro()}) : null)); 
   w.append(Btn({label:t("signOut"), kind:"secondary", block:true,
     on:()=>signOut()}));
   return w;

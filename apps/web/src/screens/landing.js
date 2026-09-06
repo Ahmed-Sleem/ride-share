@@ -384,8 +384,17 @@ function introSlides() {
     { ic: "bus", k: "j_intro1K", t: "j_intro1T", b: "j_intro1B" },
     { ic: "lookup", k: "j_intro2K", t: "j_intro2T", b: "j_intro2B" },
     { ic: "qr", k: "j_intro3K", t: "j_intro3T", b: "j_intro3B" },
-    { ic: "earnings", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B", c: "j_intro4C" },
+    { ic: "earnings", k: "j_intro4K", t: "j_intro4T", b: "j_intro4B" },
   ];
+}
+
+/* Shown again from a profile page, the way every shipped onboarding flow lets you sit the
+   tutorial again. It must not mark the intro seen: someone who replays it and walks away is still
+   a new user, and the next cold open should offer it again. */
+function replayIntro() {
+  S.view = "intro";
+  S.introSlide = 0;
+  render();
 }
 
 function finishIntro(mode) {
@@ -404,16 +413,40 @@ function introView() {
   const last = i === slides.length - 1;
   const dots = $("div", { class: "intro__dots", attrs: { "aria-hidden": "true" } });
   slides.forEach((_, n) => dots.append($("span", { class: "intro__dot" + (n === i ? " intro__dot--on" : "") })));
+  // Exactly four parts, on every slide, because the stage centres its content: a fifth line on one
+  // slide moved the headline of that slide 29 px upward and read as a glitch. So the driver slide's
+  // second paragraph is part of its body copy (content.js) rather than a fifth element, and the two
+  // text slots are height-reserved below — see the @supports block in shell.html.
   const copy = [
     $("span", { class: "intro__kick", text: t(s.k) }),
     $("div", { class: "intro__ic", attrs: { "aria-hidden": "true" } }, icon(s.ic)),
     $("h1", { class: "intro__t", text: t(s.t) }),
     $("p", { class: "intro__b", text: t(s.b) }),
+    dots,
   ];
-  if (s.c) copy.push($("p", { class: "intro__c", text: t(s.c) }));
-  copy.push(dots);
+  const stage = $("div", { class: "intro__stage" }, ...copy);
+  /* A slider on a phone has to answer to a swipe; the buttons are the keyboard-and-AT path, not
+     the expected one. Deliberately two-way on the middle slides and a no-op at both ends, so a
+     thumb that slips past the last slide cannot press "Get started" by accident. |dx| must also
+     beat |dy|, because a vertical scroll begins as a drag too. */
+  let from = null;
+  const turn = (dir) => {
+    const next = i + dir;
+    if (next < 0 || next > slides.length - 1) return;
+    S.introSlide = next;
+    render();
+  };
+  stage.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; });
+  stage.addEventListener("pointerup", (e) => {
+    if (!from) return;
+    const dx = e.clientX - from.x, dy = e.clientY - from.y;
+    from = null;
+    if (Math.abs(dx) < 24 || Math.abs(dx) < Math.abs(dy)) return;
+    turn(dx < 0 ? 1 : -1);
+  });
+  stage.addEventListener("pointercancel", () => { from = null; });
   return $("div", { class: "intro", attrs: { "aria-label": t("j_introStart") } },
-    $("div", { class: "intro__stage" }, ...copy),
+    stage,
     $("div", { class: "intro__foot" },
       Btn({ label: t("j_introSkip"), kind: "ghost", on: () => finishIntro("signup") }),
       Btn({ label: t("j_introPrev"), kind: "outline", dis: i === 0, on: () => { if (i > 0) { S.introSlide = i - 1; render(); } } }),

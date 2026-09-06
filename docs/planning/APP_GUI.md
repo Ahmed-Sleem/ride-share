@@ -335,3 +335,30 @@ what the new guard now checks. `--topbar-h` 0 references, 0 hand-written
 - **Arabic display face: Jomhuria, as shipped.** The head grows 87→94 px on a phone against Cairo 900, and
   a display face is what a poster wants. This closes the last open question in §6 on type; `--brand-font-display`
   and `--lead-display-rtl` stay as they are, applied from one list (§3/G-091).
+
+## 12. Round 10 — the installer is reachable, and the tutorial rejoins the system
+
+Two owner reports, both true, both fixed inside the system.
+
+**Download.** `/download/android` measured **HTTP 404** on live: the route serves a staged file and nothing is staged, while CI's
+APK job was *skipped* because it is `needs: verify` and `verify` was red — and even when it runs it publishes an artifact, which
+a phone cannot fetch. So CI now also pushes the debug build to a rolling `android-debug` prerelease under the brand's own file
+name (`gh release upload --clobber`, `permissions: contents: write`, gated to main), and the server 302s `/download/android`
+there, `ANDROID_APK_URL` overriding and the honest `APK_NOT_STAGED` JSON kept for a deployment with neither. The QR and the
+button need no change: they always pointed at our own path, which is the point — the target moved, the printed code did not.
+`server.test.js` had **no** download test; it has four now, and its response fake is a real `Writable` because
+`Readable.pipe` was throwing into a discarded `.catch` and hanging tests instead of failing them.
+
+**The first-open slider.** `introView()` survived the renewal but not the comparison: 27.3 px mixed-case at weight 750 where every
+page head is an uppercase 850 poster; a 1280 px footer against a 480 px stage; a head box that grew 51→83 px between slides and
+moved the headline 26 px on a phone; and no answer to a swipe. It now takes the poster's leading/tracking/weight/case while keeping
+`--f-intro` for size — `--f-poster` is 71.68 px at desktop, which wraps these sentences badly in a 480 px column — shares one
+`--intro-col` with the footer, reserves both text slots so the head top is constant (338 phone EN / 332 phone AR / 363 desktop, all
+four slides), turns on a horizontal drag and refuses to turn past the last slide, and lost its fifth element to the body copy so no
+slide carries a part the others lack. A **How the ride works** row in the rider and driver profiles replays it, on the app surface
+only, and deliberately does not mark the tour seen — someone who watches it and walks away is still new.
+
+Architecture untouched: `apps/web/src/**`, the test suites, `apps/web/server.js`, `apps/mobile/scripts/build.js` and CI. The OTA
+bundle changed because the GUI changed; `versionCode` did not, so this still arrives with no new APK. What still needs a new binary
+is unchanged: `www/index.html`'s boot copy, native splash colour, icons, permissions.
+

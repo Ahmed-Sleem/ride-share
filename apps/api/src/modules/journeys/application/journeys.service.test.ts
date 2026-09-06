@@ -7,7 +7,24 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { JourneysService } from './journeys.service.js';
 import type { Env } from '../../../config/env.js';
 import type { JourneyRow } from '../contracts/types.js';
+import { readFileSync } from 'node:fs';
 import type { SlotRow } from '../../routes/contracts/types.js';
+
+/* Time, written the only safe way a test here may write it.
+   `FakeRoutes.slotDepartureInstant` builds `service_date T departs_at +02:00`, because Cairo has
+   no DST — so a wall clock is expressed by adding that offset to now and reading the pieces back
+   off. This file used to pin every slot to 2026-09-01 12:00. The day that passed, the service
+   began refusing all nine of them through `journeys.service.ts`'s past-slot guard, which is
+   correct behaviour (a driver cannot claim a slot that already departed) — so the tests were the
+   fault, and they failed in CI and nowhere else, quietly, for a whole release cycle. A fixed date
+   in the PAST is safe: it can never become past again. A fixed date in the future is a fuse. */
+const cairoWall = (msFromNow: number) => new Date(Date.now() + msFromNow + 2 * 3600_000);
+const toSlot = (t: Date, id = 's1'): SlotRow => ({
+  id, route_id: 'r1', service_date: t.toISOString().slice(0, 10),
+  departs_at: t.toISOString().slice(11, 16), required_vehicles: 1, created_at: new Date(),
+});
+/** A slot a day ahead: far enough that a suite running near midnight cannot trip the guard. */
+const futureSlot = (id = 's1') => toSlot(cairoWall(86_400_000), id);
 
 class FakeJourneys {
   rows = new Map<string, JourneyRow>();
@@ -24,7 +41,11 @@ class FakeJourneys {
     if (!j) return null;
     return { ...j, route_code: 'ALX-R001', route_name_en: 'Corniche', service_date: this.serviceDate, departs_at: this.departsAt };
   }
-  serviceDate = '2026-09-01'; departsAt = '12:00';
+  // Read off the same slot the routes fake hands out, so the two fakes cannot disagree about
+  // when the journey departs — a projected service_date that contradicts the slot is its own bug.
+  private readonly slot = futureSlot();
+  get serviceDate() { return this.slot.service_date; }
+  get departsAt() { return this.slot.departs_at; }
   async byDriver(driverUserId: string) { return [...this.rows.values()].filter((r) => r.driver_user_id === driverUserId); }
   async setStatus(id: string, status: any) { const r = this.rows.get(id); if (r) this.rows.set(id, { ...r, status }); }
   async cancel(id: string) { const r = this.rows.get(id); if (r) this.rows.set(id, { ...r, status: 'CANCELLED' }); }
@@ -34,7 +55,7 @@ class FakeJourneys {
   }
 }
 class FakeRoutes {
-  slot: SlotRow | null = { id: 's1', route_id: 'r1', service_date: '2026-09-01', departs_at: '12:00', required_vehicles: 1, created_at: new Date() };
+  slot: SlotRow | null = futureSlot();
   async getSlotById(_id: string) { return this.slot; }
   async slotDepartureInstant(_id: string) { return this.slot ? new Date(`${this.slot.service_date}T${this.slot.departs_at}:00+02:00`) : null; }
   async stopsOnRoute() { return []; }
@@ -109,13 +130,7 @@ test('a slot in the past is refused', async () => {
 
 test('releasing inside the lock window is refused; outside succeeds', async () => {
   const { svc, routes } = setup();
-  // The service parses `date T time +02:00` (Cairo, no DST). To express
-  // "29 minutes from now" in that form, add the +2h offset to the wall clock.
-  const cairoWall = (msFromNow: number) => new Date(Date.now() + msFromNow + 2 * 3600_000);
-  const toSlot = (t: Date, id: string): SlotRow => ({
-    id, route_id: 'r1', service_date: t.toISOString().slice(0, 10),
-    departs_at: t.toISOString().slice(11, 16), required_vehicles: 1, created_at: new Date(),
-  });
+  // 29 minutes out: inside the 30-minute release lock window (helpers at the top).
 
   routes.slot = toSlot(cairoWall(29 * 60_000), 's1'); // inside the 30-min lock window
   const j = await svc.claimSlot(driver, 's1', 'v1');
@@ -215,4 +230,20 @@ test('liveFleet: ops may read it; a rider may not (authority)', async () => {
   const fleet = await svc.liveFleet(ops);
   assert.equal(Array.isArray(fleet) && fleet.length === 1, true);
   await assert.rejects(() => svc.liveFleet(rider), /Forbidden/);
+});
+
+test('no fixture in this file is pinned to a future calendar date', () => {
+  /* The bug this guards is not in the service: it is a literal written once and believed forever.
+     `2026-09-01` was correct the day it was committed and wrong the day after, and the failure
+     landed as a correct refusal, which is the worst kind of red — the code under test was right.
+     Past dates are allowed on purpose: a departed slot must stay departed for the past-slot test. */
+  const src = readFileSync(__filename, "utf8");
+  const future: string[] = [];
+  for (const m of src.matchAll(/'(\d{4}-\d{2}-\d{2})'/g)) {
+    const lit = m[1];
+    if (!lit) continue;
+    const day = Date.parse(`${lit}T23:59:59+02:00`);
+    if (Number.isFinite(day) && day > Date.now()) future.push(lit);
+  }
+  assert.deepEqual(future, [], `use futureSlot()/cairoWall() instead of these: ${future.join(", ")}`);
 });

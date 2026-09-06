@@ -427,7 +427,7 @@ window.addEventListener("focus", () => {
 });
 
 Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
-                        uiRole, pagesFor, guestHome, introSeen, markIntroSeen, introView, apkDownloadUrl,
+                        uiRole, pagesFor, guestHome, introSeen, markIntroSeen, introView, replayIntro, apkDownloadUrl,
                         openSheet, closeSheet, SHEETS, resolvedTheme,
                         enterApp, signOut, boot, API,
                         errText, OtpInput, otpValue,
