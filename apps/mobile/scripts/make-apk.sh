@@ -34,6 +34,7 @@ if [ -f "$MANIFEST" ]; then
 fi
 bash "$ROOT/apps/mobile/scripts/apply-android-version.sh"
 bash "$ROOT/apps/mobile/scripts/apply-android-icons.sh"
+node "$ROOT/apps/mobile/scripts/apply-android-night-splash.js"
 cd android
 chmod +x gradlew
 ./gradlew --no-daemon assembleDebug

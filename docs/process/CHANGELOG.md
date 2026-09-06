@@ -1,3 +1,50 @@
+## 2026-09-06 — renewal round 10b: the splash returns to its size, the installer gets a home in the repo, and the night splash stops flashing
+
+Three points from the owner, and the third overturned my own recommendation on grounds worth writing down.
+
+**The oversized word (G-105).** Measured on the built page before touching anything: the splash wordmark was
+28.8 px on a phone, 49.9 at 768, and pinned at the **80 px** ceiling from 1231 px up — a word in a 418×84 box
+sitting under a 92 px logo, so the label out-shouted the mark on the one screen that should say almost nothing.
+`--f-word` had exactly one consumer, so the token moved instead of an override being added:
+`clamp(1.5rem,1.15rem + .9vw,1.9rem)` → 24 / 25.3 / 29.9 / 30.4 px, which also agrees with the installer's own
+boot page (`.name{font-size:22px}`). Verified by re-measuring, then by eye at 390 and 1280. A unit guard pins
+the clamp's shape, its ceiling at ≤ 2rem and its floor at ≥ 1.3rem, so the fix cannot be undone by a future
+tune and cannot shrink past what the binary already treats as legible. My first version of that guard asserted
+`clamp(<rem>,<num>vw,<rem>)` and failed against my own CSS, whose middle is a sum and whose bundle may collapse
+spaces — the assertion was corrected to the real shape, not the CSS bent to fit the guess.
+
+**The installer, saved in the repo (G-107).** I had wired CI to publish the debug build as a release asset and
+redirect `/download/android` to it, on the usual grounds that binaries do not belong in git. The owner's answer
+was to build it *and keep it in the repo*, since the app updates its GUI over the air and a new binary is a rare
+event — so the history pays once per release, not per interface change. That reasoning holds for this project,
+and it changed my recommendation, so it is implemented: CI's `apk` job now copies the build to
+`apps/web/downloads/android.apk` — the exact path `apps/web/server.js` already serves — and commits it only when
+its sha256 differs, refuses anything over 60 MB, and marks `[skip ci]`. The release publish stays as the
+fallback the server redirects to, so the page is correct either way. One thing had to be surfaced rather than
+quietly overridden: `.gitignore:34` is `*.apk`, a deliberate earlier decision, so the exception
+`!apps/web/downloads/*.apk` is narrow, documented in the file itself, and paired with `git add -f`; the cost is
+stated in D-8.3 (every clone carries it, and reclaiming that means rewriting history). **Not claimed as done:**
+this sandbox cannot build an APK — Java is here, the Android SDK and Gradle are not, and 2 CPUs / 1.9 GB RAM rule
+out an emulator of the build — so the first bytes arrive from CI on this push, and D-8.1 measures them before
+anything is called installed.
+
+**The night splash (G-106), where the choice was made.** Rather than guess at Android XML, Capacitor
+8.5.0's own template was unpacked from `@capacitor/cli`'s `assets/android-template.tar.gz` and read: the app
+theme gives `AppTheme.NoActionBarLaunch` an `android:background` of `@drawable/splash` and the template contains
+no `values-night` whatsoever, which is the whole mechanism of the dark-mode white flash. A new
+`apps/mobile/scripts/apply-android-night-splash.js` writes `values-night/colors.xml` + `styles.xml` after
+`cap add android`, painting `brand.json`'s `palette.dark.paper` (the same palette the stylesheet and the boot
+page are now held to) and setting `windowSplashScreenBackground` so the API-31 system splash agrees with the
+WebView that follows; it throws if the day theme's anchor has moved, so it can never ship a dead resource.
+`apps/mobile/tests/config.test.js` **executes** it against a fixture carrying the template's real text and
+asserts the output, that a second run rewrites no bytes, and that a moved anchor fails loudly — a test that
+greps a script for a string would have proved none of that. Day behaviour is untouched, and this is a binary
+plane change: already-installed devices keep the flash until the installer is reinstalled.
+
+Gates on this round's build: unit **709 pass / 0 fail** (four new splash assertions among them), a11y 14/0,
+layout 7570/0, landing 2773/0, mobile config **5/0** (the new execution test). Docs: APP_GUI gains §13, the
+checklist D-8 with 8.1 left open on purpose, AUDIT gains G-105/106/107.
+
 ## 2026-09-06 — renewal round 10: the installer becomes downloadable, the CI test-suite stops being red, and the tutorial rejoins the system
 
 Both of the owner's reports were true, and reading the serving code instead of inferring from the page is what proved each one.

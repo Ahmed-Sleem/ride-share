@@ -216,7 +216,12 @@
   /* The intro promises exactly one screen, so its type is measured against both axes
      like the masthead's: a phone on its side gets a smaller poster, not a scroll. */
   --f-intro:clamp(1.45rem,min(7vw,6.2vh),2.6rem); --f-introgap:clamp(.75rem,2.2vh,1.75rem);
-  --f-word:clamp(1.8rem,6.5vw,5rem);
+  /* The splash wordmark, and nothing else. It was clamp(1.8rem,6.5vw,5rem): 28.8 px on a phone and
+     the 80 px ceiling from 1231 px up, which put the word nearly as tall as the 92 px mark above it
+     — a splash is a moment, not a headline, and the binary's own boot page (.name) says 22 px. Now
+     24 px on a phone, 29.9 px at 1280, 30.4 px clamped on the way up, so the word reads as a label
+     under the mark instead of competing with it. */
+  --f-word:clamp(1.5rem,1.15rem + .9vw,1.9rem);
   --f-poster:clamp(1.8rem,5.6vw,4.75rem);
   --f-end:clamp(1.6rem,4.6vw,4rem);
   --f-panel:clamp(1.2rem,2.3vw,1.75rem);

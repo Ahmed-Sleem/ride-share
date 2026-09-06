@@ -362,3 +362,30 @@ Architecture untouched: `apps/web/src/**`, the test suites, `apps/web/server.js`
 bundle changed because the GUI changed; `versionCode` did not, so this still arrives with no new APK. What still needs a new binary
 is unchanged: `www/index.html`'s boot copy, native splash colour, icons, permissions.
 
+## 13. Round 10b — the splash proportions, the night splash, and the installer's home
+
+Three owner points, all measured first.
+
+**Splash wordmark (G-105).** `--f-word` was `clamp(1.8rem,6.5vw,5rem)`: 28.8 px on a phone, and the 80 px
+ceiling from 1231 px up — a word 84 px tall under a 92 px mark, i.e. the label competing with the logo on
+the one screen meant to be brief. Retuned to `clamp(1.5rem,1.15rem + .9vw,1.9rem)` → 24 / 25.3 / 29.9 /
+30.4 px at 390 / 768 / 1280 / 1600, agreeing with the installer's own boot page (22 px). One consumer, so
+the token moved and no override was added. A unit guard pins the clamp's shape, its ceiling (≤ 2rem) and its
+floor (≥ 1.3rem), which is the complaint turned into a test.
+
+**Night splash (G-106).** The Android theme the app is generated with has no dark counterpart at all — read
+out of `@capacitor/cli` 8.5.0's own `android-template.tar.gz`, not from memory — so a dark-mode cold start
+paints the daylight splash drawable and then goes dark. `scripts/apply-android-night-splash.js` writes
+`values-night/{colors,styles}.xml` after `cap add android`, painting `brand.json`'s `palette.dark.paper`, and
+throws if the day theme's anchor has moved. `config.test.js` runs it against the real template text and
+checks the output, that a second run rewrites nothing, and that a moved anchor fails loudly. This is a binary
+plane change: installed devices keep the flash until the installer is reinstalled, and `capacitor.config.json`
+still carries its single-valued `SplashScreen.backgroundColor` because that is what the plugin reads.
+
+**The installer's home (G-107).** Kept in the repo, at the path `apps/web/server.js` already serves, committed
+by CI only when its sha256 changes, capped at 60 MB, `[skip ci]`. `.gitignore` said `*.apk` — a deliberate
+earlier decision — so the exception is narrow and documented instead of quietly bypassed, and the cost is
+stated: every clone carries the file, and reclaiming it later means rewriting history. The `android-debug`
+release publish remains wired as the fallback the server redirects to, so the landing page's button and QR are
+correct whether or not a file is staged. This sandbox cannot build the APK (no Android SDK, 1.9 GB RAM), so the
+first bytes arrive from CI on this push; D-8.1 measures them before anything is called done.

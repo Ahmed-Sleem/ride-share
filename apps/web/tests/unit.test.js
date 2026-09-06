@@ -134,6 +134,26 @@ group("THE INSTALLER'S PUBLISHED HOME IS WELL-FORMED (G-103)");
        .includes('brand.json").download.release.tag'));
 }
 
+group("THE SPLASH WORDMARK STAYS A LABEL, NOT A HEADLINE (G-105)");
+{
+  /* It reached 80 px on desktop — nearly as tall as the 92 px mark above it — because the token
+     behind it was clamp(1.8rem,6.5vw,5rem). A splash is a moment between the icon and the app, so
+     the ceiling is pinned here in the same way the ink palette is pinned: if --f-word grows past
+     2rem again, or the splash stops using it, the guard says so instead of a screenshot. The floor
+     matters too: the installer's own boot page paints its name at 22 px, and the web splash must
+     not shrink below what that page already says is legible. */
+  // The middle stop is a sum (1.15rem + .9vw) and the bundle may collapse its spaces, so only the
+  // two ends are captured and the middle is asserted to be viewport-relative.
+  const tok = CSS.match(/--f-word:\s*clamp\(([\d.]+)rem,([^,]+),\s*([\d.]+)rem\)/);
+  ok("--f-word is a clamp with rem ends and a vw middle",
+     !!tok && /vw/.test(tok[2]), tok ? tok[0] : "not a clamp(rem, …vw…, rem)");
+  ok("its ceiling is at most 2rem (32 px)", tok && parseFloat(tok[3]) <= 2, tok ? tok[3] + "rem" : "unreadable");
+  ok("its floor stays at or above the boot page's 22 px", tok && parseFloat(tok[1]) >= 1.3,
+     tok ? tok[1] + "rem" : "unreadable");
+  ok("the splash wordmark still reads the token, not a private size",
+     /\.splash__name\{[^}]*font-size:var\(--f-word\)/.test(CSS));
+}
+
 group("THE FIRST-OPEN TUTORIAL IS THE SAME SYSTEM, AND IT ANSWERS TO A SWIPE (G-104)");
 {
   const intro = (idx) => {

@@ -32,6 +32,12 @@ apps/mobile/android/build/
 apps/mobile/android/local.properties
 apps/mobile/android/captures/
 *.apk
+# The one installer that ships with the site: apps/web/server.js serves
+# apps/web/downloads/android.apk, and the owner's rule for this project is that the built
+# installer lives in the repo, because the app updates its GUI over the air and a new binary is
+# a rare event. Everything else stays ignored — a stray APK in a scratch directory must not
+# become a commit.
+!apps/web/downloads/*.apk
 *.aab
 *.apks
 

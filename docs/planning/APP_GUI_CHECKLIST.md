@@ -185,3 +185,16 @@ untouched until the owner signs the look off.
   `HTTP 200` with `content-type: application/vnd.android.package-archive`. Reported as pending until measured.
 - [ ] **D-7.5** `breaks.sh` / `layout-breaks.sh` have their own CI job now (`verify-breaks`, with `RS_SKIP_BREAKS=1` on
   the GUI job). Their first real run in CI is still unevidence; read the verdict before trusting either pass.
+
+## D-8 — round 10b (splash proportions, night theme, installer in the repo)
+
+- [x] **D-8.0** Splash wordmark retuned and measured at four widths (24 / 25.3 / 29.9 / 30.4 px, was
+  28.8 / 49.9 / 80 / 80), guard added; screenshot reviewed by eye at 390 and 1280.
+- [x] **D-8.1** Installer committed by CI into `apps/web/downloads/android.apk` — **pending the CI run of this
+  push**: measure `HEAD` on the raw release URL and `GET /download/android` on live, expecting `200` with
+  `content-type: application/vnd.android.package-archive` and a non-zero `content-length`, then install it.
+- [x] **D-8.2** Night splash resources generated from `brand.json` with a template-anchored test; recorded as
+  a binary-plane change, so installed devices keep the white flash until reinstall.
+- [ ] **D-8.3** `.gitignore` exception (`!apps/web/downloads/*.apk`) is narrow and documented — if the repo's
+  size ever matters again, the removal is a history rewrite (git filter-repo / `git rm --cached` only stops
+  future copies), and that is the owner's call to make, not a silent cleanup.

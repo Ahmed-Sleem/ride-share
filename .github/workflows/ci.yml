@@ -200,6 +200,39 @@ jobs:
           gh release upload "$TAG" "$NAME" --clobber
           echo "https://github.com/$REPO/releases/download/$TAG/$NAME" 
 
+      # The owner's rule for this project: the built installer is kept IN the repo, because the GUI
+      # updates over the air and a new binary is a rare event — so the history pays for the file once
+      # per release instead of per interface change. apps/web/server.js already serves
+      # apps/web/downloads/android.apk, which is why this path and no other. Committed only when the
+      # bytes differ, and refused above 60 MB so nothing can bury the clone by accident.
+      - name: Save the installer in the repo, where apps/web serves it from
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          SRC=$(ls apps/mobile/android/app/build/outputs/apk/debug/*.apk | head -1)
+          DEST=apps/web/downloads/android.apk
+          SIZE=$(stat -c%s "$SRC")
+          if [ "$SIZE" -gt 62914560 ]; then echo "APK_TOO_BIG: ${SIZE} bytes will not be committed" >&2; exit 1; fi
+          NEW=$(sha256sum "$SRC" | cut -d' ' -f1)
+          OLD=""
+          if git cat-file -e "HEAD:$DEST" 2>/dev/null; then
+            OLD=$(git show "HEAD:$DEST" | sha256sum | cut -d' ' -f1)
+          fi
+          if [ -n "$OLD" ] && [ "$NEW" = "$OLD" ]; then
+            echo "installer unchanged at $DEST ($NEW) — nothing to commit"; exit 0
+          fi
+          mkdir -p "$(dirname "$DEST")"
+          cp "$SRC" "$DEST"
+          VERSION=$(node -e 'const b=require("./packages/brand/brand.json");process.stdout.write(b.version.name+" ("+b.version.code+")")')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "$DEST"
+          BODY="Built by CI from commit ${GITHUB_SHA} via apps/mobile/scripts/make-apk.sh, so the landing page's button and QR have bytes behind them at every moment — including before a release is published. The GUI itself keeps arriving over the air, so this file changes only when the binary does."
+          git commit -m "Installer v${VERSION}: sha256 ${NEW:0:12} [skip ci]" -m "$BODY"
+          git push origin "HEAD:main"
+
   apk-release:
     name: Android Play AAB (signed when secrets exist)
     needs: verify
