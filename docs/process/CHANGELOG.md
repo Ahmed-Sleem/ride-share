@@ -1,4 +1,23 @@
 ## 2026-09-07 — renewal round 11: the installed app could not reach its own server, and the landing's menu was a strip
+## 2026-09-08 — round 14c: the pushed work met CI, and CI found what no local suite could
+
+Pushed as `9fe6f95`. `Verify (repo + api + web unit)` went green on it — that job runs `pnpm verify`, so it exercised the two new
+scripts, the exec-bit guard, `apps/mobile` 33/33 and the new developer's six break cases in one pass — and the renamed
+`Android installer (signed when the keystore exists)` job built and committed **Installer v0.1.0 (7)** (`sha256 9c0a532b57ee…`),
+debug variant, exactly as designed while the four secrets are absent.
+
+`Android Play AAB` went **red**, and the cause was mine and real: `lintVitalRelease → MissingDefaultResource`, because
+`apply-android-night-splash.js` declared `rs_splash_background` and `rs_splash_bar` only in `values-night` (G-123). It had been latent
+since the day that script was written — the debug variant never runs that lint task — and my shared-prep change is what made the
+release build execute it. So the shared prep earned its keep in the first hour: it turned a silent asymmetry between the two binaries
+into a build failure that says what is wrong.
+
+Fixed at the root: the patcher now declares the pair in `values/colors.xml` as well (day value = the brand's light paper, so neither
+plane drifts from the one source) and **merges** into an existing `colors.xml` instead of replacing it, because a future template or a
+plugin may put colours there. `config.test.js` checks the two folders as **sets** rather than hard-coding two names, so a third
+night-only colour cannot slip through unseen, and it asserts the merge preserves a foreign colour. Seen red on purpose: with the base
+declaration removed the suite says `the night colours must have a base values/colors.xml, not only a values-night one`, and 12/12 again
+after restore.
 ## 2026-09-08 — the new developer's first task landed, and it passed review
 
 `D-8.14` (`445668c`) rewrote `apps/mobile/tests/breaks.sh` into a real harness: `run_break` with `PASS`/`FAIL` counters,

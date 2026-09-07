@@ -59,6 +59,33 @@ const files = {
 </resources>
 `,
 };
+/* Lint holds the line here, and it is right: `lintVitalRelease` fails the build with
+   MissingDefaultResource when a `values-night` resource has no base declaration. The debug variant
+   never ran that lint task, so this sat latent until D-8.18 made both variants share one prep —
+   which is the argument for the shared prep, not against it. Every colour this script introduces
+   is therefore declared in BOTH folders: the day value is the brand's light paper, so anything that
+   queries it outside a night configuration gets a colour that belongs to this app rather than a
+   default that does not. */
+const light = (BRAND.palette && BRAND.palette.light) || {};
+if (!light.paper) throw new Error("brand.json has no palette.light.paper to declare beside the night colours");
+const baseColors = { rs_splash_background: light.paper, rs_splash_bar: "#00000000" };
+const baseDir = path.join(res, "values");
+const basePath = path.join(baseDir, "colors.xml");
+let baseText = fs.existsSync(basePath) ? fs.readFileSync(basePath, "utf8") : null;
+if (baseText === null) {
+  baseText = `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n${Object.entries(baseColors)
+    .map(([n, v]) => `    <color name="${n}">${v}</color>`).join("\n")}\n</resources>\n`;
+} else {
+  const missing = Object.entries(baseColors).filter(([n]) => !new RegExp(`name="${n}"`).test(baseText));
+  if (missing.length) {
+    const add = missing.map(([n, v]) => `    <color name="${n}">${v}</color>`).join("\n");
+    if (!/<\/resources>/.test(baseText)) throw new Error(`${basePath} has no </resources> to insert the night-pair colours into`);
+    baseText = baseText.replace(/<\/resources>/, `${add}\n</resources>`);
+  }
+}
+const baseNow = fs.existsSync(basePath) ? fs.readFileSync(basePath, "utf8") : null;
+if (baseNow !== baseText) fs.writeFileSync(basePath, baseText);
+
 const written = [];
 for (const [name, body] of Object.entries(files)) {
   const p = path.join(dir, name);
@@ -66,4 +93,5 @@ for (const [name, body] of Object.entries(files)) {
   fs.writeFileSync(p, body);
   written.push(path.relative(ROOT, p));
 }
-console.log(written.length ? `night splash resources: ${written.join(", ")}` : "night splash resources already current");
+const baseNote = " + values/colors.xml (base declarations, lint requires them for anything in values-night)";
+console.log(written.length ? `night splash resources: ${written.join(", ")}${baseNote}` : "night splash resources already current");

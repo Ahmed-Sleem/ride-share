@@ -287,6 +287,8 @@ untouched until the owner signs the look off.
   both variants' prep lists and `config.test.js` compares them — seen red two ways on purpose (manifest script stubbed to `exit 0` →
   `missing ACCESS_COARSE_LOCATION`; release prep skipping the icons step → `release prep diverged from debug prep`).
   **Still waiting on the owner:** the keystore and the four secrets (chunk A2 of `NEXT_SESSIONS_ROADMAP.md`).
+  Landed so far: CI ran the new job (renamed `Android installer (signed when the keystore exists)`) and committed **Installer v0.1.0 (7)**, still the debug variant as designed while the
+  secrets are absent. It also exposed `G-123` (the night-splash lint failure), fixed in the same pass.
 - [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
   all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.

@@ -100,6 +100,29 @@ test("the generated Android project gains a night splash, from brand.json", () =
     assert.match(styles, /windowSplashScreenBackground/);
     assert.ok(!/\.apk|@drawable\/splash/.test(styles.replace(/<!--[\s\S]*?-->/g, "")),
       "the night theme must paint a colour, not the daylight drawable");
+    /* lintVitalRelease fails the whole release build with MissingDefaultResource when a value in
+       `values-night` has no base declaration. The debug variant never ran that lint task, so the
+       rule was latent until D-8.18 gave both variants one prep — and a rule only Android enforces
+       has to be enforced here too, or the next person rediscovers it as a red CI. Checked as a set
+       relationship, not as two hard-coded names, so a third colour cannot slip through. */
+    const baseFile = path.join(res, "values", "colors.xml");
+    assert.ok(fs.existsSync(baseFile), "the night colours must have a base values/colors.xml, not only a values-night one");
+    const base = fs.readFileSync(baseFile, "utf8");
+    const names = (xml) => new Set([...xml.matchAll(/name="([^"]+)"/g)].map((m) => m[1]));
+    const missing = [...names(colors)].filter((n) => !names(base).has(n));
+    assert.deepEqual(missing, [], `night colours with no base declaration (MissingDefaultResource): ${missing.join(", ")}`);
+    assert.match(base, new RegExp(`<color name="rs_splash_background">${brand.palette.light.paper}</color>`),
+      "the day value is the brand's light paper — the same source, so neither plane can drift");
+
+    // A generated project may already carry colours (a future Capacitor template, or a plugin).
+    // Merging is the contract; replacing the file would delete somebody else's resource.
+    fs.writeFileSync(baseFile, '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="colorPrimary">#123456</color>\n</resources>\n');
+    fs.rmSync(path.join(res, "values-night", "colors.xml"));
+    run();
+    const merged = fs.readFileSync(baseFile, "utf8");
+    assert.match(merged, /colorPrimary/, "an existing colour must survive the patch");
+    assert.deepEqual([...names(colors)].filter((n) => !names(merged).has(n)), [], "and the night pair must still be complete after a merge");
+
     const second = run();
     assert.match(second, /already current/, "a second run must not rewrite bytes");
     assert.equal(fs.readFileSync(path.join(res, "values-night", "styles.xml"), "utf8"), styles);
