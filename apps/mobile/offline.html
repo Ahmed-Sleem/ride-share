@@ -29,6 +29,10 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
 .logo svg{width:100%;height:100%}
 .name{font-size:22px;font-weight:750}
 .status{font-size:13px;color:var(--muted);min-height:1.5em}
+/* The reason has to be where the user is looking. The status line inside the splash is hidden
+   the moment the offline card appears, so a failure recorded only there was a failure nobody
+   saw - which is how a mis-baked build came to look like a passenger with no data. */
+.why{font-size:13px;color:var(--muted);min-height:1.4em;margin:0;overflow-wrap:anywhere}
 h1{margin:0;font-size:18px;font-weight:750}
 p{margin:0;max-width:28ch;color:var(--muted)}
 .btn{min-height:var(--tap);padding:0 var(--s5);border:0;border-radius:var(--r);font:650 15px/1 inherit;
@@ -49,6 +53,7 @@ p{margin:0;max-width:28ch;color:var(--muted)}
 </div>
 <div class="offline" id="offline" role="alert">
   <h1>Check your internet connection</h1>
+  <p class="why" id="why"></p>
   <p>We need a connection to load rides and tickets.</p>
   <button type="button" class="btn" id="retry">Retry</button>
 </div>
@@ -64,9 +69,25 @@ p{margin:0;max-width:28ch;color:var(--muted)}
   var KEY_SHA = "rs.ota.sha.v1";
   var KEY_VER = "rs.ota.ver.v1";
 
-  function setStatus(msg) { if (statusEl) statusEl.textContent = msg || ""; }
+  var whyEl = document.getElementById("why");
+  var retryEl = document.getElementById("retry");
+  var trying = false;
+  function setStatus(msg) {
+    if (statusEl) statusEl.textContent = msg || "";
+    if (whyEl) whyEl.textContent = msg || "";
+  }
   function showOffline() { splash.style.display = "none"; off.style.display = "flex"; }
   function showSplash() { splash.style.display = "flex"; off.style.display = "none"; }
+  /* Retry used to be a control that could not be told apart from a wall: it re-ran boot()
+     with no state, so a second tap was swallowed and nothing visibly happened. It now says
+     it is working, ignores taps while working, and puts the mark back up - an attempt
+     should look like an attempt. */
+  function setBusy(is) {
+    trying = is;
+    if (!retryEl) return;
+    retryEl.disabled = is;
+    retryEl.textContent = is ? "Retrying..." : "Retry";
+  }
 
   function getCached() {
     try {
@@ -157,8 +178,10 @@ p{margin:0;max-width:28ch;color:var(--muted)}
     var cached = getCached();
     if (!origin) {
       if (cached) return mountBundle(cached.html);
+      setStatus("This build was not given a server address. Reinstall the current installer.");
       return showOffline();
     }
+    setStatus("Connecting to " + origin.replace(/^https?:\/\//, "") + "...");
 
     try {
       // Step 1: Query update API with HMAC headers (2.5s timeout)
@@ -213,11 +236,22 @@ p{margin:0;max-width:28ch;color:var(--muted)}
     } catch (err) {
       console.warn("[ota] boot error:", err);
       if (cached) return mountBundle(cached.html);
+      var host = origin.replace(/^https?:\/\//, "");
+      setStatus(err && err.message === "TIMEOUT"
+        ? host + " did not answer in time. Check the connection and try again."
+        : host + " could not be reached from this device.");
       showOffline();
+    } finally {
+      setBusy(false);
     }
   }
 
-  document.getElementById("retry").addEventListener("click", boot);
+  retryEl.addEventListener("click", function () {
+    if (trying) return;
+    setBusy(true);
+    showSplash();
+    boot();
+  });
   boot();
 })();
 </script>

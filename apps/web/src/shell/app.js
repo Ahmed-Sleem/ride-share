@@ -190,6 +190,38 @@ function render(){
     try { console.error(err); } catch (_) { /* no console */ }
   }
 }
+/* The stylesheet asks the scroller to glide (`scroll-behavior:smooth`), which is right for a
+   link that says "jump to the pricing section" and wrong for putting a reader back where they
+   already were: animated, it shows the top of the page first and slides down afterwards, which
+   reads as a bug even though it ends in the right place. So the restore is instant, and the
+   authored value is left exactly as the sheet wrote it. */
+function restoreLandingScroll(y){
+  if(!y) return;
+  const el = document.querySelector(".landing");
+  if(!el) return;
+  const assign = () => {
+    /* Read inside the closure: this runs twice, once now and once after the next frame, and
+       the second run must still put back what the stylesheet says rather than a value taken
+       before the first write. (`authored` lived outside this function once, and the outer
+       declaration was lost in an edit - jsdom never reached the line, so no unit assertion
+       noticed. A browser did.) */
+    const authored = el.style.scrollBehavior;
+    el.style.scrollBehavior = "auto";
+    el.scrollTop = y;
+    el.style.scrollBehavior = authored;
+  };
+  assign();
+  /* One more time after the next frame. The landing paints its chapters through a reveal
+     observer and a lazily mounted map, so the height under the reader can still be settling
+     while this runs - and an assignment against a `scrollHeight` that is briefly short is
+     clamped, silently, to the smaller maximum. Re-asserting costs nothing when the first
+     assignment already stuck, and it is the difference between "back where you were" and a
+     page that quietly lands 28 pixels early. */
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => { if (el.isConnected) assign(); });
+  }
+}
+
 function renderUnsafe(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
@@ -205,6 +237,14 @@ function renderUnsafe(){
   if (native && typeof Platform.applyChrome === "function") Platform.applyChrome(theme);
 
   const root=document.getElementById("root");
+  /* The landing scrolls inside its own element, and that element is about to be torn down with
+     the rest of the subtree - so its offset has to be picked up here, before the teardown, and
+     handed to whatever replaces it. This is not a menu problem: any state change in the bar -
+     the menu, the language, the theme - re-renders this view, and every one of them used to
+     throw the reader back to the top of the page. Deliberate navigation still wins, because
+     `landingGo` zeroes the scroller after this runs. */
+  const keepScroller = S.view==="landing" ? document.querySelector(".landing") : null;
+  const keepScroll = keepScroller ? keepScroller.scrollTop : 0;
   /* One teardown point for the landing's scroll machinery: whatever the next
      view is, the previous render's observer and rAF loop are already gone. */
   if (typeof teardownLanding === "function") teardownLanding();
@@ -222,7 +262,7 @@ function renderUnsafe(){
     if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
     root.append(auth()); return;
   }
-  if(S.view==="landing"){ root.append(landing()); return; }
+  if(S.view==="landing"){ root.append(landing()); restoreLandingScroll(keepScroll); return; }
   if(S.view==="auth"){ root.append(auth()); return; }
   if(!S.authed){ guestHome(); if (S.view==="intro") { root.append(introView()); return; } if (S.view==="auth") { root.append(auth()); return; } S.view="landing"; root.append(landing()); return; }
 
@@ -405,7 +445,14 @@ try {
   }
 } catch (_) { /* old WebView */ }
 
-document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Escape") return;
+  if(S.sheet) closeSheet();
+  /* The landing's menu is a disclosure, not a sheet, but it covers the whole screen from
+     here on - so it owes the same dismissal, or Escape would close a panel nobody can see
+     and leave the real one open. */
+  else if(S.landingMenu) closeLandingMenu();
+});
 window.addEventListener("online", ()=>{
   flushFieldQueue();
   if (typeof flushDriverOutbox === "function") flushDriverOutbox();

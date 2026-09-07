@@ -39,7 +39,19 @@ test("www/index.html is the local offline boot (not a remote shell)", () => {
 
 test("Railway dist serves the app HTML, not the offline splash", () => {
   const build = fs.readFileSync(path.join(__dirname, "../scripts/build.js"), "utf8");
-  assert.match(build, /MOBILE_PUBLIC_ORIGIN/);
+  /* The environment precedence used to sit inline in build.js, and this guard read it there.
+     G-110 moved the rule into scripts/resolve-origin.js so it could be tested and so a build
+     could no longer answer "no origin" - so the guard follows the rule and checks both halves:
+     the module owns the names and their order, and the build wires the resolved value into the
+     tag the boot page actually reads. Same fact, one more thing pinned: which file is allowed
+     to be wrong. */
+  const rule = fs.readFileSync(path.join(__dirname, "../scripts/resolve-origin.js"), "utf8");
+  for (const key of ["MOBILE_PUBLIC_ORIGIN", "PUBLIC_MOBILE_ORIGIN", "MOBILE_WEB_ORIGIN", "RAILWAY_PUBLIC_DOMAIN"]) {
+    assert.ok(rule.includes(key), `the origin rule must honour ${key}`);
+    assert.ok(!build.includes(key), `${key} must be read in exactly one place`);
+  }
+  assert.match(build, /const origin = resolveOrigin\(\);/, "and the build must use it, not a local guess");
+  assert.match(build, /window\.__RS_PUBLIC_ORIGIN=\$\{JSON\.stringify\(origin\)\}/);
   assert.match(build, /__RS_SURFACE="mobile"/);
   assert.match(build, /dist, "www", "index.html"/);
   assert.match(build, /LIVE app HTML/);
@@ -97,4 +109,52 @@ test("the generated Android project gains a night splash, from brand.json", () =
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+/* G-110. The installer that shipped to the store of record was built with none of the
+   deployment variables set - which is normal for CI - and the origin resolved to the empty
+   string. The boot page then went straight to "Check your internet connection" on a phone
+   with full signal, and Retry re-ran the same no-op. There was a test for server.url staying
+   unset (rightly) and none for the origin existing at all. These are those tests. */
+const { resolveOrigin, normalise } = require("../scripts/resolve-origin.js");
+
+test("a build with no environment still gets a real server address", () => {
+  const origin = resolveOrigin({});
+  assert.equal(origin, brand.app.origin);
+  assert.match(origin, /^https:\/\/[^/?#]+$/, "the default must be an https origin, not a path");
+  assert.ok(origin.length > "https://".length + 4, "and never the empty string that shipped");
+});
+
+test("deployment variables win over the default, in the documented order", () => {
+  assert.equal(resolveOrigin({ MOBILE_PUBLIC_ORIGIN: "https://one.test" }), "https://one.test");
+  assert.equal(resolveOrigin({ PUBLIC_MOBILE_ORIGIN: "https://two.test" }), "https://two.test");
+  assert.equal(resolveOrigin({ MOBILE_WEB_ORIGIN: "https://three.test" }), "https://three.test");
+  assert.equal(resolveOrigin({ MOBILE_PUBLIC_ORIGIN: "https://one.test", MOBILE_WEB_ORIGIN: "https://three.test" }),
+    "https://one.test");
+  assert.equal(resolveOrigin({ MOBILE_PUBLIC_ORIGIN: "https://one.test/" }), "https://one.test",
+    "a trailing slash is not part of an origin, and the boot page concatenates it");
+});
+
+test("a bare Railway domain is made https rather than guessed at", () => {
+  assert.equal(resolveOrigin({ RAILWAY_PUBLIC_DOMAIN: "other.up.railway.app" }), "https://other.up.railway.app");
+  assert.equal(resolveOrigin({ RAILWAY_PUBLIC_DOMAIN: "https://other.up.railway.app/" }), "https://other.up.railway.app");
+});
+
+test("an origin that cannot work is a build failure, not a silent install", () => {
+  assert.throws(() => resolveOrigin({ MOBILE_PUBLIC_ORIGIN: "http://evil.test" }), /https/);
+  assert.throws(() => normalise("not a url", "X"), /not a URL/);
+  assert.throws(() => normalise("https://a.test/base", "X"), /no path/);
+  // new URL() rejects a bare scheme outright, so the words are its own - what matters is that
+  // the build stops here instead of baking an origin nobody can reach.
+  assert.throws(() => normalise("https://", "X"), /no host|not a URL/);
+  assert.equal(normalise("HTTPS://Host.Test", "X"), "https://host.test",
+    "a scheme's case is the sender's, the origin's case is the DNS one");
+  assert.equal(normalise("http://localhost:8787"), "http://localhost:8787", "development is allowed");
+});
+
+test("local-first survives: the app starts from a file, and may navigate to the OTA host", () => {
+  const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+  assert.ok(!cfg.server || !cfg.server.url, "server.url must stay unset - see build.js and G-110");
+  assert.ok(cfg.server.allowNavigation.includes(new URL(brand.app.origin).hostname),
+    "the origin's own host must be in allowNavigation, or the address in brand.json is a lie");
 });

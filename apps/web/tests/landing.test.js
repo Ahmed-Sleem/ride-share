@@ -582,16 +582,47 @@ async function survey(view, lang, key, doc) {
     const navNow = document.querySelector('.landing__nav');
     const mb0 = navNow && navNow.querySelector('.landing__menu');
     if (mb0 && getComputedStyle(mb0).display !== 'none') {
+      /* The property being guarded is "the page did not move", not "the page was at the top":
+         the survey scrolls for other measurements, so the reference has to be where this id
+         actually was, taken in the same breath as the click. */
+      const scroller = document.querySelector('.landing');
+      const before = (scroller ? scroller.scrollTop : 0) + window.scrollY;
       mb0.click();
-      const panel = document.querySelector('.landing__menu-panel');
+      const panel = document.querySelector('.landing-menu');
       const navRef = document.querySelector('.landing__nav');
       if (panel && navRef) {
         const pcs = getComputedStyle(panel), ncs = getComputedStyle(navRef);
         const al = (x) => +((x.match(/[\d.]+/g) || [0, 0, 0, 1])[3]);
+        /* getBoundingClientRect reports the painted box, and the sheet's entrance starts at
+           scale(.985) - so a rect taken in the same frame as the click reads 1.5% short on
+           both axes no matter how well the sheet covers the page. The computed width and
+           height are the layout box, and that is what "full screen" means. */
+        const boxW = parseFloat(pcs.width), boxH = parseFloat(pcs.height);
+        /* A fixed inset:0 box is the initial containing block, and the ICB is the viewport
+           MINUS the classic scrollbar - which is 15px of a 900px headless window, so against
+           window.innerWidth a perfectly covering sheet measures 0.985. The client box is the
+           honest reference; against it the answer is exactly 1. */
+        const icbW = document.documentElement.clientWidth, icbH = document.documentElement.clientHeight;
         sheet = { alpha: al(pcs.backgroundColor), navAlpha: al(ncs.backgroundColor),
           blur: pcs.backdropFilter || pcs.webkitBackdropFilter || 'none',
           navBlur: ncs.backdropFilter || ncs.webkitBackdropFilter || 'none',
-          rows: panel.querySelectorAll('.landing__menulink').length };
+          rows: panel.querySelectorAll('.landing__menulink').length,
+          /* Two facts the old dropdown could never satisfy and nobody was measuring:
+             it must be as tall and as wide as the viewport, and it must not live inside
+             the bar - the bar's backdrop-filter would make it the containing block for a
+             fixed child, which is how a full-screen sheet quietly stayed a strip. */
+          coverW: +(boxW / icbW).toFixed(3),
+          coverH: +(boxH / icbH).toFixed(3),
+          insideNav: !!panel.closest('.landing__nav'),
+          afterScroll: (document.querySelector('.landing') || { scrollTop: 0 }).scrollTop + window.scrollY,
+          /* The row that was hidden: the sheet opens under the bar, not behind it. Compared
+             in the same frame the panel is measured, with a hair of tolerance for subpixel. */
+          firstRowTop: panel.querySelector('.landing__menulink')
+            ? +panel.querySelector('.landing__menulink').getBoundingClientRect().top.toFixed(1) : -1,
+          navBottom: +navRef.getBoundingClientRect().bottom.toFixed(1),
+          /* and it must not have moved the page: the reader was thrown to the top on
+             every open, because the re-render replaced the scroller itself. */
+          scrolled: before };
       }
     }
     base.sheet = sheet;
@@ -624,6 +655,13 @@ for (const vp of BOUNDARIES) {
           m.sheet.blur !== 'none' && m.sheet.alpha <= 0.7 && m.sheet.navBlur !== 'none' &&
           Math.abs(m.sheet.alpha - m.sheet.navAlpha) < 0.01, JSON.stringify(m.sheet));
         ok(`${id}: the sheet carries every page name`, m.sheet.rows >= 5, String(m.sheet.rows));
+        ok(`${id}: the sheet is full screen`, m.sheet.coverW === 1 && m.sheet.coverH === 1,
+          JSON.stringify({ w: m.sheet.coverW, h: m.sheet.coverH }));
+        ok(`${id}: the sheet is not inside the glass bar`, m.sheet.insideNav === false);
+        ok(`${id}: no row of the sheet starts above the bar`, m.sheet.firstRowTop >= m.sheet.navBottom - 0.5,
+          JSON.stringify({ row: m.sheet.firstRowTop, bar: m.sheet.navBottom }));
+        ok(`${id}: opening the sheet leaves the page where it was`, m.sheet.scrolled === m.sheet.afterScroll,
+          JSON.stringify({ before: m.sheet.scrolled, after: m.sheet.afterScroll }));
       }
       if (m.barCentreErr >= 0) {
         ok(`${id}: the page names sit on the poster's own axis`, m.barCentreErr <= 2,

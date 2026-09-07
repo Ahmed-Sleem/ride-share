@@ -1,3 +1,47 @@
+## 2026-09-07 — renewal round 11: the installed app could not reach its own server, and the landing's menu was a strip
+
+Both halves came from the owner's phone, and both were confirmed by reading artifacts rather than guessing at causes.
+
+**The app never left "Check your internet connection".** The shipped APK's own `capacitor.config.json` has no
+`server.url` — correct, because `build.js:57` states the app must start from a file and `config.test.js:43` has guarded
+that since round 9 — and its `index.html` is byte-identical to `offline.html` (99,194 B, sha256 `688346062f21c962`),
+also by design: the boot page is the entry file and it pulls the live bundle. What was missing is the address to pull
+from. `liveOrigin()` looked only at `MOBILE_PUBLIC_ORIGIN`/`RAILWAY_PUBLIC_DOMAIN`, which exist on the Railway runtime
+and not on a CI runner, so the installer baked `origin = ""`, and `boot()`'s `if (!origin) return showOffline()` went
+straight to the card — no attempt, no status, no splash, and a Retry that re-ran the same no-op. Independently,
+`apps/mobile/server.js` had no OPTIONS handling and sent no `access-control-allow-origin`, while the boot page always
+attaches `x-rs-app-id/x-rs-ts/x-rs-sign` — non-safelisted, so the WebView preflighted into nothing. A mis-baked build
+and a blocked transport, either one fatal, both silent.
+
+Fixed as architecture, not as a patch: `apps/mobile/scripts/resolve-origin.js` owns the rule (documented env order,
+`packages/brand/brand.json app.origin` as the floor, **a thrown build error rather than an empty string**, `new URL()`
+so `"https://"` and a base path cannot pass — my own first version accepted both, and its test caught them); the four
+OTA paths answer the preflight and echo only the app's local origins, with the proof check untouched on the real
+request; and the boot page now says what it tried, repeats the reason where it is visible (the status line lived inside
+the splash, which `showOffline()` hides), and marks itself busy so a second tap cannot vanish. `build.js` strips
+`app` before inlining brand.json into the web bundle, because the existing *no deployment host in the bundle* guard
+caught the leak first — fixed in the code, not in the guard. Mobile suite 15 → **22/0** (5 origin tests, 2 CORS tests). The web route tests were 6/2 and are 8/0 now: round 10's committed installer invalidated the *"nothing staged"* fixture that only hid `ANDROID_APK_PATH`, and `verify.sh` — the script CI runs — had never invoked `tests/server.test.js`, so no push could surface it. The fixture hides all three sources now, and the file is in the gate (G-112).
+The `META-INF`-only signature probe that made me say "would not install" was my error: `APK Sig Block 42` at
+27,831,431 ahead of the central directory at 27,882,418 is a v2/v3 signature. This is baked, so `version.code` moves
+3 → 4 and devices need the next installer; after that, the GUI still arrives over the air.
+
+**The landing's three-dot menu is a sheet now** (G-111, the owner's three complaints). It was never missing the glass —
+the suite measures the panel's alpha against the bar's and they were equal at 0.62 — it was hung inside the bar, whose
+`backdrop-filter` becomes the containing block for a `position:fixed` descendant, so full screen was impossible and
+there was nothing to frost. It is a sibling at `--z-landing-menu:19` under the bar's 20 (the dots stay reachable and
+close it; Escape and a tap on the frost too), measured `390×844` against an identical ICB, 7 rows at 22px bold in 57px
+heights. The scroll jump was structural: `.landing` *is* the scroller and `render()` replaces it, so a disclosure must
+not re-render — `setLandingMenu()` mounts and removes in place, while the render path keeps a restore for the language
+and theme switches, which lose the reader's position the same way and had no report yet. Two failures taught the rest:
+restoring inside `render()` measured `{before:1019, after:991}` because `scroll-behavior:smooth` animates the write and
+a lazily painted map leaves `scrollHeight` still growing (and locking without `scrollbar-gutter:stable` shortens the
+page by the scrollbar, the same 28px), and a `ReferenceError` in the restore ran invisible through **721 green unit
+assertions** because jsdom has no layout, so `if(!y) return` skipped the body — the guard now calls the function
+instead of reading it. Finally, the screenshot caught what no suite did: the bar's height was derived (`padding + tap`)
+while the wordmark wraps to two lines at 390px, so the real 78px bar covered "Ride"; the height is now measured where
+the sheet mounts, and the survey asserts that no row starts above the bar's bottom edge, at every id.
+**unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
+
 ## 2026-09-07 — the break harness caught its own blindness: three guards had been blind since round 9
 
 `Break-detection` finished its first-ever CI run on run `34067676257` — the job only exists because round 9c restored the exec bits that had kept

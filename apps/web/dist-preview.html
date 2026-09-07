@@ -231,6 +231,10 @@
   /* Above the sticky content of the page, below the app's own chrome, so a
      toast or a sheet is never trapped under the marketing header. */
   --z-landing-nav:20;
+  /* One below the bar, so the three dots that opened the sheet stay visible and are
+     also the thing that closes it - a full-screen menu with no reachable dismiss is a
+     trap. Above the page, because it belongs to the page. */
+  --z-landing-menu:19;
   --z-pagefx:95;                  /* the curtain covers the surface, then is gone */
   /* The page transition, in four beats: rise, fill, release, fall. The path itself is
      drawn by lib/pagefx.js from these numbers, so the sheet owns the pacing. */
@@ -1078,7 +1082,11 @@ html.native .intro{padding-top:var(--safe-t)}
 /* ── the head: fixed, frosted, one hairline ─────────────────────────────
    Frosted glass deliberately replaces blend-mode tricks: a panel that inverts
    against what is behind it cannot also be a translucent panel. */
-.landing__nav{position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
+/* --landing-bar-h is the bar's own height by construction (its padding plus the row it
+   must clear), not an estimate: the sheet below uses it to start its rows underneath the
+   chrome instead of under it. If the bar's padding changes, the sheet follows. */
+.landing__nav{--landing-bar-h:calc(var(--s2) * 2 + var(--tap));min-height:var(--landing-bar-h);
+  position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
   display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;
   column-gap:var(--s3);
   padding:var(--s2) var(--gutter);background:var(--glass);
@@ -1161,44 +1169,49 @@ html.native .intro{padding-top:var(--safe-t)}
   cursor:pointer;flex:none;opacity:.8;transition:opacity var(--med) var(--ease)}
 .landing__menu svg{width:22px;height:22px;fill:currentColor;stroke:none}
 .landing__menu:hover,.landing__menu:focus-visible{opacity:1;outline-offset:-2px}
-/* The panel is the bar continued: the same frost, the same hairline, and an
-   entrance rather than a pop. It animates on mount because a re-render replaces the
-   node — a transition on a node that has never been painted would be skipped. */
-.landing__menu-panel{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;
-  gap:1px;background:var(--glass);
-  /* Exactly the bar's glass, on purpose: the panel IS the bar continued, and a sheet that
-     is 96% opaque while its own header is 62% reads as two different materials. The blur
-     alone was already there — invisible at that alpha, which is why it looked like the
-     effect had been dropped. Where backdrop-filter is missing the fallback below still
-     gives a solid surface, so the panel is never unreadable, only less frosted. */
+/* The sheet is the bar continued: the same frost, the same hairline, and an entrance
+   rather than a pop. It is full screen because it covers the page it belongs to, and it is
+   frosted over content rather than over the bar's own flat hero - which is why the same
+   --glass reads as real glass here in a way the old strip under the bar never did. */
+.landing-menu{position:fixed;inset:0;z-index:var(--z-landing-menu);display:grid;align-content:start;
+  gap:1px;overflow-y:auto;overscroll-behavior:contain;background:var(--glass);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-  border-bottom:1px solid var(--glass-line);box-shadow:var(--sh-3);
-  padding:var(--s3) var(--gutter) var(--s4);transform-origin:top center;
-  animation:landing-menu-in var(--panel-in-dur) var(--panel-in-ease) both}
+  padding:calc(var(--landing-bar-h) + var(--s5)) var(--gutter) calc(var(--s6) + var(--safe-b));
+  transform-origin:top center;animation:landing-menu-in var(--panel-in-dur) var(--panel-in-ease) both}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .landing__menu-panel{background:var(--glass-solid)}
+  .landing-menu{background:var(--glass-solid)}
 }
+/* The page behind a full-screen menu does not move under it. `:has` is the whole
+   mechanism - no class to forget, no state to unwind, and a browser without `:has` keeps a
+   scrollable page behind a scrollable sheet, which is an inconvenience rather than a trap.
+   The gutter stays reserved while locked: hiding `overflow` would otherwise take the scrollbar
+   away, let the text reflow wider, and shorten the page - which clamps the very offset this
+   code exists to preserve. That is a 28px jump at the foot of a document, and it only showed up
+   in the browser suite at the widths where the last page is exactly that tall. */
+.landing:has(> .landing-menu){overflow:hidden;scrollbar-gutter:stable}
 @keyframes landing-menu-in{
   from{opacity:0;transform:translateY(calc(-1 * var(--s2))) scale(.985)}
   to{opacity:1;transform:none}
 }
-/* The rows arrive on the same curve, one step behind the next: the panel reads as
-   one object opening, not seven controls appearing. */
+/* The rows arrive on the same curve, one step behind the next: the sheet reads as one object
+   opening, not seven controls appearing. */
 @keyframes landing-menu-row{
   from{opacity:0;transform:translateY(calc(-1 * var(--s2)))}
   to{opacity:1;transform:none}
 }
-.landing__menu-panel .landing__menulink{animation:landing-menu-row var(--panel-in-dur) var(--panel-in-ease) both}
-.landing__menu-panel .landing__menulink:nth-child(2){animation-delay:calc(var(--panel-in-step) * 1)}
-.landing__menu-panel .landing__menulink:nth-child(3){animation-delay:calc(var(--panel-in-step) * 2)}
-.landing__menu-panel .landing__menulink:nth-child(4){animation-delay:calc(var(--panel-in-step) * 3)}
-.landing__menu-panel .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
-.landing__menu-panel .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
-.landing__menu-panel .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
+.landing-menu .landing__menulink{animation:landing-menu-row var(--panel-in-dur) var(--panel-in-ease) both}
+.landing-menu .landing__menulink:nth-child(2){animation-delay:calc(var(--panel-in-step) * 1)}
+.landing-menu .landing__menulink:nth-child(3){animation-delay:calc(var(--panel-in-step) * 2)}
+.landing-menu .landing__menulink:nth-child(4){animation-delay:calc(var(--panel-in-step) * 3)}
+.landing-menu .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
+.landing-menu .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
+.landing-menu .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
 .landing__menulink{display:block;text-align:start;border:0;background:none;cursor:pointer;
   font:inherit;font-size:var(--f-title);font-weight:var(--fw-bold);letter-spacing:-.02em;
   color:var(--ink);padding:.55rem 0}
 .landing__menulink:hover{color:var(--ink-soft)}
+.landing-menu .landing__menulink{padding:var(--s3) 0;min-block-size:var(--tap)}
+.landing-menu .divider{margin-block:var(--s2)}
 /* The theme switch, not a mystery icon: a switch you can read is a control, an
    icon is a riddle. `role="switch"` + `aria-checked` carries the state to AT. */
 .landingsw{position:relative;flex:none;width:46px;height:25px;padding:0;cursor:pointer;
@@ -1694,7 +1707,7 @@ html.native .intro{padding-top:var(--safe-t)}
 </script>
 <div id="root"></div>
 <script>
-const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":3},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
+const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":4},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
 
 (function(){
 /**
@@ -7320,9 +7333,14 @@ async function loadPublicShare(token) {
    Fixed and frosted over the poster. Desktop shows the five page links; compact
    moves them and Log in into a labelled panel — a hamburger with no name is a
    riddle, and the same five destinations must be reachable at 320px (§8.1). */
+/* The five destinations, named once. The bar, the sheet and the in-place toggle all read this,
+   and the sheet is the same builder in every case - so "the menu lists the pages" cannot
+   disagree with "the bar lists the pages" in either direction. */
+const LANDING_LINKS = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"],
+  ["help", "navHelp"], ["download", "navDownload"]];
+
 function landingNav() {
-  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"],
-    ["help", "navHelp"], ["download", "navDownload"]];
+  const links = LANDING_LINKS;
   const nav = $("header", { class: "landing__nav" });
 
   nav.append($("button", {
@@ -7342,27 +7360,102 @@ function landingNav() {
 
   nav.append($("button", {
     class: "landing__menu",
-    attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu) },
-    on: { click: () => { S.landingMenu = !S.landingMenu; render(); } },
+    attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu),
+      "aria-controls": "landing-menu" },
+    on: { click: toggleLandingMenu },
   }, icon("dots")));
 
-  if (S.landingMenu) {
-    const dd = $("div", { class: "landing__menu-panel", attrs: { role: "navigation", "aria-label": t("menu") } });
-    links.forEach(([k, lbl]) => dd.append($("button", {
-      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
-      on: { click: () => { S.landingMenu = false; landingGo(k); } },
-    })));
-    dd.append($("div", { class: "divider" }));
-    /* In the panel both entries are links like the page links above them. A filled
-       button in a menu is a second hierarchy the bar already settles: the same
-       "Sign up" sits in the header at the same moment. */
-    [["login", "signin"], ["signup", "signup"]].forEach(([lbl, mode]) => dd.append($("button", {
-      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
-      on: { click: () => { S.landingMenu = false; authGo(mode); } },
-    })));
-    nav.append(dd);
+  /* The sheet is returned NEXT TO the bar, never inside it. `header.landing__nav` paints its
+     own frost with backdrop-filter, and a filtered ancestor becomes the containing block for
+     position:fixed descendants - so a sheet that wanted the whole viewport could only ever be
+     a strip under the bar, which is precisely what it looked like. Two siblings, one
+     fragment: every one of the eight landing roots keeps calling `landingNav()` unchanged. */
+  const sheet = landingMenuSheet();
+  if (!sheet) return nav;
+  const frag = document.createDocumentFragment();
+  frag.append(nav, sheet);
+  /* A full render (a theme change while the menu is open) rebuilds the bar and the sheet
+     together, so it fits them to each other once the tree is in the document - which the
+     caller does in the same frame; see the rAF in shell/app.js. */
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => fitSheetToBar(sheet));
   }
-  return nav;
+  return frag;
+}
+
+function landingMenuSheet() {
+  if (!S.landingMenu) return null;
+  const dd = $("div", {
+    class: "landing-menu",
+    attrs: { id: "landing-menu", role: "navigation", "aria-label": t("menu") },
+    /* Tapping the frost itself closes: the sheet is a full-screen surface now, so the
+       empty area below the last row is a reasonable place to ask to go back to the page. */
+    on: { click: (e) => { if (e.target === dd) closeLandingMenu(); } },
+  });
+  LANDING_LINKS.forEach(([k, lbl]) => dd.append($("button", {
+    class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+    on: { click: () => { S.landingMenu = false; landingGo(k); } },
+  })));
+  dd.append($("div", { class: "divider" }));
+  /* In the sheet both entries are links like the page links above them. A filled
+     button in a menu is a second hierarchy the bar already settles: the same
+     "Sign up" sits in the header at the same moment. */
+  [["login", "signin"], ["signup", "signup"]].forEach(([lbl, mode]) => dd.append($("button", {
+    class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+    on: { click: () => { S.landingMenu = false; authGo(mode); } },
+  })));
+  return dd;
+}
+
+/* The bar's button and the Escape key both come through here, so the menu cannot be open in
+   one place and shut in the other - and neither of them re-renders the page.
+
+   A disclosure that rebuilds the document to show itself is a hammer, and here it had a real
+   cost: `.landing` is the scroller, `render()` replaces it, and the reader's position is a
+   property of the node being thrown away. Restoring it after the fact only works while the
+   page is already at its final height; over a lazily painted map and a reveal observer it is
+   not, and the browser suite caught the offset clamped by 28px. Toggling the sheet in place
+   has no such window, because the scroller is never replaced.
+
+   `S.landingMenu` stays the single fact: the render path reads it through the same builder,
+   so a full render (a theme change, a navigation) still paints the sheet in the same shape. */
+function setLandingMenu(open) {
+  if (!!S.landingMenu === open) return;
+  S.landingMenu = open;
+  const host = document.querySelector(".landing");
+  const btn = document.querySelector(".landing__menu");
+  if (!host) { render(); return; }
+  const live = host.querySelector(".landing-menu");
+  if (!open) {
+    if (live) live.remove();
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    return;
+  }
+  const sheet = landingMenuSheet();
+  if (!sheet) { render(); return; }
+  host.append(sheet);
+  fitSheetToBar(sheet);
+  if (btn) btn.setAttribute("aria-expanded", "true");
+}
+
+/* The sheet is a full-screen surface whose first row must begin under the bar, and the bar's
+   height is not a constant: at 390px the wordmark wraps to two lines and the bar grows by
+   roughly a quarter. `--landing-bar-h` is the floor the stylesheet can reason about, and the
+   measurement is the truth of this moment - so the number is read here, where the element is
+   already in the document and has a height. */
+function fitSheetToBar(sheet) {
+  const nav = document.querySelector(".landing__nav");
+  if (!nav || !sheet) return;
+  const h = nav.offsetHeight;
+  if (h > 0) sheet.style.paddingTop = `${h + 20}px`;
+}
+
+function toggleLandingMenu() {
+  setLandingMenu(!S.landingMenu);
+}
+
+function closeLandingMenu() {
+  setLandingMenu(false);
 }
 
 function landingLink(k, lbl) {
@@ -10777,6 +10870,38 @@ function render(){
     try { console.error(err); } catch (_) { /* no console */ }
   }
 }
+/* The stylesheet asks the scroller to glide (`scroll-behavior:smooth`), which is right for a
+   link that says "jump to the pricing section" and wrong for putting a reader back where they
+   already were: animated, it shows the top of the page first and slides down afterwards, which
+   reads as a bug even though it ends in the right place. So the restore is instant, and the
+   authored value is left exactly as the sheet wrote it. */
+function restoreLandingScroll(y){
+  if(!y) return;
+  const el = document.querySelector(".landing");
+  if(!el) return;
+  const assign = () => {
+    /* Read inside the closure: this runs twice, once now and once after the next frame, and
+       the second run must still put back what the stylesheet says rather than a value taken
+       before the first write. (`authored` lived outside this function once, and the outer
+       declaration was lost in an edit - jsdom never reached the line, so no unit assertion
+       noticed. A browser did.) */
+    const authored = el.style.scrollBehavior;
+    el.style.scrollBehavior = "auto";
+    el.scrollTop = y;
+    el.style.scrollBehavior = authored;
+  };
+  assign();
+  /* One more time after the next frame. The landing paints its chapters through a reveal
+     observer and a lazily mounted map, so the height under the reader can still be settling
+     while this runs - and an assignment against a `scrollHeight` that is briefly short is
+     clamped, silently, to the smaller maximum. Re-asserting costs nothing when the first
+     assignment already stuck, and it is the difference between "back where you were" and a
+     page that quietly lands 28 pixels early. */
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => { if (el.isConnected) assign(); });
+  }
+}
+
 function renderUnsafe(){
   document.documentElement.lang = S.lang;
   document.documentElement.dir  = S.lang==="ar" ? "rtl" : "ltr";
@@ -10792,6 +10917,14 @@ function renderUnsafe(){
   if (native && typeof Platform.applyChrome === "function") Platform.applyChrome(theme);
 
   const root=document.getElementById("root");
+  /* The landing scrolls inside its own element, and that element is about to be torn down with
+     the rest of the subtree - so its offset has to be picked up here, before the teardown, and
+     handed to whatever replaces it. This is not a menu problem: any state change in the bar -
+     the menu, the language, the theme - re-renders this view, and every one of them used to
+     throw the reader back to the top of the page. Deliberate navigation still wins, because
+     `landingGo` zeroes the scroller after this runs. */
+  const keepScroller = S.view==="landing" ? document.querySelector(".landing") : null;
+  const keepScroll = keepScroller ? keepScroller.scrollTop : 0;
   /* One teardown point for the landing's scroll machinery: whatever the next
      view is, the previous render's observer and rAF loop are already gone. */
   if (typeof teardownLanding === "function") teardownLanding();
@@ -10809,7 +10942,7 @@ function renderUnsafe(){
     if (S.view !== "auth") { S.view = "auth"; S.authMode = S.authMode || "signin"; }
     root.append(auth()); return;
   }
-  if(S.view==="landing"){ root.append(landing()); return; }
+  if(S.view==="landing"){ root.append(landing()); restoreLandingScroll(keepScroll); return; }
   if(S.view==="auth"){ root.append(auth()); return; }
   if(!S.authed){ guestHome(); if (S.view==="intro") { root.append(introView()); return; } if (S.view==="auth") { root.append(auth()); return; } S.view="landing"; root.append(landing()); return; }
 
@@ -10992,7 +11125,14 @@ try {
   }
 } catch (_) { /* old WebView */ }
 
-document.addEventListener("keydown", e=>{ if(e.key==="Escape" && S.sheet) closeSheet(); });
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Escape") return;
+  if(S.sheet) closeSheet();
+  /* The landing's menu is a disclosure, not a sheet, but it covers the whole screen from
+     here on - so it owes the same dismissal, or Escape would close a panel nobody can see
+     and leave the real one open. */
+  else if(S.landingMenu) closeLandingMenu();
+});
 window.addEventListener("online", ()=>{
   flushFieldQueue();
   if (typeof flushDriverOutbox === "function") flushDriverOutbox();

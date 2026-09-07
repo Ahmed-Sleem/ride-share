@@ -199,7 +199,13 @@ const ALARM_SRC = fs.readFileSync(
   "utf8"
 );
 
-const js = "const BRAND = " + JSON.stringify(BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
+/* `app` is the one branch of the brand file that must never reach a browser: it says where the
+   deployment lives, and a host written into a bundle is a host that cannot move. The landing
+   resolves its own origin from the document instead (`apkDownloadUrl`), and the installer reads
+   brand.json at build time through scripts/resolve-origin.js, so nobody here needs it. */
+const BUNDLE_BRAND = { ...BRAND };
+delete BUNDLE_BRAND.app;
+const js = "const BRAND = " + JSON.stringify(BUNDLE_BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
   PLATFORM_SRC + "\n\n" + OUTBOX_SRC + "\n\n" + TRACK_SRC + "\n\n" + ALARM_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 

@@ -40,17 +40,13 @@ fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(www, { recursive: true });
 fs.mkdirSync(path.join(dist, "www"), { recursive: true });
 
-function liveOrigin() {
-  const env = (process.env.MOBILE_PUBLIC_ORIGIN || process.env.PUBLIC_MOBILE_ORIGIN ||
-    process.env.MOBILE_WEB_ORIGIN || "").trim();
-  if (env) return env.replace(/\/$/, "");
-  const railway = (process.env.RAILWAY_PUBLIC_DOMAIN || "").trim().replace(/^https?:\/\//, "");
-  if (railway) return "https://" + railway.replace(/\/$/, "");
-  return "";
-}
-const origin = liveOrigin();
-const webOrigin = (process.env.PUBLIC_WEB_ORIGIN ||
-  "https://ride-shareweb-production.up.railway.app").replace(/\/$/, "");
+/* The address this build talks to comes from one module (scripts/resolve-origin.js):
+   environment first, brand.json's app.origin as the floor, and a hard failure if neither
+   answers. An empty origin used to be possible, and the installer that shipped with one
+   is exactly why that is no longer allowed. */
+const { resolveOrigin, brandOrigin, normalise } = require(path.join(HERE, "scripts", "resolve-origin.js"));
+const origin = resolveOrigin();
+const webOrigin = normalise(process.env.PUBLIC_WEB_ORIGIN || brandOrigin(), "PUBLIC_WEB_ORIGIN");
 const appId = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
 const secret = (process.env.MOBILE_APP_SECRET || "").trim();
 

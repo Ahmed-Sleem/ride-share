@@ -389,3 +389,33 @@ stated: every clone carries the file, and reclaiming it later means rewriting hi
 release publish remains wired as the fallback the server redirects to, so the landing page's button and QR are
 correct whether or not a file is staged. This sandbox cannot build the APK (no Android SDK, 1.9 GB RAM), so the
 first bytes arrive from CI on this push; D-8.1 measures them before anything is called done.
+
+## 14. Round 11 - the app reaches the server, and the menu becomes a sheet
+
+Two reports from the owner's own phone, both fixed against evidence rather than description.
+
+**The app opened onto "Check your internet connection" and stayed there.** The installed binary is the record: its
+`assets/capacitor.config.json` carries no `server.url` (correct - the app must start from a file, guarded since round 9
+by `config.test.js:43`), its `assets/public/index.html` is byte-identical to `offline.html` (99,194 B, sha256
+`688346062f21c962`) because the boot page is the entry file by design, and its `SplashScreen` colour was `#FFFFFF` with
+the night override from round 10b present in `res/`. What was missing was the address it dials: `liveOrigin()` read only
+Railway-runtime variables, so the CI installer baked `""`, and `boot()`'s `if (!origin) return showOffline()` meant no
+attempt, no status, no splash, and a Retry that redid nothing. Independently, the mobile server answered neither the
+preflight nor the CORS question for `Origin: https://localhost`, so even a correct address was blocked before it started.
+So: one module resolves the origin (env order documented, `brand.json app.origin` as the floor, a thrown build error
+instead of an empty string, `new URL()` so `"https://"` and `"/base"` cannot pass); the four OTA paths answer OPTIONS
+and echo only the app's own local origins; and the boot page now states what it tried, repeats it where it is visible,
+and marks itself busy. The signature check that "failed" on the first look was my probe looking only in `META-INF`:
+`APK Sig Block 42` at 27,831,431 before the central directory at 27,882,418 means v2/v3-signed and installable.
+This is a baked change - devices need the new installer, so `version.code` moved 3 → 4 and the release asset and
+`apps/web/downloads/android.apk` follow on the next CI run; after that the interface still arrives over the air.
+
+**The landing's mobile menu is now a sheet.** It was already the bar's glass - measured alpha 0.62 against the bar's
+0.62 - but it hung under the bar inside a `backdrop-filter`ed ancestor, which makes that bar the containing block for
+anything `position:fixed`, so "full screen" was impossible and "glassy" had nothing to frost. It is a sibling of the
+bar now, built by the same `landingMenuSheet()` the render path uses, z 19 beneath the bar's 20 so the dots that opened
+it close it, `inset:0` measured at 390×844 against an ICB of 390×844, seven rows at 22px bold ink in 57px rows, and
+Escape or a tap on the frost closes it. The scroll jump was structural: `.landing` is the scroller and `render()`
+replaces it - so a disclosure does not re-render at all, and the render path keeps a measured restore (instant, and
+re-asserted a frame later) for the language and theme switches, which had the same bug the owner has not reported yet.
+

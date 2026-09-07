@@ -10,7 +10,8 @@
     "androidScheme": "https",
     "hostname": "localhost",
     "allowNavigation": [
-      "ride-shareweb-production.up.railway.app"
+      "ride-shareweb-production.up.railway.app",
+      "ride-sharemobile-production.up.railway.app"
     ]
   },
   "plugins": {

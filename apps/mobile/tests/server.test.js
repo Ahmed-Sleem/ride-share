@@ -75,3 +75,50 @@ test("proven update returns bundle sha", async () => {
   assert.equal(j.ok, true);
   assert.match(j.sha256, /^[a-f0-9]{64}$/);
 });
+
+/* The other half of G-110. The app's WebView runs on https://localhost and fetches these
+   paths cross-origin, always carrying the x-rs-* proof headers - which are not
+   CORS-safelisted, so the browser will not even send the request until an OPTIONS probe is
+   answered. With no preflight and no allow-origin, the boot page can never reach the bundle,
+   whatever the network is doing. These requests are written here rather than through the
+   file's helper because that helper keeps only status and body, and headers are the point. */
+function raw(method, url, headers) {
+  return new Promise((resolve, reject) => {
+    const srv = http.createServer((req, res) => { handler(req, res).catch(reject); });
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address();
+      const req2 = http.request({ hostname: "127.0.0.1", port, path: url, method, headers: headers || {} }, (r) => {
+        const chunks = [];
+        r.on("data", (c) => chunks.push(c));
+        r.on("end", () => { srv.close(); resolve({ status: r.statusCode, headers: r.headers, body: Buffer.concat(chunks).toString("utf8") }); });
+      });
+      req2.on("error", (e) => { srv.close(); reject(e); });
+      req2.end();
+    });
+  });
+}
+
+test("the OTA preflight is answered before any proof is asked for", async () => {
+  const r = await raw("OPTIONS", "/v1/mobile/bundle", {
+    origin: "https://localhost",
+    "access-control-request-method": "GET",
+    "access-control-request-headers": "x-rs-app-id, x-rs-ts, x-rs-sign",
+  });
+  assert.equal(r.status, 204);
+  assert.equal(r.headers["access-control-allow-origin"], "https://localhost");
+  assert.equal(r.headers["access-control-allow-methods"], "GET, OPTIONS");
+  assert.match(r.headers["access-control-allow-headers"], /x-rs-sign/);
+  assert.ok(Number(r.headers["access-control-max-age"]) >= 60, "the probe should be cached");
+});
+
+test("the app origin is allowed on the OTA reads, and nobody else is", async () => {
+  const mine = await raw("GET", "/healthz", { origin: "https://localhost" });
+  assert.equal(mine.status, 200);
+  assert.equal(mine.headers["access-control-allow-origin"], "https://localhost");
+  assert.equal(mine.headers["vary"], "Origin", "a cached answer must not be reused for another origin");
+  const foreign = await raw("GET", "/healthz", { origin: "https://somewhere-else.test" });
+  assert.ok(!foreign.headers["access-control-allow-origin"], "a random web page gets no permission");
+  const bundle = await raw("GET", "/v1/mobile/bundle", { origin: "https://localhost" });
+  assert.ok(!bundle.headers["access-control-allow-origin"] || bundle.status >= 400,
+    "an unproven bundle read stays refused - CORS opens the transport, not the content");
+});

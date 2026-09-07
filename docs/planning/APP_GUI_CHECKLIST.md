@@ -207,3 +207,13 @@ untouched until the owner signs the look off.
 - [x] **D-8.4** Break-harness maintenance (G-109): the 3 `BROKEN-BREAK` misses from CI's first `Break-detection` run were stale anchors of mine
   from round 9, re-anchored with intent preserved and each verified CAUGHT via `BREAKS_ONLY` (~20 s each); the full 113-case suite re-runs in CI
   on this push, and that is the verdict to read.
+- [x] **D-8.5** G-110: the origin a build dials is resolved in one module and can no longer be empty; the OTA paths answer the
+  preflight and the CORS question the WebView requires; the boot page reports what it attempted. Mobile suite 15 → **22/0**.
+- [x] **D-8.6** G-111: the landing's mobile menu is a full-screen sheet beside the bar (390×844 against an ICB of 390×844,
+  alpha equal to the bar's 0.62, `blur(20px) saturate(1.8)`, 7 rows × 57px), opens and closes without moving the page
+  (measured 1600 → 1600 → 1600), and no row starts above the bar's bottom edge at any surveyed id. landing 3221/0, unit 724/0.
+- [ ] **D-8.7** Reinstall `ride-share.apk` (v0.1.0 / code 4) on the owner's phone and confirm the app boots past the splash to
+  the sign-in screen on a live connection - the symptom this round was built to remove, and only a device can close it.
+- [ ] **D-8.8** Formal `breaks.sh` cases for the 7 assertions added with G-110 (origin resolution, preflight, ACAO scoping).
+  Each of these has already been seen failing on a real fault this round — my own `normalise()` hole, the missing `authored`
+  binding, the guard left pointing at the old call — so the checks are proven; what is missing is the permanent harness entry.

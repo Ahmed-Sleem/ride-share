@@ -11,6 +11,8 @@ const FILE=path.join(__dirname,"..","dist-preview.html");
    so it may not say it is a template, a sample, or waiting on somebody: the copy is written
    generally and completely instead, and this guard keeps an admission from creeping back in. */
 const ADMIT = /\btemplate\b|\bplaceholder\b|\blorem ipsum\b|\bTBD\b|\bcoming soon\b|\bnot final\b|\bunder construction\b|\bsample text\b|\blegal team\b|نموذج|غير نهائي|قيد الإنشاء|نص تجريبي|فريق قانوني/i;
+const LANDING_SRC=fs.readFileSync(path.join(__dirname,"..","src","screens","landing.js"),"utf8");
+const APP_SRC=fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8");
 const LANDINGPARTS=fs.readFileSync(path.join(__dirname,"..","src","lib","landing-parts.js"),"utf8");
 /* The whole rendered surface, text only — the places an admission could actually be seen. */
 /* Every copy slot in the landing builders — a direct t("k"), a heading/lede/kick key, a prose
@@ -1060,9 +1062,14 @@ group("M1.8 — EMAIL SIGN-IN/SIGN-UP + SLIDER POLISH");
      !/\.landing__(section|hero|hero-foot|cta-row|foot|feature)\{[^}]*(border-top|border-bottom):1px solid var\(--line\)/.test(CSS) &&
      !/\.journey\{[^}]*border-top:1px solid var\(--line\)/.test(CSS) &&
      !/\.journey__cut\{[^}]*border-bottom:1px solid var\(--line\)/.test(CSS));
+  /* The second half used to be a fixed 320-character window from the bar's `{`, which meant
+     adding any declaration to the top of the rule - a token, in round 11 - looked like losing
+     the hairline. The fact worth pinning is that the bar's own rule carries it, so the rule is
+     taken as a unit and searched inside it, and the failure now says which rule was examined. */
+  const NAV_RULE = (CSS.match(/\.landing__nav\{[^}]*\}/) || [""])[0];
   ok("the only landing rules that keep a hairline are the glass and the FAQ rows",
      /\.landing__faq\{border-top:1px solid var\(--line\)/.test(CSS) &&
-     /\.landing__nav\{[\s\S]{0,320}border-bottom:1px solid var\(--glass-line\)/.test(CSS));
+     /border-bottom:1px solid var\(--glass-line\)/.test(NAV_RULE), NAV_RULE.slice(0, 48));
   ok("the marked bar item is a dot and a weight, not a box",
      /\.landing__links \.landing__link\[data-cta\]\{opacity:1;gap:\.45rem;font-weight:var\(--fw-semi\)\}/.test(CSS) &&
      !/\.landing__link\[data-cta\]\{[^}]*border:/.test(CSS) &&
@@ -1671,10 +1678,66 @@ group("RENEWAL — one name, one curtain, one screen per surface");
      !/\.toast\{inset-inline:auto;inset-inline-start:50%/.test(SHELL) &&
      /\.sheet\{inset-inline:0;margin-inline:auto/.test(SHELL) &&
      /\.toast\{inset-inline:0;margin-inline:auto/.test(SHELL));
-  /* Only the panel's own rule: the `@supports not (backdrop-filter…)` fallback below it
-     deliberately goes solid, and a guard that forbids that would forbid the fallback. */
+  /* Only the sheet's own rule: the `@supports not (backdrop-filter…)` fallback below it
+     deliberately goes solid, and a guard that forbids that would forbid the fallback.
+     Rewritten 2026-09-07: the strip that used to hang under the bar is a full-screen sheet
+     beside the bar (owner's call), so "absolute, inset-block-start:100%" is no longer the
+     right shape to pin - "fixed, inset:0, the bar's glass" is. */
+  const menuRule = (SHELL.match(/\.landing-menu\{[^}]*\}/) || [""])[0];
   ok("the menu sheet is the bar's own glass",
-     /\.landing__menu-panel\{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;\s*\n\s*gap:1px;background:var\(--glass\);/.test(SHELL));
+     /background:var\(--glass\)/.test(menuRule) &&
+     /backdrop-filter:var\(--glass-blur\)/.test(menuRule) &&
+     /-webkit-backdrop-filter:var\(--glass-blur\)/.test(menuRule), menuRule.slice(0, 60));
+  ok("the menu sheet covers the viewport, not a strip under the bar",
+     /position:fixed/.test(menuRule) && /inset:0/.test(menuRule), menuRule.slice(0, 40));
+  ok("the menu sheet sits below the bar so its own control stays reachable",
+     /--z-landing-menu:19;/.test(SHELL) && /--z-landing-nav:20;/.test(SHELL) &&
+     /z-index:var\(--z-landing-menu\)/.test(menuRule));
+  ok("the menu sheet starts its rows under the bar, by token, not by guess",
+     /--landing-bar-h:calc\(var\(--s2\) \* 2 \+ var\(--tap\)\)/.test(SHELL) &&
+     /padding:calc\(var\(--landing-bar-h\)/.test(menuRule));
+  ok("the page cannot scroll behind the open sheet, and keeps its scrollbar gutter",
+     /\.landing:has\(> \.landing-menu\)\{overflow:hidden;scrollbar-gutter:stable\}/.test(SHELL));
+  /* Run the mechanism, do not just read it. jsdom has no layout, so `.landing`'s scrollTop is
+     always 0 and `if(!y) return` would skip a function that throws on every line after it -
+     which is how `authored is not defined` reached a browser suite while 721 assertions here
+     stayed green. Calling it with a real offset forces the body to execute. */
+  {
+    const before = t.w.document.querySelector(".landing").style.scrollBehavior;
+    let thrown = null;
+    try { t.w.restoreLandingScroll(120); } catch (e) { thrown = e.message; }
+    ok("restoreLandingScroll runs its whole body without throwing", thrown === null, String(thrown));
+    ok("and it leaves the authored easing back where it found it",
+       t.w.document.querySelector(".landing").style.scrollBehavior === before,
+       JSON.stringify(t.w.document.querySelector(".landing").style.scrollBehavior));
+  }
+
+  ok("the sheet never enters the bar, whose filter would become its containing block",
+     /const sheet = landingMenuSheet\(\);[\s\S]{0,400}?frag\.append\(nav, sheet\)/.test(LANDING_SRC) &&
+     !/nav\.append\(dd\)/.test(LANDING_SRC), "the sheet must be a sibling of nav");
+  /* The jsdom in this file cannot lay the page out, so it cannot see a scrollTop change at
+     all - which is exactly how a source-shape version of this guard passed while the browser
+     measurement (landing.test.js) failed. What is pinned here is the mechanism; the effect is
+     pinned where there is a real layout. */
+  ok("the bar's menu button and Escape share one path, and it does not re-render",
+     /on: \{ click: toggleLandingMenu \}/.test(LANDING_SRC) &&
+     /function closeLandingMenu\(\) \{\s*\n\s*setLandingMenu\(false\);/.test(LANDING_SRC) &&
+     /function setLandingMenu\(open\) \{[\s\S]{0,700}?host\.append\(sheet\)/.test(LANDING_SRC) &&
+     !/function toggleLandingMenu\(\) \{\s*\n\s*S\.landingMenu = !S\.landingMenu;\s*\n\s*render\(\);/.test(LANDING_SRC));
+  ok("the sheet is fitted to the bar's measured height, at both mount sites",
+     /function fitSheetToBar\(sheet\) \{[\s\S]{0,240}?nav\.offsetHeight/.test(LANDING_SRC) &&
+     /fitSheetToBar\(sheet\);/.test(LANDING_SRC) &&
+     /requestAnimationFrame\(\(\) => fitSheetToBar\(sheet\)\)/.test(LANDING_SRC));
+
+  ok("the in-place sheet comes from the same builder as the rendered one",
+     (LANDING_SRC.match(/landingMenuSheet\(\)/g) || []).length >= 2 &&
+     /const LANDING_LINKS = \[/.test(LANDING_SRC) &&
+     /const links = LANDING_LINKS;/.test(LANDING_SRC));
+  ok("every landing re-render carries its scroller, restored without easing",
+     /const keepScroller = S\.view==="landing" \? document\.querySelector\("\.landing"\) : null;/.test(APP_SRC) &&
+     /restoreLandingScroll\(keepScroll\)/.test(APP_SRC) &&
+     /el\.style\.scrollBehavior = "auto";\s*\n\s*el\.scrollTop = y;/.test(APP_SRC) &&
+     /requestAnimationFrame\(\(\) => \{ if \(el\.isConnected\) assign\(\); \}\)/.test(APP_SRC));
   ok("the download entry is the one marked item in the bar",
      /"data-cta": k === "download" \? "app" : null/.test(SRC) &&
      /\.landing__links \.landing__link\[data-cta\]::before\{content:""/.test(SHELL));
@@ -1762,9 +1825,22 @@ group("LANDING v2 — nav pages, drive, about, help, sticky panels");
   // the mobile menu opens and navigates
   t.w.S.landingPage="rider"; t.w.render();
   t.q(".landing__menu").click();
-  ok("menu panel opens", !!t.q(".landing__menu-panel"));
-  t.q(".landing__menu-panel .landing__menulink").click();   // first link = Ride
-  ok("menu link navigates and closes", t.w.S.landingPage==="rider" && !t.q(".landing__menu-panel"));
+  ok("menu sheet opens", !!t.q(".landing-menu"));
+  ok("the toggle says so", t.q(".landing__menu").getAttribute("aria-expanded") === "true");
+  ok("the sheet names itself to the toggle",
+     t.q(".landing-menu").id === "landing-menu" &&
+     t.q(".landing__menu").getAttribute("aria-controls") === "landing-menu");
+  ok("the sheet is a sibling of the bar, not its child",
+     !!t.q(".landing-menu") && !t.q(".landing-menu").closest(".landing__nav"));
+  t.q(".landing-menu .landing__menulink").click();   // first link = Ride
+  ok("menu link navigates and closes", t.w.S.landingPage==="rider" && !t.q(".landing-menu"));
+  t.q(".landing__menu").click();
+  /* Both come from the jsdom window, not the test's own realm: `new KeyboardEvent(...)`
+     compiles against a global that does not exist in Node, and a bare `document` here would be
+     a second, different document from the one the app is mounted in. */
+  const key = new t.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+  t.w.document.dispatchEvent(key);
+  ok("Escape closes the sheet like it closes a sheet", !t.w.S.landingMenu && !t.q(".landing-menu"));
 })();
 
 group("POLICIES ARE FILLED (terms/privacy/safety, EN + AR)");

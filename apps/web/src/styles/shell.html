@@ -230,6 +230,10 @@ __FONT_FACES__
   /* Above the sticky content of the page, below the app's own chrome, so a
      toast or a sheet is never trapped under the marketing header. */
   --z-landing-nav:20;
+  /* One below the bar, so the three dots that opened the sheet stay visible and are
+     also the thing that closes it - a full-screen menu with no reachable dismiss is a
+     trap. Above the page, because it belongs to the page. */
+  --z-landing-menu:19;
   --z-pagefx:95;                  /* the curtain covers the surface, then is gone */
   /* The page transition, in four beats: rise, fill, release, fall. The path itself is
      drawn by lib/pagefx.js from these numbers, so the sheet owns the pacing. */
@@ -1077,7 +1081,11 @@ html.native .intro{padding-top:var(--safe-t)}
 /* ── the head: fixed, frosted, one hairline ─────────────────────────────
    Frosted glass deliberately replaces blend-mode tricks: a panel that inverts
    against what is behind it cannot also be a translucent panel. */
-.landing__nav{position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
+/* --landing-bar-h is the bar's own height by construction (its padding plus the row it
+   must clear), not an estimate: the sheet below uses it to start its rows underneath the
+   chrome instead of under it. If the bar's padding changes, the sheet follows. */
+.landing__nav{--landing-bar-h:calc(var(--s2) * 2 + var(--tap));min-height:var(--landing-bar-h);
+  position:fixed;inset:0 0 auto 0;z-index:var(--z-landing-nav);
   display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;
   column-gap:var(--s3);
   padding:var(--s2) var(--gutter);background:var(--glass);
@@ -1160,44 +1168,49 @@ html.native .intro{padding-top:var(--safe-t)}
   cursor:pointer;flex:none;opacity:.8;transition:opacity var(--med) var(--ease)}
 .landing__menu svg{width:22px;height:22px;fill:currentColor;stroke:none}
 .landing__menu:hover,.landing__menu:focus-visible{opacity:1;outline-offset:-2px}
-/* The panel is the bar continued: the same frost, the same hairline, and an
-   entrance rather than a pop. It animates on mount because a re-render replaces the
-   node — a transition on a node that has never been painted would be skipped. */
-.landing__menu-panel{position:absolute;inset-inline:0;inset-block-start:100%;display:grid;
-  gap:1px;background:var(--glass);
-  /* Exactly the bar's glass, on purpose: the panel IS the bar continued, and a sheet that
-     is 96% opaque while its own header is 62% reads as two different materials. The blur
-     alone was already there — invisible at that alpha, which is why it looked like the
-     effect had been dropped. Where backdrop-filter is missing the fallback below still
-     gives a solid surface, so the panel is never unreadable, only less frosted. */
+/* The sheet is the bar continued: the same frost, the same hairline, and an entrance
+   rather than a pop. It is full screen because it covers the page it belongs to, and it is
+   frosted over content rather than over the bar's own flat hero - which is why the same
+   --glass reads as real glass here in a way the old strip under the bar never did. */
+.landing-menu{position:fixed;inset:0;z-index:var(--z-landing-menu);display:grid;align-content:start;
+  gap:1px;overflow-y:auto;overscroll-behavior:contain;background:var(--glass);
   -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
-  border-bottom:1px solid var(--glass-line);box-shadow:var(--sh-3);
-  padding:var(--s3) var(--gutter) var(--s4);transform-origin:top center;
-  animation:landing-menu-in var(--panel-in-dur) var(--panel-in-ease) both}
+  padding:calc(var(--landing-bar-h) + var(--s5)) var(--gutter) calc(var(--s6) + var(--safe-b));
+  transform-origin:top center;animation:landing-menu-in var(--panel-in-dur) var(--panel-in-ease) both}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .landing__menu-panel{background:var(--glass-solid)}
+  .landing-menu{background:var(--glass-solid)}
 }
+/* The page behind a full-screen menu does not move under it. `:has` is the whole
+   mechanism - no class to forget, no state to unwind, and a browser without `:has` keeps a
+   scrollable page behind a scrollable sheet, which is an inconvenience rather than a trap.
+   The gutter stays reserved while locked: hiding `overflow` would otherwise take the scrollbar
+   away, let the text reflow wider, and shorten the page - which clamps the very offset this
+   code exists to preserve. That is a 28px jump at the foot of a document, and it only showed up
+   in the browser suite at the widths where the last page is exactly that tall. */
+.landing:has(> .landing-menu){overflow:hidden;scrollbar-gutter:stable}
 @keyframes landing-menu-in{
   from{opacity:0;transform:translateY(calc(-1 * var(--s2))) scale(.985)}
   to{opacity:1;transform:none}
 }
-/* The rows arrive on the same curve, one step behind the next: the panel reads as
-   one object opening, not seven controls appearing. */
+/* The rows arrive on the same curve, one step behind the next: the sheet reads as one object
+   opening, not seven controls appearing. */
 @keyframes landing-menu-row{
   from{opacity:0;transform:translateY(calc(-1 * var(--s2)))}
   to{opacity:1;transform:none}
 }
-.landing__menu-panel .landing__menulink{animation:landing-menu-row var(--panel-in-dur) var(--panel-in-ease) both}
-.landing__menu-panel .landing__menulink:nth-child(2){animation-delay:calc(var(--panel-in-step) * 1)}
-.landing__menu-panel .landing__menulink:nth-child(3){animation-delay:calc(var(--panel-in-step) * 2)}
-.landing__menu-panel .landing__menulink:nth-child(4){animation-delay:calc(var(--panel-in-step) * 3)}
-.landing__menu-panel .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
-.landing__menu-panel .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
-.landing__menu-panel .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
+.landing-menu .landing__menulink{animation:landing-menu-row var(--panel-in-dur) var(--panel-in-ease) both}
+.landing-menu .landing__menulink:nth-child(2){animation-delay:calc(var(--panel-in-step) * 1)}
+.landing-menu .landing__menulink:nth-child(3){animation-delay:calc(var(--panel-in-step) * 2)}
+.landing-menu .landing__menulink:nth-child(4){animation-delay:calc(var(--panel-in-step) * 3)}
+.landing-menu .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
+.landing-menu .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
+.landing-menu .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
 .landing__menulink{display:block;text-align:start;border:0;background:none;cursor:pointer;
   font:inherit;font-size:var(--f-title);font-weight:var(--fw-bold);letter-spacing:-.02em;
   color:var(--ink);padding:.55rem 0}
 .landing__menulink:hover{color:var(--ink-soft)}
+.landing-menu .landing__menulink{padding:var(--s3) 0;min-block-size:var(--tap)}
+.landing-menu .divider{margin-block:var(--s2)}
 /* The theme switch, not a mystery icon: a switch you can read is a control, an
    icon is a riddle. `role="switch"` + `aria-checked` carries the state to AT. */
 .landingsw{position:relative;flex:none;width:46px;height:25px;padding:0;cursor:pointer;

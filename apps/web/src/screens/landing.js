@@ -82,9 +82,14 @@ async function loadPublicShare(token) {
    Fixed and frosted over the poster. Desktop shows the five page links; compact
    moves them and Log in into a labelled panel — a hamburger with no name is a
    riddle, and the same five destinations must be reachable at 320px (§8.1). */
+/* The five destinations, named once. The bar, the sheet and the in-place toggle all read this,
+   and the sheet is the same builder in every case - so "the menu lists the pages" cannot
+   disagree with "the bar lists the pages" in either direction. */
+const LANDING_LINKS = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"],
+  ["help", "navHelp"], ["download", "navDownload"]];
+
 function landingNav() {
-  const links = [["rider", "navRide"], ["drive", "navDrive"], ["about", "navAbout"],
-    ["help", "navHelp"], ["download", "navDownload"]];
+  const links = LANDING_LINKS;
   const nav = $("header", { class: "landing__nav" });
 
   nav.append($("button", {
@@ -104,27 +109,102 @@ function landingNav() {
 
   nav.append($("button", {
     class: "landing__menu",
-    attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu) },
-    on: { click: () => { S.landingMenu = !S.landingMenu; render(); } },
+    attrs: { type: "button", "aria-label": t("menu"), "aria-expanded": String(!!S.landingMenu),
+      "aria-controls": "landing-menu" },
+    on: { click: toggleLandingMenu },
   }, icon("dots")));
 
-  if (S.landingMenu) {
-    const dd = $("div", { class: "landing__menu-panel", attrs: { role: "navigation", "aria-label": t("menu") } });
-    links.forEach(([k, lbl]) => dd.append($("button", {
-      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
-      on: { click: () => { S.landingMenu = false; landingGo(k); } },
-    })));
-    dd.append($("div", { class: "divider" }));
-    /* In the panel both entries are links like the page links above them. A filled
-       button in a menu is a second hierarchy the bar already settles: the same
-       "Sign up" sits in the header at the same moment. */
-    [["login", "signin"], ["signup", "signup"]].forEach(([lbl, mode]) => dd.append($("button", {
-      class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
-      on: { click: () => { S.landingMenu = false; authGo(mode); } },
-    })));
-    nav.append(dd);
+  /* The sheet is returned NEXT TO the bar, never inside it. `header.landing__nav` paints its
+     own frost with backdrop-filter, and a filtered ancestor becomes the containing block for
+     position:fixed descendants - so a sheet that wanted the whole viewport could only ever be
+     a strip under the bar, which is precisely what it looked like. Two siblings, one
+     fragment: every one of the eight landing roots keeps calling `landingNav()` unchanged. */
+  const sheet = landingMenuSheet();
+  if (!sheet) return nav;
+  const frag = document.createDocumentFragment();
+  frag.append(nav, sheet);
+  /* A full render (a theme change while the menu is open) rebuilds the bar and the sheet
+     together, so it fits them to each other once the tree is in the document - which the
+     caller does in the same frame; see the rAF in shell/app.js. */
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => fitSheetToBar(sheet));
   }
-  return nav;
+  return frag;
+}
+
+function landingMenuSheet() {
+  if (!S.landingMenu) return null;
+  const dd = $("div", {
+    class: "landing-menu",
+    attrs: { id: "landing-menu", role: "navigation", "aria-label": t("menu") },
+    /* Tapping the frost itself closes: the sheet is a full-screen surface now, so the
+       empty area below the last row is a reasonable place to ask to go back to the page. */
+    on: { click: (e) => { if (e.target === dd) closeLandingMenu(); } },
+  });
+  LANDING_LINKS.forEach(([k, lbl]) => dd.append($("button", {
+    class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+    on: { click: () => { S.landingMenu = false; landingGo(k); } },
+  })));
+  dd.append($("div", { class: "divider" }));
+  /* In the sheet both entries are links like the page links above them. A filled
+     button in a menu is a second hierarchy the bar already settles: the same
+     "Sign up" sits in the header at the same moment. */
+  [["login", "signin"], ["signup", "signup"]].forEach(([lbl, mode]) => dd.append($("button", {
+    class: "landing__menulink", attrs: { type: "button" }, text: t(lbl),
+    on: { click: () => { S.landingMenu = false; authGo(mode); } },
+  })));
+  return dd;
+}
+
+/* The bar's button and the Escape key both come through here, so the menu cannot be open in
+   one place and shut in the other - and neither of them re-renders the page.
+
+   A disclosure that rebuilds the document to show itself is a hammer, and here it had a real
+   cost: `.landing` is the scroller, `render()` replaces it, and the reader's position is a
+   property of the node being thrown away. Restoring it after the fact only works while the
+   page is already at its final height; over a lazily painted map and a reveal observer it is
+   not, and the browser suite caught the offset clamped by 28px. Toggling the sheet in place
+   has no such window, because the scroller is never replaced.
+
+   `S.landingMenu` stays the single fact: the render path reads it through the same builder,
+   so a full render (a theme change, a navigation) still paints the sheet in the same shape. */
+function setLandingMenu(open) {
+  if (!!S.landingMenu === open) return;
+  S.landingMenu = open;
+  const host = document.querySelector(".landing");
+  const btn = document.querySelector(".landing__menu");
+  if (!host) { render(); return; }
+  const live = host.querySelector(".landing-menu");
+  if (!open) {
+    if (live) live.remove();
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    return;
+  }
+  const sheet = landingMenuSheet();
+  if (!sheet) { render(); return; }
+  host.append(sheet);
+  fitSheetToBar(sheet);
+  if (btn) btn.setAttribute("aria-expanded", "true");
+}
+
+/* The sheet is a full-screen surface whose first row must begin under the bar, and the bar's
+   height is not a constant: at 390px the wordmark wraps to two lines and the bar grows by
+   roughly a quarter. `--landing-bar-h` is the floor the stylesheet can reason about, and the
+   measurement is the truth of this moment - so the number is read here, where the element is
+   already in the document and has a height. */
+function fitSheetToBar(sheet) {
+  const nav = document.querySelector(".landing__nav");
+  if (!nav || !sheet) return;
+  const h = nav.offsetHeight;
+  if (h > 0) sheet.style.paddingTop = `${h + 20}px`;
+}
+
+function toggleLandingMenu() {
+  setLandingMenu(!S.landingMenu);
+}
+
+function closeLandingMenu() {
+  setLandingMenu(false);
 }
 
 function landingLink(k, lbl) {

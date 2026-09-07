@@ -124,8 +124,37 @@ function proxy(req, res) {
   req.pipe(fwd);
 }
 
+/* The app lives in a WebView that serves itself from https://localhost (Capacitor's local
+   scheme) and then fetches its interface from this service. Two consequences the boot page
+   depends on, both missing until now (G-110, the second half of that defect):
+   1. the fetch is cross-origin, so the response must carry access-control-allow-origin;
+   2. the boot page always sends the x-rs-* proof headers, which are not CORS-safelisted, so
+      the browser preflights with OPTIONS before it will send them at all.
+   Without both the app can never leave its offline card, however good the connection is.
+   Only these read-only paths are opened, only to the app's own local origins, and the proof
+   check still runs on the real request - a preflight carries nothing to prove. */
+const OTA_PATHS = new Set(["/healthz", "/health", "/v1/mobile/update", "/v1/mobile/bundle"]);
+const OTA_ORIGINS = new Set(["https://localhost", "http://localhost", "capacitor://localhost"]);
+
+function otaCors(req, res) {
+  const origin = String(req.headers.origin || "");
+  if (!OTA_ORIGINS.has(origin)) return;
+  res.setHeader("access-control-allow-origin", origin);
+  res.setHeader("vary", "Origin");
+}
+
 async function handler(req, res) {
   const url = (req.url || "/").split("?")[0];
+  if (OTA_PATHS.has(url)) otaCors(req, res);
+  if (req.method === "OPTIONS" && OTA_PATHS.has(url)) {
+    res.writeHead(204, {
+      "access-control-allow-methods": "GET, OPTIONS",
+      "access-control-allow-headers": "x-rs-app-id, x-rs-ts, x-rs-sign",
+      "access-control-max-age": "600",
+      "content-length": "0",
+    });
+    return res.end();
+  }
   if (url === "/healthz" || url === "/health") {
     const api = await apiHealth();
     return json(res, 200, { ok: true, service: "mobile", kind: "app-api", api });

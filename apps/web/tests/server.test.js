@@ -96,6 +96,30 @@ test('download: a staged APK is served as an attachment', async () => {
   }
 });
 
+/* G-112. "Nothing staged" used to mean one absent file. Since the installer got a home in the
+   repo, `apps/web/server.js` has three places it will happily find an APK - ANDROID_APK_PATH,
+   `apps/web/downloads/android.apk`, and `uploads/app-debug.apk` - so a test that hid only the
+   first kept passing for the wrong reason and then failed the day the second arrived. The
+   phrase now means what it says: every candidate, moved aside and put back. */
+function withNoInstaller(fn) {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const candidates = [
+    path.join(__dirname, '..', 'downloads', 'android.apk'),
+    path.join(__dirname, '..', 'uploads', 'app-debug.apk'),
+  ];
+  const moved = [];
+  for (const file of candidates) {
+    if (fs.existsSync(file)) {
+      fs.renameSync(file, file + '.test-aside');
+      moved.push(file);
+    }
+  }
+  try { return fn(); } finally {
+    for (const file of moved.reverse()) fs.renameSync(file + '.test-aside', file);
+  }
+}
+
 test('download: with nothing staged, it redirects to the published release', async () => {
   const fs = require('node:fs');
   const path = require('node:path');
@@ -106,7 +130,7 @@ test('download: with nothing staged, it redirects to the published release', asy
   process.env.ANDROID_APK_PATH = path.join(__dirname, 'definitely-not-here.apk');
   delete process.env.ANDROID_APK_URL;
   try {
-    const r = await run(D.path);
+    const r = await withNoInstaller(() => run(D.path));
     assert.equal(r.status, 302);
     assert.equal(r.headers.location,
       `https://github.com/${D.release.repository}/releases/download/${D.release.tag}/${D.apk}`);
@@ -124,7 +148,7 @@ test('download: ANDROID_APK_URL wins over brand.json, and a missing setup says s
   process.env.ANDROID_APK_PATH = path.join(__dirname, 'definitely-not-here.apk');
   process.env.ANDROID_APK_URL = 'https://files.example.test/app.apk';
   try {
-    const r = await run('/download/android');
+    const r = await withNoInstaller(() => run('/download/android'));
     assert.equal(r.status, 302);
     assert.equal(r.headers.location, 'https://files.example.test/app.apk');
   } finally {
