@@ -235,4 +235,10 @@ untouched until the owner signs the look off.
 - [ ] **D-8.12** Owner decision, blocking and not code: the GitHub repository has no `MOBILE_APP_SECRET`, so CI bakes an empty key, `api.js` sees no key
   and skips signing, and the live proof check refuses every personal route - the app boots and browses but cannot sign in. Either set that repo secret to
   the value the deployed service already holds, or relax the gate to public reads plus a session token. Baking a key needs a new installer (`version.code` 6).
+  **Better than both, and found while explaining this to the owner (2026-09-07):** `apps/mobile/scripts/build.js` reads `MOBILE_APP_SECRET` at *build* time,
+  while the service reads it at *run* time (`server.js:16`) - which is why the live gate answers 403 and the installer baked `""`. So the mobile server can
+  append the tag to the bundle it *serves* (it already has the value, and only appends for its own document origins): no GitHub secret, no matching values in
+  two places, no reinstall, and existing installs start signing on their next launch. Exposure is unchanged - a key handed to a client is readable by that
+  client, and that was already true of the copy inside the APK; this is attestation-lite, not auth. Needs: the injection + a test that the served bundle
+  carries an assigned key, and a break case so a future edit that drops it fails loudly.
 
