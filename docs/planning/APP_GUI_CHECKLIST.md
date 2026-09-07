@@ -254,17 +254,23 @@ untouched until the owner signs the look off.
   only update path; installed apps recover on their next launch. `MOBILE_DEVICE_TOKEN_KEY` (or the existing `MOBILE_APP_SECRET`) is a **service-side**
   variable: with it the tokens survive a restart, without it the process mints an ephemeral key and says so in the enrol response (`"key":"ephemeral"`).
   Mobile suite 29/0, web unit 726/0, a11y 14/0, `__RS_APP_SECRET` count in the site bundle 0.
-- [ ] **D-8.14** *(assigned to the new developer — full brief in `docs/planning/ONBOARDING_TASK_1.md`)* Give `apps/mobile/tests/breaks.sh` a real `run_break` helper with
-  counters, `BREAKS_ONLY` and a scratch-outside-tree restore (closing G-119: its summary line is hardcoded `0 missed`), then five cases for the G-117 guards: the token
-  signature check, the expiry comparison, the enrol throttle, the "enrolment itself asks for a token" regression (the bug that shipped the 403 to every install), and the
-  boot page sending a signing header. One documented cut was **dropped after measurement**: making the ephemeral key fall back to `""` is caught by nothing, because a
-  one-process suite cannot see that all instances then share an empty key — recorded as G-120 instead of faking a case. Standing law: a case ships with its guard.
-- [ ] **D-8.15** Device verification of the whole flow on the owner's phone with the **v6** installer (27.9 MB, code 6): cold start offline → the honest
+- [x] **D-8.14** *(new developer, round 14 — reviewed and verified by the other agent)* `apps/mobile/tests/breaks.sh` now has a real
+  `run_break`: scratch copies outside the tree, a `BREAKS_ONLY` filter, `PASS`/`FAIL` counters, `BROKEN-BREAK` when the sed matched nothing, and
+  `die` unless the restore is byte-for-byte. Six cases, all CAUGHT, `examined 6 check(s), 0 missed`, exit 0 — verified on this checkout, not on his
+  machine. His helper is stricter than the web one it was modelled on: it demands that the failing `not ok` line names the expected test, so a
+  crash-everything mutation cannot masquerade as a catch. One residual to raise with him next: a mutation that breaks syntax would still make the
+  named test go red and count as caught — a cap on how many tests may fail per case would close that. G-119 CLOSED by him.
+- [ ] **D-8.15** Device verification of the whole flow on the owner's phone with the **v7** installer (code 7, rebuilt by CI after this commit): cold start offline → the honest
   card; online → splash → app → enrol 200 → sign-in accepted → a booking round-trip. Also the one thing no harness can prove here: `mountBundle` inside
   Android System WebView rather than Chromium.
 - [ ] **D-8.16** Play Integrity (the header comment's next gate, needs the owner's Google Cloud project): replaces our "this came from our app" claim with
   Google's, and is the only remaining reason to hold any key. Decided against doing it blind — it needs a cloud project, a service account and a real
   Play-signed app, none of which exist yet.
+- [ ] **D-8.19** Set `MOBILE_DEVICE_TOKEN_KEY` on the deployed mobile service — one value, 32 characters or more, e.g.
+  `openssl rand -hex 32`. Nothing breaks without it (that is deliberate: `G-120`'s lesson is that a missing key must not lock installs
+  out), but without it a restart invalidates every device token and a second instance refuses the first one's devices, so each install
+  pays a re-enrolment round trip. `POST /v1/mobile/enroll` answers `key:"ephemeral"` while this is unset and `key:"configured"` after.
+  A key shorter than 32 chars is refused as a key and reported as ephemeral, so a placeholder value cannot look like a finished job.
 - [ ] **D-8.18** Give the shipped installer a stable signature. Measured 2026-09-07: CI ships the `assembleDebug` output
   (`.github/workflows/ci.yml:168`), signed with `CN=Android Debug, O=Android, serial=01`, and **two builds of the same `versionCode 6`
   carry different public keys** (`b80a9062d671…` vs `49fc80d9de05…`) because nothing caches a debug keystore — so a phone that installed
@@ -273,8 +279,14 @@ untouched until the owner signs the look off.
   `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, and the `apk-release` job runs it "signed when secrets exist".
   Done means: the four secrets set by the owner, a release-signed APK committed at `apps/web/downloads/android.apk`, the same bytes at
   `/download/android`, a stable key across two consecutive builds (`openssl x509 -inform DER -noout -pubkey | openssl sha256` on each), and
-  a `versionCode` bump so the store path agrees. Until then the download is a tester channel, not a user channel. **Owner decision needed**
-  (creating a keystore is theirs; the CI wiring is mine).
+  a `versionCode` bump so the store path agrees. Until then the download is a tester channel, not a user channel. **Done 2026-09-07 (round 14):** `prepare-android.sh` (one prep for both variants — release used to skip the permissions, icons
+  and night-splash patches, so swapping the landing page onto the signed build would have shipped a worse binary) and
+  `apply-android-manifest.sh` (permissions + `allowBackup=false`, G-122); the `apk` job now chooses the variant itself —
+  `make-release.sh` when the four secrets exist, `make-apk.sh` with a `::notice` until then — and prints the signer's certificate on
+  every run; `version.code` 6 → 7 because the binary changes. Proven by execution, not by reading the files: `RS_PREP_DRY=1` prints
+  both variants' prep lists and `config.test.js` compares them — seen red two ways on purpose (manifest script stubbed to `exit 0` →
+  `missing ACCESS_COARSE_LOCATION`; release prep skipping the icons step → `release prep diverged from debug prep`).
+  **Still waiting on the owner:** the keystore and the four secrets (chunk A2 of `NEXT_SESSIONS_ROADMAP.md`).
 - [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
   all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.

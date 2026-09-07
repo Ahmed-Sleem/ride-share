@@ -1,4 +1,64 @@
 ## 2026-09-07 — renewal round 11: the installed app could not reach its own server, and the landing's menu was a strip
+## 2026-09-08 — the new developer's first task landed, and it passed review
+
+`D-8.14` (`445668c`) rewrote `apps/mobile/tests/breaks.sh` into a real harness: `run_break` with `PASS`/`FAIL` counters,
+`BREAKS_ONLY`, scratch copies outside the tree, `BROKEN-BREAK` when the sed matches nothing, and a hard `die` unless the file
+comes back byte-for-byte — which is the G-121 lesson taken on board rather than re-taught. Six cases (five for the device-token
+guards, plus the converted platform-boundary one), all CAUGHT, `examined 6 check(s), 0 missed`, exit 0, verified on this checkout
+and not on his machine. His matcher is stricter than the web harness it came from: `grep -F "not ok " | grep -qF "$expect"` demands
+that the failing test is the one named, so an unrelated red cannot be read as a catch.
+
+One residual for his next task, recorded rather than fixed by me: a mutation that breaks **syntax** reddens every test including the
+named one, and still counts as caught. A cap on how many tests may fail per case (or a `node --check` before the suite runs) closes it.
+## 2026-09-08 — renewal round 14b: G-120 closed with the only kind of test that can see it
+
+`KEY_SOURCE` used to be a label: the enrol response said `configured` or `ephemeral` and nothing else changed, so a key could be absent,
+empty, or `"abc"`, and every test stayed green. Two fixes, both driven by measurement rather than taste:
+
+- **A short key is not a key.** `MOBILE_DEVICE_TOKEN_KEY` below 32 characters is now treated as absent — warned about on stderr with its
+  actual length, and reported as `key:"ephemeral"`. Refusing to start was rejected on purpose: locking every install out is the G-117
+  bug class, and a lie in the response is worse than a warning.
+- **Three tests spawn a second server process**, because a one-process suite physically cannot see this: with no key a token from A must be
+  `401 DEVICE_TOKEN_INVALID` on B; with one shared key it must be `200` on B; and a 3-character key must enrol fine while admitting it is
+  ephemeral. Both faults were then introduced on purpose in scratch copies and each reddened exactly the test that names it —
+  `an ephemeral key is per-process…` for the empty-key cut (the cut that was invisible in round 13) and
+  `a key too short to be a secret is ignored…` for the dropped length guard. `apps/mobile` server suite 15/15 (was 12).
+
+Owner-side remainder, recorded as `D-8.19`: one variable on the deployed service (`openssl rand -hex 32`), which is what makes tokens
+survive a restart and span instances. No code needed for that, which is why it waits rather than blocks.
+## 2026-09-08 — renewal round 14: the installer gets a real signing story, and a shipped-binary measurement finds G-122
+
+The owner chose "signed release APK now" and asked for a plan worked in chunks, so `docs/planning/NEXT_SESSIONS_ROADMAP.md` is rewritten as
+seven dependency-ordered chunks (A1 done here, A2 is the owner's keystore, B–G after) with a "done means" per row. The old
+pre-code candidate list is marked superseded rather than deleted.
+
+**Measured from the shipped APK, not from the build scripts** (binary `AndroidManifest.xml` parsed out of the archive):
+`package eg.rideshare.app`, `versionCode 6`, `minSdkVersion 24`, `targetSdkVersion 36`, `compileSdkVersion 36`, **`debuggable true`**,
+**`allowBackup true`**. Two consequences: `minSdkVersion 24` means v2-only signing is correct (an earlier worry of mine about
+pre-Android-7 installs is void — measuring beat guessing), and `allowBackup="true"` puts the WebView data directory — where the
+session bearer token lives — into Google's cloud backup and device-to-device transfer. Recorded as **G-122**; refused by
+`apps/mobile/scripts/apply-android-manifest.sh`, which now sets `allowBackup="false"` and owns the six permissions, and it is
+idempotent because `cap sync` can run over an existing project.
+
+**The defect that would have made D-8.18 worse than the status quo:** `make-release.sh` applied only the version rewrite, while
+`make-apk.sh` also applied permissions, icons and the night splash. So "just ship the signed build" would have produced a binary
+with no location permission and the default Capacitor icon. Fixed by extracting the shared prep into
+`apps/mobile/scripts/prepare-android.sh`, which both entry points call, plus `RS_PREP_DRY=1` so the invariant is *executed*:
+`config.test.js` runs both variants and compares their prep lists. Seen red on purpose twice — stubbing the manifest script to
+`exit 0` gives `missing ACCESS_COARSE_LOCATION`, and making the release prep skip the icons step gives
+`release prep diverged from debug prep`. (A first attempt at the second proof failed for a syntax reason instead; that is a false
+catch and I re-ran it.)
+
+**CI** (`apk` job, renamed "Android installer (signed when the keystore exists)"): it selects the variant by the presence of the four
+`ANDROID_KEYSTORE_*` secrets, exports `INSTALLER_APK`/`INSTALLER_KIND` for the publish and commit steps (which no longer hardcode
+`apk/debug/*.apk`), prints the signer's certificate on every build so a key rotation is visible in a log instead of discovered by a
+phone that refuses to update, and the fallback path runs the same `make-apk.sh` on the same patches, so today's bytes are unchanged
+until the secrets exist. `version.code` 6 → 7 because the binary changes — and `docs/planning/APP_GUI_CHECKLIST.md` D-8.15 now names v7.
+
+**Also fixed, found by my own run:** the mobile break harness dirtied product source on every run (G-121, previous entry), and a
+`git checkout -- apps/mobile/scripts/make-release.sh` during that experiment threw away an uncommitted rewrite of that file —
+the lesson is recorded in the rules for this repo: never `git checkout` a tracked file you have edited without committing it,
+back it up instead (which is what the restore-proof uses).
 ## 2026-09-07 — renewal round 13c: the new developer's brief, and two of my five break cases were false
 
 The owner asked for a task file for the incoming developer with "no space for mistakes". Writing it honestly meant measuring the work

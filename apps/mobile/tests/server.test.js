@@ -284,3 +284,93 @@ test("a service with no key configured still enrols, instead of locking everyone
   }
 });
 
+
+/* ── G-120: what one key does across processes ────────────────────────────────────────────
+   A single-process suite cannot see this class of fault, which is how it shipped: with no key the
+   service mints one at module load, so every instance holds a different secret and a device enrolled
+   on A is refused on B. The cut that proved the blindness — replacing the random fallback with ""
+   — reddened nothing, because inside one process an empty key still signs and still verifies.
+   These three tests are what makes that cut (and any key-length regression) observable. */
+function spawnServer(port, extraEnv) {
+  const { spawn } = require("node:child_process");
+  const child = spawn(process.execPath, [require.resolve("../server.js")], {
+    env: Object.assign({}, process.env, { PORT: String(port) }, extraEnv || {}),
+    stdio: "ignore",
+  });
+  const ready = new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`server on :${port} did not start`)), 8000);
+    const once = () => http
+      .get({ host: "127.0.0.1", port, path: "/healthz" }, (r) => { r.resume(); clearTimeout(t); resolve(); })
+      .on("error", () => setTimeout(once, 150));
+    setTimeout(once, 150);
+  });
+  return { child, ready };
+}
+
+function send(port, method, urlPath, body, headers) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const rq = http.request({
+      host: "127.0.0.1", port, path: urlPath, method,
+      headers: Object.assign(
+        data ? { "content-type": "application/json", "content-length": Buffer.byteLength(data) } : {},
+        headers || {}),
+    }, (r) => {
+      const c = [];
+      r.on("data", (x) => c.push(x));
+      r.on("end", () => resolve({ status: r.statusCode, body: Buffer.concat(c).toString() }));
+    });
+    rq.on("error", reject);
+    if (data) rq.end(data); else rq.end();
+  });
+}
+
+const NO_KEY = { MOBILE_DEVICE_TOKEN_KEY: "", MOBILE_APP_SECRET: "" };
+const GOOD_KEY = "0123456789abcdef0123456789abcdef";
+const DEVICE = "d" + "c".repeat(31);
+
+test("an ephemeral key is per-process, so a token from one instance is refused by the next (G-120)", async () => {
+  const a = spawnServer(9131, NO_KEY);
+  const b = spawnServer(9132, NO_KEY);
+  try {
+    await Promise.all([a.ready, b.ready]);
+    const enr = await send(9131, "POST", "/v1/mobile/enroll", { deviceId: DEVICE, appId: APP_ID });
+    assert.equal(enr.status, 200);
+    assert.equal(JSON.parse(enr.body).key, "ephemeral", "and it must admit which key signed it");
+    const token = JSON.parse(enr.body).token;
+    const onA = await send(9131, "GET", "/v1/config", null, { "x-rs-device-token": token });
+    assert.equal(onA.status, 200, "the minting instance accepts it");
+    const onB = await send(9132, "GET", "/v1/config", null, { "x-rs-device-token": token });
+    assert.equal(onB.status, 401, "a second instance must not accept it — that is the exposure");
+    assert.equal(JSON.parse(onB.body).code, "DEVICE_TOKEN_INVALID");
+  } finally { a.child.kill("SIGTERM"); b.child.kill("SIGTERM"); }
+});
+
+test("one configured key makes a token valid on every instance, so the fix is one variable", async () => {
+  const env = { MOBILE_DEVICE_TOKEN_KEY: GOOD_KEY, MOBILE_APP_SECRET: "" };
+  const a = spawnServer(9133, env);
+  const b = spawnServer(9134, env);
+  try {
+    await Promise.all([a.ready, b.ready]);
+    const enr = await send(9133, "POST", "/v1/mobile/enroll", { deviceId: DEVICE, appId: APP_ID });
+    assert.equal(enr.status, 200);
+    assert.equal(JSON.parse(enr.body).key, "configured");
+    const onB = await send(9134, "GET", "/v1/config", null, { "x-rs-device-token": JSON.parse(enr.body).token });
+    assert.equal(onB.status, 200, "MOBILE_DEVICE_TOKEN_KEY is all an autoscaling deploy needs");
+  } finally { a.child.kill("SIGTERM"); b.child.kill("SIGTERM"); }
+});
+
+test("a key too short to be a secret is ignored, and the service still enrols (no lockout)", async () => {
+  /* Refusing to start would be the 503 story again, so a weak key degrades to ephemeral — but it
+     must not be reported as configured, because that is the difference between a warning a deployer
+     acts on and a green light. */
+  const s = spawnServer(9135, { MOBILE_DEVICE_TOKEN_KEY: "abc", MOBILE_APP_SECRET: "" });
+  try {
+    await s.ready;
+    const enr = await send(9135, "POST", "/v1/mobile/enroll", { deviceId: DEVICE, appId: APP_ID });
+    assert.equal(enr.status, 200, "a short key must not lock anyone out of enrolment");
+    assert.equal(JSON.parse(enr.body).key, "ephemeral", "and it must be honest about which key signed");
+    const cfg = await send(9135, "GET", "/v1/config", null, { "x-rs-device-token": JSON.parse(enr.body).token });
+    assert.equal(cfg.status, 200, "the token it minted still works");
+  } finally { s.child.kill("SIGTERM"); }
+});

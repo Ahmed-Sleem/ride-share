@@ -1,41 +1,18 @@
 #!/usr/bin/env bash
-# Produce a debug APK from a clean checkout (P7.1 / local or CI).
-# Requires: Node 20, pnpm, Java 17+, Android SDK (ANDROID_HOME).
-# Never writes a keystore. Debug APK is signed with the public Android debug key.
+# Debug APK for local runs and CI (P7.1). Requires: Node 20, pnpm, Java 17+, Android SDK.
+# Never writes a keystore: the debug variant is signed with the machine's Android debug key, which
+# is why two CI builds of the same versionCode carry different public keys (D-8.18) and why the
+# landing page's installer is a tester channel until `make-release.sh` has its secrets.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 
-if [ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ]; then
-  echo "FAIL: ANDROID_HOME or ANDROID_SDK_ROOT is required to assemble an APK"
-  exit 1
-fi
+# Every patch the release variant must also carry lives in prepare-android.sh — see the reason there.
+bash "$ROOT/apps/mobile/scripts/prepare-android.sh"
 
-pnpm --filter @ride-share/mobile build
-cd apps/mobile
-if [ ! -d android ]; then
-  npx cap add android
-fi
-npx cap sync android
-MANIFEST="android/app/src/main/AndroidManifest.xml"
-if [ -f "$MANIFEST" ]; then
-  for perm in \
-    android.permission.ACCESS_COARSE_LOCATION \
-    android.permission.ACCESS_FINE_LOCATION \
-    android.permission.ACCESS_BACKGROUND_LOCATION \
-    android.permission.FOREGROUND_SERVICE \
-    android.permission.FOREGROUND_SERVICE_LOCATION \
-    android.permission.POST_NOTIFICATIONS
-  do
-    if ! grep -q "$perm" "$MANIFEST"; then
-      sed -i "s|</manifest>|    <uses-permission android:name=\"$perm\" />\n</manifest>|" "$MANIFEST"
-    fi
-  done
-fi
-bash "$ROOT/apps/mobile/scripts/apply-android-version.sh"
-bash "$ROOT/apps/mobile/scripts/apply-android-icons.sh"
-node "$ROOT/apps/mobile/scripts/apply-android-night-splash.js"
-cd android
+if [ "${RS_PREP_DRY:-0}" = "1" ]; then echo "gradle: assembleDebug"; exit 0; fi
+
+cd apps/mobile/android
 chmod +x gradlew
 ./gradlew --no-daemon assembleDebug
 APK="$(find app/build/outputs/apk/debug -name '*.apk' | head -1)"

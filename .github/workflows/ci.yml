@@ -142,7 +142,7 @@ jobs:
           test "$uid" != "0" || { echo "mobile image runs as root"; exit 1; }
 
   apk:
-    name: Android debug APK (Capacitor)
+    name: Android installer (signed when the keystore exists)
     needs: verify
     runs-on: ubuntu-latest
     # The publish step below writes a release, and the default token is read-only; this job says
@@ -165,17 +165,63 @@ jobs:
       - uses: android-actions/setup-android@v3
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin
       - run: pnpm install --frozen-lockfile
-      - name: Wrap web + generate Android project + assembleDebug
+      # D-8.18: which binary the landing page hands out. A debug build is fine for someone
+      # installing today, but its signing key is regenerated on every runner, so two builds of the
+      # same versionCode carry different public keys (measured: b80a9062d671… vs 49fc80d9de05…) and
+      # an installed phone cannot be upgraded in place onto the next one. So: signed release as soon
+      # as the four ANDROID_KEYSTORE_* secrets exist, debug with a loud notice until then.
+      # The fallback keeps today's bytes exactly — same script, same variant, same patch list.
+      - name: Build the installer (release-signed when the keystore exists, debug otherwise)
         env:
           MOBILE_PUBLIC_ORIGIN: ${{ vars.MOBILE_PUBLIC_ORIGIN }}
-          # Both are optional. The origin falls back to packages/brand/brand.json's app.origin
-          # (which is what makes a CI-built installer able to reach the server at all, round 11);
-          # the secret, if it is ever added, is baked in and still accepted by the OTA reads.
-        run: bash apps/mobile/scripts/make-apk.sh
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ]              && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "keystore present -> building the signed release variant"
+            bash apps/mobile/scripts/make-release.sh
+            APK="$(ls apps/mobile/android/app/build/outputs/apk/release/*.apk 2>/dev/null | head -1 || true)"
+            echo "INSTALLER_KIND=release-signed" >> "$GITHUB_ENV"
+          else
+            echo "::notice title=Unsigned installer::No ANDROID_KEYSTORE_* secrets, so this is a debug build: installable, not upgradable in place (D-8.18)."
+            bash apps/mobile/scripts/make-apk.sh
+            APK="$(ls apps/mobile/android/app/build/outputs/apk/debug/*.apk | head -1)"
+            echo "INSTALLER_KIND=debug" >> "$GITHUB_ENV"
+          fi
+          [ -n "$APK" ] && [ -f "$APK" ] || { echo "FAIL: no APK was produced" >&2; exit 1; }
+          echo "INSTALLER_APK=$APK" >> "$GITHUB_ENV"
+      # The property that D-8.18 is about: one key, forever. Printed on every run so a rotation is
+      # visible in the log instead of discovered by a phone that refuses to update.
+      - name: Show the signing identity
+        run: |
+          set -uo pipefail
+          if command -v apksigner >/dev/null 2>&1; then
+            apksigner verify --print-certs "$INSTALLER_APK" | grep -iE "Signer #1 (certificate DN|.*SHA-256 digest)" | sed 's/^/  /'
+          else
+            python3 - "$INSTALLER_APK" <<'PYEOF'
+          import struct, subprocess, sys, zipfile
+          d = open(sys.argv[1], "rb").read()
+          i = d.rfind(b"PK\x05\x06"); cd = struct.unpack_from("<I", d, i + 16)[0]
+          size = struct.unpack_from("<Q", d, cd - 24)[0]; off = cd - 8 - size + 8
+          while off < cd - 24:
+              ln = struct.unpack_from("<Q", d, off)[0]; pid = struct.unpack_from("<I", d, off + 8)[0]
+              v = d[off + 12:off + 8 + ln]; off += 8 + ln
+              if pid != 0x7109871a: continue
+              n = struct.unpack_from("<I", v, 12)[0]; cl = struct.unpack_from("<I", v, 16)[0]
+              open("/tmp/c.der", "wb").write(v[20:20 + cl])
+              print(subprocess.run(["openssl", "x509", "-inform", "DER", "-in", "/tmp/c.der", "-noout",
+                                    "-subject", "-pubkey"], capture_output=True, text=True).stdout.strip())
+              print("  pubkey sha256:", subprocess.run(["openssl", "sha256"], input=v[20:20 + cl],
+                    capture_output=True).stdout.decode().split()[-1])
+          PYEOF
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: ride-share-debug-apk
-          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          name: ride-share-installer
+          path: ${{ env.INSTALLER_APK }}
           if-no-files-found: error
 
       # An artifact needs a GitHub login to fetch, so a QR pointing at one is a control that
@@ -188,13 +234,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          APK=$(ls apps/mobile/android/app/build/outputs/apk/debug/*.apk | head -1)
+          APK="$INSTALLER_APK"
           TAG=$(node -e 'process.stdout.write(require("./packages/brand/brand.json").download.release.tag)')
           NAME=$(node -e 'process.stdout.write(require("./packages/brand/brand.json").download.apk)')
           REPO=$(node -e 'process.stdout.write(require("./packages/brand/brand.json").download.release.repository)')
           [ "$REPO" = "${{ github.repository }}" ] || { echo "brand.json points at $REPO, this run is ${{ github.repository }}" >&2; exit 1; }
           cp "$APK" "$NAME"
-          NOTES="Debug build of the app, rebuilt from every push to main (commit ${{ github.sha }}). Debug-signed, so Android asks to allow installs from unknown sources; the GUI itself updates over the air, so a newer interface does not need this file again."
+          NOTES="$INSTALLER_KIND build of the app, rebuilt from every push to main (commit ${{ github.sha }}). $([ "$INSTALLER_KIND" = debug ] && echo "Debug-signed, so Android asks to allow installs from unknown sources and a previous debug install must be removed before this one goes on." || echo "Release-signed with the project's own key, so it upgrades in place.") The GUI itself updates over the air, so a newer interface does not need this file again."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --title "Android debug build" --notes "$NOTES"
           else
@@ -214,7 +260,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          SRC=$(ls apps/mobile/android/app/build/outputs/apk/debug/*.apk | head -1)
+          SRC="$INSTALLER_APK"
           DEST=apps/web/downloads/android.apk
           SIZE=$(stat -c%s "$SRC")
           if [ "$SIZE" -gt 62914560 ]; then echo "APK_TOO_BIG: ${SIZE} bytes will not be committed" >&2; exit 1; fi

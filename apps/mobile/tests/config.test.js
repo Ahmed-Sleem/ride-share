@@ -208,3 +208,49 @@ test("the generator injects the mobile tag into the bundle it serves (G-115)", (
   const hosts = JSON.parse(after).server.allowNavigation;
   assert.equal(new Set(hosts).size, hosts.length, "no duplicate hosts");
 });
+
+test("the installer variants share one prep, and the manifest patch bites for real (D-8.18, G-122)", () => {
+  /* Two things a shape check cannot prove, so both are executed:
+     (1) the debug and release installers run an IDENTICAL prep list — a signed build that quietly
+         loses the permissions or the night splash is worse than the debug build it replaces;
+     (2) apply-android-manifest.sh actually rewrites a manifest, including refusing backup. The
+         shipped debug APK measured android:allowBackup="true", which puts the bearer token in the
+         WebView data dir into Android's cloud backup and device transfer. */
+  const { execFileSync } = require("node:child_process");
+  const os = require("node:os");
+  const root = path.join(__dirname, "..", "..", "..");
+  const run = (s) => execFileSync("bash", [path.join(root, "apps/mobile/scripts", s)],
+    { cwd: root, encoding: "utf8", env: Object.assign({}, process.env, { RS_PREP_DRY: "1" }) });
+  const prep = (out) => out.split("\n").filter((l) => l.startsWith("prep: "));
+
+  const d = prep(run("make-apk.sh"));
+  const r = prep(run("make-release.sh"));
+  assert.ok(d.length >= 6, "the debug variant must run the shared prep steps, saw: " + d.join(" | "));
+  assert.deepStrictEqual(r, d, "release prep diverged from debug prep — the signed build would ship without a patch");
+  for (const need of ["permissions", "adaptive icons", "night splash", "brand.json"]) {
+    assert.ok(d.some((l) => l.includes(need)), `prep must include "${need}", saw: ` + d.join(" | "));
+  }
+  assert.match(run("make-apk.sh"), /gradle: assembleDebug/);
+  assert.match(run("make-release.sh"), /gradle: bundleRelease assembleRelease/);
+
+  // Now the patch itself, on a manifest in the state a fresh `cap add` leaves it in.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rs-manifest-"));
+  const manifest = path.join(dir, "AndroidManifest.xml");
+  fs.writeFileSync(manifest,
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n' +
+    '    <application android:allowBackup="true" android:label="@string/app_name">\n' +
+    '        <activity android:name=".MainActivity" />\n' +
+    '    </application>\n</manifest>\n');
+  execFileSync("bash", [path.join(root, "apps/mobile/scripts/apply-android-manifest.sh"), manifest], { encoding: "utf8" });
+  const out = fs.readFileSync(manifest, "utf8");
+  for (const perm of ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION",
+                      "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION", "POST_NOTIFICATIONS"]) {
+    assert.ok(out.includes(`android:name="android.permission.${perm}"`), `missing ${perm}`);
+  }
+  assert.match(out, /android:allowBackup="false"/, "backup must be refused: the bearer token lives in the backed-up data dir");
+  assert.ok(!/android:allowBackup="true"/.test(out), "and the old value must be gone, not merely followed by a second attribute");
+  // A second run must be a no-op: the step is in a build that can be re-run on an existing project.
+  execFileSync("bash", [path.join(root, "apps/mobile/scripts/apply-android-manifest.sh"), manifest], { encoding: "utf8" });
+  assert.equal(fs.readFileSync(manifest, "utf8"), out, "apply-android-manifest.sh is not idempotent");
+  fs.rmSync(dir, { recursive: true, force: true });
+});

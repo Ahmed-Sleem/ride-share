@@ -5,7 +5,8 @@ teaches the habit this repo is built on: **a guard that has never been seen fail
 a check.** Every step below has a command to run and the exact output that step must produce. If a
 step's output does not match, stop and fix that before moving on — do not carry a mismatch forward.
 
-You will touch **one file**: `apps/mobile/tests/breaks.sh`. Nothing else. Not the server, not the web
+You will touch **one file**: `apps/mobile/tests/breaks.sh`. Nothing else — not `apps/mobile/tests/*.test.js` (the other
+developer added a prep-parity test there in round 14), not the server, not the web
 app, not `brand.json`.
 
 ---
@@ -57,12 +58,13 @@ cd apps/mobile && node --test tests/server.test.js tests/config.test.js tests/bo
 You must see exactly:
 
 ```
-# tests 29
-# pass 29
+# tests 30
+# pass 30
 # fail 0
 ```
 
-If these differ, **stop and ask**. Do not "fix" a suite to make it match the number; a mismatch means
+If these differ, **stop and ask**. (Round 14 added one test — `apps/mobile/scripts/prepare-android.sh` parity — so the mobile
+number moved 29 → 30; anything else that differs is not a rounding error.) Do not "fix" a suite to make it match the number; a mismatch means
 your environment or the branch is not what this document describes.
 
 Two environment traps, both real here, neither a product bug:
@@ -167,7 +169,7 @@ title from the TAP line, so `grep -F` matches it.
 - **Do not** add `server.url` to `apps/mobile/capacitor.config.json`; **do not** put a deployment
   host in `apps/web/dist-preview.html` (a guard counts them, must stay 0); **do not** "fix" the
   mobile service answering `/` with `403 NOT_A_WEBSITE` — that is deliberate; **do not** touch
-  `apps/web/src/**` or `packages/brand/**` (the other developer is in there right now — you would
+  `apps/web/src/**`, `packages/brand/**` or `apps/mobile/scripts/**` (the other developer is in there right now — you would
   collide and both lose).
 - A mutation must never survive your run. `git status --porcelain` after `breaks.sh` must be **empty**.
 - Copy and prose rule that has bitten this repo twice: never write a token or header name into a
@@ -192,7 +194,7 @@ git status --porcelain          # must print nothing
 
 # the suites you just leaned on are still green with the file restored
 cd apps/mobile && node --test tests/server.test.js tests/config.test.js tests/boot.test.js 2>&1 | grep -E "^# (tests|pass|fail)"
-# again: # tests 29 / # pass 29 / # fail 0
+# again: # tests 30 / # pass 30 / # fail 0
 
 cd ../web && bash verify.sh     # the gate CI runs; expect every line green, exit 0
 ```
@@ -221,7 +223,7 @@ the forged token is a catch. `not ok` with `SyntaxError`, `ENOENT`, or `ECONNREF
    platform-boundary case you converted), exit 0.
 2. Your throwaway no-op case from step 2 produced **`MISSED` and exit 1** before you deleted it. Paste
    that output — it is the proof the counter is real and not the old hardcoded line.
-3. `apps/mobile` node tests **29 / 29 / 0**.
+3. `apps/mobile` node tests **30 / 30 / 0**.
 4. `apps/web` `bash verify.sh` → all suites green, **exit 0**.
 5. `git status --porcelain` → **empty**.
 6. The CI run on your commit → all jobs success, and say which job you watched

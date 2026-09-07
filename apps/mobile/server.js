@@ -19,7 +19,21 @@ const APP_ID = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
    it is read at RUN time from the service that verifies it, and it is never sent anywhere: the
    previous scheme asked the client to hold the same secret and prove it on every request, which
    cannot work - a bundle is public text and an APK is a zip anyone owns (D-8.12). */
-const TOKEN_KEY = (process.env.MOBILE_DEVICE_TOKEN_KEY || process.env.MOBILE_APP_SECRET || "").trim();
+const TOKEN_KEY_GIVEN = (process.env.MOBILE_DEVICE_TOKEN_KEY || process.env.MOBILE_APP_SECRET || "").trim();
+/* A key has to be worth the name. "abc" is a guess, and HMAC keys short enough to brute force make
+   every token in the fleet forgeable while the enrol response still claims key:"configured" — the
+   lie is the dangerous part, not the weakness. So a short key is treated as absent: this process
+   mints an ephemeral one, enrolment keeps working (the law this service lives under is that a
+   misconfiguration must never lock every install out — that is exactly what G-117 replaced), and the
+   warning names the variable and the number to fix. */
+const TOKEN_KEY_MIN_CHARS = 32;
+if (TOKEN_KEY_GIVEN && TOKEN_KEY_GIVEN.length < TOKEN_KEY_MIN_CHARS) {
+  console.error(
+    `[mobile] MOBILE_DEVICE_TOKEN_KEY is ${TOKEN_KEY_GIVEN.length} chars; at least ${TOKEN_KEY_MIN_CHARS} are required. ` +
+    "Ignoring it and using an ephemeral key for this process, so tokens will not survive a restart or span instances."
+  );
+}
+const TOKEN_KEY = TOKEN_KEY_GIVEN.length >= TOKEN_KEY_MIN_CHARS ? TOKEN_KEY_GIVEN : "";
 const TOKEN_TTL_MS = Number(process.env.MOBILE_DEVICE_TOKEN_TTL_MS || 24 * 60 * 60 * 1000);
 const RAW = (process.env.API_INTERNAL_URL || "").trim().replace(/\/$/, "");
 let API_URL = null;
