@@ -20,15 +20,24 @@ const path = require("node:path");
 
 const BRAND_FILE = path.join(__dirname, "..", "..", "..", "packages", "brand", "brand.json");
 
-function brandOrigin() {
+function brandField(key) {
   const brand = JSON.parse(fs.readFileSync(BRAND_FILE, "utf8"));
-  const origin = (brand.app && brand.app.origin) || "";
-  if (!origin) {
-    throw new Error("packages/brand/brand.json must carry app.origin - it is the only place " +
-      "the product's own address is written down");
+  const value = (brand.app && brand.app[key]) || "";
+  if (!value) {
+    throw new Error(`packages/brand/brand.json must carry app.${key} - it is the only place the ` +
+      "product's own address is written down");
   }
-  return origin;
+  return value;
 }
+
+/* Where the app's interface comes from: the mobile service, which owns /v1/mobile/*. This is
+   not the marketing site - the site answers 404 for those routes, and baking its host is how a
+   "plausible" default would have re-shipped the empty card (round 11, G-110). */
+function brandOrigin() { return brandField("origin"); }
+
+/* Where the product's pages live: the web app the download button and the QR point at. The two
+   are different services on different hosts, and the WebView needs both in allowNavigation. */
+function brandSite() { return brandField("site"); }
 
 function normalise(value, label) {
   const who = label || "origin";
@@ -72,4 +81,4 @@ function resolveOrigin(env = process.env) {
   return normalise(brandOrigin(), "brand app.origin");
 }
 
-module.exports = { resolveOrigin, brandOrigin, normalise };
+module.exports = { resolveOrigin, brandOrigin, brandSite, normalise };

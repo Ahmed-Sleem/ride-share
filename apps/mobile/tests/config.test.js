@@ -152,9 +152,20 @@ test("an origin that cannot work is a build failure, not a silent install", () =
   assert.equal(normalise("http://localhost:8787"), "http://localhost:8787", "development is allowed");
 });
 
-test("local-first survives: the app starts from a file, and may navigate to the OTA host", () => {
+test("local-first survives: the app starts from a file, and may navigate to both hosts", () => {
   const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
   assert.ok(!cfg.server || !cfg.server.url, "server.url must stay unset - see build.js and G-110");
-  assert.ok(cfg.server.allowNavigation.includes(new URL(brand.app.origin).hostname),
-    "the origin's own host must be in allowNavigation, or the address in brand.json is a lie");
+  const hosts = new Set([new URL(brand.app.origin).hostname, new URL(brand.app.site).hostname]);
+  assert.equal(hosts.size, 2, "the OTA service and the site are different hosts; if they ever become one, say so here");
+  for (const host of hosts) {
+    assert.ok(cfg.server.allowNavigation.includes(host),
+      `${host} must be navigable, or the address written in brand.json is a lie`);
+  }
+  /* And the generator, not just the file that happens to be committed: this is where round 11
+     broke - the tracked config listed both hosts while the built APK listed one, because the two
+     brand fields had been folded onto each other. */
+  const src = fs.readFileSync(path.join(__dirname, "../scripts/build.js"), "utf8");
+  assert.match(src, /brandSite\(\), "PUBLIC_WEB_ORIGIN"\)/);
+  assert.ok(!/webOrigin = normalise\(process\.env\.PUBLIC_WEB_ORIGIN \|\| brandOrigin\(\)/.test(src),
+    "the site host must not be derived from the OTA origin");
 });

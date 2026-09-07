@@ -44,9 +44,13 @@ fs.mkdirSync(path.join(dist, "www"), { recursive: true });
    environment first, brand.json's app.origin as the floor, and a hard failure if neither
    answers. An empty origin used to be possible, and the installer that shipped with one
    is exactly why that is no longer allowed. */
-const { resolveOrigin, brandOrigin, normalise } = require(path.join(HERE, "scripts", "resolve-origin.js"));
+const { resolveOrigin, brandSite, normalise } = require(path.join(HERE, "scripts", "resolve-origin.js"));
 const origin = resolveOrigin();
-const webOrigin = normalise(process.env.PUBLIC_WEB_ORIGIN || brandOrigin(), "PUBLIC_WEB_ORIGIN");
+/* Two different hosts, and the difference matters: `origin` is where the interface is fetched
+   from, the site is where a person lands. Folding them together silently dropped the site out
+   of allowNavigation, which only shows up in the built artifact - so the brand file names each
+   one and the config test asserts both are present. */
+const webOrigin = normalise(process.env.PUBLIC_WEB_ORIGIN || brandSite(), "PUBLIC_WEB_ORIGIN");
 const appId = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
 const secret = (process.env.MOBILE_APP_SECRET || "").trim();
 

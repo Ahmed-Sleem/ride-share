@@ -20,7 +20,7 @@ OTA paths answer the preflight and echo only the app's local origins, with the p
 request; and the boot page now says what it tried, repeats the reason where it is visible (the status line lived inside
 the splash, which `showOffline()` hides), and marks itself busy so a second tap cannot vanish. `build.js` strips
 `app` before inlining brand.json into the web bundle, because the existing *no deployment host in the bundle* guard
-caught the leak first — fixed in the code, not in the guard. Mobile suite 15 → **22/0** (5 origin tests, 2 CORS tests). The web route tests were 6/2 and are 8/0 now: round 10's committed installer invalidated the *"nothing staged"* fixture that only hid `ANDROID_APK_PATH`, and `verify.sh` — the script CI runs — had never invoked `tests/server.test.js`, so no push could surface it. The fixture hides all three sources now, and the file is in the gate (G-112).
+caught the leak first — fixed in the code, not in the guard. Mobile suite 15 → **22/0** (5 origin tests, 2 CORS tests).CI ran it and failed on it (`Verify (repo + api + web unit) → failure` on `2247373`, which also held up `apk`, since that job depends on `verify`); the smaller loop was my own, which skipped the routes file and reported green while the record said red. `verify.sh` invokes it now. The fixture hides all three sources now, and the file is in the gate (G-112).
 The `META-INF`-only signature probe that made me say "would not install" was my error: `APK Sig Block 42` at
 27,831,431 ahead of the central directory at 27,882,418 is a v2/v3 signature. This is baked, so `version.code` moves
 3 → 4 and devices need the next installer; after that, the GUI still arrives over the air.
@@ -40,6 +40,8 @@ assertions** because jsdom has no layout, so `if(!y) return` skipped the body �
 instead of reading it. Finally, the screenshot caught what no suite did: the bar's height was derived (`padding + tap`)
 while the wordmark wraps to two lines at 390px, so the real 78px bar covered "Ride"; the height is now measured where
 the sheet mounts, and the survey asserts that no row starts above the bar's bottom edge, at every id.
+And the artifact itself carried one last regression: folding `webOrigin` onto the brand key retargeted at the mobile service collapsed `allowNavigation` from two hosts to one, so the site vanished from the shipped APK while the tracked config still listed both — every test stayed green because they read the file, not the build. `brand.json` now separates `app.origin` (where the interface comes from) from `app.site` (where a person lands), the generator uses both, and the guard asserts both against the generator too. `version.code` 4 → 5.
+
 **unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
 
 ## 2026-09-07 — the break harness caught its own blindness: three guards had been blind since round 9
