@@ -262,4 +262,7 @@ untouched until the owner signs the look off.
 - [ ] **D-8.16** Play Integrity (the header comment's next gate, needs the owner's Google Cloud project): replaces our "this came from our app" claim with
   Google's, and is the only remaining reason to hold any key. Decided against doing it blind — it needs a cloud project, a service account and a real
   Play-signed app, none of which exist yet.
+- [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
+  is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
+  all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.
 

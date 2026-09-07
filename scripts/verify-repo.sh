@@ -21,6 +21,7 @@ checks=(
   "scripts/check-authority.sh"
   "scripts/check-hide-not-disable.sh"
   "scripts/check-platform-boundary.sh"
+  "scripts/check-exec-bits.sh"
 )
 NODE_CHECKS=(
   "scripts/check-boundaries.mjs"

@@ -46,6 +46,21 @@ Then I stopped reading tests and started the app. I took the boot page out of th
 
 **unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
 
+## 2026-09-07 — everything pushed; `verify-gui` went red on a file's *permissions* (G-118)
+
+The six held commits are on `main` (`008055d..8f66d59`) and both fixes are live, verified against the services rather than against the build: the
+deployed page now contains the centring rule and measuring it in a browser returns **0.0 px off centre** for all 7 rows in English and Arabic; and the
+device-token loop works end to end on production — `POST /v1/mobile/enroll` → 200 (`key: "configured"`, token shape valid), `/v1/config` with that
+token → **200** (it had been 403 for the whole life of the app), without one → 401 `DEVICE_TOKEN_MISSING`, forged → 401, foreign `appId` → 403,
+second enrolment inside the window → 429, and the live bundle contains **0** references to `__RS_APP_SECRET` or `x-rs-sign`.
+
+Then `verify-gui` failed, and the cause was mine: `sh: ./verify.sh: Permission denied` (exit 126). A sandbox rehydrate strips exec bits; I staged
+with `git add -A` before restoring `core.fileMode false`, so git committed mode `100644` for all 23 shell scripts. Contents were fine, every local
+suite was green, and only the one script CI invokes as `./x.sh` broke the job — metadata failing a build. Fixed with `git update-index --chmod=+x`
+across the shebang'd scripts, plus `scripts/check-exec-bits.sh` added to the standard checks: it reads the **index** rather than the disk (the disk
+can be right while the commit is wrong), and it fails when it examines nothing, per the repo's own convention against silently-vacuous checks.
+
+
 ## 2026-09-07 — the app's identity layer: a minted device token instead of a shared phrase (D-8.12, G-117)
 
 The owner picked the industry-standard option: no key in the client, a short-lived token minted by the server. `appProof`'s HMAC
