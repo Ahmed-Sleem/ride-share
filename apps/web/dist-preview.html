@@ -1206,7 +1206,12 @@ html.native .intro{padding-top:var(--safe-t)}
 .landing-menu .landing__menulink:nth-child(5){animation-delay:calc(var(--panel-in-step) * 4)}
 .landing-menu .landing__menulink:nth-child(6){animation-delay:calc(var(--panel-in-step) * 5)}
 .landing-menu .landing__menulink:nth-child(7){animation-delay:calc(var(--panel-in-step) * 6)}
-.landing__menulink{display:block;text-align:start;border:0;background:none;cursor:pointer;
+/* Centred, in both directions: the sheet is a full-screen surface, and a full-screen list read
+   against a hard left edge looks like a fallback style rather than a choice. Flex carries the
+   label down the middle of the 44px row (a block with min-height would sit it on the top line),
+   and text-align keeps wrapped lines centred. Direction-agnostic, so RTL needs no branch - the
+   row stays a full-width tap target, which is the part that must not shrink. */
+.landing__menulink{display:flex;align-items:center;justify-content:center;text-align:center;border:0;background:none;cursor:pointer;
   font:inherit;font-size:var(--f-title);font-weight:var(--fw-bold);letter-spacing:-.02em;
   color:var(--ink);padding:.55rem 0}
 .landing__menulink:hover{color:var(--ink-soft)}

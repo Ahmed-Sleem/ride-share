@@ -620,6 +620,22 @@ async function survey(view, lang, key, doc) {
           firstRowTop: panel.querySelector('.landing__menulink')
             ? +panel.querySelector('.landing__menulink').getBoundingClientRect().top.toFixed(1) : -1,
           navBottom: +navRef.getBoundingClientRect().bottom.toFixed(1),
+          /* Centred means the LABEL is centred: every row box spans the sheet, so its rect is
+             centred by construction and would pass even with the text glued to one edge. A Range
+             over the row's contents measures the ink instead - and it is what an RTL reader sees
+             too, since a centred line has no side. */
+          labelOff: (() => {
+            const rows = [...panel.querySelectorAll('.landing__menulink')];
+            const mid = icbW / 2;
+            let worst = 0;
+            for (const b of rows) {
+              const r = document.createRange();
+              r.selectNodeContents(b);
+              const rect = r.getBoundingClientRect();
+              if (rect.width > 0) worst = Math.max(worst, Math.abs(rect.left + rect.width / 2 - mid));
+            }
+            return +worst.toFixed(1);
+          })(),
           /* and it must not have moved the page: the reader was thrown to the top on
              every open, because the re-render replaced the scroller itself. */
           scrolled: before };
@@ -658,6 +674,8 @@ for (const vp of BOUNDARIES) {
         ok(`${id}: the sheet is full screen`, m.sheet.coverW === 1 && m.sheet.coverH === 1,
           JSON.stringify({ w: m.sheet.coverW, h: m.sheet.coverH }));
         ok(`${id}: the sheet is not inside the glass bar`, m.sheet.insideNav === false);
+        ok(`${id}: the sheet's labels are centred, both directions`, m.sheet.labelOff <= 1.5,
+          `${m.sheet.labelOff}px off centre`);
         ok(`${id}: no row of the sheet starts above the bar`, m.sheet.firstRowTop >= m.sheet.navBottom - 0.5,
           JSON.stringify({ row: m.sheet.firstRowTop, bar: m.sheet.navBottom }));
         ok(`${id}: opening the sheet leaves the page where it was`, m.sheet.scrolled === m.sheet.afterScroll,

@@ -1812,6 +1812,9 @@ group("LANDING v2 — nav pages, drive, about, help, sticky panels");
   t.w.S.lang = "en"; t.w.S.landingPage = "rider"; t.w.S.landingDoc = null; t.w.render();
   ok("no hue-named chapter skins survive",
      !/landing__feature--(mint|sky|pink|lime|coral|violet)/.test(t.q(".landing").innerHTML));
+  ok("the menu's centring is the component's own rule, and no edge-aligned leftover",
+    /\.landing__menulink\{[^}]*justify-content:center[^}]*text-align:center/.test(CSS) &&
+    !/\.landing__menulink\{[^}]*text-align:start/.test(CSS));
 
   // drive → about → help navigate without a full app render
   const links = t.all(".landing__link");
@@ -1832,6 +1835,11 @@ group("LANDING v2 — nav pages, drive, about, help, sticky panels");
      t.q(".landing__menu").getAttribute("aria-controls") === "landing-menu");
   ok("the sheet is a sibling of the bar, not its child",
      !!t.q(".landing-menu") && !t.q(".landing-menu").closest(".landing__nav"));
+  /* The row is asked, not the stylesheet: a full-width box is centred whatever the label does,
+     so the shape check below and the painted measurement in landing.test.js are the two halves. */
+  ok("the open sheet centres its rows",
+    t.w.getComputedStyle(t.q(".landing-menu .landing__menulink")).justifyContent === "center");
+
   t.q(".landing-menu .landing__menulink").click();   // first link = Ride
   ok("menu link navigates and closes", t.w.S.landingPage==="rider" && !t.q(".landing-menu"));
   t.q(".landing__menu").click();
