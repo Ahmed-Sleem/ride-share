@@ -46,6 +46,27 @@ Then I stopped reading tests and started the app. I took the boot page out of th
 
 **unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
 
+## 2026-09-07 — the app's identity layer: a minted device token instead of a shared phrase (D-8.12, G-117)
+
+The owner picked the industry-standard option: no key in the client, a short-lived token minted by the server. `appProof`'s HMAC
+demanded a phrase that could only live in a public artefact, so the shipped app could never satisfy it — booted, browsed, refused every
+personal route. Now `POST /v1/mobile/enroll` (public, body-capped, one per device per minute) returns `d1.<payload>.<hmac>` signed by a key
+the verifier alone holds; `/v1/*` personal routes require `x-rs-device-token`; a `401 DEVICE_TOKEN_*` makes the client re-enrol and replay the
+call once; with no key configured the service mints an ephemeral one rather than answering 503, so a fresh clone runs the app at all. The
+boot page no longer signs its reads at all — no `x-rs-ts`/`x-rs-sign`, and therefore no OPTIONS round trip before it can fetch its own
+interface — and the site bundle is verified to contain no key (`grep -c __RS_APP_SECRET dist-preview.html` → 0). Two consequences beyond the
+fix: nothing identity-related is baked, so OTA is now the only update path (the owner's architecture law, held), and because the same process
+serves the bundle, **every already-installed app recovers on its next launch with no reinstall**. `ci.yml` no longer passes a build-time
+secret; `MOBILE_DEVICE_TOKEN_KEY` (or the existing `MOBILE_APP_SECRET`) is a service-side variable only. `version.code` 5 → 6 because the
+boot page and the injected tag changed, so `/download/android`, the button and the QR all move to the new installer together — they read the
+same `brand.json`, which is how they cannot drift.
+
+Measured: mobile suite 26 → **29/0** (enrolment, forged token, one-character tamper, expiry against a real 300 ms TTL in a spawned server,
+foreign app id, enrol loop throttled, `/v1/config` reachable, public interface reads, no-key service, and a bundle-carries-no-key check); web
+unit **726/0**, a11y **14/0**. Caught by tests, not by me: the expiry had a 60 s clock-skew allowance copied from the per-request timestamp it
+replaced — a minted-`exp` token has no client clock in it, and the tolerance only kept dead tokens alive; removed from the product, not from
+the test. Also my first TTL choice of 1 ms expired before the positive assertion could run: environments prove behaviour, guesses do not.
+
 ## 2026-09-07 — landing menu: the sheet's page names are centred (D-8.13)
 
 The owner's verdict after the full-screen sheet landed: fixed on mobile, but the list still read like a drawer - names pushed to one edge of a

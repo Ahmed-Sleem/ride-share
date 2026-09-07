@@ -61,7 +61,6 @@ p{margin:0;max-width:28ch;color:var(--muted)}
 (function(){
   var origin = (window.__RS_PUBLIC_ORIGIN || "").replace(/\/$/, "");
   var appId = window.__RS_APP_ID || "eg.rideshare.app";
-  var secret = window.__RS_APP_SECRET || "";
   var splash = document.getElementById("splash");
   var off = document.getElementById("offline");
   var statusEl = document.getElementById("status");
@@ -129,27 +128,13 @@ p{margin:0;max-width:28ch;color:var(--muted)}
     return null;
   }
 
-  async function appHeaders(method, path) {
-    var ts = String(Date.now());
-    var sign = "";
-    if (secret && typeof crypto !== "undefined" && crypto.subtle) {
-      var enc = new TextEncoder();
-      var msg = appId + "\n" + ts + "\n" + method + "\n" + path;
-      var key = await crypto.subtle.importKey(
-        "raw",
-        enc.encode(secret),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"]
-      );
-      var sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
-      sign = Array.from(new Uint8Array(sig)).map(function(b){ return b.toString(16).padStart(2, "0"); }).join("");
-    }
-    return {
-      "x-rs-app-id": appId,
-      "x-rs-ts": ts,
-      "x-rs-sign": sign
-    };
+  /* The boot page reads its interface from a public route, so it sends nothing that a browser
+     would have to preflight for. The old three proof headers were always attached and always
+     useless - the key they were computed from was empty in the shipped build - and they cost
+     every launch an OPTIONS round trip. Device enrolment belongs to the app itself, after the
+     bundle is mounted (see lib/api.js); the splash's job is only to fetch and verify. */
+  function bootHeaders() {
+    return { "x-rs-app-id": appId };
   }
 
   async function fetchWithTimeout(url, opts, ms) {
@@ -184,8 +169,8 @@ p{margin:0;max-width:28ch;color:var(--muted)}
     setStatus("Connecting to " + origin.replace(/^https?:\/\//, "") + "...");
 
     try {
-      // Step 1: Query update API with HMAC headers (2.5s timeout)
-      var updateHeaders = await appHeaders("GET", "/v1/mobile/update");
+      // Step 1: ask the service what the current interface is (2.5s timeout)
+      var updateHeaders = bootHeaders();
       var res = await fetchWithTimeout(origin + "/v1/mobile/update", {
         headers: updateHeaders,
         cache: "no-store"
@@ -209,7 +194,7 @@ p{margin:0;max-width:28ch;color:var(--muted)}
 
       // Step 3: Fetch fresh bundle
       setStatus("Updating...");
-      var bundleHeaders = await appHeaders("GET", "/v1/mobile/bundle");
+      var bundleHeaders = bootHeaders();
       var bRes = await fetchWithTimeout(origin + "/v1/mobile/bundle", {
         headers: bundleHeaders,
         cache: "no-store"

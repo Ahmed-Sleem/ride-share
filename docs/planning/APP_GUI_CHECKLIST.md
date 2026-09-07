@@ -249,4 +249,17 @@ untouched until the owner signs the look off.
   `.landing__menulink` — the row keeps its full width as a tap target, only the ink moves, and a centred line needs no RTL branch. Measured two ways because
   a full-width box is centred whatever the label does: `labelOff` in `landing.test.js` compares the label's Range rect to the viewport centre line at every
   boundary and language (worst 0.x px, gate ≤1.5), and `unit.test.js` asks the mounted row for its computed `justify-content`. unit 726/0, landing 3333/0.
+- [x] **D-8.12** Resolved as the owner chose — the industry-standard shape (G-117): no phrase in the client, a short-lived device token minted by
+  `POST /v1/mobile/enroll` and verified by the same service that serves the bundle. Nothing identity-related is baked any more, so the OTA path is the
+  only update path; installed apps recover on their next launch. `MOBILE_DEVICE_TOKEN_KEY` (or the existing `MOBILE_APP_SECRET`) is a **service-side**
+  variable: with it the tokens survive a restart, without it the process mints an ephemeral key and says so in the enrol response (`"key":"ephemeral"`).
+  Mobile suite 29/0, web unit 726/0, a11y 14/0, `__RS_APP_SECRET` count in the site bundle 0.
+- [ ] **D-8.14** Break cases (`apps/mobile/tests/breaks.sh`) for the guards that came with G-117: the token's signature check, the expiry comparison,
+  the enrol throttle map, the "no key ⇒ ephemeral key" fallback, and the boot page's "no signing headers" rule. Standing law: a case ships with its guard.
+- [ ] **D-8.15** Device verification of the whole flow on the owner's phone with the **v6** installer (27.9 MB, code 6): cold start offline → the honest
+  card; online → splash → app → enrol 200 → sign-in accepted → a booking round-trip. Also the one thing no harness can prove here: `mountBundle` inside
+  Android System WebView rather than Chromium.
+- [ ] **D-8.16** Play Integrity (the header comment's next gate, needs the owner's Google Cloud project): replaces our "this came from our app" claim with
+  Google's, and is the only remaining reason to hold any key. Decided against doing it blind — it needs a cloud project, a service account and a real
+  Play-signed app, none of which exist yet.
 

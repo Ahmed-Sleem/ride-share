@@ -52,7 +52,9 @@ const origin = resolveOrigin();
    one and the config test asserts both are present. */
 const webOrigin = normalise(process.env.PUBLIC_WEB_ORIGIN || brandSite(), "PUBLIC_WEB_ORIGIN");
 const appId = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
-const secret = (process.env.MOBILE_APP_SECRET || "").trim();
+/* No client-side key is read or baked any more (D-8.12). If a build still sets MOBILE_APP_SECRET
+   it is ignored here on purpose: the service signs the device tokens with it, and a copy in a
+   binary or a bundle would only be an invitation to read it out. */
 
 /* Local-first: Capacitor must start on a FILE in www/, never server.url.
    With server.url the WebView hits the remote host first; offline then
@@ -62,7 +64,7 @@ if (!fs.existsSync(bootSrc)) {
   console.error("FAIL: apps/mobile/offline.html missing");
   process.exit(1);
 }
-const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
+const inject = `<script>window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};</script>`;
 let boot = fs.readFileSync(bootSrc, "utf8");
 /* The boot page is inside the binary and cannot fetch the app's stylesheet, so the
    typeface is handed to it here, from the same brand.json the web build reads. The
@@ -109,7 +111,7 @@ fs.writeFileSync(path.join(www, "offline.html"), boot);
 /* Railway `mobile` serves the LIVE app HTML (intro → auth), not the splash.
    The splash only lives on the device so offline never hits Android's page. */
 let appHtml = fs.readFileSync(webHtml, "utf8");
-const appTag = `<script>window.__RS_SURFACE="mobile";window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
+const appTag = `<script>window.__RS_SURFACE="mobile";window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_APP_ID=${JSON.stringify(appId)};</script>`;
 /* Test for the assignment. The previous guard asked whether the bundle mentions __RS_SURFACE
    at all - and lib/api.js reads window.__RS_SURFACE on every request, so the answer was always
    yes, the tag was never injected, and the delivered app had no origin, no surface and no key:

@@ -7,22 +7,6 @@
 
    No mocks: a request that cannot reach a backend is a real error state,
    never a fabricated success.                                       */
-async function signApiRequest(method, path, ts, secret, appId) {
-  if (typeof crypto !== "undefined" && crypto.subtle) {
-    const enc = new TextEncoder();
-    const msg = appId + "\n" + ts + "\n" + method + "\n" + path;
-    const key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
-    return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  return "";
-}
 
 const API = {
   /* Same-origin /v1 on the website. The native shell injects the public
@@ -40,35 +24,86 @@ const API = {
     storeSet("rs.user", JSON.stringify(user));
   },
 
+  /* The device identity is a random id we generate and keep, not a hardware serial: it exists so
+     the same install can re-enroll quietly after its token expires, and so a person who clears app
+     data simply looks like a new install (which is true). It is not personal data and is never sent
+     anywhere except this service's enroll route. */
+  deviceId() {
+    let id = storeGet("rs.device");
+    if (!id) {
+      const rnd = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? String(crypto.randomUUID()).replace(/-/g, "")
+        : Array.from({ length: 4 }, () => Math.random().toString(36).slice(2, 10)).join("");
+      id = "d" + rnd.slice(0, 31);
+      storeSet("rs.device", id);
+    }
+    return id;
+  },
+
   clearSession() {
     try { localStorage.removeItem("rs.access"); } catch {}
     try { localStorage.removeItem("rs.refresh"); } catch {}
     try { localStorage.removeItem("rs.user"); } catch {}
   },
 
-  async request(method, path, body, extraHeaders) {
+  /* One enrolment per install, then a bearer-of-the-app header on every request. When the token is
+     missing, expired, or was minted before a server restart, the request is retried once after a
+     fresh enrolment - so a person never sees the difference, and a day is the worst-case stall. */
+  _tok: "",
+  _tokExp: 0,
+
+  async enroll() {
+    if (typeof fetch !== "function" || typeof window === "undefined") return null;
+    let res;
+    try {
+      res = await fetch(this.base + "/mobile/enroll", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          deviceId: this.deviceId(),
+          appId: window.__RS_APP_ID || "eg.rideshare.app",
+        }),
+      });
+    } catch { return null; }
+    if (!res.ok) return null;
+    let meta = null;
+    try { meta = await res.json(); } catch { return null; }
+    if (!meta || !meta.token) return null;
+    this._tok = String(meta.token);
+    this._tokExp = Number(meta.expiresAt) || 0;
+    try { localStorage.setItem("rs.device.token", JSON.stringify({ t: this._tok, e: this._tokExp })); } catch {}
+    return meta;
+  },
+
+  async deviceToken() {
+    if (this._tok && Date.now() < this._tokExp - 5 * 60 * 1000) return this._tok;
+    try {
+      const cached = JSON.parse(storeGet("rs.device.token") || "null");
+      if (cached && cached.t && Date.now() < Number(cached.e) - 5 * 60 * 1000) {
+        this._tok = String(cached.t); this._tokExp = Number(cached.e);
+        return this._tok;
+      }
+    } catch { /* a torn cache is just a missing token */ }
+    const got = await this.enroll();
+    return got ? this._tok : "";
+  },
+
+  async request(method, path, body, extraHeaders, afterEnroll) {
     if (typeof fetch !== "function") throw new ApiError("NETWORK", "error.network", null);
     const headers = { "content-type": "application/json" };
     const token = this.access();
     if (token) headers["authorization"] = "Bearer " + token;
+    const onDevice = typeof window !== "undefined" && window.__RS_SURFACE === "mobile";
+    if (onDevice) {
+      try {
+        const dev = await this.deviceToken();
+        if (dev) headers["x-rs-device-token"] = dev;
+      } catch (e) {
+        console.warn("[api] device token unavailable", e);
+      }
+    }
     if (extraHeaders && typeof extraHeaders === "object") {
       for (const [k, v] of Object.entries(extraHeaders)) if (v != null) headers[k] = String(v);
-    }
-    if (typeof window !== "undefined" && window.__RS_SURFACE === "mobile" && window.__RS_APP_SECRET) {
-      try {
-        const ts = String(Date.now());
-        const appId = window.__RS_APP_ID || "eg.rideshare.app";
-        const cleanPath = path.startsWith("/") ? path : "/" + path;
-        const urlPath = "/v1" + cleanPath.split("?")[0];
-        const sign = await signApiRequest(method, urlPath, ts, window.__RS_APP_SECRET, appId);
-        if (sign) {
-          headers["x-rs-app-id"] = appId;
-          headers["x-rs-ts"] = ts;
-          headers["x-rs-sign"] = sign;
-        }
-      } catch (e) {
-        console.warn("[api] HMAC signing failed", e);
-      }
     }
     let res;
     try {
@@ -83,6 +118,15 @@ const API = {
     let payload = null;
     try { payload = await res.json(); } catch { /* non-JSON */ }
     if (!res.ok) {
+      /* A stale or missing device token is our own bookkeeping, not the person's problem: enroll
+         once and replay the call. Any other 401 is a real auth failure and must reach the caller. */
+      const code = (payload && payload.code) || "";
+      if (onDevice && res.status === 401 && String(code).indexOf("DEVICE_TOKEN") === 0 && !afterEnroll) {
+        this._tok = "";
+        try { localStorage.removeItem("rs.device.token"); } catch {}
+        await this.enroll();
+        return this.request(method, path, body, extraHeaders, true);
+      }
       // 502/503/504 from the proxy means the API is unreachable — a clearer,
       // retryable message beats "something went wrong" for the user.
       const fallback = res.status >= 500 ? "error.unavailable" : "error.internal";

@@ -15,7 +15,7 @@ if (!fs.existsSync(htmlPath)) {
   fs.writeFileSync(htmlPath, "<!doctype html><title>test-bundle</title><body>Bundle Content</body>");
 }
 
-const { handler, signAppRequest, APP_ID } = require("../server.js");
+const { handler, APP_ID } = require("../server.js");
 
 function request(url, headers) {
   return new Promise((resolve, reject) => {
@@ -36,25 +36,12 @@ function request(url, headers) {
   });
 }
 
-function makeHeaders(method, urlPath) {
-  const ts = String(Date.now());
-  const sign = signAppRequest(method, urlPath, ts, process.env.MOBILE_APP_SECRET, APP_ID);
-  return { "x-rs-app-id": APP_ID, "x-rs-ts": ts, "x-rs-sign": sign };
+/* The boot page carries no credential, so this is now "the headers a real boot page sends".
+   If a future edit puts a signing step back, the test above fails and says why. */
+function makeHeaders() {
+  return { "x-rs-app-id": APP_ID };
 }
 
-async function subtleHmac(method, pathStr, ts, secret, appId) {
-  const enc = new TextEncoder();
-  const msg = appId + "\n" + ts + "\n" + method + "\n" + pathStr;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
-  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 async function subtleSha256(contentStr) {
   const enc = new TextEncoder();
@@ -62,11 +49,20 @@ async function subtleSha256(contentStr) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-test("bootloader subtle HMAC matches server signAppRequest", async () => {
-  const ts = String(Date.now());
-  const clientSig = await subtleHmac("GET", "/v1/mobile/update", ts, process.env.MOBILE_APP_SECRET, APP_ID);
-  const serverSig = signAppRequest("GET", "/v1/mobile/update", ts, process.env.MOBILE_APP_SECRET, APP_ID);
-  assert.equal(clientSig, serverSig);
+test("the boot page asks for its interface without a credential, and without a preflight", async () => {
+  /* This test used to prove the two HMAC implementations agreed. They cannot disagree now because
+     neither exists: a client-side signature needed a key in a public artefact (D-8.12), so the boot
+     page sends only an app id - and, having no non-safelisted header to announce, it no longer has
+     to survive an OPTIONS probe before it can even ask. That is the property worth holding: the
+     splash's one job is to fetch, and nothing about fetching may depend on a secret. */
+  const boot = fs.readFileSync(path.join(__dirname, "..", "offline.html"), "utf8");
+  assert.ok(!/x-rs-sign/.test(boot), "no signature: there is no key a bundle could keep");
+  assert.ok(!/x-rs-ts/.test(boot), "and no timestamp, so no clock skew to fail on");
+  assert.match(boot, /x-rs-app-id/, "it still says which program it is");
+  for (const p of ["/v1/mobile/update", "/v1/mobile/bundle"]) {
+    const r = await request(p, { "x-rs-app-id": APP_ID });
+    assert.equal(r.status, 200, `${p} must answer a plain request from the boot page`);
+  }
 });
 
 test("bootloader subtle SHA-256 matches node crypto hash", async () => {
@@ -77,7 +73,7 @@ test("bootloader subtle SHA-256 matches node crypto hash", async () => {
 });
 
 test("update API returns valid bundle metadata with sha256", async () => {
-  const r = await request("/v1/mobile/update", makeHeaders("GET", "/v1/mobile/update"));
+  const r = await request("/v1/mobile/update", makeHeaders());
   assert.equal(r.status, 200);
   const meta = JSON.parse(r.body);
   assert.equal(meta.ok, true);
@@ -86,10 +82,10 @@ test("update API returns valid bundle metadata with sha256", async () => {
 });
 
 test("bundle API serves html bundle and matches update sha256", async () => {
-  const updateRes = await request("/v1/mobile/update", makeHeaders("GET", "/v1/mobile/update"));
+  const updateRes = await request("/v1/mobile/update", makeHeaders());
   const meta = JSON.parse(updateRes.body);
 
-  const bundleRes = await request("/v1/mobile/bundle", makeHeaders("GET", "/v1/mobile/bundle"));
+  const bundleRes = await request("/v1/mobile/bundle", makeHeaders());
   assert.equal(bundleRes.status, 200);
   assert.equal(bundleRes.headers["content-type"], "text/html; charset=utf-8");
   assert.equal(bundleRes.headers["x-rs-sha256"], meta.sha256);
@@ -115,12 +111,12 @@ test("a tampered signature no longer blocks the public interface reads", async (
   assert.match(r.body, /test-bundle|fixture|<!doctype/i, "the bundle is served, headers and all");
 });
 
-test("but the proxied API still refuses it", async () => {
+test("but the proxied API still refuses it, and names what is missing", async () => {
   const r = await request("/v1/healthz", {
     "x-rs-app-id": APP_ID,
     "x-rs-ts": String(Date.now()),
     "x-rs-sign": "f".repeat(64),
   });
-  assert.equal(r.status, 403);
-  assert.equal(JSON.parse(r.body).code, "APP_UNPROVEN");
+  assert.equal(r.status, 401);
+  assert.equal(JSON.parse(r.body).code, "DEVICE_TOKEN_MISSING");
 });

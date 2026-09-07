@@ -171,7 +171,6 @@ jobs:
           # Both are optional. The origin falls back to packages/brand/brand.json's app.origin
           # (which is what makes a CI-built installer able to reach the server at all, round 11);
           # the secret, if it is ever added, is baked in and still accepted by the OTA reads.
-          MOBILE_APP_SECRET: ${{ secrets.MOBILE_APP_SECRET }}
         run: bash apps/mobile/scripts/make-apk.sh
       - uses: actions/upload-artifact@v4
         with:

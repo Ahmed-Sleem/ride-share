@@ -419,3 +419,17 @@ Escape or a tap on the frost closes it. The scroll jump was structural: `.landin
 replaces it - so a disclosure does not re-render at all, and the render path keeps a measured restore (instant, and
 re-asserted a frame later) for the language and theme switches, which had the same bug the owner has not reported yet.
 
+## 15. The app's identity layer (2026-09-07, D-8.12 / G-117)
+
+The GUI work ran into an architecture question: an installed app could reach its interface but not its data. The gate expected an HMAC signed
+with a phrase the client had to hold, and no client can hold a secret — a bundle is public text, an APK is a zip anyone owns, and the bundle is
+rebuilt at every commit. The app's identity is now *minted*, not *proven by the client*: `POST /v1/mobile/enroll` accepts a random per-install
+device id (no hardware serial, no personal data) and returns a short-lived token the service signs with a key that never leaves it; personal
+routes carry `x-rs-device-token`, and a stale token is refreshed and the call replayed once, invisibly.
+
+Two design points worth keeping in view while the GUI changes around it. First, the boot page and the app no longer need anything baked, so the
+"local-first + OTA" architecture is now the *only* update path rather than one of two — no future GUI change will ever require a new installer for
+an identity reason. Second, this layer is attestation, never auth: it says which program is asking; the bearer token from login says who the person
+is, and it is the only thing forwarded to the private api. The device token is deliberately dropped at the proxy so the api cannot come to depend on
+it, and the api keeps its own throttling for anything that touches a person.
+
