@@ -217,3 +217,5 @@ untouched until the owner signs the look off.
 - [ ] **D-8.8** Formal `breaks.sh` cases for the 7 assertions added with G-110 (origin resolution, preflight, ACAO scoping).
   Each of these has already been seen failing on a real fault this round — my own `normalise()` hole, the missing `authored`
   binding, the guard left pointing at the old call — so the checks are proven; what is missing is the permanent harness entry.
+- [x] **D-8.7** G-113: the OTA reads answer without a signature that cannot exist in this pipeline; the proxied API keeps its gate.
+  Live before the change: `/v1/mobile/update` → `403 APP_UNPROVEN`. Mobile suite **23/0**. Reversible with one repo secret.

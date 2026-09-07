@@ -162,6 +162,37 @@ async function handler(req, res) {
   if (url === "/" || url === "/index.html") {
     return json(res, 403, { ok: false, code: "NOT_A_WEBSITE" });
   }
+  /* The two OTA reads are public by decision, not by oversight (round 11). They serve one
+     static, non-personal artefact - the interface itself - to a client that cannot keep a
+     secret: the signature the boot page sends is an HMAC over a key baked into the APK, and
+     anyone with the installer can read it out of the bundle. Gating on it bought the
+     appearance of a lock and, with no secret wired into the installer build, produced a 403
+     that left every installed app sitting on "Check your internet connection". Everything
+     that actually touches a person - the whole /v1 proxy - still runs through appProof below,
+     unchanged, and a build that does carry a secret keeps working: the headers are accepted
+     and ignored, not required. */
+  if (url === "/v1/mobile/update" || url === "/v1/mobile/bundle") {
+    const m = bundleMeta();
+    if (!m) return json(res, 503, { ok: false, code: "BUNDLE_MISSING" });
+    if (url === "/v1/mobile/update") {
+      return json(res, 200, {
+        ok: true,
+        versionCode: m.versionCode,
+        versionName: m.versionName,
+        sha256: m.sha256,
+        bytes: m.bytes,
+      });
+    }
+    res.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "x-rs-sha256": m.sha256,
+      "x-rs-version-code": String(m.versionCode),
+    });
+    return res.end(m.buf);
+  }
+
   const proof = appProof(req);
   if (!proof.ok) return json(res, proof.status, { ok: false, code: proof.code });
 

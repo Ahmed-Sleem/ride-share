@@ -118,7 +118,11 @@ test("the app origin is allowed on the OTA reads, and nobody else is", async () 
   assert.equal(mine.headers["vary"], "Origin", "a cached answer must not be reused for another origin");
   const foreign = await raw("GET", "/healthz", { origin: "https://somewhere-else.test" });
   assert.ok(!foreign.headers["access-control-allow-origin"], "a random web page gets no permission");
+  /* Follows the round-11 policy: the interface reads are public, so an unsigned bundle read is
+     allowed and must still be readable by the WebView - which is the whole point of the CORS
+     answer. The refusal lives on the proxied API, asserted in boot.test.js, not here. */
   const bundle = await raw("GET", "/v1/mobile/bundle", { origin: "https://localhost" });
-  assert.ok(!bundle.headers["access-control-allow-origin"] || bundle.status >= 400,
-    "an unproven bundle read stays refused - CORS opens the transport, not the content");
+  assert.equal(bundle.status, 200);
+  assert.equal(bundle.headers["access-control-allow-origin"], "https://localhost");
+  assert.match(bundle.headers["x-rs-sha256"] || "", /^[a-f0-9]{64}$/, "and the integrity header the boot page verifies against");
 });

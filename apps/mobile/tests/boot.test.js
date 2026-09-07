@@ -98,10 +98,29 @@ test("bundle API serves html bundle and matches update sha256", async () => {
   assert.equal(computedHash, meta.sha256);
 });
 
-test("tampered signature on bundle is rejected with 403", async () => {
-  const headers = makeHeaders("GET", "/v1/mobile/bundle");
-  headers["x-rs-sign"] = "0".repeat(64);
-  const r = await request("/v1/mobile/bundle", headers);
+/* Round 11 reversed one policy and this is where it shows. A signature over a key baked into a
+   debug APK is not a secret - anyone holding the installer can read it out of the bundle - so the
+   gate on the two OTA reads bought nothing except a 403 that bricked every installed app once the
+   installer job turned out to have no secret to bake. They are public now. What must stay shut is
+   anything that reaches a person, so the assertions moved to the proxy path instead: a bad
+   signature there is still refused, and the OTA reads ignore a bad signature rather than reject it.
+   If the owner ever wants the old behaviour back, it is one repo secret plus flipping this block. */
+test("a tampered signature no longer blocks the public interface reads", async () => {
+  const r = await request("/v1/mobile/bundle", {
+    "x-rs-app-id": APP_ID,
+    "x-rs-ts": String(Date.now()),
+    "x-rs-sign": "f".repeat(64),
+  });
+  assert.equal(r.status, 200);
+  assert.match(r.body, /test-bundle|fixture|<!doctype/i, "the bundle is served, headers and all");
+});
+
+test("but the proxied API still refuses it", async () => {
+  const r = await request("/v1/healthz", {
+    "x-rs-app-id": APP_ID,
+    "x-rs-ts": String(Date.now()),
+    "x-rs-sign": "f".repeat(64),
+  });
   assert.equal(r.status, 403);
   assert.equal(JSON.parse(r.body).code, "APP_UNPROVEN");
 });
