@@ -433,3 +433,24 @@ an identity reason. Second, this layer is attestation, never auth: it says which
 is, and it is the only thing forwarded to the private api. The device token is deliberately dropped at the proxy so the api cannot come to depend on
 it, and the api keeps its own throttling for anything that touches a person.
 
+
+## 16. Round 17 — the bar's air, edge, and the rail's travel (owner's notes on the running app)
+
+Three rules came out of renewing the app's top bar, and they belong here because they are easy to lose:
+
+1. **A bar's air is its own tokens.** `--head-t` / `--head-b` are worn by `.topbar`, and the status-bar inset is *added* to the top
+   (`calc(var(--head-t) + var(--safe-t))`) rather than replacing it. A bar with no bottom padding has its title touching the edge of
+   itself, which is what "thin" means when someone says a bar is thin.
+2. **An edge is a hairline plus a short fade, drawn outside the box.** `.topbar::after` and `.nav::before` are one recipe in two
+   directions (`--edge-h`, `--edge-scrim` per theme, `box-shadow:inset` for the line), so the top bar and the bottom menu cannot drift
+   apart, and so no measured height changes. Depth is *earned*: `.main.is-rolled` (set by `Motion.scrollEdge`) deepens the fade only
+   while content passes under the bar — the same judgement Material 3 makes with `scrolledUnderElevation` and iOS makes with the scroll
+   edge effect. Chrome at rest is a line; the moment the page moves, it is a surface.
+3. **Entrance motion belongs to the page, not to its chrome.** `.main__inner>*{animation:pagein}` with `.main__inner>.topbar{animation:none}`:
+   a sticky bar caught in its own `translateY(8px)` is a gap above the bar for the length of the animation, and it will not show up in a
+   source read at all — only in a measured frame.
+
+Behaviour in JS, the look in the sheet: `Motion.scrollEdge(scroller)` returns a detach and owns nothing but the boolean.
+Motion also has to answer to `prefers-reduced-motion`: the rail's `transition:width` and the label fade live inside
+`@media (prefers-reduced-motion:no-preference) and (min-width:600px)`, and the layout suite asserts both sides of it, because Chrome
+under `reduce` reports `0.00001s` rather than `0s` — so the predicate is "no travel", not "zero".

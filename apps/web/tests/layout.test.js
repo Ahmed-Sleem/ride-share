@@ -114,6 +114,14 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
             docScrollW:de.scrollWidth, docClientW:de.clientWidth,
             docScrollH:de.scrollHeight, docClientH:de.clientHeight,
             nav:box(nav), main:box(main), top:box(top), band:box(band),
+            title:box(q(".topbar__title")),
+            /* The edge is a pseudo-element, so it can only be read from the rendered
+               style â€” the whole reason this suite exists next to a text grep. */
+            edge:(()=>{ if(!top) return null; const c=getComputedStyle(top,"::after");
+              return {bg:c.backgroundImage, shadow:c.boxShadow, h:parseFloat(c.height)||0, pe:c.pointerEvents}; })(),
+            navEdge:(()=>{ if(!nav) return null; const c=getComputedStyle(nav,"::before");
+              return {bg:c.backgroundImage, h:parseFloat(c.height)||0}; })(),
+            navDur:nav?parseFloat(getComputedStyle(nav).transitionDuration)||0:null,
             navDisplay:nav?getComputedStyle(nav).flexDirection:null,
             labelShown:(()=>{ const l=q(".navitem__label");
               return l?getComputedStyle(l).display!=="none":false; })(),
@@ -173,6 +181,41 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
         if(m.top && m.band)
           ok(`${id}: content starts below the page head`,
              m.band.t>=m.top.b-1, `band.t=${m.band.t} top.b=${m.top.b}`);
+        /* 5b. THE BAR IS THE TOP OF THE PAGE, AND IT HAS AN EDGE.
+           Round 17 (the owner, on the running app): the bar was thin, it did not reach
+           the top of the page, and its boundary was a blur that had nothing under it.
+           These three are the only way to see that, because they depend on the entrance
+           animation, the sticky offset and a pseudo-element â€” none of which exist in the
+           stylesheet text or in jsdom. The 1200px gutter is in here deliberately: it was
+           the exact number that floated the bar down, and it is the exact number that will
+           do it again if someone "tidies" the rule back. */
+        if(m.top)
+          ok(`${id}: the head touches the top of the page`, Math.abs(m.top.t)<=0.5, `top.t=${m.top.t}`);
+        if(m.top && m.title){
+          ok(`${id}: the title owns air under it inside the bar`,
+             m.top.b-m.title.b>=10, `head.b=${m.top.b} title.b=${m.title.b}`);
+          ok(`${id}: and air above it, so the poster is not glued to the edge`,
+             m.title.t-m.top.t>=10, `title.t=${m.title.t} head.t=${m.top.t}`);
+        }
+        if(m.edge){
+          ok(`${id}: the bar's edge is a fade, not a hard cut`,
+             /gradient/.test(m.edge.bg), String(m.edge.bg).slice(0,28));
+          ok(`${id}: with a hairline exactly on the border`,
+             /inset/.test(m.edge.shadow)&&/1px/.test(m.edge.shadow), m.edge.shadow);
+          ok(`${id}: the fade is short and never over a tap`,
+             m.edge.h>=10&&m.edge.h<=24&&m.edge.pe==="none", `h=${m.edge.h} pe=${m.edge.pe}`);
+        }
+        if(vp.nav==="bar" && m.navEdge && m.edge)
+          ok(`${id}: the bottom menu and the head draw the same edge`,
+             /gradient/.test(m.navEdge.bg)&&m.navEdge.h===m.edge.h,
+             `nav.h=${m.navEdge.h} head.h=${m.edge.h}`);
+        if(vp.nav!=="bar" && m.navEdge)
+          ok(`${id}: the rail keeps its own inline edge and grows no top fade`,
+             m.navEdge.bg==="none", String(m.navEdge.bg).slice(0,24));
+        if(m.navDur!=null && vp.nav!=="bar")
+          ok(`${id}: the rail's width change is travelled, not snapped`,
+             m.navDur>0, `transition-duration=${m.navDur}s`);
+
         if(m.band && m.main)
           ok(`${id}: search band sits inside the scroller`,
              m.band.t>=m.main.t-1 && m.band.b<=m.main.b+1,
@@ -290,6 +333,40 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
   });
   ok("very long text: no horizontal overflow", long.over<=1, String(long.over));
   ok("very long text: page still does not scroll", long.vover<=1, String(long.vover));
+
+  /* The motion guard, proven from both sides. A rule that lives inside
+     `prefers-reduced-motion:no-preference` is only real if a reader who asks for calm
+     actually gets the old instant behaviour â€” so the same element is measured twice,
+     and the assertion that matters is the one that passes on the second pass. */
+  {
+    const railDur=async(mode)=>{
+      await page.emulateMediaFeatures([{name:"prefers-reduced-motion",value:mode}]);
+      await page.setViewport({width:1280,height:800,deviceScaleFactor:1});
+      await page.goto(FILE,{waitUntil:"load"});
+      await page.evaluate(()=>{ S.view="app"; S.authed=true; S.role="rider"; S.page="home";
+        S.stack=[]; S.sheet=null; S.opsView=null; render(); });
+      return await page.evaluate(()=>{
+        const nav=document.querySelector(".nav"), head=document.querySelector(".topbar");
+        /* Under `reduce` a engine does not set durations to zero â€” it rewrites them to a
+           hair above nothing (Chrome reports 0.00001s), so the predicate is "not a
+           travel", never "== 0". And the edge is matched on the whole function name: a
+           truncated probe string once made a passing edge look like a failing one here. */
+        return {dur:parseFloat(getComputedStyle(nav).transitionDuration)||0,
+          label:getComputedStyle(document.querySelector(".navitem__label")).animationName,
+          barEdge:head?getComputedStyle(head,"::after").backgroundImage:""};
+      });
+    };
+    const lively=await railDur("no-preference");
+    ok("the rail travels when motion is welcome", lively.dur>0.05, String(lively.dur)+"s");
+    ok("â€¦and the labels fade in", lively.label==="rail-in", lively.label);
+    const calm=await railDur("reduce");
+    ok("reduced motion leaves the rail no travel", calm.dur<0.01, String(calm.dur)+"s");
+    ok("reduced motion takes the label fade back too", calm.label==="none", calm.label);
+    ok("the edge itself is not motion, so it survives either way",
+       /^linear-gradient/.test(lively.barEdge)&&/^linear-gradient/.test(calm.barEdge),
+       `${lively.barEdge.slice(0,18)} | ${calm.barEdge.slice(0,18)}`);
+    await page.emulateMediaFeatures([]);
+  }
 
   ok("no console errors during the run", errors.length===0, errors.slice(0,2).join(" | "));
 

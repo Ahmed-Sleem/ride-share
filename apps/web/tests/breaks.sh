@@ -562,5 +562,48 @@ run_break "the curtain's pacing token is renamed in the sheet" src/styles/shell.
   's|  --fx-rise:220ms;|  --fx-rise-ms:220ms;|' \
   "every pacing token the curtain reads is defined in the sheet"
 
+# ── round 17: the bar is the top of the page, it owns its air, and it has an edge ──
+# Each of these was the owner's complaint, so each has a mutation that re-creates the
+# complaint and must be caught by the guard that answers it.
+run_break "the air under the title is deleted" src/styles/shell.html \
+  's|  --head-t:12px; --head-b:16px;|  --head-t:12px;|' \
+  "the bar's air is tokens, not a number in one rule"
+
+run_break "the head reverts to a bare top pad and no bottom" src/styles/shell.html \
+  's|^  padding:calc(var(--head-t) + var(--safe-t)) 0 var(--head-b)}|  padding:0|' \
+  "the head wears them"
+
+run_break "the ≥1200 gutter above the bar comes back" src/styles/shell.html \
+  's|  .main{padding:0 var(--s4) var(--s4)}|  .main{padding:var(--s4)}|' \
+  "no gutter floats the head off the top at the widths that used to have one"
+
+run_break "the edge stops being one recipe for both bars" src/styles/shell.html \
+  's|^\.topbar::after,\.nav::before{|.topbar::after{|' \
+  "the edge is one recipe, shared by the head and the bottom menu"
+
+run_break "the fade is only declared for light mode" src/styles/shell.html \
+  's|^  --edge-scrim:rgba(255,255,255,.10);||' \
+  "the fade is declared per theme, so it is not invisible on ink"
+
+run_break "the bottom menu's fade is un-mirrored" src/styles/shell.html \
+  's|    background:linear-gradient(to top,var(--edge-scrim),transparent);|    background:linear-gradient(to bottom,var(--edge-scrim),transparent);|' \
+  "and keeps the same fade, mirrored"
+
+run_break "the deeper state stops answering to the page" src/styles/shell.html \
+  's|^\.main\.is-rolled \.topbar::after{|.main .topbar::after{|' \
+  "the deeper state answers to the page, not to a standing decoration"
+
+run_break "the page's entrance is allowed to lift the bar" src/styles/shell.html \
+  's|^\.main__inner>\.topbar{animation:none}|.main__inner>.topbar{animation:pagein var(--med) var(--ease)}|' \
+  "the page's entrance cannot lift the bar off the top"
+
+run_break "the rail's travel escapes the motion guard" src/styles/shell.html \
+  's|@media (prefers-reduced-motion:no-preference) and (min-width:600px){|@media (min-width:600px){|' \
+  "the travel exists inside the motion guard, not outside it"
+
+run_break "the labels snap in instead of fading behind the space" src/styles/shell.html \
+  's|^  \.nav__brand>span,\.navitem__label{animation:rail-in.*|  /* no label fade */|' \
+  "the labels arrive a beat behind the space they need"
+
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

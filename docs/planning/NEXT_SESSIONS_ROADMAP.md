@@ -18,7 +18,7 @@ and nothing is scheduled because it is easy.
 | **A2** | The keystore + four secrets, then the signed installer ships | **owner**, then agent verifies | see "A2, the only step that needs a keyboard you own" below |
 | **B** | Prove the signature is stable: two consecutive builds, same pubkey | agent | `apksigner --print-certs` (or the fallback parser in the `apk` job) prints the same key hash on run N and N+1; `cmp` the live `/download/android` bytes against the repo blob; release notes stop saying "debug" |
 | **C** ✅ (agent part) | `G-120`: a key too short to be a secret is ignored, and three two-process tests make the whole class visible | owner sets one Railway var (`D-8.19`) | `MOBILE_DEVICE_TOKEN_KEY` set; a test that spawns **two** servers proves a token from A is refused on B **only** when the key differs, and accepted when both read the env key — `config.test.js`+`server.test.js` prove it: 15/15, and each fault was introduced on purpose and reddened the test that names it |
-| **D** | `apps/web` polish list (the standing parallel track) | agent | one component library: `Section()`, `mkActions`, map primitives shared with the app; no visual regression (`layout` + `landing` suites), and the duplication guard stays green |
+| **D** ◐ | `apps/web` polish list (the standing parallel track) — **round 17 took the bar first**: D-8.20 (flush top, `--head-t`/`--head-b` air, shared edge, rail travel) landed with 22 unit + 9× per-viewport layout guards and 10 break cases | agent | one component library: `Section()`, `mkActions`, map primitives shared with the app; no visual regression (`layout` + `landing` suites), and the duplication guard stays green |
 | **E** | `D-8.11`: promote the boot harness into CI | agent | a CI job boots the **built** page against the **deployed** mobile service and fails when the first screen is the offline splash; recipe in `~/.vtest/BOOT_HARNESS.md` |
 | **F** | `D-8.15`: the real-phone pass, then `G-041` (real rides) | owner runs, agent scripts | cold start offline → honest card; online → splash → app → enrol 200 → sign-in → booking round-trip; then the money path unblocks |
 | **G** | Legal and data: `G-002`, `G-006`, `G-017`, `G-041`, `G-003`, `G-007` | owner + legal, agent drafts | a privacy policy and ToS that name the real processing, a retention rule per table, and the store listing's data-safety form |
@@ -55,6 +55,12 @@ without a separate step. If you would rather not keep a keystore at all, say so 
 **One consequence to expect:** the first signed build cannot be installed *over* a debug build. Anyone
 who already has the debug installer must uninstall it once. That is Android refusing to let a
 different key replace an app, and it is the thing A2 exists to prevent from happening again.
+
+**Round 17 (2026-09-08)** — the owner ran the app and the webapp and asked for three GUI fixes; all three are in `main` with
+`version.code` 8 so an installed phone takes them through OTA (`/v1/mobile/update`). The one part CSS cannot reach is recorded as
+`G-124` (the native status-bar band: needs edge-to-edge on the window, therefore a new binary). `ONBOARDING_TASK_2.md` was handed to
+the second developer the same day — **the app's map is written but the map SDK is never loaded**, which is why no map shows anywhere;
+that task is the fastest route to the functionality the owner is missing.
 
 ## Superseded
 The "Session 2 candidates" list that used to sit here (product questions, screen inventory, config

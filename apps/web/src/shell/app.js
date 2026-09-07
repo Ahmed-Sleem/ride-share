@@ -295,6 +295,10 @@ function renderUnsafe(){
     if(band) inner.insertBefore(band, inner.children[1]||null);
     if(def.wide) body.classList.add("main--wide");
     body.append(inner);
+    /* The head's edge answers to this page, not to the window: it deepens only once
+       content has actually passed under it. The behaviour lives in Motion, the look
+       lives in the sheet, and neither knows the other's numbers. */
+    if (typeof Motion !== "undefined" && Motion.scrollEdge) Motion.scrollEdge(body);
   } else {
     col.append(head);
   }

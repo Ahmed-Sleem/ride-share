@@ -289,6 +289,18 @@ untouched until the owner signs the look off.
   **Still waiting on the owner:** the keystore and the four secrets (chunk A2 of `NEXT_SESSIONS_ROADMAP.md`).
   Landed so far: CI ran the new job (renamed `Android installer (signed when the keystore exists)`) and committed **Installer v0.1.0 (7)**, still the debug variant as designed while the
   secrets are absent. It also exposed `G-123` (the night-splash lint failure), fixed in the same pass.
+- [x] **D-8.20** The app's top bar is a bar: flush to the top, its own air, and a modern edge (owner's round-17 notes, 2026-09-08).
+  Measured before: `title.b == head.b` (0 px under the title), `headTop 14` at ≥1200 and `8` everywhere from the page-in `translateY`,
+  `border-bottom:0` + `box-shadow:none`, and `.nav{transition:none}` snapping the rail 144 px. After: `--head-t:12px/--head-b:16px` worn
+  by the head (16 px of air under the title, measured at 320→1920), `headTop 0.0` at every viewport, the entrance animation moved to
+  `.main__inner>*` so chrome never lifts, and the edge is one shared recipe — hairline + `--edge-h` fade on a pseudo-element outside the
+  box, deepening while `.main.is-rolled` (Material 3 `scrolledUnderElevation` / iOS 26 scroll edge). The bottom menu, which the owner
+  called the good one, now draws the *same* two layers, mirrored, and gave up its own `border-top`.
+  Proven: unit 726→748, layout 7570→12520 (per-viewport geometry + both sides of the motion query: `0.28s` vs `0s`), 10 new
+  `breaks.sh` cases all CAUGHT. `version.code` → 8 so the bundle inside installed apps changes through OTA.
+  **Still open, and not a CSS fix:** `G-124` — the native status-bar band in the installed app needs edge-to-edge on the window
+  (`apps/mobile`), i.e. a new binary, not a bundle.
+
 - [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
   all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.

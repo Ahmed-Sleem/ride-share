@@ -2694,3 +2694,61 @@ group("MAP — EditRouteMap exists; SearchMap can render with no stops");
   const t=boot();
   ok("EditRouteMap is exported", typeof t.w.EditRouteMap === "function");
 }
+
+group("THE BAR IS THE TOP OF THE PAGE AND HAS AN EDGE (round 17)");
+{
+  /* The look is measured in the browser (layout.test.js 5b). What is pinned here is the
+     reason it stays that way: the air is a token the head wears, the edge is one recipe
+     that both horizontal bars share, and the fade is theme-declared. A rewrite that keeps
+     the pixels but drops the tokens would pass a screenshot and fail this. */
+  const head=rule(".topbar");
+  ok("the bar's air is tokens, not a number in one rule", /--head-t:\d+px; --head-b:\d+px/.test(CSS));
+  ok("the head wears them", /padding:calc\(var\(--head-t\) \+ var\(--safe-t\)\) 0 var\(--head-b\)/.test(head||""), head);
+  ok("the status-bar inset is added to the top, never swapped for it",
+     /\+ var\(--safe-t\)/.test(head||""));
+  ok("no gutter floats the head off the top at the widths that used to have one",
+     !/\.main\{padding:var\(--s4\)\}/.test(CSS) && /\.main\{padding:0 var\(--s4\) var\(--s4\)\}/.test(CSS));
+  ok("the edge is one recipe, shared by the head and the bottom menu",
+     /\.topbar::after,\.nav::before\{/.test(CSS));
+  ok("fade plus hairline, and the hairline is a token",
+     /linear-gradient\(to bottom,var\(--edge-scrim\),transparent\)/.test(CSS) &&
+     /box-shadow:inset 0 1px 0 var\(--line\)/.test(CSS));
+  ok("the fade is declared per theme, so it is not invisible on ink",
+     /--edge-scrim:rgba\(10,10,10,/.test(CSS) && /--edge-scrim:rgba\(255,255,255,/.test(CSS));
+  ok("a fade is not a control", /\.topbar::after,\.nav::before\{[^}]*pointer-events:none/.test(CSS));
+  ok("a plain head (a sheet, a dock) does not sprout one", /\.topbar--plain::after\{display:none\}/.test(CSS));
+  {
+    const compact=CSS.slice(CSS.indexOf("/* compact: bottom bar */"));
+    ok("the bottom menu gave its own 1px rule to the shared edge",
+       !/border-top:1px solid var\(--line\)/.test(compact.slice(0,900)));
+    ok("and keeps the same fade, mirrored", /\.nav::before\{[^}]*to top,var\(--edge-scrim\)/.test(compact));
+  }
+  ok("the deeper state answers to the page, not to a standing decoration",
+     /\.main\.is-rolled \.topbar::after\{/.test(CSS));
+  ok("the page's entrance cannot lift the bar off the top",
+     /\.main__inner>\.topbar\{animation:none\}/.test(CSS));
+}
+
+group("THE RAIL TRAVELS AND THE PAGE TELLS THE BAR (round 17)");
+{
+  const noPref=CSS.slice(CSS.indexOf("@media (prefers-reduced-motion:no-preference) and (min-width:600px){"));
+  ok("the travel exists inside the motion guard, not outside it",
+     noPref.length>40 && /@media \(prefers-reduced-motion:no-preference\) and \(min-width:600px\)\{/.test(CSS));
+  ok("it rides the landing menu's timing, so the app has one feel",
+     /transition:width var\(--panel-in-dur\) var\(--panel-in-ease\)/.test(noPref));
+  ok("the labels arrive a beat behind the space they need",
+     /\.nav__brand>span,\.navitem__label\{animation:rail-in var\(--panel-in-dur\) var\(--panel-in-ease\) both\}/.test(noPref));
+  ok("a reduced-motion reader gets no width transition at all", !/transition:/.test(rule(".nav")||""));
+
+  const t=boot(); t.go("rider","home");
+  const main=t.q(".main");
+  ok("the page starts at rest", !main.classList.contains("is-rolled"));
+  main.scrollTop=24; main.dispatchEvent(new t.w.Event("scroll"));
+  ok("content under the bar becomes a fact the sheet can act on", main.classList.contains("is-rolled"));
+  main.scrollTop=0; main.dispatchEvent(new t.w.Event("scroll"));
+  ok("…and is withdrawn the moment the page is back at the top", !main.classList.contains("is-rolled"));
+  main.scrollTop=24; main.dispatchEvent(new t.w.Event("scroll"));
+  ok("it comes back on, so this is a listener and not a one-shot", main.classList.contains("is-rolled"));
+  ok("the flag sits on the scroller, never on the bar",
+     !!main && !t.q(".topbar").classList.contains("is-rolled") && main.contains(t.q(".topbar")));
+}

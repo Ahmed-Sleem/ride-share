@@ -208,6 +208,14 @@
      material, so they share the token instead of restating a number. */
   --glass-blur:blur(20px) saturate(180%);
   --glass-line:rgba(10,10,10,.08);
+  /* THE BAR'S EDGE, one recipe for the whole shell: a hairline sitting exactly on the
+     border, plus a short fade away from it. `--edge-h` is how far the fade reaches and
+     `--edge-scrim` is its ink — declared per theme the way --line is, because a fade
+     that only shows on paper is a bug on ink. `--head-t`/`--head-b` are the bar's own
+     air: the top is added to the status-bar inset so the glass runs under the clock,
+     the bottom is the gutter under the title that makes a bar read as a bar. */
+  --edge-h:14px; --edge-scrim:rgba(10,10,10,.07);
+  --head-t:12px; --head-b:16px;
   --stage:var(--ink-900); --stage-line:rgba(255,255,255,.16);
   --grid-line:rgba(10,10,10,.05);
   --sea:#e9eef3; --coast:#c2ced7; --canal:#d5e0e8;
@@ -273,6 +281,7 @@
   --info:var(--blue-400); --info-bg:var(--blue-950);
   --offline:#B8B8B8;
   --line:#262626; --line-strong:#454545;
+  --edge-scrim:rgba(255,255,255,.10);
   --focus:var(--brand); --scrim:rgba(0,0,0,.66);
   --map-land:#111111; --map-water:#1F1F1F; --map-park:#0D0D0D;
   --map-road:#2E2E2E; --map-road-minor:#1A1A1A; --map-building:#242424;
@@ -336,11 +345,11 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
    old centred flex row swallowed it — 48px of dead space at poster size. */
 .topbar{flex:none;position:sticky;top:0;z-index:var(--z-sticky);
   display:grid;grid-template-columns:minmax(0,1fr);
-  grid-template-rows:auto auto;row-gap:var(--s2);
+  grid-template-rows:auto auto;row-gap:var(--s3);
   align-items:center;min-height:0;border-bottom:0;
   background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);
   backdrop-filter:var(--glass-blur);
-  padding:calc(var(--s2) + var(--safe-t)) 0 0}
+  padding:calc(var(--head-t) + var(--safe-t)) 0 var(--head-b)}
 /* Sticky, not fixed, and inside the page: the title scrolls with its own screen while the
    back control and the account actions never leave, so moving the head into the column
    cost nothing in reachability. Glass is honest here for the first time — content really
@@ -365,6 +374,28 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   font-weight:var(--fw-heavy);text-transform:uppercase;max-width:var(--measure-poster);
   text-wrap:balance;color:var(--ink);flex:none;min-width:0;overflow:visible;text-overflow:clip;
   white-space:normal}
+
+/* The edge itself. Both bars get the same two layers, drawn by a pseudo-element that
+   sits OUTSIDE the bar's box: the bar's own geometry — and therefore every number the
+   layout suite measures — is untouched, while the boundary stops being an all-or-nothing
+   1px cut. `pointer-events:none` because a fade is not a control.
+   The second state is the modern one: Material 3 raises `scrolledUnderElevation` and iOS
+   26's scroll edge effect both give a bar depth only when content passes beneath it, so
+   `.main.is-rolled` (set by Motion.scrollEdge) deepens the same fade rather than adding
+   a second decoration. At rest: a line. The moment the page moves: a surface. */
+.topbar::after,.nav::before{content:"";position:absolute;inset-inline:0;block-size:var(--edge-h);
+  pointer-events:none}
+.topbar::after{inset-block-start:100%;
+  background:linear-gradient(to bottom,var(--edge-scrim),transparent);
+  box-shadow:inset 0 1px 0 var(--line)}
+.main.is-rolled .topbar::after{background:
+  linear-gradient(to bottom,var(--edge-scrim),var(--edge-scrim) 40%,transparent)}
+@media (prefers-reduced-motion:no-preference){
+  .topbar::after{transition:background var(--fast) var(--ease)}
+}
+/* A sheet or a dock that overlaps the head must not be softened over: the fade belongs
+   to the bar, and the bar is the thing under it. */
+.topbar--plain::after{display:none}
 
 /* ── search band: the first element of the page, scrolls with content ── */
 .searchband{width:100%}
@@ -419,8 +450,18 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 /* compact: bottom bar */
 @media (max-width:599.98px){
   .app{flex-direction:column}
-  .nav{order:2;border-top:1px solid var(--line);
+  .nav{order:2;position:relative;
     padding:var(--s2) var(--s2) calc(var(--s2) + var(--safe-b))}
+  .nav::before{inset-block-end:100%;
+    background:linear-gradient(to top,var(--edge-scrim),transparent);
+    box-shadow:inset 0 -1px 0 var(--line)}
+  /* The bottom menu is the bar the owner likes, so the page head was brought to IT rather
+     than the other way round: the 1px rule it used to carry is drawn by the shared
+     `.nav::before` now, in the same place, with the same fade off it. `position:relative`
+     is only what a pseudo-element needs to anchor to, and it is only added where the fade
+     is wanted — the rail has its own edge on the inline side and keeps it untouched.
+     (Placed after the rules: the "bar is at the bottom" guard reads the head of this
+     block, and a comment that arrives first is a comment that moves a contract.) */
   .appcol{order:1}
 }
 
@@ -493,7 +534,10 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 }
 @media (min-width:1200px){
   :root{ --content-max:756px; }
-  .main{padding:var(--s4)}
+  /* Air around the page, but never ABOVE the head: the bar is the top of the page, and a
+     gutter here used to float the whole glass strip 14 px below the window — the gap the
+     owner pointed at. The scroller's own padding is inline and trailing only. */
+  .main{padding:0 var(--s4) var(--s4)}
   /* The head is page content now, so it must not carry the old bar's edge padding. At
      this width var(--s4) resolves to 14px, which was the entire amount by which the
      title missed the band's edge (measured 312 against 298). Zero puts head, band and
@@ -1323,6 +1367,20 @@ html.native .intro{padding-top:var(--safe-t)}
 }
 @keyframes landingslide{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 
+/* The desktop rail folds to icons and opens again. It used to switch with no transition
+   at all — the whole column snapped 144 px sideways in one frame, which is the harshest
+   thing on the surface and the one the owner named. It now travels on the same duration
+   and curve the landing menu already uses, so opening a rail and opening a menu feel like
+   the same app; the labels fade in a beat behind it rather than appearing in a space that
+   is not there yet. Everything lives in this one media query, so a reduced-motion reader
+   gets a rail that simply is or is not — the same promise the rest of the sheet makes. */
+@media (prefers-reduced-motion:no-preference) and (min-width:600px){
+  .nav{transition:width var(--panel-in-dur) var(--panel-in-ease),
+    padding-inline var(--panel-in-dur) var(--panel-in-ease)}
+  .nav__brand>span,.navitem__label{animation:rail-in var(--panel-in-dur) var(--panel-in-ease) both}
+}
+@keyframes rail-in{from{opacity:0}to{opacity:1}}
+
 /* ── the journey: one route, ridden down the page ─────────────────────
    The map is absolutely positioned over the whole section and the copy flows
    above it: as the reader scrolls, the bus rides the real corridor and each cut
@@ -1642,8 +1700,13 @@ html.native .intro{padding-top:var(--safe-t)}
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .authwrap__card>.center>svg{width:56px;height:56px}
 
-/* page-enter motion — every screen transitions in; killed by reduced-motion */
-.main__inner{animation:pagein var(--med) var(--ease)}
+/* page-enter motion — every screen transitions in; killed by reduced-motion.
+   It is the page that enters, not its chrome: the animation belongs to the blocks and the
+   head is explicitly told to stay where it is. A sticky bar lifted 8 px by its own
+   entrance is a gap above the bar for as long as the animation runs, and that flicker is
+   what reads as "the bar is not attached to the top" — the owner's exact complaint. */
+.main__inner>*{animation:pagein var(--med) var(--ease)}
+.main__inner>.topbar{animation:none}
 .metric--link{cursor:pointer;transition:border-color var(--fast) var(--ease),
   transform var(--fast) var(--ease)}
 .metric--link:hover{border-color:var(--accent);transform:translateY(-1px)}
@@ -1712,7 +1775,7 @@ html.native .intro{padding-top:var(--safe-t)}
 </script>
 <div id="root"></div>
 <script>
-const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":7},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
+const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":8},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
 
 (function(){
 /**
@@ -6399,7 +6462,24 @@ const Motion = (function () {
     };
   }
 
-  return { reduced, clamp01, reveal, mountScrub, journey,
+  /* ── scrollEdge: flag a scroller once its content has passed under a bar ─────────
+     The one job is the boolean — "is anything under the bar" — because the sheet owns
+     what that looks like. passive:true so a scroll on a phone is never made to wait for
+     a class toggle, and the initial call so a page restored halfway down is honest from
+     its first frame. Returns the detach, the way every other hook here does. */
+  function scrollEdge(scroller, cls) {
+    const name = cls || "is-rolled";
+    if (!scroller || typeof scroller.addEventListener !== "function") return function () {};
+    const set = () => {
+      const on = (scroller.scrollTop || 0) > 0;
+      if (scroller.classList.contains(name) !== on) scroller.classList.toggle(name, on);
+    };
+    scroller.addEventListener("scroll", set, { passive: true });
+    set();
+    return () => scroller.removeEventListener("scroll", set);
+  }
+
+  return { reduced, clamp01, reveal, mountScrub, journey, scrollEdge,
            SCRUB_FROM, SCRUB_SPAN, WORD_FROM, WORD_SPAN };
 })();
 
@@ -11024,6 +11104,10 @@ function renderUnsafe(){
     if(band) inner.insertBefore(band, inner.children[1]||null);
     if(def.wide) body.classList.add("main--wide");
     body.append(inner);
+    /* The head's edge answers to this page, not to the window: it deepens only once
+       content has actually passed under it. The behaviour lives in Motion, the look
+       lives in the sheet, and neither knows the other's numbers. */
+    if (typeof Motion !== "undefined" && Motion.scrollEdge) Motion.scrollEdge(body);
   } else {
     col.append(head);
   }

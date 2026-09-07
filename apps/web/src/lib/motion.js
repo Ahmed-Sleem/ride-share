@@ -457,6 +457,23 @@ const Motion = (function () {
     };
   }
 
-  return { reduced, clamp01, reveal, mountScrub, journey,
+  /* ── scrollEdge: flag a scroller once its content has passed under a bar ─────────
+     The one job is the boolean — "is anything under the bar" — because the sheet owns
+     what that looks like. passive:true so a scroll on a phone is never made to wait for
+     a class toggle, and the initial call so a page restored halfway down is honest from
+     its first frame. Returns the detach, the way every other hook here does. */
+  function scrollEdge(scroller, cls) {
+    const name = cls || "is-rolled";
+    if (!scroller || typeof scroller.addEventListener !== "function") return function () {};
+    const set = () => {
+      const on = (scroller.scrollTop || 0) > 0;
+      if (scroller.classList.contains(name) !== on) scroller.classList.toggle(name, on);
+    };
+    scroller.addEventListener("scroll", set, { passive: true });
+    set();
+    return () => scroller.removeEventListener("scroll", set);
+  }
+
+  return { reduced, clamp01, reveal, mountScrub, journey, scrollEdge,
            SCRUB_FROM, SCRUB_SPAN, WORD_FROM, WORD_SPAN };
 })();

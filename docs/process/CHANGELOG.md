@@ -1,3 +1,50 @@
+## 2026-09-08 — round 17: the app's bar became a bar (owner's three complaints, measured first)
+
+The owner used the app and the webapp after login and named three things. Each was measured before it was touched, because two of the three
+had a different cause than they looked like they had.
+
+**Thin bar, no air under the title** — measured: the title's bottom equalled the bar's bottom exactly (`title.b 87.1 == head.b 87.1`), i.e. **0 px** of
+gutter under the poster, because `.topbar` carried `padding:calc(var(--s2) + var(--safe-t)) 0 0`: air above (for the status bar), none below. Now
+`--head-t:12px; --head-b:16px` are the bar's own tokens, worn as `padding:calc(var(--head-t) + var(--safe-t)) 0 var(--head-b)`, and the title sits with
+**16 px above and 16 px below it at every width** (measured 320 → 1920). The ≥840 density block was deliberately *not* overridden: the owner's standing
+ask was that the app be consistent, and one pair of numbers for the bar is more consistent than a responsive one.
+
+**A gap above the bar** — two separate causes. On the web at ≥1200 px: `.main{padding:var(--s4)}` floated the whole scroller, and with it the sticky
+glass strip, **14 px** below the window (`headTop 14` measured at 1280 and 1920). Now `padding:0 var(--s4) var(--s4)`: air beside and below the page, never
+above the bar. The second cause was subtler and invisible to a source read: `.main__inner` carries `animation:pagein`, whose first keyframe is
+`translateY(8px)`, so **the bar was lifted off the top by its own entrance** for as long as the transition ran — measured `headTop 8` on every viewport,
+including widths that had no gutter at all. The animation now belongs to the page's blocks (`.main__inner>*`) with `.main__inner>.topbar{animation:none}`:
+the content rises, the chrome stays pinned. Both are fixed: `headTop 0.0` at 320/390/768/1280/1920.
+
+**An edge under the bar** — researched before designing: Material 3 removed the AppBar drop shadow in favour of `scrolledUnderElevation` (a tint that
+appears only when content passes under), and iOS 26's HIG pushes the same idea as the scroll edge effect and warns against custom toolbar backgrounds.
+So the edge is two layers, not one shadow: a hairline exactly on the border and a 14 px fade away from it, drawn by a pseudo-element *outside* the bar's box
+so no measured number moves; and while `.main` is actually scrolled, the same fade deepens (`.main.is-rolled`), which is what makes it read as a surface
+rather than a rule. `Motion.scrollEdge` sets that flag from a passive scroll listener — behaviour in the JS, the look in the sheet, neither holding the
+other's numbers. The owner also said the **bottom menu's edge is the good one**: so the head was brought to *it*, not the reverse — the bottom bar's
+`border-top:1px solid var(--line)` is gone, replaced by the same shared `.topbar::after,.nav::before` recipe mirrored upward, one `--edge-scrim` token
+declared per theme (`rgba(10,10,10,.07)` on paper, `rgba(255,255,255,.10)` on ink, so the fade is not a light-mode-only decoration).
+
+**The desktop rail opened without any animation** — `.nav` had no `transition` at all (`transitionDuration "0s"` measured), so the whole column snapped 144 px
+in one frame. It now travels on `--panel-in-dur`/`--panel-in-ease` — the landing menu's own timing, so opening a rail and opening a menu are the same
+gesture — with the labels fading in behind the space they need. Proven in a real browser by sampling a frame mid-flight: **72 → 179.9 → 216 px**
+(`inBetween: true`), and the guard pair asserts both sides of the motion query: travel `0.28s` under `no-preference`, `0s` under `reduce`, and the edge
+itself (not motion) survives both.
+
+**Guards**: `apps/web` unit **726 → 748** (+22, one group for the bar's air/edge and one for the rail and the scroll flag), layout **7570 → 12520** (the new
+per-viewport block is 9 assertions × every viewport × every role, including `the head touches the top of the page` and
+`the bottom menu and the head draw the same edge`), and `apps/web/tests/breaks.sh` grew **10 cases, all CAUGHT** (`0 missed`), including two of my own mistakes
+that the harness caught for me: four patterns written with `\{` were rejected by sed's BRE (an escaped brace opens an interval), reported as
+`BROKEN-BREAK → edit did not change the file` rather than silently passing. Two new-layout assertions also failed first and were *my tests* being wrong: Chrome
+under `reduce` reports `0.00001s`, not `0s`, and a `slice(0,9)` probe cut the word "gradient" in half.
+
+**Shipping**: `version.code` **7 → 8**, because the bundle inside the installed app is this CSS. The owner's judgement that no APK change was needed is right
+in the practical sense — the shell reaches an installed phone through the OTA channel, and `/v1/mobile/update` now advertises 8 — but the APK does carry a
+copy (`apps/mobile/scripts/build.js` → `app/src/www/`), so the next installer CI commits will contain it too. One thing this round did **not** fix, recorded as
+`G-124`: in the installed app the Android status bar is a band the WebView does not paint, so it can still look like a strip above the bar. `viewport-fit=cover`
+is already set and `--head-t` already adds `env(safe-area-inset-top)`; what is missing is edge-to-edge on the native window, which is `apps/mobile` and needs a
+new binary.
+
 ## 2026-09-07 — renewal round 11: the installed app could not reach its own server, and the landing's menu was a strip
 ## 2026-09-08 — round 14c: the pushed work met CI, and CI found what no local suite could
 
