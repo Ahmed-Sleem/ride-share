@@ -277,3 +277,45 @@ test("the installer variants share one prep, and the manifest patch bites for re
   assert.equal(fs.readFileSync(manifest, "utf8"), out, "apply-android-manifest.sh is not idempotent");
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+/* ── the delivery contract, learned the hard way in round 17 ───────────────────────
+   The owner asked for a GUI change and said, correctly, that no APK change was needed.
+   The reason is stronger than "OTA will carry it": the installer never contained the app.
+   Unzipping the binary CI shipped (6203ac7) showed `assets/public/index.html` is 100,474 B
+   of boot page — `splash ×9`, `boot ×11`, `.topbar ×0` — while the app is 1.1 MB. That is
+   by design (`www/` = what the WebView opens; `dist/www/` = what OTA hands out), and it has
+   two consequences worth a test: nobody may quietly bake the shell into `www/` (it would be
+   a GUI no `apps/web` change can reach), and a device only takes a new GUI when
+   `packages/brand/brand.json`'s `version.code` goes up. Recorded in APP_GUI.md §17. */
+test("the installer ships a boot page, and OTA is the only path to the app's GUI", () => {
+  const build = fs.readFileSync(path.join(ROOT, "apps/mobile/scripts/build.js"), "utf8");
+  const bootPage = fs.readFileSync(path.join(ROOT, "apps/mobile/offline.html"), "utf8");
+
+  // Both files Capacitor packages come from the boot page…
+  assert.match(build, /fs\.writeFileSync\(path\.join\(www, "index\.html"\), boot\)/,
+    "www/index.html must stay the boot page — the APK may not start carrying the app");
+  assert.match(build, /fs\.writeFileSync\(path\.join\(www, "offline\.html"\), boot\)/);
+  // …and the app page is written only to the OTA artifact.
+  assert.match(build, /fs\.writeFileSync\(path\.join\(dist, "www", "index\.html"\), appHtml\)/,
+    "the app HTML must reach devices through dist/www (OTA)");
+  assert.ok(!/writeFileSync\(path\.join\(www,[^)]*appHtml/.test(build),
+    "appHtml into www/ would ship a frozen GUI inside the binary");
+
+  // The boot page must not grow a copy of the shell it launches.
+  assert.ok(!/\.topbar\s*\{/.test(bootPage),
+    "offline.html carries no app CSS: a boot page with shell rules in it is a second, unreachable GUI");
+  for (const route of ["/v1/mobile/update", "/v1/mobile/bundle"]) {
+    assert.ok(bootPage.includes(route), `the boot page must reach ${route} — that is how the app arrives`);
+  }
+
+  // version.code is the release lever for the GUI on a phone, so it has to be the number meta.json publishes.
+  assert.match(build, /versionCode: ver\.code/,
+    "meta.json must publish brand.json's code, or an installed app has no way to be told there is a new GUI");
+  assert.ok(Number.isInteger(brand.version.code) && brand.version.code >= 1,
+    "brand.version.code must stay a positive integer: OTA compares it, and a regression is invisible on every screen");
+
+  // The generator says which bytes went where, so `boot 100474` is visible in a build log
+  // instead of having to be discovered by unzipping a published artifact.
+  assert.match(build, /console\.log\(`mobile: boot \$\{boot\.length\} bytes → www\//,
+    "the split between the boot page and the app bundle should be printed at build time");
+});
