@@ -1,3 +1,27 @@
+## 2026-09-07 — the break harness caught its own blindness: three guards had been blind since round 9
+
+`Break-detection` finished its first-ever CI run on run `34067676257` — the job only exists because round 9c restored the exec bits that had kept
+the whole browser suite from ever running in CI — and it came back `breaks caught: 110, missed: 3`. Every miss was
+`BROKEN-BREAK … edit did not change the file`, which is the harness reporting that its own probe was stale rather than the app being unguarded:
+three cases still `sed`-ed `if(band) body.prepend(band);` and `.topbar{flex:none;display:flex;`, both rewritten by round 9 (the head became a
+sticky grid, and the band began its life as `inner.insertBefore(band, inner.children[1]||null)`). The lesson is narrow and real: in round 9 I
+re-anchored the *assertions* and left the *cases that test those assertions* pointing at old prose. A guard's guard is still a guard.
+
+Each case was re-anchored with its intent intact — band promoted to chrome (must land inside the scroller), band buried under the list (must
+follow the page head in the column), head free to shrink (must keep `flex:none`) — with expected-failure names updated to the assertions that carry
+those facts today. Verified individually through the harness's own `BREAKS_ONLY` filter: CAUGHT, CAUGHT, CAUGHT, ~20 s each instead of 18 min, and
+the tree came back clean from all three runs, so nothing was left mutated. The full 113-case suite runs in CI on this push, and that is the verdict
+to read; this entry is the targeted proof, not a substitute for it. Recorded as G-109 with the rule: when a render-path or CSS rewrite moves a
+guarded structure, the break-case anchor moves in the same commit.
+
+The same push carries round 10b's docs commit (`19e588f`), held back while `Break-detection` was running so the push would not cancel it under
+`cancel-in-progress`, plus the measurement it was waiting for: the installer is in the repo at `apps/web/downloads/android.apk`, **27,882,440
+bytes**, sha256 `9843cbefcfa2…` computed here and matching the CI commit message exactly, 538 zip entries with 11 dex files and an
+`AndroidManifest.xml`, signed with the v2/v3 block (`APK Sig Block 42` at 27,831,431, ahead of the central directory — an earlier "not signed,
+would not install" line of mine was a bad probe that looked only in `META-INF`, where v1 lives), served live as **HTTP 200** +
+`application/vnd.android.package-archive` + `attachment; filename="ride-share.apk"`, and also reachable as the `android-debug` release asset.
+`versionName 0.1.0 / versionCode 3`, unchanged, so the GUI keeps arriving over the air.
+
 ## 2026-09-06 — round 10b verified in CI: the installer is on main, on the release, and on the live route
 
 Two things happened after the commit, and one of them is a process rule worth keeping.

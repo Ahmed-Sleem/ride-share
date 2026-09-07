@@ -204,3 +204,6 @@ untouched until the owner signs the look off.
 - [ ] **D-8.3** `.gitignore` exception (`!apps/web/downloads/*.apk`) is narrow and documented — if the repo's
   size ever matters again, the removal is a history rewrite (git filter-repo / `git rm --cached` only stops
   future copies), and that is the owner's call to make, not a silent cleanup.
+- [x] **D-8.4** Break-harness maintenance (G-109): the 3 `BROKEN-BREAK` misses from CI's first `Break-detection` run were stale anchors of mine
+  from round 9, re-anchored with intent preserved and each verified CAUGHT via `BREAKS_ONLY` (~20 s each); the full 113-case suite re-runs in CI
+  on this push, and that is the verdict to read.

@@ -80,20 +80,27 @@ run_break "nav moved inside the scroller" src/shell/app.js \
   's|  app.append(nav());|  col.querySelector(".main").append(nav());|' \
   "navigation is NOT inside the scrolling region"
 
+# Re-anchored 2026-09-07 (G-109). Round 9 moved the head into the page and rewired the band's
+# insertion to `inner.insertBefore(band, inner.children[1]||null)`; the assertions were updated
+# then and these two cases were not, so their sed found nothing to change and CI reported them as
+# BROKEN-BREAK - the harness noticing that a guard had gone blind, which is the only reason to
+# keep it. Intent preserved exactly: a band promoted to chrome, and a band buried under the list.
 run_break "search band pinned above the scroller" src/shell/app.js \
-  's@    if(band) body.prepend(band);@    if(band) col.append(band);@' \
-  "band is inside the scrolling region|band is the first element of the page"
+  's@    if(band) inner.insertBefore(band, inner.children\[1\]||null);@    if(band) col.append(band);@' \
+  "band is inside the scrolling region|band follows the page head in the column"
 
 run_break "band drops below the content" src/shell/app.js \
-  's@    if(band) body.prepend(band);@    if(band) body.append(band);@' \
-  "band is the first element of the page"
+  's@    if(band) inner.insertBefore(band, inner.children\[1\]||null);@    if(band) inner.append(band);@' \
+  "band follows the page head in the column"
 
 run_break "divider returns under the band" src/styles/shell.html \
   's|^\.searchband{width:100%}|.searchband{width:100%;border-bottom:1px solid var(--line)}|' \
   "no divider under the band"
 
+# Same cause, same fix: the head became a two-row sticky grid in round 9, so the flex-row anchor
+# these cases were written against no longer exists.
 run_break "top bar loses flex:none" src/styles/shell.html \
-  's|^\.topbar{flex:none;display:flex;|.topbar{display:flex;|' \
+  's|^\.topbar{flex:none;position:sticky;top:0;|.topbar{position:sticky;top:0;|' \
   "top bar cannot shrink"
 
 run_break "nav loses flex:none" src/styles/shell.html \
