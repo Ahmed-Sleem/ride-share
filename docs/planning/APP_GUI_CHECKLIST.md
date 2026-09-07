@@ -187,8 +187,9 @@ untouched until the owner signs the look off.
   `/download/android` answers **HTTP 200** with `content-disposition: attachment; filename="ride-share.apk"`
   and the same byte count. Installing on a phone is the owner's remaining hand-test.
   `HTTP 200` with `content-type: application/vnd.android.package-archive`. Reported as pending until measured.
-- [ ] **D-7.5** `breaks.sh` / `layout-breaks.sh` have their own CI job now (`verify-breaks`, with `RS_SKIP_BREAKS=1` on
-  the GUI job). Their first real run in CI is still unevidence; read the verdict before trusting either pass.
+- [x] **D-7.5** The break jobs have their own CI entry (`verify-breaks`, with `RS_SKIP_BREAKS=1` on the GUI job) **and it has been run on
+  purpose-faulty code**: its first real run reported `caught 110 / missed 3`, all three re-anchored in the same commit, and later runs on `2247373`
+  and the current head pass. The standing rule it existed to enforce still applies to every new guard: a case is added with the guard, not after.
 
 ## D-8 — round 10b (splash proportions, night theme, installer in the repo)
 
@@ -212,8 +213,11 @@ untouched until the owner signs the look off.
 - [x] **D-8.6** G-111: the landing's mobile menu is a full-screen sheet beside the bar (390×844 against an ICB of 390×844,
   alpha equal to the bar's 0.62, `blur(20px) saturate(1.8)`, 7 rows × 57px), opens and closes without moving the page
   (measured 1600 → 1600 → 1600), and no row starts above the bar's bottom edge at any surveyed id. landing 3221/0, unit 724/0.
-- [ ] **D-8.7** Reinstall `ride-share.apk` (v0.1.0 / code 4) on the owner's phone and confirm the app boots past the splash to
-  the sign-in screen on a live connection - the symptom this round was built to remove, and only a device can close it.
+- [ ] **D-8.7** Reinstall `ride-share.apk` on the owner's phone and confirm the app boots past the splash to the sign-in screen on a live
+  connection - the symptom this round was built to remove, and only a device can close it. **Get code 5, not 4** (27,883,996 B, sha256
+  `9fc2eabc45d3…`): `/download/android` serves the newest committed installer, verified byte-identical to `apps/web/downloads/android.apk` on
+  `main` (`008055d`), and v5 is the first with both hosts in `allowNavigation`. A device is also the only place that can close the last unknown:
+  `mountBundle` in a real WebView versus a browser (the harness proved the flow in Chromium, not in Android System WebView).
 - [ ] **D-8.8** Formal `breaks.sh` cases for the 7 assertions added with G-110 (origin resolution, preflight, ACAO scoping).
   Each of these has already been seen failing on a real fault this round — my own `normalise()` hole, the missing `authored`
   binding, the guard left pointing at the old call — so the checks are proven; what is missing is the permanent harness entry.
