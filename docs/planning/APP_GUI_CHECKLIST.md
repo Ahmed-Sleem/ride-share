@@ -181,7 +181,11 @@ untouched until the owner signs the look off.
   `--intro-col` shared by stage and footer (buttons measured at 400→880 at 1280, exactly the stage's column), constant
   head top across slides, swipe with a vertical-drag veto and a last-slide no-op, no fifth slide element, 13 assertions.
 - [x] **D-7.3** Replay path: `How the ride works` in the rider and driver profiles, app-surface only, does not mark seen.
-- [ ] **D-7.4** After this pushes and CI runs `apk`, tap the live QR and install: the release asset must answer
+- [x] **D-7.4** Measured 2026-09-06 after run `34067676257`: the release exists (tag `android-debug`, prerelease,
+  published 23:47:17Z, asset `ride-share.apk`, 27,882,440 B, `content-type: application/vnd.android.package-archive`)
+  at `https://github.com/Ahmed-Sleem/ride-share/releases/download/android-debug/ride-share.apk`, and live
+  `/download/android` answers **HTTP 200** with `content-disposition: attachment; filename="ride-share.apk"`
+  and the same byte count. Installing on a phone is the owner's remaining hand-test.
   `HTTP 200` with `content-type: application/vnd.android.package-archive`. Reported as pending until measured.
 - [ ] **D-7.5** `breaks.sh` / `layout-breaks.sh` have their own CI job now (`verify-breaks`, with `RS_SKIP_BREAKS=1` on
   the GUI job). Their first real run in CI is still unevidence; read the verdict before trusting either pass.
@@ -190,9 +194,11 @@ untouched until the owner signs the look off.
 
 - [x] **D-8.0** Splash wordmark retuned and measured at four widths (24 / 25.3 / 29.9 / 30.4 px, was
   28.8 / 49.9 / 80 / 80), guard added; screenshot reviewed by eye at 390 and 1280.
-- [x] **D-8.1** Installer committed by CI into `apps/web/downloads/android.apk` — **pending the CI run of this
-  push**: measure `HEAD` on the raw release URL and `GET /download/android` on live, expecting `200` with
-  `content-type: application/vnd.android.package-archive` and a non-zero `content-length`, then install it.
+- [x] **D-8.1** Done and measured end to end: CI's `apk` job completed **success**, committed
+  `apps/web/downloads/android.apk` (**27,882,440 B**) to main as `86c8535 Installer v0.1.0 (3): sha256 9843cbefcfa2`,
+  `git ls-tree -l origin/main` agrees with the release asset's size, and live serves it as an attachment. The
+  60 MB ceiling held, the `[skip ci]` on the bot's own commit stopped it re-triggering itself, and the GUI plane
+  is untouched — `versionCode 3` unchanged, so the interface still arrives over the air.
 - [x] **D-8.2** Night splash resources generated from `brand.json` with a template-anchored test; recorded as
   a binary-plane change, so installed devices keep the white flash until reinstall.
 - [ ] **D-8.3** `.gitignore` exception (`!apps/web/downloads/*.apk`) is narrow and documented — if the repo's

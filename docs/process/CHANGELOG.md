@@ -1,3 +1,28 @@
+## 2026-09-06 — round 10b verified in CI: the installer is on main, on the release, and on the live route
+
+Two things happened after the commit, and one of them is a process rule worth keeping.
+
+**A commit message of mine silenced CI.** Round 10b quoted the literal skip marker its own installer-commit step signs, and GitHub honours
+that string in the head commit of a push, so the push carrying the api fix, the release publish and the night-splash step started **no run**
+— `/actions/runs?branch=main` still showed the three-hour-old `a5465f2` as newest. Nothing in the tree was wrong, which is what makes it
+expensive: a green-looking repo with no verdict. Re-triggered with an empty commit that describes the marker in words (`c6a6ba0`), recorded
+as G-108 with the rule: never write the literal form in a message, and when an expected run is absent, read the run list before doubting
+the workflow file.
+
+**Then everything the owner asked for measured true.** Run `34067676257`: `Verify (repo + api + web unit)` **success** — the first green that
+job has had this session, after nine api fixtures stopped being pinned to a calendar date; `Verify GUI (full browser suite)` **success** — the
+job that used to die in 21 seconds with exit 126 because every `*.sh` was committed 100644; `Android debug APK (Capacitor)` **success**, which
+built the app, published `ride-share.apk` (**27,882,440 bytes**, `application/vnd.android.package-archive`) to the `android-debug` prerelease at
+23:47:17Z, and committed the same bytes to main as `86c8535 Installer v0.1.0 (3): sha256 9843cbefcfa2` at
+`apps/web/downloads/android.apk` — the exact path `apps/web/server.js` already serves, confirmed with `git ls-tree -l` against the release
+asset's size. Live then answered `/download/android` with **HTTP 200**, `content-disposition: attachment; filename="ride-share.apk"`, same byte
+count: the landing page's button and QR have a real installer behind them, from the repo, with the release as a second source. `versionCode` is
+still 3, so the GUI continues to arrive over the air; the committed binary costs every clone 27.9 MB, which is the trade the owner chose and
+D-8.3 now records as reversible only by rewriting history.
+
+Still running when this was written: `Break-detection`, the first CI verdict those two mutation passes have ever had — reported in the next
+entry rather than assumed here.
+
 ## 2026-09-06 — renewal round 10b: the splash returns to its size, the installer gets a home in the repo, and the night splash stops flashing
 
 Three points from the owner, and the third overturned my own recommendation on grounds worth writing down.
