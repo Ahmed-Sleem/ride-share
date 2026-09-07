@@ -229,7 +229,7 @@ untouched until the owner signs the look off.
   generator. `version.code` 5, because the list is baked.
 - [x] **D-8.10** G-115 + G-116: the OTA bundle must carry its own origin (guard on the assignment, fail the build otherwise), and CORS must answer
   writes as well as reads. Both server-side, so installed apps gain them on redeploy. Mobile suite 22 -> **26/0**.
-- [ ] **D-8.11** Promote the harness that found G-115 into CI, because nothing else looks at the artifact the way a phone does. Recipe, in order:
+- [ ] **D-8.11** *(mine — do not start; it collides with D-8.14's files)* Promote the harness that found G-115 into CI, because nothing else looks at the artifact the way a phone does. Recipe, in order:
   `node apps/mobile/scripts/build.js` -> spawn `node apps/mobile/server.js` with `PORT` and `MOBILE_WWW_DIR=apps/mobile/dist/www` -> take the boot page
   from the built `www/offline.html` and rewrite only its `window.__RS_PUBLIC_ORIGIN` to that local server -> serve that directory on a second
   localhost port (the mobile server answers `/` with 403 `NOT_A_WEBSITE`, by design) -> puppeteer at 390x844 `isMobile` loads it and asserts: the splash
@@ -254,7 +254,7 @@ untouched until the owner signs the look off.
   only update path; installed apps recover on their next launch. `MOBILE_DEVICE_TOKEN_KEY` (or the existing `MOBILE_APP_SECRET`) is a **service-side**
   variable: with it the tokens survive a restart, without it the process mints an ephemeral key and says so in the enrol response (`"key":"ephemeral"`).
   Mobile suite 29/0, web unit 726/0, a11y 14/0, `__RS_APP_SECRET` count in the site bundle 0.
-- [ ] **D-8.14** Break cases (`apps/mobile/tests/breaks.sh`) for the guards that came with G-117: the token's signature check, the expiry comparison,
+- [ ] **D-8.14** *(assigned to the new developer — full brief in `docs/planning/ONBOARDING_TASK_1.md`)* Break cases (`apps/mobile/tests/breaks.sh`) for the guards that came with G-117: the token's signature check, the expiry comparison,
   the enrol throttle map, the "no key ⇒ ephemeral key" fallback, and the boot page's "no signing headers" rule. Standing law: a case ships with its guard.
 - [ ] **D-8.15** Device verification of the whole flow on the owner's phone with the **v6** installer (27.9 MB, code 6): cold start offline → the honest
   card; online → splash → app → enrol 200 → sign-in accepted → a booking round-trip. Also the one thing no harness can prove here: `mountBundle` inside
