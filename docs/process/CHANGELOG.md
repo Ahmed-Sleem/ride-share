@@ -1,50 +1,39 @@
 ## 2026-09-07 — renewal round 11: the installed app could not reach its own server, and the landing's menu was a strip
+## 2026-09-07 — renewal round 13c: the new developer's brief, and two of my five break cases were false
 
-Both halves came from the owner's phone, and both were confirmed by reading artifacts rather than guessing at causes.
+The owner asked for a task file for the incoming developer with "no space for mistakes". Writing it honestly meant measuring the work
+I had described last turn, and two of the five break cases in that description did not survive measurement:
 
-**The app never left "Check your internet connection".** The shipped APK's own `capacitor.config.json` has no
-`server.url` — correct, because `build.js:57` states the app must start from a file and `config.test.js:43` has guarded
-that since round 9 — and its `index.html` is byte-identical to `offline.html` (99,194 B, sha256 `688346062f21c962`),
-also by design: the boot page is the entry file and it pulls the live bundle. What was missing is the address to pull
-from. `liveOrigin()` looked only at `MOBILE_PUBLIC_ORIGIN`/`RAILWAY_PUBLIC_DOMAIN`, which exist on the Railway runtime
-and not on a CI runner, so the installer baked `origin = ""`, and `boot()`'s `if (!origin) return showOffline()` went
-straight to the card — no attempt, no status, no splash, and a Retry that re-ran the same no-op. Independently,
-`apps/mobile/server.js` had no OPTIONS handling and sent no `access-control-allow-origin`, while the boot page always
-attaches `x-rs-app-id/x-rs-ts/x-rs-sign` — non-safelisted, so the WebView preflighted into nothing. A mis-baked build
-and a blocked transport, either one fatal, both silent.
+- the "ephemeral key falls back to an empty string" cut is **caught by nothing** — every test runs in one process, and inside one process
+  an empty key still signs and still verifies. Recorded instead as **G-120**: with no `MOBILE_DEVICE_TOKEN_KEY`, each instance mints its
+  own random key, so a token enrolled on A is refused on B (proved this round: two servers on 9201/9202, the same token passed the gate on the minting instance and was refused on the other with `401 DEVICE_TOKEN_INVALID`;
+  it reads `503` on the first hop only because no API process runs in that sandbox, which is itself the point — the identity layer let it through). Survivable because `apps/web/src/lib/api.js` re-enrols once on a `401 DEVICE_TOKEN*`, and
+  because Railway runs one instance; permanent fix is owner-side (set the key, or share it through a store).
+- the expiry cut reddens `a service with no key configured still enrols…`, **not** a test named for expiry — the `DEVICE_TOKEN_EXPIRED`
+  assertion lives inside that spawned-server test (`server.test.js:281`), which sets a 300 ms TTL and waits 500 ms. The brief now says so,
+  because reading that mapping off a green-looking suite costs an afternoon.
 
-Fixed as architecture, not as a patch: `apps/mobile/scripts/resolve-origin.js` owns the rule (documented env order,
-`packages/brand/brand.json app.origin` as the floor, **a thrown build error rather than an empty string**, `new URL()`
-so `"https://"` and a base path cannot pass — my own first version accepted both, and its test caught them); the four
-OTA paths answer the preflight and echo only the app's local origins, with the proof check untouched on the real
-request; and the boot page now says what it tried, repeats the reason where it is visible (the status line lived inside
-the splash, which `showOffline()` hides), and marks itself busy so a second tap cannot vanish. `build.js` strips
-`app` before inlining brand.json into the web bundle, because the existing *no deployment host in the bundle* guard
-caught the leak first — fixed in the code, not in the guard. Mobile suite 15 → **22/0** (5 origin tests, 2 CORS tests).CI ran it and failed on it (`Verify (repo + api + web unit) → failure` on `2247373`, which also held up `apk`, since that job depends on `verify`); the smaller loop was my own, which skipped the routes file and reported green while the record said red. `verify.sh` invokes it now. The fixture hides all three sources now, and the file is in the gate (G-112).
-The `META-INF`-only signature probe that made me say "would not install" was my error: `APK Sig Block 42` at
-27,831,431 ahead of the central directory at 27,882,418 is a v2/v3 signature. This is baked, so `version.code` moves
-3 → 4 and devices need the next installer; after that, the GUI still arrives over the air.
+`apps/mobile/tests/breaks.sh` also turned out to have no `run_break` helper, no `BREAKS_ONLY` and no counter — it ends in the literal
+`echo "breaks: examined 1 check, 0 missed"` (**G-119**), which is why `D-8.14` is now "give the harness a spine, then five cases". Its
+step-2 validation asks him to prove the counter is real with a cut I measured: the default TTL moved from 24 h to 25 h and all 18 tests
+stayed green — a true `MISSED`.
 
-**The landing's three-dot menu is a sheet now** (G-111, the owner's three complaints). It was never missing the glass —
-the suite measures the panel's alpha against the bar's and they were equal at 0.62 — it was hung inside the bar, whose
-`backdrop-filter` becomes the containing block for a `position:fixed` descendant, so full screen was impossible and
-there was nothing to frost. It is a sibling at `--z-landing-menu:19` under the bar's 20 (the dots stay reachable and
-close it; Escape and a tap on the frost too), measured `390×844` against an identical ICB, 7 rows at 22px bold in 57px
-heights. The scroll jump was structural: `.landing` *is* the scroller and `render()` replaces it, so a disclosure must
-not re-render — `setLandingMenu()` mounts and removes in place, while the render path keeps a restore for the language
-and theme switches, which lose the reader's position the same way and had no report yet. Two failures taught the rest:
-restoring inside `render()` measured `{before:1019, after:991}` because `scroll-behavior:smooth` animates the write and
-a lazily painted map leaves `scrollHeight` still growing (and locking without `scrollbar-gutter:stable` shortens the
-page by the scrollbar, the same 28px), and a `ReferenceError` in the restore ran invisible through **721 green unit
-assertions** because jsdom has no layout, so `if(!y) return` skipped the body — the guard now calls the function
-instead of reading it. Finally, the screenshot caught what no suite did: the bar's height was derived (`padding + tap`)
-while the wordmark wraps to two lines at 390px, so the real 78px bar covered "Ride"; the height is now measured where
-the sheet mounts, and the survey asserts that no row starts above the bar's bottom edge, at every id.
-And the artifact itself carried one last regression: folding `webOrigin` onto the brand key retargeted at the mobile service collapsed `allowNavigation` from two hosts to one, so the site vanished from the shipped APK while the tracked config still listed both — every test stayed green because they read the file, not the build. `brand.json` now separates `app.origin` (where the interface comes from) from `app.site` (where a person lands), the generator uses both, and the guard asserts both against the generator too. `version.code` 4 → 5.
+Also verified this round, because "is the APK ready?" deserves a measurement rather than a summary: the installer the landing page serves
+is the CI `assembleDebug` output (`.github/workflows/ci.yml:168`), signed with `CN=Android Debug, serial=01`, and **two CI builds of the
+same versionCode 6 carry different public keys** (`b80a9062…` and `49fc80d9…`) because nothing caches a debug keystore. So the download
+works for anyone installing today (27,884,040 bytes, sha256 `a1e73d2654ec…`, OTA bundle `v6`, no key baked in) but an in-place upgrade of
+an already-installed copy will fail with a signature mismatch, and a debug build keeps WebView inspection on. The signed path already
+exists and is unwired: `make-release.sh` reads four `ANDROID_KEYSTORE_*` secrets that GitHub does not have. **D-8.18** (`D-8.17` is the exec-bit gate, already done).
 
-Then I stopped reading tests and started the app. I took the boot page out of the published APK, pointed it at a local copy of the mobile server and let a browser run the flow: it showed its splash ("Connecting to localhost:9010"), answered its own preflight, fetched the bundle, mounted it - the reported bug is dead - and then went silent, which is how **G-115** surfaced: the delivered bundle carried no mobile tag at all, because the build script asked whether the bundle *mentions* `__RS_SURFACE` while `api.js` mentions it by reading it. Fixed by guarding on the assignment, injecting into `<head>`, and failing the build when a bundle would have no origin; the test runs the generator and reads its output instead of its source. The same harness showed **G-116**, my own half-finished fix: CORS was answered for the two OTA reads only, so a `POST /v1/auth/login` would have died exactly the way the bundle fetch did - preflight now covers `/v1/*` with the methods and headers the app sends, and the proxy keeps a single allow-origin. Mobile suite 22 -> **26/0**, including a localhost-with-port origin case and the tracked config equalling what the generator writes. Re-running the harness after the fix, `/v1/config` is requested from the configured host instead of the WebView's own; the one CORS message left names *production*, which is still the pre-fix build, so the run measures both the fix and the push that has not landed yet.
-
-**unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
+`docs/planning/ONBOARDING_TASK_1.md` is rewritten around the real harness; `D-8.14` in the checklist now names the dropped cut instead of
+promising it. Full local gate on this tree: unit 726/0, a11y 14/0, layout 7570/0, landing 3333/0, routes 8/8, mobile 29/29,
+`apps/web/verify.sh` exit 0.
+**A harness bug the task wrote itself.** Making the brief exact meant running the mobile harness, and `apps/mobile/tests/breaks.sh`
+restored its mutated file by filtering lines in python — which appended a blank line to `apps/web/src/screens/rider.js` **on every run**,
+and `build.js` then baked it into `apps/web/dist-preview.html`. Two runs left the product tree dirty with a change nobody made, which is
+exactly what the brief tells the new developer to check for. Rewritten to copy the file to scratch outside the tree, restore with `cp`,
+and prove it with `cmp`; my first version deleted the scratch dir in the same function, so `cmp` compared against a file that no longer
+existed and the harness failed itself — it now runs twice in a row leaving `git status` empty, and `apps/mobile` stays 29/29. G-121.
 
 ## 2026-09-07 — everything pushed; `verify-gui` went red on a file's *permissions* (G-118)
 
