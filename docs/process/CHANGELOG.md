@@ -38,10 +38,15 @@ that the harness caught for me: four patterns written with `\{` were rejected by
 `BROKEN-BREAK → edit did not change the file` rather than silently passing. Two new-layout assertions also failed first and were *my tests* being wrong: Chrome
 under `reduce` reports `0.00001s`, not `0s`, and a `slice(0,9)` probe cut the word "gradient" in half.
 
-**Shipping**: `version.code` **7 → 8**, because the bundle inside the installed app is this CSS. The owner's judgement that no APK change was needed is right
-in the practical sense — the shell reaches an installed phone through the OTA channel, and `/v1/mobile/update` now advertises 8 — but the APK does carry a
-copy (`apps/mobile/scripts/build.js` → `app/src/www/`), so the next installer CI commits will contain it too. One thing this round did **not** fix, recorded as
-`G-124`: in the installed app the Android status bar is a band the WebView does not paint, so it can still look like a strip above the bar. `viewport-fit=cover`
+**Shipping**: `version.code` **7 → 8**, and the owner's judgement that this needs no APK change is **right, and for a better reason than "OTA will
+carry it"**: the installer does not contain the app at all. Measured by unzipping the v8 binary CI committed (`6203ac7`, `sha256 655b61cf997f…`),
+`assets/public/index.html` is **100,474 B** of boot page — `splash × 9`, `boot × 11`, `topbar × 0`, `--s2 × 0` — i.e. the launcher, not the shell
+(`apps/mobile/www/` holds that one page and its `offline.html` twin; the 1,097,500 B built page never enters the APK). The app GUI an installed phone
+shows is whatever the mobile service offers at `/v1/mobile/bundle`. So a new installer changes nothing a tester can see, and the version bump is what
+makes the phone take the new bundle. Two facts came out of shipping it. (1) The web service redeployed with the new
+bar within ~90 s and `--head-t × 3` was readable in the live page, but the **mobile** service kept answering `versionCode: 7` with the round-16 bundle
+(`sha256 ede7e68e…`, 1,153,099 B) — a stale deploy is therefore a stale GUI, and nothing else can fix it, which is why this correction ships as its own
+push. (2) One thing this round did **not** fix, recorded as `G-124`: in the installed app the Android status bar is a band the WebView does not paint, so it can still look like a strip above the bar. `viewport-fit=cover`
 is already set and `--head-t` already adds `env(safe-area-inset-top)`; what is missing is edge-to-edge on the native window, which is `apps/mobile` and needs a
 new binary.
 

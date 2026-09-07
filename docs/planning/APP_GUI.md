@@ -454,3 +454,14 @@ Behaviour in JS, the look in the sheet: `Motion.scrollEdge(scroller)` returns a 
 Motion also has to answer to `prefers-reduced-motion`: the rail's `transition:width` and the label fade live inside
 `@media (prefers-reduced-motion:no-preference) and (min-width:600px)`, and the layout suite asserts both sides of it, because Chrome
 under `reduce` reports `0.00001s` rather than `0s` — so the predicate is "no travel", not "zero".
+
+## 17. Where the app's GUI actually comes from (measured while shipping round 17)
+
+The installed APK contains a **boot page**, not the app: `assets/public/index.html` inside the shipped binary is 100,474 B and carries the splash and
+the OTA fetch, with no `.topbar` and no `--s2` in it. The 1.1 MB built page the shell suites test never enters the binary. Therefore:
+
+* renewing app GUI = rebuilding the web bundle and publishing it through `/v1/mobile/update` + `/v1/mobile/bundle`; the installer is irrelevant to it;
+* `version.code` in `packages/brand/brand.json` is the only lever that makes an installed app take a new GUI, and it must go **up**;
+* a service that has not redeployed serves a stale GUI forever — the mobile service kept serving the round-16 bundle for 20+ minutes after the commit,
+  while the web origin had the new page in ~90 s. If a tester reports "nothing changed", measure `/v1/mobile/update` before believing anything else;
+* the native band above the bar (`G-124`) is the one part that genuinely needs a new binary, because it is the window, not the page.
