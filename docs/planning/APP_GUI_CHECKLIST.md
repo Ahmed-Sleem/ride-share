@@ -219,3 +219,7 @@ untouched until the owner signs the look off.
   binding, the guard left pointing at the old call — so the checks are proven; what is missing is the permanent harness entry.
 - [x] **D-8.7** G-113: the OTA reads answer without a signature that cannot exist in this pipeline; the proxied API keeps its gate.
   Live before the change: `/v1/mobile/update` → `403 APP_UNPROVEN`. Mobile suite **23/0**. Reversible with one repo secret.
+- [x] **D-8.8** (superseded by its own outcome) The route tests were the real gap and CI had them all along: `withNoInstaller()` now hides all three
+  installer sources, `verify.sh` runs the file locally too, and web routes are **8/0**. G-112.
+- [x] **D-8.9** G-114: `app.origin` (OTA) and `app.site` (the site) are separate brand facts, both present in `allowNavigation`, asserted against the
+  generator. `version.code` 5, because the list is baked.
