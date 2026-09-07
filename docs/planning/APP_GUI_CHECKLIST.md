@@ -223,3 +223,16 @@ untouched until the owner signs the look off.
   installer sources, `verify.sh` runs the file locally too, and web routes are **8/0**. G-112.
 - [x] **D-8.9** G-114: `app.origin` (OTA) and `app.site` (the site) are separate brand facts, both present in `allowNavigation`, asserted against the
   generator. `version.code` 5, because the list is baked.
+- [x] **D-8.10** G-115 + G-116: the OTA bundle must carry its own origin (guard on the assignment, fail the build otherwise), and CORS must answer
+  writes as well as reads. Both server-side, so installed apps gain them on redeploy. Mobile suite 22 -> **26/0**.
+- [ ] **D-8.11** Promote the harness that found G-115 into CI, because nothing else looks at the artifact the way a phone does. Recipe, in order:
+  `node apps/mobile/scripts/build.js` -> spawn `node apps/mobile/server.js` with `PORT` and `MOBILE_WWW_DIR=apps/mobile/dist/www` -> take the boot page
+  from the built `www/offline.html` and rewrite only its `window.__RS_PUBLIC_ORIGIN` to that local server -> serve that directory on a second
+  localhost port (the mobile server answers `/` with 403 `NOT_A_WEBSITE`, by design) -> puppeteer at 390x844 `isMobile` loads it and asserts: the splash
+  names the host *before* the network goes idle, `#root` mounts, `.offline` never appears, no console message matches `/blocked by CORS/`, and every
+  `/v1/` response carries exactly one `access-control-allow-origin`. Poll from **outside** the page: mounting a bundle replaces the document and kills
+  anything running inside it.
+- [ ] **D-8.12** Owner decision, blocking and not code: the GitHub repository has no `MOBILE_APP_SECRET`, so CI bakes an empty key, `api.js` sees no key
+  and skips signing, and the live proof check refuses every personal route - the app boots and browses but cannot sign in. Either set that repo secret to
+  the value the deployed service already holds, or relax the gate to public reads plus a session token. Baking a key needs a new installer (`version.code` 6).
+
