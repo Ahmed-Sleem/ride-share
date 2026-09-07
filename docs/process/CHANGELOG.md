@@ -46,7 +46,11 @@ shows is whatever the mobile service offers at `/v1/mobile/bundle`. So a new ins
 makes the phone take the new bundle. Two facts came out of shipping it. (1) The web service redeployed with the new
 bar within ~90 s and `--head-t × 3` was readable in the live page, but the **mobile** service kept answering `versionCode: 7` with the round-16 bundle
 (`sha256 ede7e68e…`, 1,153,099 B) — a stale deploy is therefore a stale GUI, and nothing else can fix it, which is why this correction ships as its own
-push. (2) One thing this round did **not** fix, recorded as `G-124`: in the installed app the Android status bar is a band the WebView does not paint, so it can still look like a strip above the bar. `viewport-fit=cover`
+push. Every push that touched `apps/mobile/**` had deployed it and every `apps/web`-only one had not, so its Railway trigger is path-filtered — recorded
+because the next GUI round will hit it again. The fact is now a test rather than a paragraph: `apps/mobile/tests/config.test.js` (12 → 13) asserts both
+`www/` files come from the boot page, that `appHtml` reaches only `dist/www/`, that the boot page names `/v1/mobile/update` and `/v1/mobile/bundle` and
+carries no `.topbar` rule of its own, and that `meta.json` publishes `brand.json`'s `version.code`; seen red three ways (`www/index.html` ← `appHtml`, an
+OTA route renamed, `versionCode` hard-coded to 1), each restored byte-exact, 34/34 after. (2) One thing this round did **not** fix, recorded as `G-124`: in the installed app the Android status bar is a band the WebView does not paint, so it can still look like a strip above the bar. `viewport-fit=cover`
 is already set and `--head-t` already adds `env(safe-area-inset-top)`; what is missing is edge-to-edge on the native window, which is `apps/mobile` and needs a
 new binary.
 
