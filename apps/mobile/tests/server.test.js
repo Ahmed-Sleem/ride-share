@@ -106,9 +106,46 @@ test("the OTA preflight is answered before any proof is asked for", async () => 
   });
   assert.equal(r.status, 204);
   assert.equal(r.headers["access-control-allow-origin"], "https://localhost");
-  assert.equal(r.headers["access-control-allow-methods"], "GET, OPTIONS");
+  /* Included, not equal: the same answer now also covers the app's writes, and pinning the
+     literal list here is what made this test contradict the test added beside it. The intent is
+     "a preflight is answered before any proof is asked for" - the 204 above is that proof. */
+  assert.match(r.headers["access-control-allow-methods"], /GET/);
+  assert.match(r.headers["access-control-allow-methods"], /OPTIONS/);
   assert.match(r.headers["access-control-allow-headers"], /x-rs-sign/);
   assert.ok(Number(r.headers["access-control-max-age"]) >= 60, "the probe should be cached");
+});
+
+test("a write from the app is preflighted too, and a refusal stays readable", async () => {
+  const pre = await raw("OPTIONS", "/v1/auth/login", {
+    origin: "https://localhost",
+    "access-control-request-method": "POST",
+    "access-control-request-headers": "authorization, content-type, x-rs-app-id, x-rs-ts, x-rs-sign",
+  });
+  assert.equal(pre.status, 204, "the WebView must not be answered by the proof check");
+  const methods = pre.headers["access-control-allow-methods"] || "";
+  for (const m of ["GET", "POST", "PATCH", "DELETE"]) {
+    assert.ok(methods.includes(m), `preflight must allow ${m} - the app writes, not just reads`);
+  }
+  assert.ok((pre.headers["access-control-allow-headers"] || "").includes("authorization"),
+    "a signed-in request carries a bearer token, so preflight must allow the header");
+  /* And the refusal itself: a 403 without allow-origin shows up as a network error, which is
+     how a person ends up reading "check your internet connection" while the server is fine. */
+  const denied = await raw("GET", "/v1/config", { origin: "https://localhost" });
+  assert.equal(denied.status, 403, "no proof, no data - unchanged");
+  assert.equal(denied.headers["access-control-allow-origin"], "https://localhost");
+  const foreign = await raw("GET", "/v1/config", { origin: "https://somewhere-else.test" });
+  assert.ok(!foreign.headers["access-control-allow-origin"], "and nothing for anyone else");
+});
+
+test("localhost with a port is an app origin; a look-alike is not", async () => {
+  for (const origin of ["http://localhost:8099", "https://localhost:3000", "capacitor://localhost"]) {
+    const r = await raw("GET", "/healthz", { origin });
+    assert.equal(r.headers["access-control-allow-origin"], origin, `${origin} must be answered`);
+  }
+  for (const origin of ["http://evil.localhost", "https://localhost.evil.test", "http://127.0.0.1:8099"]) {
+    const r = await raw("GET", "/healthz", { origin });
+    assert.ok(!r.headers["access-control-allow-origin"], `${origin} must get nothing`);
+  }
 });
 
 test("the app origin is allowed on the OTA reads, and nobody else is", async () => {

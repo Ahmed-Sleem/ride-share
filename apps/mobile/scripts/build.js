@@ -110,10 +110,19 @@ fs.writeFileSync(path.join(www, "offline.html"), boot);
    The splash only lives on the device so offline never hits Android's page. */
 let appHtml = fs.readFileSync(webHtml, "utf8");
 const appTag = `<script>window.__RS_SURFACE="mobile";window.__RS_PUBLIC_ORIGIN=${JSON.stringify(origin)};window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};</script>`;
-if (!appHtml.includes("__RS_SURFACE")) {
+/* Test for the assignment. The previous guard asked whether the bundle mentions __RS_SURFACE
+   at all - and lib/api.js reads window.__RS_SURFACE on every request, so the answer was always
+   yes, the tag was never injected, and the delivered app had no origin, no surface and no key:
+   it mounted, then asked the WebView's own https://localhost for /v1, where nothing answers
+   (G-115). Same class as G-110, one layer up, and invisible to every test that read the source
+   instead of the served bundle. */
+const TAG_ASSIGNED = /window\.__RS_PUBLIC_ORIGIN\s*=/;
+if (!TAG_ASSIGNED.test(appHtml)) {
   appHtml = appHtml.includes("<head>") ? appHtml.replace("<head>", "<head>" + appTag) : appTag + appHtml;
-} else if (!appHtml.includes("__RS_APP_SECRET")) {
-  appHtml = appHtml.replace('window.__RS_SURFACE="mobile";', `window.__RS_SURFACE="mobile";window.__RS_APP_ID=${JSON.stringify(appId)};window.__RS_APP_SECRET=${JSON.stringify(secret)};`);
+}
+if (!TAG_ASSIGNED.test(appHtml)) {
+  console.error("FAIL: the OTA bundle has no mobile tag - the app would boot with no API origin");
+  process.exit(1);
 }
 fs.writeFileSync(path.join(dist, "www", "index.html"), appHtml);
 fs.writeFileSync(path.join(dist, "www", "offline.html"), boot);

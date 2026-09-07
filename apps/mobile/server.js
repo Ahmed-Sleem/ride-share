@@ -114,7 +114,12 @@ function proxy(req, res) {
       timeout: 10000,
     },
     (r) => {
-      res.writeHead(r.statusCode || 502, r.headers);
+      /* Our own scoped allow-origin is already set; two of them in one response is a hard
+         failure in every browser, so an upstream copy is dropped rather than appended. */
+      const fwdHeaders = { ...r.headers };
+      for (const h of ["access-control-allow-origin", "access-control-allow-credentials",
+        "access-control-allow-methods", "access-control-allow-headers"]) delete fwdHeaders[h];
+      res.writeHead(r.statusCode || 502, fwdHeaders);
       r.pipe(res);
     }
   );
@@ -134,22 +139,32 @@ function proxy(req, res) {
    Only these read-only paths are opened, only to the app's own local origins, and the proof
    check still runs on the real request - a preflight carries nothing to prove. */
 const OTA_PATHS = new Set(["/healthz", "/health", "/v1/mobile/update", "/v1/mobile/bundle"]);
-const OTA_ORIGINS = new Set(["https://localhost", "http://localhost", "capacitor://localhost"]);
+const OTA_ORIGIN = /^(?:https?:\/\/localhost|capacitor:\/\/localhost)(?::\d+)?$/;
 
 function otaCors(req, res) {
   const origin = String(req.headers.origin || "");
-  if (!OTA_ORIGINS.has(origin)) return;
+  /* A port is allowed on purpose: `cap serve` and any local harness run on http://localhost:PORT,
+     and the WebView itself is https://localhost with no port. Both are "this app on this device";
+     nothing else gets an answer. */
+  if (!OTA_ORIGIN.test(origin)) return;
   res.setHeader("access-control-allow-origin", origin);
   res.setHeader("vary", "Origin");
 }
 
 async function handler(req, res) {
   const url = (req.url || "/").split("?")[0];
-  if (OTA_PATHS.has(url)) otaCors(req, res);
-  if (req.method === "OPTIONS" && OTA_PATHS.has(url)) {
+  /* The whole surface this service offers is called by one client: the app on a device, whose
+     document origin is https://localhost (or localhost with a port under `cap serve`). The app
+     reads its interface from here and its data through the proxy below, and the proof check that
+     guards that proxy answers with a plain 403 - which, without an allow-origin, the WebView
+     reports as a CORS failure, so a refused request looked like a dead network. Same defect as
+     G-110, one route wider. Answering CORS is not answering the request: the proof check still
+     runs, still refuses, and now the refusal arrives readable. */
+  otaCors(req, res);
+  if (req.method === "OPTIONS" && (OTA_PATHS.has(url) || url.startsWith("/v1/"))) {
     res.writeHead(204, {
-      "access-control-allow-methods": "GET, OPTIONS",
-      "access-control-allow-headers": "x-rs-app-id, x-rs-ts, x-rs-sign",
+      "access-control-allow-methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+      "access-control-allow-headers": "authorization, content-type, x-rs-app-id, x-rs-ts, x-rs-sign",
       "access-control-max-age": "600",
       "content-length": "0",
     });
