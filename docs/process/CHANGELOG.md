@@ -46,6 +46,19 @@ Then I stopped reading tests and started the app. I took the boot page out of th
 
 **unit 724/0 · landing 3221/0 (2773 at HEAD) · a11y 14/0 · layout 7570/0 · mobile 22/0.**
 
+## 2026-09-07 — landing menu: the sheet's page names are centred (D-8.13)
+
+The owner's verdict after the full-screen sheet landed: fixed on mobile, but the list still read like a drawer - names pushed to one edge of a
+surface that is now the whole screen. `.landing__menulink` becomes a centred flex row, so the label sits on the centre line and inside the 44px tap
+height instead of on its top edge; the row keeps its full width, and centring makes the Arabic branch simpler rather than needing one.
+
+Measured properly, which mattered: the row's own rect is centred by construction, so asserting it would have passed with the text glued left.
+`landing.test.js` now measures the **label ink** - a Range over the row's contents, compared to `clientWidth/2` - at every viewport and language, and
+`unit.test.js` asks the mounted element for its computed `justify-content` rather than grepping the stylesheet. unit 724 -> **726/0**, landing
+3221 -> **3333/0** (the new check runs 112 times across the survey, both directions). The installer the site hands out is the fixed one:
+`/download/android` serves 27,883,996 B, sha256 `9fc2eabc45d3c20b`, identical to `apps/web/downloads/android.apk` on `main` = `008055d`, and v5's baked
+config carries both `…mobile-production` and `…web-production` in `allowNavigation` with the OTA origin resolved.
+
 ## 2026-09-07 — the break harness caught its own blindness: three guards had been blind since round 9
 
 `Break-detection` finished its first-ever CI run on run `34067676257` — the job only exists because round 9c restored the exec bits that had kept

@@ -241,4 +241,8 @@ untouched until the owner signs the look off.
   two places, no reinstall, and existing installs start signing on their next launch. Exposure is unchanged - a key handed to a client is readable by that
   client, and that was already true of the copy inside the APK; this is attestation-lite, not auth. Needs: the injection + a test that the served bundle
   carries an assigned key, and a break case so a future edit that drops it fails loudly.
+- [x] **D-8.13** The full-screen menu centres its page names. `display:flex;align-items:center;justify-content:center` + `text-align:center` on
+  `.landing__menulink` — the row keeps its full width as a tap target, only the ink moves, and a centred line needs no RTL branch. Measured two ways because
+  a full-width box is centred whatever the label does: `labelOff` in `landing.test.js` compares the label's Range rect to the viewport centre line at every
+  boundary and language (worst 0.x px, gate ≤1.5), and `unit.test.js` asks the mounted row for its computed `justify-content`. unit 726/0, landing 3333/0.
 
