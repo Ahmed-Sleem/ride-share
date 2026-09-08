@@ -57,6 +57,15 @@ were proven by that same failed job's log (`apply-android-manifest: CAMERA inser
 `system bars: … transparent status/navigation bars, icons matched to #FFFFFF (day) / #0A0A0A (night)` all printed before the failure), so this round's changes are
 CI-verified even though the job was red. Recorded as `G-129` / `D-8.28`.
 
+**Then the signed build went green, and chunk B closed with a byte-for-byte proof.** Run 34186705399 (`f50f374`): `Android installer (signed when the keystore
+exists)` and `Android Play AAB` both `success`, the installer log reading `keystore present -> building the signed release variant` and
+`INSTALLER_KIND: release-signed`, the AAB job ending `SIGNED=1`. CI committed `c34a16e`, which changed exactly one file: `apps/web/downloads/android.apk`,
+`27,884,056 → 26,507,417` bytes (`sha256 b834472fc299…`) — and `/download/android` serves those exact bytes. The signature was checked where it can be checked
+without a device: the AAB's `META-INF/RIDESHAR.RSA` (the alias, in the filename) contains the certificate from the keystore **identically, 885 bytes, SHA-256
+`59B0BF70…C27583`**, and the APK in the repo blob is byte-identical to the APK inside that run's artifact — one build, one `signingConfig`, one key. Unzipping
+the shipped installer still shows `assets/public/index.html` at 100,474 B with `topbar ×0`, i.e. the owner's architecture survived its first signed build: a GUI
+change still needs no binary, and `version.code` correctly stayed 10 because this round changed no GUI.
+
 ## 2026-09-08 — round 18: the rail's travel became reachable at all, and it rides a spring
 
 Round 17 gave the desktop rail `transition:width` and the owner's verdict after using it was: *"the side menu, it tranversls but very fast very

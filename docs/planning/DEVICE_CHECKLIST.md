@@ -5,7 +5,7 @@ What it is for: everything in this list is a thing that **cannot be proven from 
 the installer, in Android's permission system, or in how a band of pixels looks at 3 am on a real device.
 Every item names the change that made it worth checking, so a fail tells you which commit to read.
 
-**How to run it:** install, then walk the list top to bottom. 22 boxes, 21 of them on the phone and one a `curl` you can run from a laptop (A2). Mark each line ✓/✗ and send me the ✗ ones
+**How to run it:** install, then walk the list top to bottom. 23 boxes: A0 names the exact file to install, A1–A3 are the signature migration, 21 are on the phone and one (A2) is a `curl`. Mark each line ✓/✗ and send me the ✗ ones
 with one sentence each. Do not "clean up" between items — the point is what one install gives you.
 
 ---
@@ -16,6 +16,7 @@ The landing page's installer used to be a **debug** build: its signing key was r
 runner, so two builds of the same version could not replace each other. The four `ANDROID_KEYSTORE_*`
 secrets are set now, so the next CI build is **release-signed with one key forever**.
 
+- [ ] **A0.** Know which file you are installing, so a later "it did not update" is not a mystery: the installer is now **release-signed** — `26,507,417` bytes, sha256 starting `b834472fc299`, committed at `c34a16e` (the debug build it replaced was `27,884,056` B). Certificate: `CN=ride-share, O=ride-share, C=EG`, SHA-256 `59B0BF7055CCE2BC75CCACB9201F5E0D213540941FA891C88EB66957B3C27583`, from the key you were given. Unzip it: `assets/public/index.html` is ~100 KB of boot page with `topbar ×0` — the app is not inside, and never was; the GUI comes over the air. `versionCode` stays **10**.
 - [ ] **A1.** Uninstall the old app, then install the new APK from `/download/android`. *The first move
   from debug-signed to release-signed is one unavoidable uninstall — after it, no update ever asks again.*
 - [ ] **A2.** *(one non-phone box, but it belongs here: the device token works)* run `curl -s -X POST https://ride-sharemobile-production.up.railway.app/v1/mobile/enroll -H 'content-type: application/json' -d '{"deviceId":"yourtest-0001","appId":"eg.rideshare.app"}'` → it must say `"key":"configured"`, and the `token` it returns must earn a `200` from `GET /v1/config` **only** when sent as `x-rs-device-token` (not `Authorization`) — and a second call with the same `deviceId` inside 60 s is refused on purpose.

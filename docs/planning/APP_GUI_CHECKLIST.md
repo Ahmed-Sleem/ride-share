@@ -350,7 +350,7 @@ untouched until the owner signs the look off.
   hardcoded if we change it without updating?" — is answered by *what was not touched*: this script writes two colours and two icon flags and no length, no
   font, no spacing. `--head-t`, `--safe-t: env(safe-area-inset-top)` and `viewport-fit=cover` stay in the sheet and keep arriving over the air. 38 mobile tests
   green; all four new guards were shown red on purpose (drop the prep step, skip the night theme, re-add `StatusBar`, undeclare CAMERA) and green again.
-- [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 22 boxes across the one-time signature migration (A),
+- [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 23 boxes across the one-time signature migration (A),
   location permission incl. the Deny → Settings → retry path and the Approximate-only case (B), camera/QR (C), system bars in both system modes and the
   double-gap test that decides whether a native follow-up is owed (D), and the four regressions that must stay green (E). Read it, tick it, send the ✗ lines.
 - [x] **D-8.28** Round 20 — the first signed CI run failed, on code older than this round (`G-129`): `make-release.sh` patched `app/build.gradle` with an
