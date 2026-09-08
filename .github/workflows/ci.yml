@@ -90,6 +90,44 @@ jobs:
           bash apps/web/tests/breaks.sh
           bash apps/web/tests/layout-breaks.sh
 
+  # D-8.11. Everything else in this repo reads a file; this job reads a screen. It boots the byte-for-byte
+  # same page the installer carries (`apps/mobile/www/index.html`) in headless Chromium against a real
+  # `apps/mobile/server.js` on TLS (crypto.subtle, so the sha check is live, not skipped), and asserts the
+  # app mounts — then repeats with the service unreachable and asserts the OFFLINE card appears instead.
+  # The second half is what makes the first half mean anything: a page that mounts no matter what would
+  # pass a success-only check while shipping the wrong file (measured while building this: serving the OTA
+  # app HTML as the boot page passes the positive assertion and fails the negative one).
+  verify-boot:
+    name: Boot the installer's first screen (live + offline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install the browser (same cache key as verify-gui)
+        run: pnpm --filter @ride-share/web exec puppeteer browsers install chrome
+      - name: The unit half of the harness (verdict machine + front-door guards)
+        run: pnpm --filter @ride-share/mobile test
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+      - name: Build the boot page, then boot it in a browser
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+        run: |
+          pnpm --filter @ride-share/mobile build
+          node apps/mobile/scripts/verify-boot.js
+      - name: Keep the log readable if the boot failed
+        if: failure()
+        run: |
+          echo "See the 'boot: FAIL' lines above — the harness prints the screen state it actually observed."
+          echo "If a boot died here, start at apps/mobile/scripts/BOOT_HARNESS.md: it lists the ways a boot fails and where each is decided."
+
   verify-db:
     name: Verify database (migrations + schema drift + types)
     runs-on: ubuntu-latest

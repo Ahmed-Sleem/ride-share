@@ -229,13 +229,22 @@ untouched until the owner signs the look off.
   generator. `version.code` 5, because the list is baked.
 - [x] **D-8.10** G-115 + G-116: the OTA bundle must carry its own origin (guard on the assignment, fail the build otherwise), and CORS must answer
   writes as well as reads. Both server-side, so installed apps gain them on redeploy. Mobile suite 22 -> **26/0**.
-- [ ] **D-8.11** *(mine — do not start; it collides with D-8.14's files)* Promote the harness that found G-115 into CI, because nothing else looks at the artifact the way a phone does. Recipe, in order:
-  `node apps/mobile/scripts/build.js` -> spawn `node apps/mobile/server.js` with `PORT` and `MOBILE_WWW_DIR=apps/mobile/dist/www` -> take the boot page
-  from the built `www/offline.html` and rewrite only its `window.__RS_PUBLIC_ORIGIN` to that local server -> serve that directory on a second
-  localhost port (the mobile server answers `/` with 403 `NOT_A_WEBSITE`, by design) -> puppeteer at 390x844 `isMobile` loads it and asserts: the splash
-  names the host *before* the network goes idle, `#root` mounts, `.offline` never appears, no console message matches `/blocked by CORS/`, and every
-  `/v1/` response carries exactly one `access-control-allow-origin`. Poll from **outside** the page: mounting a bundle replaces the document and kills
-  anything running inside it.
+- [x] **D-8.11** *(mine)* Promote the harness that found G-115 into CI, because nothing else looks at the artifact the way a phone does.
+  **Shipped round 21.** `apps/mobile/scripts/verify-boot.js` (driver) + `boot-serve.js` (front door) + `lib/boot-assert.js` (the verdict, shared)
+  + `tests/boot-assert.test.js` (14 tests, inside the mobile suite) + the CI job `verify-boot` (name: *Boot the installer's first screen
+  (live + offline)*). `apps/mobile/scripts/BOOT_HARNESS.md` is the manual, including why each of the three break-it-on-purpose switches exists.
+  Three places where the recipe above met the source and changed, each for a measured reason:
+  (1) it asked for `www/offline.html`; the WebView loads `www/index.html` (both are written from the same bytes by `build.js:109/145`), so the
+  harness boots `index.html` and a test now fails if the two ever diverge; (2) it asked for a second localhost port plus CORS assertions, but
+  `otaCors` answers only `localhost`/`capacitor://localhost` origins — so page and API share ONE `https://boot-live.test.invalid:<port>` origin
+  (mapped to 127.0.0.1) and the run measures the boot path, leaving CORS to `server.test.js` where it is already proven; (3) it asked for plain
+  http, and plain http kills `crypto.subtle` on a non-localhost origin, which would have made the bundle's sha check silently unrunnable — the
+  harness mints a throwaway cert per run instead. Polling stays outside the page, as the recipe demanded, because `mountBundle` does
+  `document.open()/write()` and kills anything running inside; `waitUntil` is `domcontentloaded`, never `networkidle`, for the same reason.
+  Verified by breaking it, four ways (D-8.2 [2]): mis-baked origin (the G-114 class) reddens two checks; serving the OTA app page instead of the
+  boot page passes the positive check and fails the negative — which is the whole argument for keeping the negative control; an always-failing sha
+  comparison (a valid bundle rejected) reddens the suite; and the type bug the test itself found (`opacity "0"` vs `0`) is now coerced in
+  `isVisible`. `verify-repo.sh` green; mobile suite 40 -> 53.
 - [ ] **D-8.12** Owner decision, blocking and not code: the GitHub repository has no `MOBILE_APP_SECRET`, so CI bakes an empty key, `api.js` sees no key
   and skips signing, and the live proof check refuses every personal route - the app boots and browses but cannot sign in. Either set that repo secret to
   the value the deployed service already holds, or relax the gate to public reads plus a session token. Baking a key needs a new installer (`version.code` 6).

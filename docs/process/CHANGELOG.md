@@ -1,3 +1,47 @@
+## 2026-09-08 — round 21: the first screen inside the APK became a test, and a claim about reproducible bytes was corrected
+
+The owner said *"now whats next for you, the other developer still doing task 2"* — so nothing was handed over, nothing was waited on, and the
+round spent itself on the last chunk that had been carried open across sessions: **D-8.11**. The rules were re-read first (`AGENTS.md`,
+`docs/process/PROJECT_RULES.md` P1–P6, `ENGINEERING_STANDARD.md` §0/§0.1/§0.2/§0.3), then the sandbox was repaired the way it now always is
+after a rehydration (fetch by URL, `reset --mixed`, `core.fileMode false`, re-`chmod +x` the 26 scripts — checker: 26 examined, 0 wrong).
+
+**What was actually missing.** Every test in this repo reads a *file*. The two bugs that cost the most (G-114, a boot page baked with the wrong
+server address; G-115, a bundle whose origin tag was missing) both lived in the seam between files, so they walked past unit tests, the layout
+matrix and the whole web suite. The recipe to catch them had been sitting in a scratch directory for rounds. It is repo code now: a CI job
+`verify-boot` that starts a real `apps/mobile/server.js`, serves the boot page the installer carries over TLS in front of it, and asserts in a
+headless Chromium that the app **mounts**; then it repeats the same page against a port where nothing answers and asserts the **offline card
+appears with a reason line**. The second half is not decoration: measured while building this, serving the OTA app HTML *as* the boot page
+passes the positive check and congratulates itself — only the negative control reddens it. A harness that can only pass is a lamp, not a test.
+
+**Three design choices, each forced by the source rather than by taste.** The page and the API share ONE origin (`https://boot-live.test.invalid`
+mapped to 127.0.0.1) because the product's `otaCors` answers only `localhost`/`capacitor://localhost` and the mobile server answers `/` with
+`403 NOT_A_WEBSITE` — so the front door serves the page and proxies `/healthz` + `/v1/mobile/{update,bundle}`; TLS because Chromium has no
+`crypto.subtle` on a non-localhost insecure origin and the boot page hashes the bundle before mounting it (plain http would have reported a bug
+that is not there); `waitUntil: "domcontentloaded"` and polling from OUTSIDE the page because `mountBundle` does `document.open()/write()` and
+kills anything running inside. The first candidate host alias was rejected on reading `server.js`: `localhost` would have been CORS-free, but a
+`localhost` page dialling another port is a CORS test wearing a boot-test costume.
+
+**Break-and-observe (§0.2), four ways.** Mis-baked origin (G-114's class) → two checks red. Wrong file served as the boot page → the harness
+refuses to run, and with the refusal lifted the negative control reddens. An always-failing sha comparison (a *valid* bundle rejected) → the suite
+reddens, proving the integrity path really runs in CI and did not quietly skip. And the test suite itself found a live bug in the shared verdict:
+`isVisible` compared `opacity === "0"` while `getComputedStyle` yields the number `0` — a hidden card could have read as shown. Fixed by coercion,
+then asserted. `apps/mobile/tests/boot-assert.test.js` (14 tests) also proves each guard fires by running the front door in a new
+`RS_BOOT_BAKE_ONLY=1` mode, because an `if` nothing has ever satisfied is untested code (the standing lesson of G-129). Mobile suite 40 → 53,
+`scripts/verify-repo.sh` green, `unit`/`a11y`/`layout`/`landing` green against the rebuilt `dist`.
+
+**A claim corrected (G-130).** Run `34187433105` was a docs-only push, yet CI built and committed a *second* installer for `32b94ef`: same
+26,507,417 bytes, all 532 zip entries identical by name, size, CRC and fixed 1981 timestamps, and **5,547 bytes differing at offset 26,466,388**
+— inside the APK Signing Block (a fresh PKCS#7 signature per build). So the installer is **not byte-reproducible**; "build it twice and compare
+hashes" was never a proof this repo could produce. What is true, and now written that way in roadmap row B: the *signing identity* is stable
+(cert `59B0BF70…C27583`), and *one build*'s bytes are verifiable three ways over (live `/download/android` == the blob that job committed == the
+sha in that job's log).
+
+**Untouched, deliberately:** `apps/web`'s GUI, `packages/brand`, `apps/mobile/capacitor.config.json`, the OTA contract, the permission model
+(the owner's standing instruction — the dialog comes from Capacitor and works), and the task-3 brief (not re-sent while task 2 is in flight).
+Still with the owner: pull `/home/user/keystore/` + `/home/user/KEYSTORE-NOTE.md` out of this sandbox, run
+`docs/planning/DEVICE_CHECKLIST.md` on a phone (23 boxes, send back only the ✗ lines), and decide **G-128** (background-location +
+foreground-service permissions: drop them, or keep them and write the foreground service in the same change).
+
 ## 2026-09-08 — round 20: permissions, answered by reading the dependency, and A2 done without a keyboard
 
 The owner asked *"does the app/web take the user's permission to use location?"* and, separately, *"can you do A2 yourself?"*. Both were
