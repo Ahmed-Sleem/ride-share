@@ -9,11 +9,13 @@ process.env.MOBILE_APP_SECRET = "b".repeat(32);
 process.env.MOBILE_APP_ID = "eg.rideshare.app";
 
 const HERE = path.join(__dirname, "..");
-const htmlPath = path.join(HERE, "dist", "www", "index.html");
-if (!fs.existsSync(htmlPath)) {
-  fs.mkdirSync(path.dirname(htmlPath), { recursive: true });
-  fs.writeFileSync(htmlPath, "<!doctype html><title>test-bundle</title><body>Bundle Content</body>");
-}
+/* Same isolation as server.test.js, same reason (a builder running in a sibling file deletes `dist/`):
+   the sha pairing asserted below is only meaningful if the bytes cannot change underneath the request. */
+const BUNDLE_DIR = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "rs-boot-bundle-"));
+process.env.MOBILE_BUNDLE_DIR = BUNDLE_DIR;
+const htmlPath = path.join(BUNDLE_DIR, "index.html");
+fs.writeFileSync(htmlPath, "<!doctype html><title>test-bundle</title><body>Bundle Content</body>");
+process.on("exit", () => { try { fs.rmSync(BUNDLE_DIR, { recursive: true, force: true }); } catch (_) {} });
 
 const { handler, APP_ID } = require("../server.js");
 

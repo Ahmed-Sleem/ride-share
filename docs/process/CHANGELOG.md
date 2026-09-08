@@ -36,6 +36,16 @@ hashes" was never a proof this repo could produce. What is true, and now written
 (cert `59B0BF70…C27583`), and *one build*'s bytes are verifiable three ways over (live `/download/android` == the blob that job committed == the
 sha in that job's log).
 
+**Then CI found a bug in someone else's suite, which is the point of adding a job.** Run `34190310438`: `verify` failed with `503 BUNDLE_MISSING` in
+`server.test.js`'s app-origin test and `verify-boot` failed with `ENOENT .../apps/mobile/www/index.html`. Not flake theatre — both were true. The first is a race
+that predates this round: `config.test.js` runs the builder as a child process to prove what `build.js` emits, and the builder `rmSync`s `apps/mobile/dist` first,
+while two sibling suites were reading `dist/www/index.html` as their OTA artifact. On my 2-core sandbox they never overlapped; on CI's 4 cores they did. Fixed at
+the root, not with a retry: `server.js` now honours `MOBILE_BUNDLE_DIR` and both suites point it at a private fixture they write (`.env.example` says it exists for
+tests, never for deployment) — a test's bytes should be the bytes the test chose. The second is mine and of the worst kind: my new job ran the mobile suite *before*
+the build, so it passed locally on an already-built tree and failed on a clean checkout; the job builds first now. Recorded as `G-131`, together with a third thing
+that same log made me look at: `.env.example` still documented a gate that round 11 deleted (`503 APP_GATE_NOT_CONFIGURED`) and omitted the key that actually gates
+(`MOBILE_DEVICE_TOKEN_KEY`). Proved by observation, not by belief: the isolated suites ran green against six builder processes deleting `dist/` underneath them.
+
 **One of my own claims corrected while checking this.** In round 20 I told you runs `34186705399` (`f50f374`) and `34187433105` (`ae3b3ee`)
 were "all green". That was wrong in its last word: both had `Break-detection (guards must fail on purpose)` finish as **cancelled**, because the next push
 killed it (`concurrency: cancel-in-progress`). Verified job by job just now: `f50f374` = Verify ✓, Verify GUI ✓, Verify database ✓, images ✓, installer ✓,

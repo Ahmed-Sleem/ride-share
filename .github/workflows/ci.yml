@@ -112,16 +112,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install the browser (same cache key as verify-gui)
         run: pnpm --filter @ride-share/web exec puppeteer browsers install chrome
-      - name: The unit half of the harness (verdict machine + front-door guards)
-        run: pnpm --filter @ride-share/mobile test
+      # Build FIRST: `apps/mobile/www/` is a build product (gitignored), and both the mobile suite and
+      # the harness read it. Running the tests before the build — which is what this step originally did —
+      # makes `config.test.js` fail with `ENOENT .../apps/mobile/www/index.html` on a clean checkout while
+      # passing on any dev machine that had built once. That is the exact failure class D-8.11 exists to
+      # remove, so the job does not get to have it.
+      - name: Build the boot page and the OTA artifact
         env:
           NODE_PATH: ${{ github.workspace }}/node_modules
-      - name: Build the boot page, then boot it in a browser
+        run: pnpm --filter @ride-share/mobile build
+      - name: The unit half of the harness, while the boot runs (shared step ⇒ shared logs)
         env:
           NODE_PATH: ${{ github.workspace }}/node_modules
         run: |
-          pnpm --filter @ride-share/mobile build
-          node apps/mobile/scripts/verify-boot.js
+          pnpm --filter @ride-share/mobile test & TESTS=$!
+          node apps/mobile/scripts/verify-boot.js; BOOT=$?
+          wait $TESTS; TEST_RC=$?
+          echo "boot: harness exit=$BOOT, mobile suite exit=$TEST_RC"
+          test "$BOOT" -eq 0 -a "$TEST_RC" -eq 0
       - name: Keep the log readable if the boot failed
         if: failure()
         run: |

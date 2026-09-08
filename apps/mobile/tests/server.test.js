@@ -10,11 +10,16 @@ process.env.MOBILE_DEVICE_TOKEN_KEY = "a".repeat(32);
 process.env.MOBILE_APP_ID = "eg.rideshare.app";
 
 const HERE = path.join(__dirname, "..");
-const htmlPath = path.join(HERE, "dist", "www", "index.html");
-if (!fs.existsSync(htmlPath)) {
-  fs.mkdirSync(path.dirname(htmlPath), { recursive: true });
-  fs.writeFileSync(htmlPath, "<!doctype html><title>fixture</title>");
-}
+/* A PRIVATE bundle directory, not `apps/mobile/dist/www`. See the note in server.js: a sibling test file
+   runs the builder, which `rmSync`s dist/ as its first act — sharing that directory makes this suite lose
+   a race against a build it does not know about (CI run 34190310438, `503 BUNDLE_MISSING`). Writing a
+   fixture here instead means the assertions below run against bytes this file controls, which is what a
+   test is supposed to do. */
+const BUNDLE_DIR = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "rs-bundle-"));
+process.env.MOBILE_BUNDLE_DIR = BUNDLE_DIR;
+const htmlPath = path.join(BUNDLE_DIR, "index.html");
+fs.writeFileSync(htmlPath, "<!doctype html><title>fixture</title>");
+process.on("exit", () => { try { fs.rmSync(BUNDLE_DIR, { recursive: true, force: true }); } catch (_) {} });
 
 const { handler, issueDeviceToken, APP_ID } = require("../server.js");
 

@@ -11,9 +11,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
-const DIST = path.join(__dirname, "dist", "www", "index.html");
+/* Where the OTA artifact lives. `MOBILE_BUNDLE_DIR` exists for one reason that is not a convenience:
+   `apps/mobile/tests/config.test.js` runs the *builder* as a child process to prove what build.js
+   produces, and the builder starts by `rmSync`-ing `dist/`. Two test files sharing that directory is a
+   race, and CI lost it once (run 34190310438: `/v1/mobile/bundle` answered 503 BUNDLE_MISSING in a test
+   that had passed for a month — the file was deleted between its two `existsSync` calls). So the tests
+   point the server at a private directory and never touch a real build's output; deployment keeps the
+   default and never sets the variable. */
+const BUNDLE_DIR = (process.env.MOBILE_BUNDLE_DIR || "").trim();
+const DIST = BUNDLE_DIR ? path.join(BUNDLE_DIR, "index.html") : path.join(__dirname, "dist", "www", "index.html");
 const WWW = path.join(__dirname, "www", "index.html");
-const META = path.join(__dirname, "dist", "meta.json");
+const META = BUNDLE_DIR ? path.join(BUNDLE_DIR, "..", "meta.json") : path.join(__dirname, "dist", "meta.json");
 const APP_ID = (process.env.MOBILE_APP_ID || "eg.rideshare.app").trim();
 /* The key the device tokens are signed with. It is deliberately the only secret in this design,
    it is read at RUN time from the service that verifies it, and it is never sent anywhere: the

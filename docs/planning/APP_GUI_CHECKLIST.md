@@ -241,6 +241,10 @@ untouched until the owner signs the look off.
   http, and plain http kills `crypto.subtle` on a non-localhost origin, which would have made the bundle's sha check silently unrunnable — the
   harness mints a throwaway cert per run instead. Polling stays outside the page, as the recipe demanded, because `mountBundle` does
   `document.open()/write()` and kills anything running inside; `waitUntil` is `domcontentloaded`, never `networkidle`, for the same reason.
+  CI's first run of this job also caught two things that were not the harness' own bugs, and both are now fixed (G-131): `verify-boot` must **build**
+  before running the mobile suite (`www/` is a build product, absent on a clean checkout), and `apps/mobile`'s two server suites no longer read
+  `apps/mobile/dist/www` while a sibling test runs the builder that `rmSync`es it — they point the server at a private fixture via `MOBILE_BUNDLE_DIR`.
+  Proven by running the isolated suites against six concurrent builder processes.
   CI note for the next reader: `verify-breaks` is the job most often cancelled by a following push, so a run can be "success on the badge,
   cancelled on one job" — read the job list, not the badge.
   Verified by breaking it, four ways (D-8.2 [2]): mis-baked origin (the G-114 class) reddens two checks; serving the OTA app page instead of the
