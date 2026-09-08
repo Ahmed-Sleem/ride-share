@@ -307,7 +307,11 @@ untouched until the owner signs the look off.
   layout 11875 with the line's colour asserted *equal* to the other bar's, 11 `breaks.sh` cases CAUGHT incl. one that re-adds a fade token to
   prove the rejection is enforced), `apps/mobile` 34/34 incl. the build-log line that prints boot vs OTA bytes. See APP_GUI.md §16 rule 2 — the
   research is recorded *and* overruled, so the next round neither repeats the fade nor thinks a gradient is a design decision.
-- [ ] **D-8.22** The push that changes app GUI must touch `apps/mobile/**` too, or the mobile service never redeploys and installed phones keep
+- [x] **D-8.22** The push that changes app GUI must touch `apps/mobile/**` too, or the mobile service never redeploys and installed phones keep
+  Measured and obeyed, round 17b: three apps/web-only pushes left `versionCode 7` for ~30 min; the push touching
+  `apps/mobile/tests/config.test.js` moved it to 8 within a minute, and this round's push (brand 9 + `scripts/build.js`
+  log line) moved it to 9 with the served bundle's sha equal to the advertised one. The rule is now written where the
+  three people who can break it will read it: CHANGELOG, APP_GUI.md §18, and ONBOARDING_TASK_2.md's house rules.
   the old bundle (measured: 3 pushes, `versionCode` stuck at 7 for ~30 min, then 8 within ~60 s of a push touching `apps/mobile/tests/`).
   Either widen Railway's trigger for the `mobile` service, or keep the standing habit of landing a mobile-side file with GUI work. The build log
   line from 17b is the cheapest such file to touch honestly — see APP_GUI.md §18.
