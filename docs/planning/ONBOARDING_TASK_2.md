@@ -84,6 +84,10 @@ grey rectangle: the `tileerror` event flips the same "unavailable" state.
   Do not edit `apps/mobile/tests/breaks.sh` — that file is yours in spirit but the agent is reviewing it
   this round; if you want a change there, put it in step 6 below and nothing else.
 * Screenshots are not evidence. A number in a failing assertion is.
+* If you write `breaks.sh` cases: in sed's BRE, `\( \)` is a **capture group** and `\{` opens an **interval**, so a pattern like
+  `var\(--line\)` matches `var--line` and never the literal parens you can see in the file. Literal punctuation stays **unescaped**.
+  When that goes wrong the harness prints `BROKEN-BREAK → edit did not change the file` — which happened four times in one round to the
+  agent, and is the harness doing its job, not a nuisance: an edit that matches nothing is a test that proves nothing.
 
 ## Step 6 — the small one, from your task-1 review (separate commit, separate push)
 
@@ -97,7 +101,14 @@ refuses to call it caught.
 
 ## House rules that are not negotiable
 
-* Touch `apps/web/**` only (plus `docs/`), no `apps/mobile/**`, no `packages/brand/**`, no CI YAML.
+* Touch `apps/web/**` (plus `docs/`). No `apps/mobile/**`, no `packages/brand/**`, no CI YAML — and that has a consequence for you:
+  shipping a GUI to a device needs `packages/brand/brand.json`'s `version.code` bumped **and** a push that touches `apps/mobile/**`,
+  because the mobile service's Railway trigger is path-filtered to that directory (`D-8.22` in the checklist, measured this round: three
+  pushes, `versionCode` stuck at 7 for half an hour, then 8 within a minute of a push touching `apps/mobile/tests/`). Do **not** do either
+  yourself: put the line `needs: version.code bump + mobile redeploy` in your commit body and the agent lands both at review. If you
+  ship without it, your map will be correct in `main`, in CI and on the website, and invisible on every phone — and it will look like your
+  work did nothing. The installer never contains the app at all (`apps/mobile/www/` is a 100 KB boot page; the app is the OTA artifact),
+  which is why the version number and the service, not the APK, are what a device sees.
 * Colours, spacing, durations and easing come from tokens — `scripts/check-tokens.sh` and
   `scripts/check-branding.sh` enforce it, and `map.js` already reads `cssVar()` for every colour it draws.
 * Nothing may regress the app shell's bar (round 17, D-8.20): `--head-t`/`--head-b`, the shared
