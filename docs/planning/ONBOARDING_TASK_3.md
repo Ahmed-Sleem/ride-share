@@ -15,9 +15,10 @@ Everything below was measured in this repo today, not assumed.
 1. **The client function exists and nobody calls it.** `apps/web/src/lib/api.js:255` is
    `myNotifications: () => API.request("GET", "/notifications/mine")` and `:254` is
    `registerDevice: (token, platform) => API.request("POST", "/notifications/device", …)`.
-   Grepping `myNotifications` across `apps/web/src` returns **one** hit: its own definition. Same
-   for `registerDevice`: the definition only. So the app has already written the request, and no
-   screen has ever sent it.
+   Grepping `myNotifications` across `apps/web/src` returns **one** hit: its own definition
+   (`lib/api.js:255`). It has never been called. So the request half of an inbox already exists in
+   the client and the screen half does not. (`registerDevice` is the opposite case — step 4: that
+   one *is* wired, and you must not wire it again.)
 2. **The server answers.** `apps/api/src/modules/notifications/api/notifications.controller.ts`
    has exactly two routes, both `@UseGuards(IdentityGuard)`:
    - `GET notifications/mine` → `assertCan(actor.role, Capability.MANAGE_OWN_ACCOUNT)` then
@@ -87,12 +88,17 @@ description. If a step's gate does not run, the step is not done.
 - A plain list: newest first, `role`-less `<ul>`/`<li>` (a `list` role on a `ul` is a duplicate),
   each item a `<button>` with `min-height:var(--tap)` and `gap`s from the spacing scale — the
   renewal's rule is that a screen never invents a pixel value that a token already owns.
-- One row shows: title (bold when unread), the body clamped to 2 lines, a human date
-  (`timeAgo`-style relative for <24 h, an absolute date after — a person scanning an inbox needs
-  "4 m", a person auditing one needs "8 Sep 14:05"), and a kind label derived from `kind`
+- One row shows: title (bold when unread), the body clamped to 2 lines, a human date, and a kind
+  label derived from `kind`
   (`N-S…`/transactional, `N-R3…`/behavioural, `N-R4…`/promotional — see
   `apps/api/src/modules/notifications/domain/tiers.ts:21-26`, which is the only place that
   mapping exists; do not re-derive it differently).
+  **Dates have an idiom already — use it.** `screens/admin.js:225` and `screens/wallet.js:55` do
+  `d.toLocaleString(S.lang === "ar" ? "ar-EG" : "en-GB", { … })`, which is also how Arabic digits get
+  decided, so an absolute date is a one-liner with the behaviour the app already has. There is **no**
+  relative-time helper anywhere in `apps/web/src` (0 hits for `timeAgo`/`relativeTime`), so if you
+  want `"4 m"` you write it: in `lib/`, locale-aware the same way, handing over to the absolute form
+  after 24 h, and tested at the boundary (yesterday 23:59 must not read as "1 m").
 - **Unread must not be colour alone.** A 6 px dot *plus* the row's `aria-label` naming "unread" is
   the pattern this codebase already uses for status.
 - Tapping a row marks it read (locally, and via the ledger) and routes on `ref_type`/`ref_id`:
@@ -112,15 +118,23 @@ description. If a step's gate does not run, the step is not done.
   the suite and rightly so. If you want a count visible on the bar, put it in the existing
   `.navitem__label`/badge of the rail item (the same component serves phone and desktop).
 
-### 4. Register the device when it is worth registering
+### 4. What already exists, and must not be duplicated
 
-- After a successful `POST /notifications/device`… only if a push token exists. On the web there is
-  none without a service worker, and this task does **not** add one. So the correct code is: detect
-  `window.PushManager`, register only when present, and show nothing about push when it is absent.
-  A half-wired push is worse than none: it promises a notification that never comes.
-- If you decide to call `registerDevice` at all, call it once per session, after auth, and swallow
-  its failure silently *in the UI* while still logging through the app's existing error path — the
-  person must not see a toast about a capability they never asked for.
+- **Push registration is done.** `lib/components.js:91-95`: once the auth path settles,
+  `if (typeof Platform !== "undefined" && typeof API.registerDevice === "function")` calls
+  `Platform.registerPush()` and posts the token, `.catch(() => {})`. In a browser `Platform` is
+  undefined so nothing happens — which is the correct behaviour: no service worker, and no promise
+  of a notification that will never arrive. Do not add a second registration and do not surface
+  push to a web user.
+- **There is a local reminder channel: `LocalAlarm`**, in the same file
+  (`LocalAlarm.restore({ onFire: (item) => { S.page = item.page || "waiting"; render(); } })`). An
+  inbox row that deserves a device-side nudge goes *through* that API — never a `setTimeout`, never
+  a second scheduler — and anything scheduled has to survive a cold start, which is what `restore`
+  is for. If you use it, test the restore path in `unit.test.js`.
+- **Do not invent a mark-read endpoint.** `apps/api` answers `GET notifications/mine` and
+  `POST notifications/device` and nothing else; a `PATCH` that 404s behind a swallowed `.catch` is
+  the G-110 / G-115 / G-125 shape — a green run over something that never happened. The on-device
+  ledger from step 1 is the honest design *because the UI says so*.
 
 ### 5. Tests, appended — never replacing one
 
@@ -185,8 +199,10 @@ House rules that are not negotiable:
 * Never overwrite a long doc wholesale — edit with anchors and assert the anchor matched. Several
   aborts here came from anchors remembered instead of read from the file.
 * Screenshots are not evidence; a number in a failing assertion is.
-* If you add anything the person can read, both languages, in the same commit. The suite greps
-  `content.js` for missing keys and its output is a build failure, not a warning.
+* If you add anything the person can read, both languages, in the same commit. The parity guard is
+  `unit.test.js:2106` ("Both languages, every key, checked as a SHAPE"), and note *why* it exists: a
+  missing string does not throw — `t()` falls back to printing the raw key (`data/content.js:20`),
+  so a half-translated feature looks like a working one with `notes.markAllRead` on screen.
 
 ## Two things you will be tempted to fix that you must not
 
