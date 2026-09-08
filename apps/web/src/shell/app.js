@@ -155,9 +155,36 @@ function railToggle(){
   return $("button",{class:"rail-toggle",
     attrs:{type:"button", "aria-pressed":String(collapsed),
       "aria-label": collapsed ? t("expandMenu") : t("collapseMenu")},
-    on:{click:()=>{ S.rail = collapsed ? "open" : "collapsed";
-                    storeSet("rs.rail", S.rail); render(); }}},
+    on:{click:foldRail}},
     icon(collapsed ? "fwd" : "back"));
+}
+/* Folding the rail is a look, not a navigation: it changes one class on .app. It used to
+   call render(), and render() rebuilds the shell from scratch — a newly created .nav has no
+   previous width, so the width transition in the sheet could never fire and the rail snapped
+   144 px sideways while a 280ms fade tried to cover for it. Mutating in place is the whole
+   fix; the spring is only visible because of it. If the shell is ever restructured so the
+   rail cannot be found, fall back to a render: a stale look beats a broken one.
+   The three things render() would have updated are updated here, in the same order:
+   the class, the control's own state, and the tooltips — a title belongs to an icon-only
+   rail and to nothing else, so it is set on the way in and dropped on the way out. */
+function foldRail(){
+  const app = document.querySelector(".app");
+  if(!app){ render(); return; }
+  const open = app.classList.contains("rail-collapsed");   // the state we are moving TO
+  S.rail = open ? "open" : "collapsed";
+  storeSet("rs.rail", S.rail);
+  app.classList.toggle("rail-collapsed", !open);
+  const tg = document.querySelector(".rail-toggle");
+  if(tg){
+    tg.setAttribute("aria-pressed", String(!open));
+    tg.setAttribute("aria-label", t(open ? "collapseMenu" : "expandMenu"));
+    tg.replaceChildren(icon(open ? "back" : "fwd"));
+  }
+  document.querySelectorAll(".navitem:not(.compact-only)").forEach((b)=>{
+    const lab = b.querySelector(".navitem__label");
+    if(!lab) return;
+    if(open) b.removeAttribute("title"); else b.setAttribute("title", lab.textContent || "");
+  });
 }
 function navItem(p, extra){
   const label=t("nav."+p.k);

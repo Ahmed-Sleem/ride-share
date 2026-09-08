@@ -480,3 +480,37 @@ stop it: `apps/web` build → `dist/index.html`; the mobile generator → `dist/
 leaves devices on the old GUI indefinitely; and finally `brand.version.code` going up, because that is the only thing an installed app
 compares. `scripts/build.js` now prints `boot … bytes → www/ | app … bytes → dist/www/ (OTA, versionCode N)` so the first two are
 visible in any build log, and `config.test.js` guards that line.
+
+## 19. Round 18 — motion a person can actually trigger, and the spring recipe
+
+Three laws, in the order they cost us time:
+
+1. **A transition belongs to an element that survives the interaction.** `transition` is the difference between two paints of *one* node. A
+   control that changes a look by rebuilding the tree deletes the thing that would have animated, and the rule reads perfectly in a stylesheet
+   while never firing. So a look-only toggle (fold the rail) mutates state in place; anything that navigates may rebuild. The guard has to be
+   behavioural — click the control and assert `t.q(".nav")===navBefore` — because a guard that *sets the class itself* measures the cascade,
+   not the user's path. Round 17's guard did exactly that and stayed green over a rail that never moved.
+2. **A page that defers its own render will hide the rebuild from a synchronous check.** `render()` goes through `PageFx.armed()`, so after a
+   click the DOM has not changed *yet*. Node identity alone therefore survives a regression; pin the wiring too (the handler's name in the
+   bundle, and the absence of a rebuild in the handler's own body) and let the layout suite measure both directions on one element.
+3. **Overshoot is allowed on space, never on alpha.** Material names it: spatial springs (size, position) may pass the target; effect springs
+   (opacity, colour) must not. A bounce in opacity is a flash. That single rule decided every split in this block — `--rail-in-ease` on
+   `width`/`padding-inline`, `--ease` on the label fade, and a faster non-overshooting `--rail-out-ease` on the way back out.
+
+Regenerating the curve rather than tuning it by eye (these are the numbers in `--rail-in-ease`, and the unit assertion that bounds the overshoot
+to 4-15% is what stops a later edit from sliding into clown territory):
+
+```python
+z  = 0.65                     # damping ratio: 0.7 → ~4.6% overshoot, 0.6 → ~9.5%, 1.0 → none
+wn = 4.0/(z*0.43)             # choose ω so the 2% settle lands where the duration should be
+wd = wn*math.sqrt(1-z*z)
+p  = lambda t: 1-math.exp(-z*wn*t)*(math.cos(wd*t) + (z/math.sqrt(1-z*z))*math.sin(wd*t))
+# sample p across the settle time, 21-25 points, round to 3 dp, hand it to linear(); keep a
+# cubic-bezier declared FIRST for engines without linear() — a var() is not validated at parse
+# time, so the duplicate-declaration fallback trick does not work with custom properties, which
+# is exactly why this is an @supports block and not two lines.
+```
+
+And one delivery note that is not about CSS: **the artifact is not the source.** `rule()` and friends read `dist-preview.html`, so after any edit
+to the sheet or a module, rebuild before believing a suite — or you will spend a round debugging a file that no longer exists, which is what
+"Could not parse CSS stylesheet" was this round: a comment left where a deleted rule had been, in a build nobody had regenerated.

@@ -126,6 +126,21 @@ if (!TAG_ASSIGNED.test(appHtml)) {
   console.error("FAIL: the OTA bundle has no mobile tag - the app would boot with no API origin");
   process.exit(1);
 }
+/* The OTA artifact is the whole app on a phone that may be mid-tunnel with no
+   network. Anything it has to FETCH before it can paint — a stylesheet, a script, a
+   font in a url() — is a page that renders as nothing at exactly the moment the app is
+   most useful, and it renders as nothing only on the device, never in CI, where the
+   network is always on. The web build inlines its fonts for the same reason; this is
+   the promise one layer out, checked on the bytes that actually ship.
+   (Third-party links the user taps — the store page, the terms — are untouched: a dead
+   hyperlink is an inconvenience, a render-blocking origin is the whole screen.) */
+const RENDER_BLOCKING = [/url\(\s*["']?https?:\/\//i, /<link[^>]+rel=["']?stylesheet["']?[^>]+href=["']?https?:/i, /<script[^>]+src=["']?https?:/i];
+const leaks = RENDER_BLOCKING.filter((re)=>re.test(appHtml));
+if (leaks.length) {
+  console.error("FAIL: the OTA bundle reaches a third-party origin before it can paint: " + leaks.join(", "));
+  console.error("      inline the asset (see build.js's font inlining) — a phone offline would show a blank page.");
+  process.exit(1);
+}
 fs.writeFileSync(path.join(dist, "www", "index.html"), appHtml);
 fs.writeFileSync(path.join(dist, "www", "offline.html"), boot);
 

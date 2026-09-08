@@ -186,6 +186,29 @@
      every animation, so an entrance written with these tokens needs no gate. */
   --panel-in-dur:280ms; --panel-in-ease:cubic-bezier(.2,.8,.2,1);
   --panel-in-step:28ms;     /* how far behind the previous row the next one arrives */
+  /* The rail is the one thing in the app that moves something BIG, and it needs its own
+     motion, not the menu's. The owner's verdict on round 17: "it tranversls but very fast
+     very harsh not elegant and not bouncy". These are a damped-spring step response, damping
+     ratio 0.65, sampled at 23 points: 63% of the way inside a quarter of the time (so it
+     leaves quickly, which is what keeps a control feeling responsive) and it runs 6.7% PAST
+     the open width before settling back at 470ms — the overshoot is the bounce.
+     Material's split is the rule being followed: a SPATIAL change (size, position) may
+     overshoot; an EFFECT (opacity, colour) must never, because a bounce in alpha reads as a
+     flash. So --rail-in-ease drives width and padding alone. Folding away is not a moment to
+     celebrate: shorter, no overshoot, accelerating out. */
+  --rail-in-dur:470ms; --rail-in-ease:cubic-bezier(.34,1.42,.64,1);
+  --rail-out-dur:190ms; --rail-out-ease:cubic-bezier(.3,0,.8,.15);
+  --rail-step:22ms;         /* each label lands a beat after the one above it */
+}
+
+/* cubic-bezier can overshoot once; linear() can hold a real decaying oscillation. Declare
+   the spring where it is understood and leave the bezier as the answer for an older Android
+   System WebView (the curve is supported from Chrome/WebView 113) — as an @supports block
+   rather than a second declaration, because a var() is not resolved when the engine checks
+   syntax, so the duplicate-declaration trick silently keeps the fallback. Look it up in the
+   sheet with "regenerate" — the numbers come from the oscillator, never from taste. */
+@supports (animation-timing-function:linear(0, 1)){
+  :root{--rail-in-ease:linear(0, 0.041, 0.142, 0.276, 0.422, 0.564, 0.693, 0.803, 0.892, 0.960, 1.009, 1.041, 1.059, 1.067, 1.067, 1.062, 1.054, 1.044, 1.034, 1.025, 1.017, 1.010, 1);}
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1359,17 +1382,31 @@ html.native .intro{padding-top:var(--safe-t)}
 }
 @keyframes landingslide{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 
-/* The desktop rail folds to icons and opens again. It used to switch with no transition
-   at all — the whole column snapped 144 px sideways in one frame, which is the harshest
-   thing on the surface and the one the owner named. It now travels on the same duration
-   and curve the landing menu already uses, so opening a rail and opening a menu feel like
-   the same app; the labels fade in a beat behind it rather than appearing in a space that
-   is not there yet. Everything lives in this one media query, so a reduced-motion reader
-   gets a rail that simply is or is not — the same promise the rest of the sheet makes. */
+/* The desktop rail folds to icons and opens again.
+   Round 17 gave it the landing menu's timing and the owner called it harsh; measuring the
+   click path found the real reason it felt like nothing at all: the toggle called render(),
+   render() rebuilt the shell, and a brand-new .nav has no previous width to transition FROM
+   — the travel was in the sheet and unreachable from the only control that triggers it.
+   app.js now flips the class in place, so what is written here is what happens: the divider
+   rides the spring (overshoot and settle), the labels ride opacity only and start from
+   `display:none`, which is what lets the fade replay on every open without a re-render —
+   the animation is bound to the STATE, not to the node being created. Each row lands a beat
+   after the one above it, the same trick the landing menu uses. Everything lives inside this
+   one media query, so a reduced-motion reader gets a rail that simply is or is not. */
 @media (prefers-reduced-motion:no-preference) and (min-width:600px){
-  .nav{transition:width var(--panel-in-dur) var(--panel-in-ease),
-    padding-inline var(--panel-in-dur) var(--panel-in-ease)}
-  .nav__brand>span,.navitem__label{animation:rail-in var(--panel-in-dur) var(--panel-in-ease) both}
+  .nav{transition:width var(--rail-in-dur) var(--rail-in-ease),
+    padding-inline var(--rail-in-dur) var(--rail-in-ease)}
+  .app.rail-collapsed .nav{transition-duration:var(--rail-out-dur);
+    transition-timing-function:var(--rail-out-ease)}
+  .app:not(.rail-collapsed) .nav__brand>span,
+  .app:not(.rail-collapsed) .navitem__label{animation:rail-in var(--rail-in-dur) var(--ease) both}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(2) .navitem__label{animation-delay:calc(var(--rail-step) * 1)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(3) .navitem__label{animation-delay:calc(var(--rail-step) * 2)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(4) .navitem__label{animation-delay:calc(var(--rail-step) * 3)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(5) .navitem__label{animation-delay:calc(var(--rail-step) * 4)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(6) .navitem__label{animation-delay:calc(var(--rail-step) * 5)}
+  /* the profile row is last in the column, so it lands last */
+  .app:not(.rail-collapsed) .nav__foot .navitem__label{animation-delay:calc(var(--rail-step) * 6)}
 }
 @keyframes rail-in{from{opacity:0}to{opacity:1}}
 
@@ -1767,7 +1804,7 @@ html.native .intro{padding-top:var(--safe-t)}
 </script>
 <div id="root"></div>
 <script>
-const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":9},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
+const BRAND = {"name":{"en":"Ride Share","ar":"رايد شير"},"tagline":{"en":"Share the ride. One fixed price.","ar":"شارك الرحلة. سعر ثابت."},"description":"Shared rides on fixed routes at a fixed price.","version":{"name":"0.1.0","code":10},"font":{"family":"\"Cairo\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans Arabic\", sans-serif","weight":750,"note":"Text runs in Cairo for Arabic (self-hosted, variable 200-1000, Arabic ranges only, so Latin keeps the system stack and the brand's letterforms); --brand-font-display, composed at build time from assets/fonts/fonts.json, adds the masthead face to the poster's display roles."},"logo":{"viewBox":"0 0 24 24","path":"M10.6223 3.90741c-1.20712-1.20714-3.09489-1.23486-4.30929-.02046-.41495.41495-.71699.96417-.84122 1.55432-.59015.12423-1.13937.42627-1.55432.84122-1.2144 1.2144-1.18669 3.10218.02046 4.30931.96862.9686 2.37548 1.1779 3.52103.5953l1.47896 1.3553c-.05911.3509-.08406.7078-.07998 1.0623.01453 1.26.39197 2.5758 1.00914 3.7262.13522.252.37182.4341.65002.5002.2782.0661.5714.0099.8055-.1543.5376-.3772.9988-.4969 1.3707-.4979.3764-.0009.7303.1199 1.0473.3317.5919.3956.8671 1.1024.4524 2.0481-.1383.3154-.1045.6799.0894.9646.1939.2847.5207.4495.8649.4362 1.437-.0553 2.7584-.8034 3.8989-1.9439 1.1842-1.1842 1.7637-2.5978 1.6758-4.071-.0866-1.4527-.8131-2.8268-1.9736-3.9873-1.1796-1.17955-2.7171-1.95508-4.2554-2.16837-.5785-.08021-1.1679-.08125-1.7413.01127l-1.5065-1.42739c.548-1.13519.3301-2.5124-.6229-3.4654Zm.0919 5.71744L9.2479 8.23554c-.19592-.18563-.30849-.44256-.31213-.71243-.00363-.26987.10196-.52975.29281-.72059.41457-.41457.42454-1.03588-.02046-1.48089-.44501-.44501-1.06633-.43503-1.4809-.02046-.26525.26524-.35944.64193-.30022.89134.08017.33765-.02045.69273-.26584.93813-.2454.2454-.60048.34602-.93813.26584-.24941-.05922-.6261.03498-.89135.30022-.41457.41457-.42455 1.03589.02046 1.4809.44501.44501 1.06633.43503 1.4809.02046.37853-.37854.98803-.39183 1.38271-.03016l1.5307 1.4027c.11824-.1603.24972-.314.39525-.4595.1813-.1813.3728-.34306.5725-.48625Z","color":{"light":"#0A0A0A","dark":"#F2F2F2"}},"browserThemeColor":{"light":"#FFFFFF","dark":"#0A0A0A"},"email":{"fromName":"Ride Share","colors":{"primary":"#0A0A0A","primaryDark":"#000000","accent":"#0A0A0A","ink":"#0A0A0A","muted":"#767676","cardBg":"#FFFFFF","pageBg":"#EFEFEF","line":"#DEDEDE"}},"download":{"path":"/download/android","apk":"ride-share.apk","release":{"note":"Where the installer actually lives. apps/web/server.js redirects DL_PATH here when no APK is staged next to it, and ci.yml publishes the debug build to this tag - so the QR and the button on the landing page point at the site, while the bytes come from the release. Only the tag and the repo move if that ever changes.","repository":"Ahmed-Sleem/ride-share","tag":"android-debug"}},"palette":{"note":"The four values that both planes need: apps/web defines them as --bg-base/--text-primary/--text-secondary/--line (light: ink-0/ink-900/ink-600/ink-200), and apps/mobile/offline.html cannot read that stylesheet, so build.js injects them. A guard in apps/web/tests/unit.test.js holds the stylesheet to these numbers, which is the whole point: neither side may drift.","light":{"paper":"#FFFFFF","ink":"#0A0A0A","muted":"#5C5C5C","hairline":"#DEDEDE"},"dark":{"paper":"#0A0A0A","ink":"#F2F2F2","muted":"#B8B8B8","hairline":"#262626"}}};
 
 (function(){
 /**
@@ -10956,9 +10993,36 @@ function railToggle(){
   return $("button",{class:"rail-toggle",
     attrs:{type:"button", "aria-pressed":String(collapsed),
       "aria-label": collapsed ? t("expandMenu") : t("collapseMenu")},
-    on:{click:()=>{ S.rail = collapsed ? "open" : "collapsed";
-                    storeSet("rs.rail", S.rail); render(); }}},
+    on:{click:foldRail}},
     icon(collapsed ? "fwd" : "back"));
+}
+/* Folding the rail is a look, not a navigation: it changes one class on .app. It used to
+   call render(), and render() rebuilds the shell from scratch — a newly created .nav has no
+   previous width, so the width transition in the sheet could never fire and the rail snapped
+   144 px sideways while a 280ms fade tried to cover for it. Mutating in place is the whole
+   fix; the spring is only visible because of it. If the shell is ever restructured so the
+   rail cannot be found, fall back to a render: a stale look beats a broken one.
+   The three things render() would have updated are updated here, in the same order:
+   the class, the control's own state, and the tooltips — a title belongs to an icon-only
+   rail and to nothing else, so it is set on the way in and dropped on the way out. */
+function foldRail(){
+  const app = document.querySelector(".app");
+  if(!app){ render(); return; }
+  const open = app.classList.contains("rail-collapsed");   // the state we are moving TO
+  S.rail = open ? "open" : "collapsed";
+  storeSet("rs.rail", S.rail);
+  app.classList.toggle("rail-collapsed", !open);
+  const tg = document.querySelector(".rail-toggle");
+  if(tg){
+    tg.setAttribute("aria-pressed", String(!open));
+    tg.setAttribute("aria-label", t(open ? "collapseMenu" : "expandMenu"));
+    tg.replaceChildren(icon(open ? "back" : "fwd"));
+  }
+  document.querySelectorAll(".navitem:not(.compact-only)").forEach((b)=>{
+    const lab = b.querySelector(".navitem__label");
+    if(!lab) return;
+    if(open) b.removeAttribute("title"); else b.setAttribute("title", lab.textContent || "");
+  });
 }
 function navItem(p, extra){
   const label=t("nav."+p.k);

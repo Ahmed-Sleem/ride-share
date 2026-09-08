@@ -316,6 +316,14 @@ untouched until the owner signs the look off.
   Either widen Railway's trigger for the `mobile` service, or keep the standing habit of landing a mobile-side file with GUI work. The build log
   line from 17b is the cheapest such file to touch honestly — see APP_GUI.md §18.
 
+- [x] **D-8.23** Round 18 — the rail's travel is reachable from its own control and rides a measured spring. `foldRail()` mutates in place
+  (no `render()`); the open is 470 ms at damping ratio 0.65 (+6.7% overshoot) on `width`/`padding-inline` only, the labels ride `--ease`
+  opacity staggered 22 ms with the profile last, and the fold-away is 190 ms with no overshoot. Measured on the click path: 1 distinct width
+  before, 28 after, peak 225.6 px settling on 216 px; under `reduce`, 2 widths (it simply is). Unit 770 / layout 11877 / breaks 128 → ✓ all green.
+- [x] **D-8.24** `run_break` now reports `MISSED-BUILD` instead of `MISSED` when the mutation does not compile, and every new case names the
+  assertion that actually *sees* the mutation. Both came from a genuine false miss this round: `build.js` refuses to write a bundle it cannot
+  parse, so the harness judged yesterday's artifact and a guard looked weak. Proved with a throwaway case, then deleted; the file stays byte-clean.
+
 - [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
   all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.

@@ -185,6 +185,29 @@ __FONT_FACES__
      every animation, so an entrance written with these tokens needs no gate. */
   --panel-in-dur:280ms; --panel-in-ease:cubic-bezier(.2,.8,.2,1);
   --panel-in-step:28ms;     /* how far behind the previous row the next one arrives */
+  /* The rail is the one thing in the app that moves something BIG, and it needs its own
+     motion, not the menu's. The owner's verdict on round 17: "it tranversls but very fast
+     very harsh not elegant and not bouncy". These are a damped-spring step response, damping
+     ratio 0.65, sampled at 23 points: 63% of the way inside a quarter of the time (so it
+     leaves quickly, which is what keeps a control feeling responsive) and it runs 6.7% PAST
+     the open width before settling back at 470ms — the overshoot is the bounce.
+     Material's split is the rule being followed: a SPATIAL change (size, position) may
+     overshoot; an EFFECT (opacity, colour) must never, because a bounce in alpha reads as a
+     flash. So --rail-in-ease drives width and padding alone. Folding away is not a moment to
+     celebrate: shorter, no overshoot, accelerating out. */
+  --rail-in-dur:470ms; --rail-in-ease:cubic-bezier(.34,1.42,.64,1);
+  --rail-out-dur:190ms; --rail-out-ease:cubic-bezier(.3,0,.8,.15);
+  --rail-step:22ms;         /* each label lands a beat after the one above it */
+}
+
+/* cubic-bezier can overshoot once; linear() can hold a real decaying oscillation. Declare
+   the spring where it is understood and leave the bezier as the answer for an older Android
+   System WebView (the curve is supported from Chrome/WebView 113) — as an @supports block
+   rather than a second declaration, because a var() is not resolved when the engine checks
+   syntax, so the duplicate-declaration trick silently keeps the fallback. Look it up in the
+   sheet with "regenerate" — the numbers come from the oscillator, never from taste. */
+@supports (animation-timing-function:linear(0, 1)){
+  :root{--rail-in-ease:linear(0, 0.041, 0.142, 0.276, 0.422, 0.564, 0.693, 0.803, 0.892, 0.960, 1.009, 1.041, 1.059, 1.067, 1.067, 1.062, 1.054, 1.044, 1.034, 1.025, 1.017, 1.010, 1);}
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1358,17 +1381,31 @@ html.native .intro{padding-top:var(--safe-t)}
 }
 @keyframes landingslide{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 
-/* The desktop rail folds to icons and opens again. It used to switch with no transition
-   at all — the whole column snapped 144 px sideways in one frame, which is the harshest
-   thing on the surface and the one the owner named. It now travels on the same duration
-   and curve the landing menu already uses, so opening a rail and opening a menu feel like
-   the same app; the labels fade in a beat behind it rather than appearing in a space that
-   is not there yet. Everything lives in this one media query, so a reduced-motion reader
-   gets a rail that simply is or is not — the same promise the rest of the sheet makes. */
+/* The desktop rail folds to icons and opens again.
+   Round 17 gave it the landing menu's timing and the owner called it harsh; measuring the
+   click path found the real reason it felt like nothing at all: the toggle called render(),
+   render() rebuilt the shell, and a brand-new .nav has no previous width to transition FROM
+   — the travel was in the sheet and unreachable from the only control that triggers it.
+   app.js now flips the class in place, so what is written here is what happens: the divider
+   rides the spring (overshoot and settle), the labels ride opacity only and start from
+   `display:none`, which is what lets the fade replay on every open without a re-render —
+   the animation is bound to the STATE, not to the node being created. Each row lands a beat
+   after the one above it, the same trick the landing menu uses. Everything lives inside this
+   one media query, so a reduced-motion reader gets a rail that simply is or is not. */
 @media (prefers-reduced-motion:no-preference) and (min-width:600px){
-  .nav{transition:width var(--panel-in-dur) var(--panel-in-ease),
-    padding-inline var(--panel-in-dur) var(--panel-in-ease)}
-  .nav__brand>span,.navitem__label{animation:rail-in var(--panel-in-dur) var(--panel-in-ease) both}
+  .nav{transition:width var(--rail-in-dur) var(--rail-in-ease),
+    padding-inline var(--rail-in-dur) var(--rail-in-ease)}
+  .app.rail-collapsed .nav{transition-duration:var(--rail-out-dur);
+    transition-timing-function:var(--rail-out-ease)}
+  .app:not(.rail-collapsed) .nav__brand>span,
+  .app:not(.rail-collapsed) .navitem__label{animation:rail-in var(--rail-in-dur) var(--ease) both}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(2) .navitem__label{animation-delay:calc(var(--rail-step) * 1)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(3) .navitem__label{animation-delay:calc(var(--rail-step) * 2)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(4) .navitem__label{animation-delay:calc(var(--rail-step) * 3)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(5) .navitem__label{animation-delay:calc(var(--rail-step) * 4)}
+  .app:not(.rail-collapsed) .nav__items .navitem:nth-child(6) .navitem__label{animation-delay:calc(var(--rail-step) * 5)}
+  /* the profile row is last in the column, so it lands last */
+  .app:not(.rail-collapsed) .nav__foot .navitem__label{animation-delay:calc(var(--rail-step) * 6)}
 }
 @keyframes rail-in{from{opacity:0}to{opacity:1}}
 

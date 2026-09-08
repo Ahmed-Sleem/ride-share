@@ -1,3 +1,45 @@
+## 2026-09-08 — round 18: the rail's travel became reachable at all, and it rides a spring
+
+Round 17 gave the desktop rail `transition:width` and the owner's verdict after using it was: *"the side menu, it tranversls but very fast very
+harsh not elegant and not bouncy"*. Measuring the **click** path explained why it felt like nothing: `render()` rebuilds the shell, so the
+`.nav` that existed a frame earlier is discarded and the new one is *created* at its final width — a transition needs one element with two
+values, and there was only ever one value. Same instrument, before and after: round 17 **1 distinct width** in 900 ms of frames; round 18
+**28**, from 72 px to a peak of 225.6 px, ending on 216 px. So `railToggle()` no longer renders: `foldRail()` flips one class on `.app`,
+updates the button's `aria-pressed`/`aria-label`/icon and the tooltips, and falls back to `render()` only if there is no shell to fold.
+
+The curve is then a real spring rather than a borrowed menu easing. Sampled from the damped-oscillator step response at damping ratio 0.65
+(`ω` chosen so it settles inside 0.5% at 470 ms): 63% of the travel inside a quarter of the time, +6.7% past the open width, one rebound,
+rest. Material's own split is what made the choices decidable — a **spatial** change (a size) may overshoot; an **effect** (opacity, colour)
+must never, because a bounce in alpha reads as a flash. So `--rail-in-ease` (a `linear()` curve inside `@supports`, with a `cubic-bezier`
+declared *first* for an Android System WebView older than 113) drives `width`/`padding-inline` only, while the labels ride `--ease` and stay
+opacity-only, staggered 22 ms apart with the profile row landing last. Folding away is not a moment to celebrate: `--rail-out-dur:190ms`,
+no overshoot, accelerating out. Under `prefers-reduced-motion:reduce` the whole block does not match, and the rail simply *is* (2 distinct
+widths, measured).
+
+Two harness findings, both from a MISSED that looked like a weak guard and was not:
+
+1. **A break case must name the assertion that detects the mutation, not the one closest to the topic.** "the fold-away rides the spring too"
+   deleted a rule and expected `it takes a spring's time to arrive and none to leave` to fail — that assertion reads the *tokens*, which the
+   deletion left standing. Pointed at the assertion that reads the rule, the same case is CAUGHT.
+2. **A mutation that does not compile proves nothing.** `build.js` refuses to write a bundle it cannot parse, so `run_break` was testing
+   yesterday's artifact and reporting a miss. `run_break` now fails the case as `MISSED-BUILD` (proved with a throwaway, then deleted) —
+   and this round it caught my own unbalanced `}` twice, in two different files. CI is green on all 124 cases today, which is what makes the
+   stricter accounting safe: a case whose build fails would already have been MISSED.
+
+version.code 9 → 10, and `apps/mobile/scripts/build.js` gained a real reason to be in the push: it now refuses to publish an OTA artifact
+whose CSS or HTML reaches a third-party origin through `url()`, `<link rel=stylesheet>` or `<script src>` — a phone in a tunnel gets a blank
+screen from that, and CI never sees it because CI has a network. Proven by injecting a CDN `@font-face` into the sheet (build exits 1, naming
+the pattern) and restoring it. `apps/mobile` 35/35 with that test pinned (config 14), mutation-proven by weakening one pattern's `https?:`
+anchor, which turns the suite red.
+
+Guards moved with the change: unit 770 (the rail group is now behavioural — the same `.nav` node must survive the click, storage is asserted
+with a recording stand-in because jsdom has no storage area for an opaque-origin document — plus the spring's overshoot bounded to 4-15%, the
+`@supports`-ordering requirement, and `linear(0,` counted on declarations only so the `@supports` test itself is not off-by-one), layout
+11877 (both directions measured on one element by flipping the class, with the fade read in the state that shows it), breaks 128 cases.
+`RS_SKIP_BREAKS=1 bash apps/web/verify.sh` → ✓ all green; `node build.js` on a damaged sheet had earlier produced
+"Could not parse CSS stylesheet" in jsdom, which is the same lesson one layer up: an artifact is not a source file, so rebuild before
+believing a suite that reads the build.
+
 ## 2026-09-08 — round 17b: the owner rejected the fade, and the simpler thing the app already had won
 
 Round 17 gave both horizontal bars a two-layer edge — a hairline plus a 14 px `--edge-scrim` fade, per theme, deepening while the page was

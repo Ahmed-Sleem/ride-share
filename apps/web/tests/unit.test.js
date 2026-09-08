@@ -2737,10 +2737,11 @@ group("THE RAIL TRAVELS AND THE PAGE TELLS THE BAR (round 17)");
   const noPref=CSS.slice(CSS.indexOf("@media (prefers-reduced-motion:no-preference) and (min-width:600px){"));
   ok("the travel exists inside the motion guard, not outside it",
      noPref.length>40 && /@media \(prefers-reduced-motion:no-preference\) and \(min-width:600px\)\{/.test(CSS));
-  ok("it rides the landing menu's timing, so the app has one feel",
-     /transition:width var\(--panel-in-dur\) var\(--panel-in-ease\)/.test(noPref));
+  ok("the rail's travel rides its OWN spring, not the landing menu's borrowed curve",
+     /transition:width var\(--rail-in-dur\) var\(--rail-in-ease\)/.test(noPref)
+     && !/transition:width var\(--panel-in-dur\)/.test(noPref));
   ok("the labels arrive a beat behind the space they need",
-     /\.nav__brand>span,\.navitem__label\{animation:rail-in var\(--panel-in-dur\) var\(--panel-in-ease\) both\}/.test(noPref));
+     /\.app:not\(\.rail-collapsed\) \.nav__brand>span,\s*\.app:not\(\.rail-collapsed\) \.navitem__label\{animation:rail-in var\(--rail-in-dur\) var\(--ease\) both\}/.test(noPref));
   ok("a reduced-motion reader gets no width transition at all", !/transition:/.test(rule(".nav")||""));
 
   const t=boot(); t.go("rider","home");
@@ -2754,4 +2755,93 @@ group("THE RAIL TRAVELS AND THE PAGE TELLS THE BAR (round 17)");
   ok("it comes back on, so this is a listener and not a one-shot", main.classList.contains("is-rolled"));
   ok("the flag sits on the scroller, never on the bar",
      !!main && !t.q(".topbar").classList.contains("is-rolled") && main.contains(t.q(".topbar")));
+}
+
+group("THE RAIL FOLDS IN PLACE, AND THE SPRING IS A MEASURED ONE (round 18)");
+{
+  /* Round 17 wrote a transition and a guard that measured it by setting the class from the
+     test — which passed, while the only button that folds the rail called render(), rebuilt
+     the shell, and handed the browser a .nav with no previous width to leave from. So the
+     rule here is behavioural: click the thing, then prove the NODE survived. A transition is
+     a difference between two paints of one element; if the element is new there is no
+     difference to animate, however correct the sheet reads. */
+  const t=boot(); t.go("rider","home");
+  /* Persistence is proven with a recording stand-in, not by reading window.localStorage:
+     jsdom gives an opaque-origin document no storage area and its getter throws a
+     DOMException, which the app's own try/catch swallows — so a bare read here would pass on
+     a bug and fail on a fix. The app resolves `localStorage` off the global at call time, so
+     shadowing it before the click is enough to see the write. */
+  const seen={};
+  Object.defineProperty(t.w,"localStorage",{configurable:true,value:{
+    setItem:(k,v)=>{seen[k]=String(v);}, getItem:(k)=>seen[k]??null,
+    removeItem:(k)=>{delete seen[k];}}});
+  const app=t.q(".app"), nav=t.q(".nav"), main=t.q(".main"), tg=t.q(".rail-toggle");
+  ok("the rail starts folded, as the owner requires", !!app && app.classList.contains("rail-collapsed"));
+  tg.click();
+  ok("one click opens it", t.w.S.rail==="open" && !t.q(".app").classList.contains("rail-collapsed"));
+  ok("the .nav itself is the same node, so it has a previous width to transition from",
+     t.q(".nav")===nav);
+  ok("…and the fold did not rebuild the page under it either", t.q(".main")===main && t.q(".app")===app);
+  ok("the control states its own state, in both directions",
+     tg.getAttribute("aria-pressed")==="false" && /collapse/i.test(tg.getAttribute("aria-label")||""),
+     tg.getAttribute("aria-label"));
+  ok("the choice is stored under the key the next launch reads", seen["rs.rail"]==="open",
+     JSON.stringify(seen));
+  /* The same three nodes, three clicks later: an element that survived a rebuild check
+     cannot be re-created by a tooltip pass either. Element.click() returns undefined, so the
+     click is a statement and the assertion only ever reads state. */
+  const items=[...t.d.querySelectorAll(".navitem:not(.compact-only)")];
+  tg.click();
+  ok("folding back to icons puts a tooltip on every one of them",
+     t.w.S.rail==="collapsed" && items.length>0 && items.every((b)=>b.hasAttribute("title")),
+     items.length+" items");
+  ok("…and the control's own words flip with it", tg.getAttribute("aria-pressed")==="true"
+     && /expand/i.test(tg.getAttribute("aria-label")||""), tg.getAttribute("aria-label"));
+  ok("…and the fold away is stored too, because a rail is a preference", seen["rs.rail"]==="collapsed",
+     JSON.stringify(seen));
+  tg.click();
+  ok("…and the tooltips are undone the moment the labels are back",
+     t.w.S.rail==="open" && items.every((b)=>!b.hasAttribute("title")));
+
+  /* render() does not rebuild synchronously: PageFx.armed() holds it behind the page curtain
+     and repaints a frame or two later. A node-identity check alone therefore survives a
+     regression, which is exactly how round 17's guard stayed green over a rail that never
+     travelled. So the wiring is pinned twice — the click target, and the absence of a rebuild
+     in the fold's own body (its single render() must be the guarded fallback). */
+  ok("the toggle's click handler is the fold, not a render",
+     /on:\{click:foldRail\}\}/.test(SRC), (SRC.match(/class:"rail-toggle"[\s\S]{0,220}/)||[""])[0].split("\n").slice(0,4).join(" ⏎ ").slice(0,150));
+  ok("the fold's body rebuilds only when there is no shell to fold", (()=>{
+     const i=SRC.indexOf("function foldRail()"); const body=SRC.slice(i, SRC.indexOf("function navItem"));
+     return i>0 && (body.match(/render\(\)/g)||[]).length===1 && /if\(!app\)\{ render\(\); return; \}/.test(body);
+   })(), "one render(), and it is the escape hatch");
+
+  const inDur=parseFloat((CSS.match(/--rail-in-dur:(\d+)ms/)||[0,0])[1]);
+  const outDur=parseFloat((CSS.match(/--rail-out-dur:(\d+)ms/)||[0,0])[1]);
+  ok("it takes a spring's time to arrive and none to leave",
+     inDur>=380 && inDur<=620 && outDur>0 && outDur<inDur, inDur+"ms in / "+outDur+"ms out");
+  ok("the travel is a sampled spring, and the bezier that mimics it is declared FIRST",
+     /--rail-in-ease:linear\(0, 0\.04/.test(CSS)
+     && CSS.indexOf("--rail-in-ease:cubic-bezier(")>0
+     && CSS.indexOf("--rail-in-ease:cubic-bezier(")<CSS.indexOf("@supports (animation-timing-function:linear(0, 1))"));
+  ok("it overshoots by a measurable fraction (4-15%), and lands exactly on 1", (()=>{
+     const v=(CSS.match(/--rail-in-ease:linear\(0, ([\d., ]+)\)/)||[,""])[1].split(",").map(Number);
+     const peak=Math.max(...v);
+     return v.length>14 && peak>1.03 && peak<1.15 && Math.abs(v[v.length-1]-1)<1e-9;
+   })(), "a bounce the owner can feel, a settle the layout can trust");
+  ok("and the quicker, non-overshooting exit is written on the folded state, not only in the tokens",
+     /\.app\.rail-collapsed \.nav\{transition-duration:var\(--rail-out-dur\);\s*transition-timing-function:var\(--rail-out-ease\)\}/.test(CSS));
+  ok("a bounce never rides on alpha — the fade is opacity and nothing else", (()=>{
+     const i=CSS.indexOf("@keyframes rail-in"); const kf=CSS.slice(i,i+120);
+     return i>0 && /from\{opacity:0\}to\{opacity:1\}/.test(kf) && !/transform/.test(kf);
+   })());
+  ok("the fade is bound to the STATE, so it replays on every fold without a rebuild",
+     !/^\s*\.nav__brand>span,\.navitem__label\{animation:/m.test(CSS));
+  ok("each row lands a beat after the one above, and the profile lands last",
+     (CSS.match(/animation-delay:calc\(var\(--rail-step\) \* \d\)/g)||[]).length===6,
+     String((CSS.match(/animation-delay:calc\(var\(--rail-step\) \* \d\)/g)||[]).length));
+  /* Counted on declarations: the @supports test itself spells linear(0, 1), and a guard that
+     counts it would be off by one forever. */
+  ok("the spring is the sheet's only multi-bounce curve, so it cannot leak into a hover",
+     (CSS.match(/--[\w-]+:linear\(0, /g)||[]).length===1,
+     String((CSS.match(/--[\w-]+:linear\(0, /g)||[]).length));
 }

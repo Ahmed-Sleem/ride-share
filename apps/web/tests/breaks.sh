@@ -35,8 +35,15 @@ run_break () {                       # name | file | sed-expr | expected-failing
   if cmp -s "$file" "$bak"; then
     echo "  BROKEN-BREAK  $name → edit did not change the file"
     FAIL=$((FAIL+1)); cp "$bak" "$file"; INFLIGHT=""; return
-  fi
-  node build.js >/dev/null 2>&1
+    fi
+    # A mutation that does not COMPILE is not a caught bug. build.js refuses to write a bundle
+    # it cannot parse, which leaves yesterday's artifact on disk — so the test then reads an
+    # un-mutated file and reports a clean pass, and the case looks like a weak guard when the real
+    # problem is a sed expression that produced broken source. Say so, and do not count it.
+    if ! node build.js >/dev/null 2>&1; then
+      echo "  MISSED-BUILD  $name → the edit does not compile; rewrite the mutation so it is valid"
+      FAIL=$((FAIL+1)); cp "$bak" "$file"; INFLIGHT=""; rm -f "$bak"; node build.js >/dev/null 2>&1; return
+    fi
   local out; out="$(node tests/unit.test.js 2>&1)"
   cp "$bak" "$file"; INFLIGHT=""; rm -f "$bak"; node build.js >/dev/null 2>&1
   local hit=""; IFS='|' read -ra WANT <<< "$expect"
@@ -50,7 +57,7 @@ run_break () {                       # name | file | sed-expr | expected-failing
     echo "$out" | grep FAIL | head -3 | sed 's/^/                /'
     FAIL=$((FAIL+1))
   fi
-}
+    }
 
 echo "=== BREAK TESTS ==="
 
@@ -608,8 +615,27 @@ run_break "the rail's travel escapes the motion guard" src/styles/shell.html \
   "the travel exists inside the motion guard, not outside it"
 
 run_break "the labels snap in instead of fading behind the space" src/styles/shell.html \
-  's|^  \.nav__brand>span,\.navitem__label{animation:rail-in.*|  /* no label fade */|' \
+    's|^  \.app:not(.rail-collapsed) \.navitem__label{animation:rail-in.*|  /* no label fade */|' \
   "the labels arrive a beat behind the space they need"
+# Round 18. In sed's BRE a literal ( ) { } needs NO backslash: a backslash-dot opens a capture
+# group and backslash-{ an interval, so an over-escaped pattern matches nothing and the case
+# silently proves nothing. BROKEN-BREAK is the harness telling you exactly that.
+run_break "the fold-away rides the spring too" src/styles/shell.html \
+    's|^  \.app\.rail-collapsed \.nav{transition-duration.*|  /* exit shares the entry */|' \
+    "and the quicker, non-overshooting exit is written on the folded state, not only in the tokens"
+
+run_break "the spring has no fallback for an old WebView" src/styles/shell.html \
+    's|--rail-in-ease:cubic-bezier(.34,1.42,.64,1);||' \
+    "the travel is a sampled spring, and the bezier that mimics it is declared FIRST"
+
+run_break "the labels all land in one frame" src/styles/shell.html \
+    's|animation-delay:calc(var(--rail-step) \* [0-9])|animation-delay:0ms|g' \
+    "each row lands a beat after the one above, and the profile lands last"
+
+run_break "the rail is rebuilt on fold, so no travel can fire" src/shell/app.js \
+    's|on:{click:foldRail}},|on:{click:()=>{S.rail=S.rail==="open"?"collapsed":"open";render();}}},|' \
+    "the toggle's click handler is the fold, not a render"
+
 
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

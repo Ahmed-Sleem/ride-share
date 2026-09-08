@@ -325,3 +325,34 @@ test("the installer ships a boot page, and OTA is the only path to the app's GUI
   assert.match(build, /app \$\{appHtml\.length\} bytes → dist\/www\/ \(OTA, versionCode \$\{BRAND\.version\.code\}\)/,
     "the OTA artifact's size and versionCode must be printed beside it");
 });
+
+test("the OTA artifact can paint with no network at all (a phone in a tunnel is the normal case)", () => {
+  const build = fs.readFileSync(path.join(ROOT, "apps/mobile/scripts/build.js"), "utf8");
+  // Three shapes make a page wait on someone else's server before it can draw anything: a font
+  // or image in url(), a stylesheet link, a script src. On a laptop with a network each one is
+  // invisible; on a phone in a tunnel the page is blank, and no CI job ever sees it. So the
+  // generator screens the bytes it publishes, and this test screens the screen.
+  const m = build.match(/const RENDER_BLOCKING = \[([\s\S]*?)\];/);
+  assert.ok(m, "build.js must declare RENDER_BLOCKING — the OTA artifact is the app, offline");
+  for (const shape of ["url", "stylesheet", "script"]) {
+    assert.ok(m[1].includes(shape), `the screen must cover ${shape}`);
+  }
+  // Each shape is only dangerous because it names an absolute origin; a pattern that lost its
+  // protocol would still look like a guard and screen nothing.
+  assert.equal((m[1].match(/https\?:/g) || []).length, 3,
+    "all three render-blocking shapes must be anchored on a protocol");
+  assert.ok(/if \(leaks\.length\) \{[\s\S]{0,400}process\.exit\(1\)/.test(build),
+    "a leak has to stop the build, not just be mentioned");
+  const at = build.indexOf("const RENDER_BLOCKING");
+  const wrote = build.indexOf('fs.writeFileSync(path.join(dist, "www", "index.html")');
+  assert.ok(at > 0 && at < wrote, "the check must run BEFORE the artifact is written");
+
+  // And the real thing, whenever the app has actually been built in this checkout.
+  const ota = path.join(ROOT, "apps/mobile/dist/www/index.html");
+  if (fs.existsSync(ota)) {
+    const bytes = fs.readFileSync(ota, "utf8");
+    for (const re of [/url\(\s*["']?https?:\/\//i, /<link[^>]+rel=["']?stylesheet["']?[^>]+href=["']?https?:/i, /<script[^>]+src=["']?https?:/i]) {
+      assert.ok(!re.test(bytes), `the published OTA artifact still reaches out: ${re}`);
+    }
+  }
+});

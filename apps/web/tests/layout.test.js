@@ -356,7 +356,11 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
       await page.setViewport({width:1280,height:800,deviceScaleFactor:1});
       await page.goto(FILE,{waitUntil:"load"});
       await page.evaluate(()=>{ S.view="app"; S.authed=true; S.role="rider"; S.page="home";
-        S.stack=[]; S.sheet=null; S.opsView=null; render(); });
+        S.stack=[]; S.sheet=null; S.opsView=null;
+        /* The fade is bound to the open state (that is what lets it replay on a fold), so the
+           measurement has to be taken in the state where it exists. The rail defaults to
+           folded, exactly as the owner asked. */
+        S.rail="open"; render(); });
       return await page.evaluate(()=>{
         const nav=document.querySelector(".nav"), head=document.querySelector(".topbar");
         const main=document.querySelector(".main");
@@ -364,7 +368,14 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
            hair above nothing (Chrome reports 0.00001s), so the predicate is "not a
            travel", never "== 0". And the edge is matched on the whole function name: a
            truncated probe string once made a passing edge look like a failing one here. */
-        return {dur:parseFloat(getComputedStyle(nav).transitionDuration)||0,
+        const dur=parseFloat(getComputedStyle(nav).transitionDuration)||0;
+        /* Same element, class flipped, measured again: the fold-away must be quicker and
+           must NOT overshoot. Read on one node, so it is the cascade being measured and not
+           a second page load. */
+        const app=nav.closest(".app"); app.classList.add("rail-collapsed");
+        const durOut=parseFloat(getComputedStyle(nav).transitionDuration)||0;
+        app.classList.remove("rail-collapsed");
+        return {dur,durOut,
           label:getComputedStyle(document.querySelector(".navitem__label")).animationName,
           /* The edge is a border now, and a border is not motion: it must be there in both
              modes when content is under the bar. Its ARRIVAL is the motion, so the
@@ -379,10 +390,15 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
     };
     const lively=await railDur("no-preference");
     ok("the rail travels when motion is welcome", lively.dur>0.05, String(lively.dur)+"s");
+    ok("â€¦on a spring long enough to see it settle, not a blink", lively.dur>0.35, String(lively.dur)+"s");
+    ok("â€¦and leaving is quicker than arriving, which is what stops a bounce feeling like a delay",
+       lively.durOut>0 && lively.durOut<lively.dur*0.6,
+       `${lively.dur}s in vs ${lively.durOut}s out`);
     ok("â€¦and the labels fade in", lively.label==="rail-in", lively.label);
     const calm=await railDur("reduce");
     ok("reduced motion leaves the rail no travel", calm.dur<0.01, String(calm.dur)+"s");
-    ok("reduced motion takes the label fade back too", calm.label==="none", calm.label);
+    ok("â€¦in either direction, and it takes the label fade back too",
+       calm.durOut<0.01 && calm.label==="none", `${calm.durOut}s | ${calm.label}`);
     ok("the line is not motion, so it is painted in both modes",
        !!lively.line&&!!calm.line&&lively.line.w==="1px"&&calm.line.w==="1px"&&
        lively.line.col===calm.line.col&&!/rgba\(0, 0, 0, 0\)/.test(calm.line.col),
