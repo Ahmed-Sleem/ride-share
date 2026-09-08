@@ -36,6 +36,13 @@ hashes" was never a proof this repo could produce. What is true, and now written
 (cert `59B0BF70…C27583`), and *one build*'s bytes are verifiable three ways over (live `/download/android` == the blob that job committed == the
 sha in that job's log).
 
+**One of my own claims corrected while checking this.** In round 20 I told you runs `34186705399` (`f50f374`) and `34187433105` (`ae3b3ee`)
+were "all green". That was wrong in its last word: both had `Break-detection (guards must fail on purpose)` finish as **cancelled**, because the next push
+killed it (`concurrency: cancel-in-progress`). Verified job by job just now: `f50f374` = Verify ✓, Verify GUI ✓, Verify database ✓, images ✓, installer ✓,
+AAB ✓, Break-detection cancelled; `ae3b3ee` the same shape. Nothing is broken by that — the suites that ran are the ones that matter for those diffs, and
+the mobile break battery is a separate script — but "green CI" must mean *every job*, and it did not. The rule that comes out of it: after a push, re-poll
+the run and read the **job list**, never the run badge; and do not call a round closed while its longest job is still in flight.
+
 **Untouched, deliberately:** `apps/web`'s GUI, `packages/brand`, `apps/mobile/capacitor.config.json`, the OTA contract, the permission model
 (the owner's standing instruction — the dialog comes from Capacitor and works), and the task-3 brief (not re-sent while task 2 is in flight).
 Still with the owner: pull `/home/user/keystore/` + `/home/user/KEYSTORE-NOTE.md` out of this sandbox, run

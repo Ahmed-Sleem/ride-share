@@ -241,6 +241,8 @@ untouched until the owner signs the look off.
   http, and plain http kills `crypto.subtle` on a non-localhost origin, which would have made the bundle's sha check silently unrunnable — the
   harness mints a throwaway cert per run instead. Polling stays outside the page, as the recipe demanded, because `mountBundle` does
   `document.open()/write()` and kills anything running inside; `waitUntil` is `domcontentloaded`, never `networkidle`, for the same reason.
+  CI note for the next reader: `verify-breaks` is the job most often cancelled by a following push, so a run can be "success on the badge,
+  cancelled on one job" — read the job list, not the badge.
   Verified by breaking it, four ways (D-8.2 [2]): mis-baked origin (the G-114 class) reddens two checks; serving the OTA app page instead of the
   boot page passes the positive check and fails the negative — which is the whole argument for keeping the negative control; an always-failing sha
   comparison (a valid bundle rejected) reddens the suite; and the type bug the test itself found (`opacity "0"` vs `0`) is now coerced in
