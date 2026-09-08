@@ -493,3 +493,67 @@ test("the OTA artifact can paint with no network at all (a phone in a tunnel is 
     }
   }
 });
+
+/* ── round 20: the release-signing patch, which had never run once ──────────────────────
+   A bash heredoc keeps the Python script's own indentation, and this script's body is indented by two
+   spaces to match the `if` around it — so the first execution of the signed path, on the day the
+   keystore secrets finally existed, died with `IndentationError: unexpected indent` (CI job
+   101934922253). Nothing in CI or in this suite had ever run those lines. They are now a file, and the
+   file is executed here against the real @capacitor/cli template. */
+test("the release signing config is written into the generated build.gradle (D-8.18)", () => {
+  const { execFileSync } = require("node:child_process");
+  const os = require("node:os");
+  const script = path.join(ROOT, "apps/mobile/scripts/apply-release-signing.py");
+  const TEMPLATE = `apply plugin: 'com.android.application'\n\nandroid {\n    namespace = "com.getcapacitor.app"\n    compileSdk = rootProject.ext.compileSdkVersion\n    defaultConfig {\n        applicationId "com.getcapacitor.app"\n        versionCode 1\n    }\n    buildTypes {\n        release {\n            minifyEnabled false\n            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'\n        }\n    }\n}\n\ndependencies {\n    implementation project(':capacitor-android')\n}\n`;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rs-sign-"));
+  const gradle = path.join(tmp, "build.gradle");
+  const props = path.join(tmp, "keystore.properties");
+  fs.writeFileSync(gradle, TEMPLATE);
+  fs.writeFileSync(props, "storeFile=/tmp/upload.jks\nstorePassword=s3cret-pass\nkeyAlias=rideshare\nkeyPassword=s3cret-pass\n");
+  const run = () => execFileSync("python3", [script, gradle, props], { encoding: "utf8" });
+  try {
+    const out = run();
+    assert.match(out, /patched/, "the patch must say what it did, not sit silent");
+    const text = fs.readFileSync(gradle, "utf8");
+    assert.match(text, /signingConfigs \{\n\s*release \{/, "a release signingConfig must exist inside android {}");
+    assert.equal(text.split("signingConfig signingConfigs.release").length - 1, 1, "exactly one attach to buildTypes.release");
+    assert.ok(text.indexOf("signingConfigs") < text.indexOf("buildTypes"), "signingConfigs must be declared before it is referenced");
+    assert.ok(text.includes(props), "the gradle side reads the properties file the shell script wrote (never a password inline)");
+    assert.ok(!/storePassword\s*=\s*['"][^'"]{4,}['"]/.test(text), "no secret may be baked into a gradle file");
+    assert.equal((text.match(/\{/g) || []).length, (text.match(/\}/g) || []).length, "braces must balance — an unbalanced gradle file is a red build three steps later");
+    assert.match(text, /rsHasReleaseKey/, "and a build with no keystore must skip signing rather than fail at configuration time");
+    // idempotent, and honest about being a no-op
+    const first = text;
+    assert.match(run(), /already wired/, "a re-run must report, not restack a second block");
+    assert.equal(fs.readFileSync(gradle, "utf8"), first, "a re-run must write no bytes");
+    // a project without the anchors fails the build instead of shipping an unsigned "release"
+    fs.writeFileSync(gradle, "apply plugin: 'com.android.application'\n");
+    let failed = false;
+    try { run(); } catch (_) { failed = true; }
+    assert.ok(failed, "no `android {` / `buildTypes {` must be a failure, not a silent pass");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+/* The escape hatch that makes the release path reachable without a keystore. `make-release.sh` used to
+   print the gradle plan only AFTER deciding to patch build.gradle, so CI could not smoke the release
+   branch on demand and the untested code stayed untested until a secret existed. */
+test("the release pipeline can be run for real, dry, with secrets present (P7.6)", () => {
+  const { execFileSync } = require("node:child_process");
+  const out = execFileSync("bash", ["apps/mobile/scripts/make-release.sh"], {
+    cwd: path.join(ROOT), encoding: "utf8",
+    env: Object.assign({}, process.env, {
+      RS_PREP_DRY: "1", ANDROID_KEYSTORE_BASE64: "eA==", ANDROID_KEYSTORE_PASSWORD: "p",
+      ANDROID_KEY_ALIAS: "rideshare", ANDROID_KEY_PASSWORD: "p",
+    }),
+  });
+  assert.match(out, /gradle: bundleRelease assembleRelease/);
+  assert.match(out, /SIGNED=planned/, "with the four secrets set, the dry run must report the signed path it would take");
+  assert.match(out, /prep: system bars/, "and the dry run must cover the shared prep, so no step can hide behind --dry");
+  const bare = execFileSync("bash", ["apps/mobile/scripts/make-release.sh"], {
+    cwd: path.join(ROOT), encoding: "utf8",
+    env: Object.assign({}, process.env, { RS_PREP_DRY: "1", ANDROID_KEYSTORE_BASE64: "", ANDROID_KEYSTORE_PASSWORD: "", ANDROID_KEY_ALIAS: "", ANDROID_KEY_PASSWORD: "" }),
+  });
+  assert.match(bare, /SIGNED=0/, "without them it must say unsigned, exactly as the landing page's notice claims");
+});

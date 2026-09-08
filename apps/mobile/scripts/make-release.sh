@@ -18,6 +18,15 @@ cd "$ROOT"
 
 bash "$ROOT/apps/mobile/scripts/prepare-android.sh"
 
+# Print the step plan and stop, before any Gradle file is touched. This is what lets CI run the release
+# pipeline on demand without a keystore, and it is why a whole class of "unreachable until a secret
+# exists" bug (the IndentationError above) can be made reachable by a test instead.
+if [ "${RS_PREP_DRY:-0}" = "1" ]; then
+  echo "gradle: bundleRelease assembleRelease"
+  [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && echo "SIGNED=planned" || echo "SIGNED=0"
+  exit 0
+fi
+
 SIGNED=0
 WORKDIR="$(mktemp -d)"
 cleanup() { rm -rf "$WORKDIR"; }
@@ -35,47 +44,15 @@ storePassword=$ANDROID_KEYSTORE_PASSWORD
 keyAlias=$ANDROID_KEY_ALIAS
 keyPassword=$ANDROID_KEY_PASSWORD
 EOF
-  # Inject a signingConfigs.release block if Capacitor's template has none.
   APPG="apps/mobile/android/app/build.gradle"
-  if ! grep -q "signingConfigs" "$APPG"; then
-    python3 - "$APPG" "$WORKDIR/keystore.properties" <<'PY'
-import sys
-path, props = sys.argv[1], sys.argv[2]
-text = open(path, encoding="utf-8").read()
-block = f'''
-    def ks = new File("{props}")
-    if (ks.exists()) {{
-        def p = new Properties()
-        ks.withInputStream {{ p.load(it) }}
-        signingConfigs {{
-            release {{
-                storeFile file(p["storeFile"])
-                storePassword p["storePassword"]
-                keyAlias p["keyAlias"]
-                keyPassword p["keyPassword"]
-            }}
-        }}
-    }}
-'''
-    text = text.replace("android {", "android {" + block, 1)
-    if "signingConfig signingConfigs.release" not in text:
-        text = text.replace(
-            "release {",
-            "release {\n            if (signingConfigs.findByName('release') != null) signingConfig signingConfigs.release",
-            1,
-        )
-    open(path, "w", encoding="utf-8").write(text)
-PY
-  fi
+  # The Gradle patch is a FILE, not a heredoc, and that is load-bearing: see the header of
+  # scripts/apply-release-signing.py. A bash <<'PY' heredoc keeps the script's own indentation, so the
+  # inline version died on `IndentationError: unexpected indent` the first time the release path was
+  # ever run (CI job 101934922253, 2026-09-08 — with the keystore secrets present at last).
+  python3 "$ROOT/apps/mobile/scripts/apply-release-signing.py" "$APPG" "$WORKDIR/keystore.properties"
   SIGNED=1
 else
   echo "unsigned: ANDROID_KEYSTORE_* secrets not set — Play will not accept this build" >&2
-fi
-
-if [ "${RS_PREP_DRY:-0}" = "1" ]; then
-  echo "gradle: bundleRelease assembleRelease"
-  echo "SIGNED=$SIGNED"
-  exit 0
 fi
 
 cd apps/mobile/android

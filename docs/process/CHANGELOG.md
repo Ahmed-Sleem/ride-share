@@ -44,6 +44,19 @@ the item, because the next person to run this check will hit the same two traps 
 returns an error body with no `token` key). What no sandbox can prove is persistence across a redeploy; that stays with the value's location, not
 with the endpoint.
 
+**The first signed build could not run at all, and the bug predated this round.** Run 34186113553: `Verify (repo + api + web unit)`, `Verify database` and both
+container images green; `Android installer (signed when the keystore exists)` and `Android Play AAB` **red** — `make-release.sh`'s inline gradle patch, written as
+`python3 - <<PY`, raised `IndentationError: unexpected indent` (job 101934922253, log line 1548), because bash preserves a heredoc body's indentation and the body
+was indented two spaces to sit inside an `if`. Nothing had ever reached those lines: with no secrets, CI always took the debug branch, so the runs we had been
+citing as "the installer job is green" had not built a release binary once. Fixed structurally: the patch is now `apps/mobile/scripts/apply-release-signing.py`,
+a file a test can execute, and `RS_PREP_DRY=1` returns before any gradle surgery so the release pipeline can be smoked with no keystore at all. `config.test.js`
+(38 -> **40**) drives the real `@capacitor/cli` 8.5.1 `build.gradle` through it and asserts one attach, balanced braces, no baked password, idempotency and a loud
+failure when an anchor moves; three deliberate faults each reddened the test that names them — including one false mutation of mine, because `re.sub(count=0)`
+replaces *everything* rather than nothing, so the mutation had to be verified to mutate. Read this before the next "green means shipped": the round-20 prep scripts
+were proven by that same failed job's log (`apply-android-manifest: CAMERA inserted before <application>; permissions 7 -> 8`, the icons, the night splash, and
+`system bars: … transparent status/navigation bars, icons matched to #FFFFFF (day) / #0A0A0A (night)` all printed before the failure), so this round's changes are
+CI-verified even though the job was red. Recorded as `G-129` / `D-8.28`.
+
 ## 2026-09-08 — round 18: the rail's travel became reachable at all, and it rides a spring
 
 Round 17 gave the desktop rail `transition:width` and the owner's verdict after using it was: *"the side menu, it tranversls but very fast very

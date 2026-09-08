@@ -353,3 +353,13 @@ untouched until the owner signs the look off.
 - [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 22 boxes across the one-time signature migration (A),
   location permission incl. the Deny → Settings → retry path and the Approximate-only case (B), camera/QR (C), system bars in both system modes and the
   double-gap test that decides whether a native follow-up is owed (D), and the four regressions that must stay green (E). Read it, tick it, send the ✗ lines.
+- [x] **D-8.28** Round 20 — the first signed CI run failed, on code older than this round (`G-129`): `make-release.sh` patched `app/build.gradle` with an
+  inline `python3 - <<PY` heredoc whose body was indented to match the `if` around it, and bash preserves that indentation, so Python raised
+  `IndentationError: unexpected indent`. That branch had never executed — every previous build fell back to debug because the secrets did not exist, which
+  means the two CI runs cited as "the installer job is green" had never produced a release binary. Fixed structurally, not by patching the indent: the patch
+  is now `apps/mobile/scripts/apply-release-signing.py` (a file a test can execute) and `RS_PREP_DRY=1` returns **before** any gradle surgery, so the release
+  pipeline is smoke-testable without a keystore. `config.test.js` runs the real `@capacitor/cli` 8.5.1 template through the script and asserts structure, one
+  attach, balanced braces, no baked password, idempotency and a loud failure when an anchor moves — mobile 38 → **40**, and three mutations were each seen to
+  redden exactly the test that names them (pre-fix ordering; idempotency guard removed; the `buildTypes` anchor made unreachable). One honest near-miss in my
+  own method: `re.sub(..., count=0)` replaces **everything**, so my first "mutation" of that line proved nothing until I broke the anchor itself — a mutation
+  must be verified to mutate. Standing rule: **an `if` that no secret has ever satisfied is untested code.**
