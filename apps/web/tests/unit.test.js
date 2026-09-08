@@ -2695,7 +2695,7 @@ group("MAP — EditRouteMap exists; SearchMap can render with no stops");
   ok("EditRouteMap is exported", typeof t.w.EditRouteMap === "function");
 }
 
-group("THE BAR IS THE TOP OF THE PAGE AND HAS AN EDGE (round 17)");
+group("THE BAR IS THE TOP OF THE PAGE AND HAS AN EDGE (round 17, edge redone in 17b)");
 {
   /* The look is measured in the browser (layout.test.js 5b). What is pinned here is the
      reason it stays that way: the air is a token the head wears, the edge is one recipe
@@ -2708,23 +2708,26 @@ group("THE BAR IS THE TOP OF THE PAGE AND HAS AN EDGE (round 17)");
      /\+ var\(--safe-t\)/.test(head||""));
   ok("no gutter floats the head off the top at the widths that used to have one",
      !/\.main\{padding:var\(--s4\)\}/.test(CSS) && /\.main\{padding:0 var\(--s4\) var\(--s4\)\}/.test(CSS));
-  ok("the edge is one recipe, shared by the head and the bottom menu",
-     /\.topbar::after,\.nav::before\{/.test(CSS));
-  ok("fade plus hairline, and the hairline is a token",
-     /linear-gradient\(to bottom,var\(--edge-scrim\),transparent\)/.test(CSS) &&
-     /box-shadow:inset 0 1px 0 var\(--line\)/.test(CSS));
-  ok("the fade is declared per theme, so it is not invisible on ink",
-     /--edge-scrim:rgba\(10,10,10,/.test(CSS) && /--edge-scrim:rgba\(255,255,255,/.test(CSS));
-  ok("a fade is not a control", /\.topbar::after,\.nav::before\{[^}]*pointer-events:none/.test(CSS));
-  ok("a plain head (a sheet, a dock) does not sprout one", /\.topbar--plain::after\{display:none\}/.test(CSS));
+  ok("the head's edge IS the bottom menu's edge: 1px, var(--line), nothing else",
+     /border-bottom:1px solid transparent/.test(head||"") &&
+     /\.main\.is-rolled \.topbar\{border-bottom-color:var\(--line\)\}/.test(CSS), head);
+  ok("at rest the page opens with no rule under the title",
+     /border-bottom:1px solid transparent/.test(head||""));
+  ok("the line is reserved while invisible, so a sticky bar never shifts the page a pixel",
+     /border-bottom:1px solid transparent/.test(head||"") && !/border-bottom:0/.test(head||""));
+  ok("the treatment the owner rejected stays out of the sheet",
+     !/--edge-/.test(CSS) && !/\.topbar::after/.test(CSS) && !/\.nav::before/.test(CSS));
+  ok("a plain head (a sheet, a dock) takes no line at all", /\.topbar--plain\{border-bottom:0\}/.test(CSS));
   {
     const compact=CSS.slice(CSS.indexOf("/* compact: bottom bar */"));
-    ok("the bottom menu gave its own 1px rule to the shared edge",
-       !/border-top:1px solid var\(--line\)/.test(compact.slice(0,900)));
-    ok("and keeps the same fade, mirrored", /\.nav::before\{[^}]*to top,var\(--edge-scrim\)/.test(compact));
+    ok("the bottom menu keeps its always-on line", /border-top:1px solid var\(--line\)/.test(compact.slice(0,400)));
+    const medium=CSS.slice(CSS.indexOf("/* medium and up: side rail */"));
+    ok("and the rail keeps its own inline edge, untouched by either round",
+       /\.nav\{flex-direction:column;border-inline-end:1px solid var\(--line\)/.test(medium));
   }
-  ok("the deeper state answers to the page, not to a standing decoration",
-     /\.main\.is-rolled \.topbar::after\{/.test(CSS));
+  ok("the line's arrival is motion, so it lives inside the reduced-motion guard",
+     /@media \(prefers-reduced-motion:no-preference\)\{\s*\.topbar\{transition:border-bottom-color var\(--fast\) var\(--ease\)\}/.test(CSS)
+     && !/transition:/.test(head||""));
   ok("the page's entrance cannot lift the bar off the top",
      /\.main__inner>\.topbar\{animation:none\}/.test(CSS));
 }

@@ -173,4 +173,11 @@ const meta = {
   builtAt: new Date().toISOString(),
 };
 fs.writeFileSync(path.join(dist, "meta.json"), JSON.stringify(meta, null, 2) + "\n");
-console.log(`mobile: boot ${boot.length} bytes → www/ (live ${origin})`);
+console.log(
+  /* Both sizes on one line, because they decide what a device can see: the APK carries only
+     the boot page, and the app a tester actually reads is the OTA artifact. "Why is my change
+     not in the app?" was answered this round by unzipping a published binary; this line
+     answers it from a build log, and it names the versionCode that is the only lever. */
+  `mobile: boot ${boot.length} bytes → www/ (live ${origin})` +
+  ` | app ${appHtml.length} bytes → dist/www/ (OTA, versionCode ${BRAND.version.code})`,
+);

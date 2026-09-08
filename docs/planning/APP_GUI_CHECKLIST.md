@@ -300,6 +300,17 @@ untouched until the owner signs the look off.
   `breaks.sh` cases all CAUGHT. `version.code` → 8 so the bundle inside installed apps changes through OTA.
   **Still open, and not a CSS fix:** `G-124` — the native status-bar band in the installed app needs edge-to-edge on the window
   (`apps/mobile`), i.e. a new binary, not a bundle.
+- [x] **D-8.21** Round 17b — the owner rejected 17's fade and named the fix: the bottom menu's plain 1px line, the same on the head, only while
+  content is under it. Done as ordered: `--edge-*` tokens and both pseudo-layers deleted, `.nav` back to `border-top:1px solid var(--line)`,
+  `.topbar` = `border-bottom:1px solid transparent` → `var(--line)` under `.main.is-rolled`, arrival transition inside the motion guard,
+  `--head-t/--head-b` and the flush top kept because those were praised. `version.code` 9. Guards rewritten in the same commit (unit 748,
+  layout 11875 with the line's colour asserted *equal* to the other bar's, 11 `breaks.sh` cases CAUGHT incl. one that re-adds a fade token to
+  prove the rejection is enforced), `apps/mobile` 34/34 incl. the build-log line that prints boot vs OTA bytes. See APP_GUI.md §16 rule 2 — the
+  research is recorded *and* overruled, so the next round neither repeats the fade nor thinks a gradient is a design decision.
+- [ ] **D-8.22** The push that changes app GUI must touch `apps/mobile/**` too, or the mobile service never redeploys and installed phones keep
+  the old bundle (measured: 3 pushes, `versionCode` stuck at 7 for ~30 min, then 8 within ~60 s of a push touching `apps/mobile/tests/`).
+  Either widen Railway's trigger for the `mobile` service, or keep the standing habit of landing a mobile-side file with GUI work. The build log
+  line from 17b is the cheapest such file to touch honestly — see APP_GUI.md §18.
 
 - [x] **D-8.17** Exec bits are now part of the gate: `scripts/check-exec-bits.sh` (in `verify-repo.sh`'s standard set) asserts every shebang'd `*.sh`
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for

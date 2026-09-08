@@ -1,3 +1,36 @@
+## 2026-09-08 — round 17b: the owner rejected the fade, and the simpler thing the app already had won
+
+Round 17 gave both horizontal bars a two-layer edge — a hairline plus a 14 px `--edge-scrim` fade, per theme, deepening while the page was
+scrolled — after reading Material 3's `scrolledUnderElevation` and iOS 26's scroll edge effect. The owner's verdict after using it:
+*"the size of the top bar now fixed and have no gaps and very pretty, but the edges is very very bad, revert to the older simple line edge
+of the bottom menu, and use the same in the top menu, and make it only visible on scroll when some content get under the top menu only."*
+The bar's size and the flush top were kept; the edge was torn out.
+
+Now: the bottom menu has its original `border-top:1px solid var(--line)` back, exactly as it shipped for the whole renewal. The head carries
+the same rule as `border-bottom:1px solid var(--line)` **only while `.main.is-rolled`**, i.e. only once the page has started sliding under it —
+at rest `border-bottom:1px solid transparent`, so the page opens with no rule under the title at all. The width is reserved rather than added
+on purpose: a border appearing on the first scroll event is a 1 px shift of a sticky element sitting on top of content that just moved, and
+measuring it (`.main__inner` flex column, `air under title 17 px` in both states) is how that was known rather than hoped. `.topbar--plain`
+(sheet and dock heads) keeps `border-bottom:0`, so a head that overlaps something it does not scroll never grows a line. `--edge-h`,
+`--edge-scrim`, both `::after`/`::before` layers, the theme-declared fade and the deepening gradient are **deleted**, and one guard exists to
+keep them deleted: `the treatment the owner rejected stays out of the sheet`, with a `breaks.sh` case that reintroduces a single edge token
+and must go red. The only motion left is the line's own arrival, `transition:border-bottom-color var(--fast) var(--ease)`, inside
+`prefers-reduced-motion:no-preference`; measured 390→1280 the settled colour equals the other bar's (`rgb(222,222,222)` = `var(--line)`,
+which the layout suite now asserts as an *equality* with the bottom menu's top line on a phone and the rail's inline line at ≥600 — "use the
+same" is only testable that way), and under `reduce` it is the same colour with `1e-05s`.
+
+`version.code` 8 → **9**. `apps/mobile/scripts/build.js` prints `boot 100466 bytes → www/ | app 1123682 bytes → dist/www/ (OTA,
+versionCode 9)`, because the size question it answers ("is my change even in the binary?") should not require unzipping a published APK;
+that change also deliberately touches `apps/mobile/**`, since the mobile service's Railway trigger is path-filtered and an `apps/web`-only
+push leaves every installed phone on the old GUI.
+
+Three mistakes of mine came out of doing it, all caught by the harness rather than by me: four `run_break` patterns and then two more were
+written with `\{` and `\(--line\)` — in sed's BRE those are an interval start and a capture group, so the edits silently changed nothing and
+`BROKEN-BREAK` reported it (`literal parens are not escaped` is now the rule for this file); two layout assertions read `getComputedStyle`
+immediately after toggling `is-rolled` and so measured the *transition in flight* rather than the rule, fixed by suppressing the transition
+for the measurement only; and a first rescue of the reverted sandbox HEAD almost committed stale `apps/web/**` copies over CI's newer
+installer, which the per-file `cmp` against `origin/main` caught.
+
 ## 2026-09-08 — round 17: the app's bar became a bar (owner's three complaints, measured first)
 
 The owner used the app and the webapp after login and named three things. Each was measured before it was touched, because two of the three

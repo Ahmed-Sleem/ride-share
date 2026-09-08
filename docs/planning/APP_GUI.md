@@ -441,11 +441,17 @@ Three rules came out of renewing the app's top bar, and they belong here because
 1. **A bar's air is its own tokens.** `--head-t` / `--head-b` are worn by `.topbar`, and the status-bar inset is *added* to the top
    (`calc(var(--head-t) + var(--safe-t))`) rather than replacing it. A bar with no bottom padding has its title touching the edge of
    itself, which is what "thin" means when someone says a bar is thin.
-2. **An edge is a hairline plus a short fade, drawn outside the box.** `.topbar::after` and `.nav::before` are one recipe in two
-   directions (`--edge-h`, `--edge-scrim` per theme, `box-shadow:inset` for the line), so the top bar and the bottom menu cannot drift
-   apart, and so no measured height changes. Depth is *earned*: `.main.is-rolled` (set by `Motion.scrollEdge`) deepens the fade only
-   while content passes under the bar — the same judgement Material 3 makes with `scrolledUnderElevation` and iOS makes with the scroll
-   edge effect. Chrome at rest is a line; the moment the page moves, it is a surface.
+2. **An edge is one hairline, and the head's is earned by the scroll.** Round 17 shipped a hairline *plus* a 14 px fade, drawn by
+   `.topbar::after`/`.nav::before` with `--edge-h`/`--edge-scrim` per theme (the Material 3 `scrolledUnderElevation` / iOS 26 scroll-edge
+   family). **The owner tried it and rejected it: "the edges is very very bad, revert to the older simple line edge of the bottom menu,
+   use the same in the top menu, and make it only visible on scroll."** So round 17b deleted the fade and both tokens, gave the bottom
+   menu back its own `border-top:1px solid var(--line)`, and gave the head that same line as `border-bottom:1px solid transparent`
+   painted to `var(--line)` only while `.main.is-rolled` (set by `Motion.scrollEdge`).
+   Two things are worth keeping from the episode. The **width is reserved, not added**: a border that appears on the first scroll event
+   would move the sticky bar's content by 1 px at the exact moment the page is moving. And the rejection is now a guard —
+   `the treatment the owner rejected stays out of the sheet` asserts no `--edge-` token and no bar pseudo-element exists, with a
+   `breaks.sh` case that puts one token back to prove the guard bites. Research earns its place by surviving contact with the owner;
+   where it doesn't, the simpler thing the app already had was the design.
 3. **Entrance motion belongs to the page, not to its chrome.** `.main__inner>*{animation:pagein}` with `.main__inner>.topbar{animation:none}`:
    a sticky bar caught in its own `translateY(8px)` is a gap above the bar for the length of the animation, and it will not show up in a
    source read at all — only in a measured frame.
@@ -465,3 +471,12 @@ the OTA fetch, with no `.topbar` and no `--s2` in it. The 1.1 MB built page the 
 * a service that has not redeployed serves a stale GUI forever — the mobile service kept serving the round-16 bundle for 20+ minutes after the commit,
   while the web origin had the new page in ~90 s. If a tester reports "nothing changed", measure `/v1/mobile/update` before believing anything else;
 * the native band above the bar (`G-124`) is the one part that genuinely needs a new binary, because it is the window, not the page.
+
+## 18. Round 17b — what a GUI change has to pass through to reach a phone
+
+The owner's verdict on the edge arrived as a CSS-only change, and reaching a device still took four steps, each of which can silently
+stop it: `apps/web` build → `dist/index.html`; the mobile generator → `dist/www/index.html` + `dist/meta.json` (the OTA artifact and its
+`versionCode`); the **mobile** service redeploying — which it does only for pushes touching `apps/mobile/**`, so an `apps/web`-only push
+leaves devices on the old GUI indefinitely; and finally `brand.version.code` going up, because that is the only thing an installed app
+compares. `scripts/build.js` now prints `boot … bytes → www/ | app … bytes → dist/www/ (OTA, versionCode N)` so the first two are
+visible in any build log, and `config.test.js` guards that line.

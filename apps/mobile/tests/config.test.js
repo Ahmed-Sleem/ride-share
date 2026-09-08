@@ -316,6 +316,12 @@ test("the installer ships a boot page, and OTA is the only path to the app's GUI
 
   // The generator says which bytes went where, so `boot 100474` is visible in a build log
   // instead of having to be discovered by unzipping a published artifact.
-  assert.match(build, /console\.log\(`mobile: boot \$\{boot\.length\} bytes → www\//,
-    "the split between the boot page and the app bundle should be printed at build time");
+  // The generator prints both sizes on one line (round 17b), so each half is asserted on its
+  // own: the fact worth keeping is that a build log states what went into the APK and what is
+  // OTA-only. (This assertion is also why the log change needed a test change: the guard read
+  // the old `console.log(` + literal adjacency, refused my edit, and was right to.)
+  assert.match(build, /mobile: boot \$\{boot\.length\} bytes → www\//,
+    "the boot page's size must be printed at build time");
+  assert.match(build, /app \$\{appHtml\.length\} bytes → dist\/www\/ \(OTA, versionCode \$\{BRAND\.version\.code\}\)/,
+    "the OTA artifact's size and versionCode must be printed beside it");
 });

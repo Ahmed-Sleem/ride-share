@@ -577,21 +577,27 @@ run_break "the ≥1200 gutter above the bar comes back" src/styles/shell.html \
   's|  .main{padding:0 var(--s4) var(--s4)}|  .main{padding:var(--s4)}|' \
   "no gutter floats the head off the top at the widths that used to have one"
 
-run_break "the edge stops being one recipe for both bars" src/styles/shell.html \
-  's|^\.topbar::after,\.nav::before{|.topbar::after{|' \
-  "the edge is one recipe, shared by the head and the bottom menu"
+run_break "the head's line is painted at rest, not on scroll" src/styles/shell.html \
+  's|border-bottom:1px solid transparent|border-bottom:1px solid var(--line)|' \
+  "at rest the page opens with no rule under the title"
 
-run_break "the fade is only declared for light mode" src/styles/shell.html \
-  's|^  --edge-scrim:rgba(255,255,255,.10);||' \
-  "the fade is declared per theme, so it is not invisible on ink"
+run_break "the line stops being reserved, so the page jumps a pixel" src/styles/shell.html \
+  's|min-height:0;border-bottom:1px solid transparent;|min-height:0;|' \
+  "the line is reserved while invisible, so a sticky bar never shifts the page a pixel"
 
-run_break "the bottom menu's fade is un-mirrored" src/styles/shell.html \
-  's|    background:linear-gradient(to top,var(--edge-scrim),transparent);|    background:linear-gradient(to bottom,var(--edge-scrim),transparent);|' \
-  "and keeps the same fade, mirrored"
+run_break "the rolled line stops using the shared token" src/styles/shell.html \
+  's|\.main\.is-rolled \.topbar{border-bottom-color:var(--line)}|.main.is-rolled .topbar{border-bottom-color:#DEDEDE}|' \
+  "the head's edge IS the bottom menu's edge: 1px, var(--line), nothing else"
 
-run_break "the deeper state stops answering to the page" src/styles/shell.html \
-  's|^\.main\.is-rolled \.topbar::after{|.main .topbar::after{|' \
-  "the deeper state answers to the page, not to a standing decoration"
+run_break "the bottom menu loses the line the owner asked to copy" src/styles/shell.html \
+  's|^  \.nav{order:2;border-top:1px solid var(--line);|  .nav{order:2;|' \
+  "the bottom menu keeps its always-on line"
+
+# The rejected treatment must stay rejected: this case is the proof that the guard which
+# says so is not decorative — re-introducing a single edge token trips it.
+run_break "the fade the owner rejected creeps back into the sheet" src/styles/shell.html \
+  's|  --head-t:12px; --head-b:16px;|  --head-t:12px; --head-b:16px; --edge-scrim:rgba(10,10,10,.07);|' \
+  "the treatment the owner rejected stays out of the sheet"
 
 run_break "the page's entrance is allowed to lift the bar" src/styles/shell.html \
   's|^\.main__inner>\.topbar{animation:none}|.main__inner>.topbar{animation:pagein var(--med) var(--ease)}|' \

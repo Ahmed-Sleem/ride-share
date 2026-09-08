@@ -207,13 +207,11 @@ __FONT_FACES__
      material, so they share the token instead of restating a number. */
   --glass-blur:blur(20px) saturate(180%);
   --glass-line:rgba(10,10,10,.08);
-  /* THE BAR'S EDGE, one recipe for the whole shell: a hairline sitting exactly on the
-     border, plus a short fade away from it. `--edge-h` is how far the fade reaches and
-     `--edge-scrim` is its ink — declared per theme the way --line is, because a fade
-     that only shows on paper is a bug on ink. `--head-t`/`--head-b` are the bar's own
-     air: the top is added to the status-bar inset so the glass runs under the clock,
-     the bottom is the gutter under the title that makes a bar read as a bar. */
-  --edge-h:14px; --edge-scrim:rgba(10,10,10,.07);
+  /* The bar's own air: --head-t is added to the status-bar inset so the glass runs under
+     the clock, --head-b is the gutter under the title that makes a bar read as a bar. The
+     edge is NOT a token pair of its own — it is the same 1px var(--line) the bottom menu has
+     always used, which is why there is nothing here to declare (round 17b: the owner tried a
+     hairline-plus-fade treatment and rejected it; the line, and only the line, won). */
   --head-t:12px; --head-b:16px;
   --stage:var(--ink-900); --stage-line:rgba(255,255,255,.16);
   --grid-line:rgba(10,10,10,.05);
@@ -280,7 +278,6 @@ __FONT_FACES__
   --info:var(--blue-400); --info-bg:var(--blue-950);
   --offline:#B8B8B8;
   --line:#262626; --line-strong:#454545;
-  --edge-scrim:rgba(255,255,255,.10);
   --focus:var(--brand); --scrim:rgba(0,0,0,.66);
   --map-land:#111111; --map-water:#1F1F1F; --map-park:#0D0D0D;
   --map-road:#2E2E2E; --map-road-minor:#1A1A1A; --map-building:#242424;
@@ -345,7 +342,7 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 .topbar{flex:none;position:sticky;top:0;z-index:var(--z-sticky);
   display:grid;grid-template-columns:minmax(0,1fr);
   grid-template-rows:auto auto;row-gap:var(--s3);
-  align-items:center;min-height:0;border-bottom:0;
+  align-items:center;min-height:0;border-bottom:1px solid transparent;
   background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);
   backdrop-filter:var(--glass-blur);
   padding:calc(var(--head-t) + var(--safe-t)) 0 var(--head-b)}
@@ -374,27 +371,25 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
   text-wrap:balance;color:var(--ink);flex:none;min-width:0;overflow:visible;text-overflow:clip;
   white-space:normal}
 
-/* The edge itself. Both bars get the same two layers, drawn by a pseudo-element that
-   sits OUTSIDE the bar's box: the bar's own geometry — and therefore every number the
-   layout suite measures — is untouched, while the boundary stops being an all-or-nothing
-   1px cut. `pointer-events:none` because a fade is not a control.
-   The second state is the modern one: Material 3 raises `scrolledUnderElevation` and iOS
-   26's scroll edge effect both give a bar depth only when content passes beneath it, so
-   `.main.is-rolled` (set by Motion.scrollEdge) deepens the same fade rather than adding
-   a second decoration. At rest: a line. The moment the page moves: a surface. */
-.topbar::after,.nav::before{content:"";position:absolute;inset-inline:0;block-size:var(--edge-h);
-  pointer-events:none}
-.topbar::after{inset-block-start:100%;
-  background:linear-gradient(to bottom,var(--edge-scrim),transparent);
-  box-shadow:inset 0 1px 0 var(--line)}
-.main.is-rolled .topbar::after{background:
-  linear-gradient(to bottom,var(--edge-scrim),var(--edge-scrim) 40%,transparent)}
+/* THE HEAD'S EDGE — one line, and only when it is earned.
+   Round 17 tried hairline-plus-fade; round 17b is the owner's verdict: "the edges is very
+   very bad, revert to the older simple line edge of the bottom menu, use the same in the
+   top menu, and make it only visible on scroll". So the top bar draws exactly what the
+   bottom menu draws — 1px, `var(--line)`, no gradient, no second layer, no new token — and
+   it draws it only while content is actually passing under it: `.main.is-rolled`, set by
+   `Motion.scrollEdge`, is what brings it. At rest the page opens with no rule under the
+   title at all, which is the state the bar looked best in.
+   The width is reserved (`1px solid transparent`) rather than added, because a border that
+   appears on the first scroll event is a 1 px jump in a sticky element sitting on top of
+   the very content that just moved. */
+.main.is-rolled .topbar{border-bottom-color:var(--line)}
 @media (prefers-reduced-motion:no-preference){
-  .topbar::after{transition:background var(--fast) var(--ease)}
+  .topbar{transition:border-bottom-color var(--fast) var(--ease)}
 }
-/* A sheet or a dock that overlaps the head must not be softened over: the fade belongs
-   to the bar, and the bar is the thing under it. */
-.topbar--plain::after{display:none}
+/* A head that belongs to a sheet or a dock overlaps something it does not scroll, so it
+   takes no line at all — the width goes back to zero, and the rolled rule cannot bring it
+   because it only ever sets a colour. */
+.topbar--plain{border-bottom:0}
 
 /* ── search band: the first element of the page, scrolls with content ── */
 .searchband{width:100%}
@@ -449,18 +444,15 @@ button{background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
 /* compact: bottom bar */
 @media (max-width:599.98px){
   .app{flex-direction:column}
-  .nav{order:2;position:relative;
+  .nav{order:2;border-top:1px solid var(--line);
     padding:var(--s2) var(--s2) calc(var(--s2) + var(--safe-b))}
-  .nav::before{inset-block-end:100%;
-    background:linear-gradient(to top,var(--edge-scrim),transparent);
-    box-shadow:inset 0 -1px 0 var(--line)}
-  /* The bottom menu is the bar the owner likes, so the page head was brought to IT rather
-     than the other way round: the 1px rule it used to carry is drawn by the shared
-     `.nav::before` now, in the same place, with the same fade off it. `position:relative`
-     is only what a pseudo-element needs to anchor to, and it is only added where the fade
-     is wanted — the rail has its own edge on the inline side and keeps it untouched.
-     (Placed after the rules: the "bar is at the bottom" guard reads the head of this
-     block, and a comment that arrives first is a comment that moves a contract.) */
+  /* Exactly the rule it had before round 17, because the owner is right that it was already
+     the right edge: one hairline, `var(--line)`, always on. Always-on is correct HERE and
+     wrong on the top bar — the bottom bar sits at the end of the page, so its line is a
+     boundary with the shell's own edge, while the head's line is only meaningful once the
+     page has started sliding under it. That difference is the whole of round 17b.
+     (Placed after the rule on purpose: the "bar is at the bottom" guard reads the head of
+     this block, so a comment that arrives first is a comment that moves a contract.) */
   .appcol{order:1}
 }
 

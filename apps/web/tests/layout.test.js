@@ -117,10 +117,24 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
             title:box(q(".topbar__title")),
             /* The edge is a pseudo-element, so it can only be read from the rendered
                style â€” the whole reason this suite exists next to a text grep. */
-            edge:(()=>{ if(!top) return null; const c=getComputedStyle(top,"::after");
-              return {bg:c.backgroundImage, shadow:c.boxShadow, h:parseFloat(c.height)||0, pe:c.pointerEvents}; })(),
-            navEdge:(()=>{ if(!nav) return null; const c=getComputedStyle(nav,"::before");
-              return {bg:c.backgroundImage, h:parseFloat(c.height)||0}; })(),
+            edge:(()=>{ if(!top) return null; const c=getComputedStyle(top);
+              return {w:c.borderBottomWidth, col:c.borderBottomColor}; })(),
+            afterPseudo:top?getComputedStyle(top,"::after").backgroundImage:null,
+            navTop:(()=>{ if(!nav) return null; const c=getComputedStyle(nav);
+              return {w:c.borderTopWidth, col:c.borderTopColor}; })(),
+            navSide:(()=>{ if(!nav) return null; const c=getComputedStyle(nav);
+              return {w:c.borderInlineEndWidth, col:c.borderInlineEndColor}; })(),
+            /* The rolled state, read in the same pass so both halves describe one render.
+               The transition is switched off for the measurement: the colour is animated over
+               --fast, so a value sampled the instant the class lands is the OLD value, and the
+               assertion would be reading a frame of motion instead of a rule. */
+            rolled:(()=>{ if(!top||!main) return null;
+              const prev=top.style.transition; top.style.transition="none";
+              main.classList.add("is-rolled");
+              const c=getComputedStyle(top);
+              const out={w:c.borderBottomWidth, col:c.borderBottomColor};
+              main.classList.remove("is-rolled"); top.style.transition=prev;
+              return out; })(),
             navDur:nav?parseFloat(getComputedStyle(nav).transitionDuration)||0:null,
             navDisplay:nav?getComputedStyle(nav).flexDirection:null,
             labelShown:(()=>{ const l=q(".navitem__label");
@@ -137,6 +151,10 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
         }, role, pk);
 
         const id=`${vp.n} ${role}/${pk}`;
+        /* "Use the same edge as the bottom menu" is only testable as an equality: when the
+           head's line is on it must BE the line the bar at the other end of the shell already
+           draws â€” its top rule on a phone, its inline rule on a rail. */
+        const wantLine=m=>(vp.nav==="bar"?m.navTop:m.navSide)||{col:"",w:""};
 
         // 1. no horizontal page overflow, ever
         ok(`${id}: no horizontal overflow`,
@@ -197,21 +215,15 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
           ok(`${id}: and air above it, so the poster is not glued to the edge`,
              m.title.t-m.top.t>=10, `title.t=${m.title.t} head.t=${m.top.t}`);
         }
-        if(m.edge){
-          ok(`${id}: the bar's edge is a fade, not a hard cut`,
-             /gradient/.test(m.edge.bg), String(m.edge.bg).slice(0,28));
-          ok(`${id}: with a hairline exactly on the border`,
-             /inset/.test(m.edge.shadow)&&/1px/.test(m.edge.shadow), m.edge.shadow);
-          ok(`${id}: the fade is short and never over a tap`,
-             m.edge.h>=10&&m.edge.h<=24&&m.edge.pe==="none", `h=${m.edge.h} pe=${m.edge.pe}`);
+        if(m.edge && m.rolled){
+          ok(`${id}: the head carries no visible rule at rest`,
+             m.edge.w==="1px"&&/rgba\(0, 0, 0, 0\)|transparent/.test(m.edge.col), JSON.stringify(m.edge));
+          ok(`${id}: content under the head brings the other bar's exact line`,
+             m.rolled.w==="1px" && m.rolled.col===wantLine(m).col && wantLine(m).w==="1px",
+             `${m.rolled.col} vs ${JSON.stringify(wantLine(m))}`);
+          ok(`${id}: and the line is the only layer â€” no pseudo, no gradient left behind`,
+             !m.afterPseudo || m.afterPseudo==="none", String(m.afterPseudo).slice(0,26));
         }
-        if(vp.nav==="bar" && m.navEdge && m.edge)
-          ok(`${id}: the bottom menu and the head draw the same edge`,
-             /gradient/.test(m.navEdge.bg)&&m.navEdge.h===m.edge.h,
-             `nav.h=${m.navEdge.h} head.h=${m.edge.h}`);
-        if(vp.nav!=="bar" && m.navEdge)
-          ok(`${id}: the rail keeps its own inline edge and grows no top fade`,
-             m.navEdge.bg==="none", String(m.navEdge.bg).slice(0,24));
         if(m.navDur!=null && vp.nav!=="bar")
           ok(`${id}: the rail's width change is travelled, not snapped`,
              m.navDur>0, `transition-duration=${m.navDur}s`);
@@ -347,13 +359,22 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
         S.stack=[]; S.sheet=null; S.opsView=null; render(); });
       return await page.evaluate(()=>{
         const nav=document.querySelector(".nav"), head=document.querySelector(".topbar");
+        const main=document.querySelector(".main");
         /* Under `reduce` a engine does not set durations to zero â€” it rewrites them to a
            hair above nothing (Chrome reports 0.00001s), so the predicate is "not a
            travel", never "== 0". And the edge is matched on the whole function name: a
            truncated probe string once made a passing edge look like a failing one here. */
         return {dur:parseFloat(getComputedStyle(nav).transitionDuration)||0,
           label:getComputedStyle(document.querySelector(".navitem__label")).animationName,
-          barEdge:head?getComputedStyle(head,"::after").backgroundImage:""};
+          /* The edge is a border now, and a border is not motion: it must be there in both
+             modes when content is under the bar. Its ARRIVAL is the motion, so the
+             transition is suppressed to read the settled value in either mode. */
+          line:(()=>{ if(!head||!main) return null;
+            const prev=head.style.transition; head.style.transition="none";
+            main.classList.add("is-rolled");
+            const c=getComputedStyle(head);
+            const out={w:c.borderBottomWidth, col:c.borderBottomColor};
+            main.classList.remove("is-rolled"); head.style.transition=prev; return out; })()};
       });
     };
     const lively=await railDur("no-preference");
@@ -362,9 +383,10 @@ const ok=(n,c,d)=>{ if(c){pass++;} else {fail++;console.log("  FAIL  "+n+(d?"  â
     const calm=await railDur("reduce");
     ok("reduced motion leaves the rail no travel", calm.dur<0.01, String(calm.dur)+"s");
     ok("reduced motion takes the label fade back too", calm.label==="none", calm.label);
-    ok("the edge itself is not motion, so it survives either way",
-       /^linear-gradient/.test(lively.barEdge)&&/^linear-gradient/.test(calm.barEdge),
-       `${lively.barEdge.slice(0,18)} | ${calm.barEdge.slice(0,18)}`);
+    ok("the line is not motion, so it is painted in both modes",
+       !!lively.line&&!!calm.line&&lively.line.w==="1px"&&calm.line.w==="1px"&&
+       lively.line.col===calm.line.col&&!/rgba\(0, 0, 0, 0\)/.test(calm.line.col),
+       `${JSON.stringify(lively.line)} | ${JSON.stringify(calm.line)}`);
     await page.emulateMediaFeatures([]);
   }
 
