@@ -14,13 +14,5 @@
       "ride-shareweb-production.up.railway.app"
     ]
   },
-  "plugins": {
-    "SplashScreen": {
-      "launchAutoHide": true,
-      "backgroundColor": "#FFFFFF"
-    },
-    "StatusBar": {
-      "style": "DARK"
-    }
-  }
+  "plugins": {}
 }

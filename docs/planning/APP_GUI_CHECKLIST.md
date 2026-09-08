@@ -271,6 +271,7 @@ untouched until the owner signs the look off.
   out), but without it a restart invalidates every device token and a second instance refuses the first one's devices, so each install
   pays a re-enrolment round trip. `POST /v1/mobile/enroll` answers `key:"ephemeral"` while this is unset and `key:"configured"` after.
   A key shorter than 32 chars is refused as a key and reported as ephemeral, so a placeholder value cannot look like a finished job.
+  Still the owner's job (Railway has no token here), and one command: `openssl rand -hex 32` → Railway → the **mobile** service → Variables → `MOBILE_DEVICE_TOKEN_KEY` → deploy. Verify in 5 seconds without me: `curl -s -X POST https://ride-sharemobile-production.up.railway.app/v1/mobile/enroll -H 'content-type: application/json' -d '{}'` and read `key:"ephemeral"` → `"configured"`.
 - [ ] **D-8.18** Give the shipped installer a stable signature. Measured 2026-09-07: CI ships the `assembleDebug` output
   (`.github/workflows/ci.yml:168`), signed with `CN=Android Debug, O=Android, serial=01`, and **two builds of the same `versionCode 6`
   carry different public keys** (`b80a9062d671…` vs `49fc80d9de05…`) because nothing caches a debug keystore — so a phone that installed
@@ -286,7 +287,7 @@ untouched until the owner signs the look off.
   every run; `version.code` 6 → 7 because the binary changes. Proven by execution, not by reading the files: `RS_PREP_DRY=1` prints
   both variants' prep lists and `config.test.js` compares them — seen red two ways on purpose (manifest script stubbed to `exit 0` →
   `missing ACCESS_COARSE_LOCATION`; release prep skipping the icons step → `release prep diverged from debug prep`).
-  **Still waiting on the owner:** the keystore and the four secrets (chunk A2 of `NEXT_SESSIONS_ROADMAP.md`).
+  **A2 closed 2026-09-08 (round 20) — the agent did it, the owner approved the route.** `keytool` generated a fresh PKCS12 key (`RSA 2048`, alias `rideshare`, 10 000 days, valid to 2054-01-24), and all four secrets were written through the API (PUT `/actions/secrets/<NAME>`, `SealedBox` over the repo's own public key: 201/204 for each, `GET …/secrets` now lists exactly the four). Cert SHA-256 `59B0BF7055CCE2BC75CCACB9201F5E0D213540941FA891C88EB66957B3C27583` — CI's `Show the signing identity` step must print that same value on the first signed build; that is the check. The keystore itself is **not in the repo** (`.gitignore` already covers `*.jks`/`*.keystore`); a copy plus the two passwords live in the sandbox workspace, and GitHub holds the only durable copy, so **download it before anything else** — lose it and no future installer can upgrade onto the last one. One uninstall is still owed to the phone: debug-signed → release-signed cannot replace in place (D-8.27 item A1).
   Landed so far: CI ran the new job (renamed `Android installer (signed when the keystore exists)`) and committed **Installer v0.1.0 (7)**, still the debug variant as designed while the
   secrets are absent. It also exposed `G-123` (the night-splash lint failure), fixed in the same pass.
 - [x] **D-8.20** The app's top bar is a bar: flush to the top, its own air, and a modern edge (owner's round-17 notes, 2026-09-08).
@@ -328,3 +329,22 @@ untouched until the owner signs the look off.
   is `100755` **in the index**. This caught a real red — `verify-gui` failed on `./verify.sh: Permission denied` after a rehydrate staged mode 644 for
   all 23 scripts (G-118). Working rule for this environment: restore `core.fileMode false` before any `git add`, not only during recovery.
 
+- [x] **D-8.25** Round 20 — the permissions audit, measured instead of assumed (the owner asked "does the app ask the user first?"). Answer: yes, and it
+  already did. Four things were checked at the source, not from memory: (1) `apply-android-manifest.sh` declares the 4 location/service/notification
+  permissions and now `CAMERA` too; (2) `@capacitor/android` 8.5.1's own `BridgeWebChromeClient.onGeolocationPermissionsShowPrompt` **raises the Android
+  runtime dialog** for `ACCESS_COARSE_LOCATION`+`ACCESS_FINE_LOCATION` when the page calls `navigator.geolocation`, with an Android 12+ coarse-only
+  fallback — so no JS call and no `@capacitor/geolocation.requestPermissions()` is needed on this path; (3) `packages/platform/src/index.js` prefers the
+  native plugin and falls back to the web API, which is why **Chrome on Android asks too** (the owner saw it: *"the web worked bec it asked me before while
+  testing"*) — a browser permission, per origin, reset from the site-info icon; (4) `onPermissionRequest` maps `getUserMedia` → CAMERA / RECORD_AUDIO, which
+  is where G-127's missing `CAMERA` was hurting. What the audit found missing was not a prompt, it was two things the prompts touch: the camera permission
+  (G-127) and dead config that looked like a fix (G-126). No `apps/web` change was needed and none was made — `apps/web` tests read the built file, and this
+  round touches `apps/mobile` only.
+- [x] **D-8.26** Round 20 — G-124/G-126/G-127 landed as **one** prep-script commit, deliberately the last GUI-independent native change before the phone
+  checklist: `apply-android-system-bars.js` (new, in `prepare-android.sh` after the night splash so neither rewrites the other's file), `CAMERA` + MLKit
+  meta-data in `apply-android-manifest.sh`, and the empty `plugins: {}` in `apps/mobile/scripts/build.js`. The owner's architecture worry — "will the GUI become
+  hardcoded if we change it without updating?" — is answered by *what was not touched*: this script writes two colours and two icon flags and no length, no
+  font, no spacing. `--head-t`, `--safe-t: env(safe-area-inset-top)` and `viewport-fit=cover` stay in the sheet and keep arriving over the air. 38 mobile tests
+  green; all four new guards were shown red on purpose (drop the prep step, skip the night theme, re-add `StatusBar`, undeclare CAMERA) and green again.
+- [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 20 boxes across the one-time signature migration (A),
+  location permission incl. the Deny → Settings → retry path and the Approximate-only case (B), camera/QR (C), system bars in both system modes and the
+  double-gap test that decides whether a native follow-up is owed (D), and the four regressions that must stay green (E). Read it, tick it, send the ✗ lines.

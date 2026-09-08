@@ -38,5 +38,8 @@ step "android manifest: permissions + no app-data backup (G-122)" bash apps/mobi
 step "versionName/versionCode from brand.json (P7.6)" bash apps/mobile/scripts/apply-android-version.sh
 step "adaptive icons from brand.json" bash apps/mobile/scripts/apply-android-icons.sh
 step "night splash from brand.json" node apps/mobile/scripts/apply-android-night-splash.js
+# After the night splash on purpose: that script creates values-night/styles.xml, and this one adds the
+# system-bar items into the same style in both folders, so neither writes over the other's file.
+step "system bars from brand.json (G-124, G-126)" node apps/mobile/scripts/apply-android-system-bars.js
 
 [ "${RS_PREP_DRY:-0}" = "1" ] || echo "prep: done"

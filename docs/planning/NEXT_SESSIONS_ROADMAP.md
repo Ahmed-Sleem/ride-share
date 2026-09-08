@@ -15,10 +15,10 @@ and nothing is scheduled because it is easy.
 | chunk | what | who | done means |
 | --- | --- | --- | --- |
 | **A1** ✅ | Signing infrastructure: one prep for both installer variants, CI picks the variant, manifest hardened, version 7 | agent | pushed in round 14; `config.test.js` compares the two prep lists and was seen red both ways |
-| **A2** | The keystore + four secrets, then the signed installer ships | **owner**, then agent verifies | see "A2, the only step that needs a keyboard you own" below |
+| **A2** ✅ | The keystore + four secrets, then the signed installer ships | **agent did it** (round 20, owner's approval), agent verifies the first signed build | four secrets set through the API; the next CI run's `Show the signing identity` step must print cert SHA-256 `59B0BF70…C27583`. Owner's half: download the keystore copy out of the sandbox, and expect **one** uninstall on any phone holding a debug build |
 | **B** | Prove the signature is stable: two consecutive builds, same pubkey | agent | `apksigner --print-certs` (or the fallback parser in the `apk` job) prints the same key hash on run N and N+1; `cmp` the live `/download/android` bytes against the repo blob; release notes stop saying "debug" |
 | **C** ✅ (agent part) | `G-120`: a key too short to be a secret is ignored, and three two-process tests make the whole class visible | owner sets one Railway var (`D-8.19`) | `MOBILE_DEVICE_TOKEN_KEY` set; a test that spawns **two** servers proves a token from A is refused on B **only** when the key differs, and accepted when both read the env key — `config.test.js`+`server.test.js` prove it: 15/15, and each fault was introduced on purpose and reddened the test that names it |
-| **D** ◐ | `apps/web` polish list (the standing parallel track) — **round 17 took the bar first**: D-8.20 (flush top, `--head-t`/`--head-b` air, shared edge, rail travel) landed with 22 unit + 9× per-viewport layout guards and 10 break cases | agent | one component library: `Section()`, `mkActions`, map primitives shared with the app; no visual regression (`layout` + `landing` suites), and the duplication guard stays green |
+| **D** ◐ | `apps/web` polish list (the standing parallel track). Round 17 took the bar (D-8.20), 17b replaced its fade with the plain 1 px line the owner asked for (D-8.21), round 18 made the rail's travel reachable from its own button and put a measured spring under it (D-8.23/D-8.24, unit 770 · layout 11877 · breaks 128, live at `versionCode` 10), round 20 closed the permissions question (D-8.25) and the native bars (D-8.26) without touching `apps/web` | agent | one component library: `Section()`, `mkActions`, map primitives shared with the app; no visual regression (`layout` + `landing` suites), and the duplication guard stays green |
 | **E** | `D-8.11`: promote the boot harness into CI | agent | a CI job boots the **built** page against the **deployed** mobile service and fails when the first screen is the offline splash; recipe in `~/.vtest/BOOT_HARNESS.md` |
 | **F** | `D-8.15`: the real-phone pass, then `G-041` (real rides) | owner runs, agent scripts | cold start offline → honest card; online → splash → app → enrol 200 → sign-in → booking round-trip; then the money path unblocks |
 | **G** | Legal and data: `G-002`, `G-006`, `G-017`, `G-041`, `G-003`, `G-007` | owner + legal, agent drafts | a privacy policy and ToS that name the real processing, a retention rule per table, and the store listing's data-safety form |
@@ -27,7 +27,15 @@ Everything the owner decides goes through an MCQ; the open ones are recorded in
 `docs/decisions/OPEN_ITEMS.md` (enrol window `MOBILE_ENROL_WINDOW_MS`, the store-vs-sideload
 announcement, and the % for `G-041`).
 
-## A2, the only step that needs a keyboard you own
+## A2, the only step that needs a keyboard you own — **done by the agent, round 20**
+
+> What actually happened: the owner asked whether I could do it myself and said not to worry about security. I could, so I did. `keytool`
+> was in the sandbox, the repo token is admin, and GitHub's `PUT /actions/secrets/<NAME>` (libsodium sealed box over the repo's own public key —
+> decode `key` **once**, `SealedBox` is what Actions expects, `Box` returns 422) accepted all four. The commands below stay here as the record of
+> what was run and as the procedure for re-minting a key, since the sandbox is not a vault: the durable copy of `upload.p12` is GitHub's secret
+> plus the file handed to the owner. Keystore: alias `rideshare`, RSA 2048, PKCS12, valid to 2054-01-24, cert SHA-256
+> `59B0BF7055CCE2BC75CCACB9201F5E0D213540941FA891C88EB66957B3C27583`.
+
 Run this **once**, on your own machine, and never commit the output. Losing the keystore means an
 updated app cannot be installed over the old one — so keep a copy somewhere it survives a laptop.
 
@@ -56,11 +64,17 @@ without a separate step. If you would rather not keep a keystore at all, say so 
 who already has the debug installer must uninstall it once. That is Android refusing to let a
 different key replace an app, and it is the thing A2 exists to prevent from happening again.
 
-**Round 17 (2026-09-08)** — the owner ran the app and the webapp and asked for three GUI fixes; all three are in `main` with
-`version.code` 8 so an installed phone takes them through OTA (`/v1/mobile/update`). The one part CSS cannot reach is recorded as
-`G-124` (the native status-bar band: needs edge-to-edge on the window, therefore a new binary). `ONBOARDING_TASK_2.md` was handed to
-the second developer the same day — **the app's map is written but the map SDK is never loaded**, which is why no map shows anywhere;
-that task is the fastest route to the functionality the owner is missing.
+**Rounds 17 → 20 (2026-09-08)** — the GUI track closed and the delivery question got answered with measurements: 17 shipped the bar
+(flush top, its own air), 17b swapped the fade for the plain line the owner named, 18 gave the rail a spring that is actually reachable from
+its own button (**1 → 28** distinct widths on the click path), all live at `versionCode` 10 with the advertised sha equal to the served bytes and
+the installer blob equal to the repo's. 20 answered *"what about permissions?"*: the OS raises the location prompt for us — Capacitor's
+`BridgeWebChromeClient` on the app side, the browser's own prompt on the web side (which is what the owner saw while testing) — and what was
+missing was `CAMERA` (G-127), the manifest of a plugin that ships none, plus two **inert** `plugins` blocks (G-126). `G-124` was fixed at the only
+level it exists, the generated theme, and stays out of the web layer on purpose: the installer decides the bars' colours, the page decides every
+pixel inside them, so a GUI change still needs no binary. `apps/mobile/android/` is still generated at build time and never committed.
+Still open, in order: **D-8.19** (one Railway var, the owner's), **chunk B** (prove two consecutive signed builds share a key), **D-8.27**
+(the phone checklist, 20 boxes), **chunk E** (boot harness in CI), and the `G-128` background-location decision before a Play release.
+`ONBOARDING_TASK_2.md` (the map, second developer) is in flight; `ONBOARDING_TASK_3.md` (notifications inbox) is written and waiting for it.
 
 ## Superseded
 The "Session 2 candidates" list that used to sit here (product questions, screen inventory, config

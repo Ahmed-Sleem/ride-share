@@ -160,13 +160,17 @@ const cfg = {
       webOrigin.replace(/^https?:\/\//, ""),
     ].filter(Boolean))],
   },
-  plugins: {
-    SplashScreen: {
-      launchAutoHide: true,
-      backgroundColor: BRAND.browserThemeColor.light,
-    },
-    StatusBar: { style: "DARK" },
-  },
+  /* G-126 — this object is empty on purpose, and it stays empty unless a plugin that reads it is
+     installed. Two blocks used to live here (`SplashScreen { launchAutoHide, backgroundColor }` and
+     `StatusBar { style }`); Capacitor reads `plugins` at exactly one call site, CapConfig#getPluginConfig,
+     which only ever asks for the id of a loaded plugin, and `grep -ril splash` over @capacitor/android
+     8.5.1's java sources returns nothing — so both were inert. The splash a tester actually sees is the
+     activity theme (AppTheme.NoActionBarLaunch -> @drawable/splash, plus values-night), painted by
+     scripts/apply-android-night-splash.js and scripts/apply-android-system-bars.js from
+     packages/brand/brand.json. That is also why a "#FFFFFF" that agreed with daylight but not with ink
+     sat here unchallenged: a dead config block looks like a fix. apps/mobile/tests/config.test.js now
+     refuses any plugins key whose package is not a declared dependency, so this cannot come back. */
+  plugins: {},
 };
 fs.writeFileSync(
   path.join(HERE, "capacitor.config.json"),

@@ -514,3 +514,33 @@ p  = lambda t: 1-math.exp(-z*wn*t)*(math.cos(wd*t) + (z/math.sqrt(1-z*z))*math.s
 And one delivery note that is not about CSS: **the artifact is not the source.** `rule()` and friends read `dist-preview.html`, so after any edit
 to the sheet or a module, rebuild before believing a suite — or you will spend a round debugging a file that no longer exists, which is what
 "Could not parse CSS stylesheet" was this round: a comment left where a deleted rule had been, in a build nobody had regenerated.
+
+## 20. Round 20 - permissions, and where the OS ends
+
+The owner asked the right question at the right time: *does the app ask before it takes the location?* The answer, measured in the
+dependencies rather than from memory, is that **the asking is not our code** — which is a good thing to know, because it means a GUI
+round can never delete it.
+
+| Who prompts | Where it lives | What we had to do |
+|---|---|---|
+| Android, for location | `@capacitor/android` 8.5.1, `BridgeWebChromeClient.onGeolocationPermissionsShowPrompt` — requests `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION`, grants the WebView, and honours a coarse-only answer on API 31+ | Declare the permissions (`apply-android-manifest.sh`). Nothing in JS. |
+| Android, for `getUserMedia` | same file, `onPermissionRequest` — maps VIDEO_CAPTURE to CAMERA, AUDIO_CAPTURE to RECORD_AUDIO | Declare `CAMERA` (G-127). The WebView path and the MLKit plugin path both needed it. |
+| Chrome/Firefox/Safari, on the web origin | the browser's own prompt, stored **per origin**, reset from the site-info icon | Nothing — but the app and the browser are two separate permission states, which is why the owner saw a prompt on the site and a different one in the APK. |
+| iOS | no iOS build exists; `Camera`, `Location` usage strings would be needed the day one does | Recorded, not fictional. |
+
+Two rules fall out of that table, and both are now in the tests:
+
+1. **A permission is a binary fact, so it is declared where binaries are made.** `apps/mobile/scripts/apply-android-manifest.sh` owns the
+   list; `config.test.js` runs it against a real manifest and asserts placement, a count of exactly one, idempotency, and that the result
+   still parses. A `plugins` or `capacitor.config.json` entry is never the place a permission is granted.
+2. **A plugin config block is only real if the plugin is installed.** Capacitor reads `plugins` at exactly one call site
+   (`CapConfig#getPluginConfig`), asked for by the id of a loaded plugin, so `StatusBar { style: "DARK" }` and
+   `SplashScreen { backgroundColor: "#FFFFFF" }` were configuring nothing (G-126). The bars are painted by the generated theme instead, in
+   `apply-android-system-bars.js`, from `packages/brand/brand.json`: transparent status and navigation bars, `windowLightStatusBar` true by
+   day and false by night, OS contrast enforcement off. That is the whole native surface — two colours and two icon flags, no length, no
+   font, no spacing — which is the answer to the owner's worry that a GUI could get "hardcoded in the app": it cannot, because the page owns
+   every pixel inside the bars, and the bars' colours come from the same palette file the sheet reads.
+
+The one limit worth saying out loud: a **theme** cannot know about an *in-app* light/dark toggle, only the system's. `D-8.27` items D3/D4 are
+the box that tells us whether that is acceptable or whether the native side owes a one-time inset bridge. And `ACCESS_BACKGROUND_LOCATION` is
+declared while nothing uses it (`G-128`) - an owner decision, not a bug.

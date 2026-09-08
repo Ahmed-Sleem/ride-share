@@ -250,7 +250,7 @@ test("the installer variants share one prep, and the manifest patch bites for re
   const r = prep(run("make-release.sh"));
   assert.ok(d.length >= 6, "the debug variant must run the shared prep steps, saw: " + d.join(" | "));
   assert.deepStrictEqual(r, d, "release prep diverged from debug prep — the signed build would ship without a patch");
-  for (const need of ["permissions", "adaptive icons", "night splash", "brand.json"]) {
+  for (const need of ["permissions", "adaptive icons", "night splash", "system bars", "brand.json"]) {
     assert.ok(d.some((l) => l.includes(need)), `prep must include "${need}", saw: ` + d.join(" | "));
   }
   assert.match(run("make-apk.sh"), /gradle: assembleDebug/);
@@ -275,6 +275,143 @@ test("the installer variants share one prep, and the manifest patch bites for re
   // A second run must be a no-op: the step is in a build that can be re-run on an existing project.
   execFileSync("bash", [path.join(root, "apps/mobile/scripts/apply-android-manifest.sh"), manifest], { encoding: "utf8" });
   assert.equal(fs.readFileSync(manifest, "utf8"), out, "apply-android-manifest.sh is not idempotent");
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+/* G-124 — the system bars. The bug this closes was measured on the device, not guessed from a
+   screenshot: the activity paints a status-bar background of its own, and on a night-mode cold start
+   the app opened with a light band carrying the page's title row. `plugins.StatusBar` looked like the
+   fix for two rounds; it was configuring a plugin that is not installed. The theme has to say it, and a
+   theme that only Android can read has to be proven here, against the real template, in CI. */
+test("the generated theme owns the system bars, day and night (G-124)", () => {
+  const { execFileSync } = require("node:child_process");
+  const os = require("node:os");
+  const SCRIPT = "apply-android-system-bars.js";
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "rs-bars-"));
+  const scripts = path.join(tmp, "apps", "mobile", "scripts");
+  const res = path.join(tmp, "apps", "mobile", "android", "app", "src", "main", "res");
+  fs.mkdirSync(path.join(scripts), { recursive: true });
+  fs.mkdirSync(path.join(res, "values"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, "packages", "brand"), { recursive: true });
+  // the script resolves ROOT from its own location, so it runs as a copy parked at the same depth
+  fs.copyFileSync(path.join(__dirname, "../scripts", SCRIPT), path.join(scripts, SCRIPT));
+  fs.copyFileSync(path.join(ROOT, "packages/brand/brand.json"), path.join(tmp, "packages/brand/brand.json"));
+  const TEMPLATE = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+    </style>
+</resources>
+`;
+  const dayFile = path.join(res, "values", "styles.xml");
+  const nightFile = path.join(res, "values-night", "styles.xml");
+  const run = () => execFileSync(process.execPath, [path.join(scripts, SCRIPT)], { encoding: "utf8" });
+  try {
+    fs.writeFileSync(dayFile, TEMPLATE);
+    const first = run();
+    assert.match(first, /system bars:/, "a first run must say what it wrote — a quiet no-op is how G-122 hid");
+    const day = fs.readFileSync(dayFile, "utf8");
+    for (const item of ["android:statusBarColor", "android:navigationBarColor", "android:windowLightStatusBar",
+                        "android:windowLightNavigationBar", "android:enforceStatusBarContrast",
+                        "android:enforceNavigationBarContrast"]) {
+      assert.ok(day.includes(`name="${item}"`), `the day theme must set ${item}; saw:\n${day}`);
+    }
+    assert.match(day, /android:statusBarColor">#00000000</, "the bar is transparent, not painted: the page underneath is what a person sees");
+    assert.match(day, /android:windowLightStatusBar">true</, "day icons are dark, because day paper is light");
+    assert.match(day, /@drawable\/splash/, "the night splash's drawable must survive — this script adds items, it does not rewrite the style");
+    const night = fs.readFileSync(nightFile, "utf8");
+    assert.match(night, /android:windowLightStatusBar">false</, "night icons are light, over the brand's ink paper");
+    assert.match(night, /android:statusBarColor">#00000000</, "and the bar is transparent there too");
+
+    // idempotent: a re-run on an already-patched project writes no bytes
+    const dayNow = day, nightNow = night;
+    assert.match(run(), /already current/);
+    assert.equal(fs.readFileSync(dayFile, "utf8"), dayNow, "a second run must not rewrite the day theme");
+    assert.equal(fs.readFileSync(nightFile, "utf8"), nightNow, "a second run must not rewrite the night theme");
+
+    // a style added by the night splash is merged into, not replaced, and a template that moved fails loudly
+    fs.writeFileSync(nightFile, `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@color/rs_splash_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
+`);
+    run();
+    const merged = fs.readFileSync(nightFile, "utf8");
+    assert.match(merged, /@color\/rs_splash_background/, "the night splash's colour must survive this patch");
+    assert.match(merged, /android:enforceStatusBarContrast">false</, "and the bar items must still arrive");
+    fs.writeFileSync(dayFile, '<resources><style name="Elsewhere"/></resources>');
+    let failed = false;
+    try { run(); } catch (_) { failed = true; }
+    assert.ok(failed, "a template this script can no longer anchor to must fail the build, not ship a dead resource");
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+/* G-126 — `plugins` in capacitor.config.json is read by exactly one call site in Capacitor's own
+   source (CapConfig#getPluginConfig), which only ever asks for the id of a plugin that was loaded. A key
+   with no package behind it is a decoration: it looks like a decision, costs a reviewer nothing to
+   approve, and changes no pixels. Both of this app's blocks were that (measured: `grep -ril splash`
+   over @capacitor/android 8.5.1's java returns nothing; @capacitor/status-bar has zero hits in
+   pnpm-lock.yaml). This guard is what keeps a third one from being written in good faith. */
+test("no config block configures a plugin that is not installed (G-126)", () => {
+  const pkgs = (txt) => [...txt.matchAll(/["']@(capacitor|capacitor-[a-z]+)\/([a-z0-9-]+)["']/g)]
+    .map((m) => m[2].split("-").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(""));
+  const mobilePkg = fs.readFileSync(path.join(ROOT, "apps/mobile/package.json"), "utf8");
+  const lock = fs.readFileSync(path.join(ROOT, "pnpm-lock.yaml"), "utf8");
+  const installed = new Set([...pkgs(mobilePkg), ...pkgs(lock)]);
+  const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+  const generated = fs.readFileSync(path.join(ROOT, "apps/mobile/scripts/build.js"), "utf8");
+  /* The generator is the source of truth (capacitor.config.json is its output); both are checked so a
+     block cannot be added on one side and quietly dropped from the other. */
+  const declared = new Set([...Object.keys(cfg.plugins || {}),
+                           ...[...generated.matchAll(/^\s{4}([A-Z][A-Za-z]+): \{$/gm)].map((m) => m[1])]);
+  for (const key of declared) {
+    assert.ok(installed.has(key),
+      `"${key}" is configured but no @capacitor/${key.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()).replace(/^-/, "")} ` +
+      "dependency exists — that block is inert. Paint it in the theme (apply-android-system-bars.js) " +
+      "or add the plugin, but do not write a config nobody reads.");
+  }
+  assert.ok(!/StatusBar|SplashScreen/.test(JSON.stringify(cfg.plugins || {})),
+    "the two blocks that were dead stay deleted; the theme is the one place the bars are decided");
+});
+
+/* CAMERA is declared for a reason a reader should not have to rediscover: the barcode plugin this app
+   depends on ships an EMPTY manifest, and its requestPermissions() answers checkPermissions() instead of
+   prompting when the permission is undeclared — a silent "denied" for a driver at the door. Placement is
+   asserted because Android is picky about it, and the count is asserted because the loop above appends
+   before </manifest>: a permission added twice is a build that still passes and still confuses. */
+test("the manifest carries the camera permission in the right place, exactly once (G-127)", () => {
+  const { execFileSync } = require("node:child_process");
+  const os = require("node:os");
+  const root = path.join(__dirname, "..", "..", "..");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rs-cam-"));
+  const manifest = path.join(dir, "AndroidManifest.xml");
+  // the real file a fresh `cap add android` leaves behind, copied from the @capacitor/cli template
+  fs.writeFileSync(manifest,
+    '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n\n' +
+    '    <application\n        android:allowBackup="true"\n        android:label="@string/app_name"\n        android:theme="@style/AppTheme">\n\n' +
+    '        <activity android:name=".MainActivity" android:theme="@style/AppTheme.NoActionBarLaunch" />\n    </application>\n\n' +
+    '    <uses-permission android:name="android.permission.INTERNET" />\n</manifest>\n');
+  const script = path.join(root, "apps/mobile/scripts/apply-android-manifest.sh");
+  execFileSync("bash", [script, manifest], { encoding: "utf8", cwd: root });
+  const out = fs.readFileSync(manifest, "utf8");
+  const line = '<uses-permission android:name="android.permission.CAMERA" />';
+  assert.equal(out.split(line).length - 1, 1, `CAMERA must appear exactly once, saw ${out.split(line).length - 1}`);
+  assert.ok(out.indexOf(line) < out.indexOf("<application"), "a permission belongs before <application>");
+  assert.ok(out.indexOf("com.google.mlkit.vision.DEPENDENCIES") > out.indexOf("<application")
+    && out.indexOf("com.google.mlkit.vision.DEPENDENCIES") < out.indexOf("</application>"),
+    "the MLKit barcode meta-data belongs INSIDE <application>, which is where the library looks for it");
+  const twice = execFileSync("bash", [script, manifest], { encoding: "utf8", cwd: root });
+  assert.match(twice, /already declared \(1\)/, "a re-run must say so rather than guess (the failure mode is a duplicate)");
+  assert.equal(fs.readFileSync(manifest, "utf8"), out, "and write no bytes");
+  let parsed = true;
+  try { require("node:child_process").execFileSync("python3", ["-c", `import xml.dom.minidom,sys;xml.dom.minidom.parse(${JSON.stringify(manifest)})`]); }
+  catch (_) { parsed = false; }
+  assert.ok(parsed, "the patched manifest must still parse — aapt is not the place to discover otherwise");
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

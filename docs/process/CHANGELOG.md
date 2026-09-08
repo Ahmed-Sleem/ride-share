@@ -1,3 +1,41 @@
+## 2026-09-08 — round 20: permissions, answered by reading the dependency, and A2 done without a keyboard
+
+The owner asked *"does the app/web take the user's permission to use location?"* and, separately, *"can you do A2 yourself?"*. Both were
+answered by measurement rather than recollection, and one of them changed the repo.
+
+**Permissions.** The prompt is not ours to write: `@capacitor/android` 8.5.1's `BridgeWebChromeClient.onGeolocationPermissionsShowPrompt`
+requests `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION` at the moment the page calls `navigator.geolocation`, grants the WebView, and
+honours a coarse-only answer on API 31+. Our manifest patch (`apply-android-manifest.sh`) is what makes that legal by declaring them, and
+`packages/platform/src/index.js` prefers the native plugin and falls back to the web API — which is why the browser *also* asks, per origin
+(the owner had seen exactly that). So the answer for location was "already correct, verified". What the audit found genuinely missing was
+two things: **`CAMERA` was never declared**, while `@capacitor-mlkit/barcode-scanning@8.1.0` ships an empty manifest and *silently* answers
+`checkPermissions()` instead of prompting when the permission is undeclared (G-127) — a driver at the door would have seen no dialog and no
+error; and **two `plugins` blocks configured plugins that are not installed** — `StatusBar { style }` (zero hits in `pnpm-lock.yaml`) and
+`SplashScreen { backgroundColor: "#FFFFFF" }` (no `splash` string anywhere in `@capacitor/android`'s java sources, and Capacitor reads
+`plugins` at exactly one call site, for a loaded plugin id). Dead config is not free: the StatusBar block read like a fix for `G-124` for
+two rounds (G-126).
+
+**What landed** (all `apps/mobile`, nothing in `apps/web`, so no GUI change and no `version.code` bump — D-8.22 is about a GUI change
+needing the mobile redeploy, not the reverse): a new prep step `apply-android-system-bars.js` writes six theme items into the generated
+`AppTheme.NoActionBarLaunch` in *both* `values/` and `values-night/` — transparent status/navigation bars, `windowLightStatusBar` true by
+day and false by night, `enforce*Contrast` off — colours sourced from `packages/brand/brand.json`, never typed twice; `apply-android-manifest.sh`
+gained `CAMERA` (before `<application>`, exactly once) plus the `com.google.mlkit.vision.DEPENDENCIES=barcode_ui` meta-data inside it; the
+dead blocks are gone from the generator. Three mobile tests were added (35 → **38**, all green) and each was **seen red on purpose**: drop the
+prep step → `D-8.18`'s prep-divergence guard; make the patch skip the night theme → `G-124`; re-add `StatusBar` → `G-126`; undeclare `CAMERA`
+→ `G-127`. This is also the answer to the owner's architecture worry: the installer now decides **two colours and two icon flags** and nothing
+else, so the page still owns every pixel inside the bars, spacing (`--safe-t: env(safe-area-inset-top)`) included, and a GUI change still needs
+no binary. `G-128` records the one thing left to decide — three declared-but-unused location-service permissions that cost a Play review.
+
+**A2, closed by the agent.** `keytool` minted a fresh PKCS12 key (alias `rideshare`, RSA 2048, valid to 2054-01-24, cert SHA-256
+`59B0BF70…C27583`) and all four `ANDROID_KEYSTORE_*` secrets were written through `PUT /actions/secrets/<NAME>` — 201/204 each, and
+`GET …/secrets` now lists exactly four. Two findings worth keeping: the API's `key` must be base64-decoded **once** (not twice, which is what
+my first attempt did before every 422), and the accepted encryption is a libsodium **sealed box** (`SealedBox`), not `Box`. The keystore is not
+in the repo; the sandbox is not a vault, so the owner was handed a copy to keep, and the first signed CI run must print that same cert hash.
+Also recovered this round, without touching product code: the sandbox had rehydrated with HEAD 33 commits stale, `origin` deleted, exec bits
+wiped and objects missing — `reset --mixed` to the true tip (`ff62b6e`) plus `chmod +x` from the tree's own `100755` modes, verified by
+`git status` empty and `check-exec-bits.sh` at 0 wrong. `fuse.js@6.6.2` had to be re-installed into `~/.vtest` before `apps/web/build.js`
+could run at all (v7 has no `dist/fuse.min.js`, so the pinned 6.6.2 is the version that builds).
+
 ## 2026-09-08 — round 18: the rail's travel became reachable at all, and it rides a spring
 
 Round 17 gave the desktop rail `transition:width` and the owner's verdict after using it was: *"the side menu, it tranversls but very fast very
