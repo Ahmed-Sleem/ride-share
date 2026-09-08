@@ -36,6 +36,14 @@ wiped and objects missing — `reset --mixed` to the true tip (`ff62b6e`) plus `
 `git status` empty and `check-exec-bits.sh` at 0 wrong. `fuse.js@6.6.2` had to be re-installed into `~/.vtest` before `apps/web/build.js`
 could run at all (v7 has no `dist/fuse.min.js`, so the pinned 6.6.2 is the version that builds).
 
+**And the owner's other open item closed itself while I was writing this.** `D-8.19` (`MOBILE_DEVICE_TOKEN_KEY` on the mobile service) was set in
+Railway at some point after round 19, so I verified it instead of assuming it: `POST /v1/mobile/enroll` now answers `key:"configured"`, a minted
+token presented in `x-rs-device-token` gets `200 /v1/config` with the real maps config (`provider:"osm"`), a tampered signature gets `401`, and a
+missing header gets `401`. My first probe wrongly used `Authorization` and read a false `401` for a minute — the lesson is in the checklist next to
+the item, because the next person to run this check will hit the same two traps (wrong header, and the one-per-60-seconds enrolment throttle that
+returns an error body with no `token` key). What no sandbox can prove is persistence across a redeploy; that stays with the value's location, not
+with the endpoint.
+
 ## 2026-09-08 — round 18: the rail's travel became reachable at all, and it rides a spring
 
 Round 17 gave the desktop rail `transition:width` and the owner's verdict after using it was: *"the side menu, it tranversls but very fast very

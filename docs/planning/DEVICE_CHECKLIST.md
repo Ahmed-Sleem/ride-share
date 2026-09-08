@@ -5,7 +5,7 @@ What it is for: everything in this list is a thing that **cannot be proven from 
 the installer, in Android's permission system, or in how a band of pixels looks at 3 am on a real device.
 Every item names the change that made it worth checking, so a fail tells you which commit to read.
 
-**How to run it:** install, then walk the list top to bottom. Mark each line ✓/✗ and send me the ✗ ones
+**How to run it:** install, then walk the list top to bottom. 22 boxes, 21 of them on the phone and one a `curl` you can run from a laptop (A2). Mark each line ✓/✗ and send me the ✗ ones
 with one sentence each. Do not "clean up" between items — the point is what one install gives you.
 
 ---
@@ -18,6 +18,7 @@ secrets are set now, so the next CI build is **release-signed with one key forev
 
 - [ ] **A1.** Uninstall the old app, then install the new APK from `/download/android`. *The first move
   from debug-signed to release-signed is one unavoidable uninstall — after it, no update ever asks again.*
+- [ ] **A2.** *(one non-phone box, but it belongs here: the device token works)* run `curl -s -X POST https://ride-sharemobile-production.up.railway.app/v1/mobile/enroll -H 'content-type: application/json' -d '{"deviceId":"yourtest-0001","appId":"eg.rideshare.app"}'` → it must say `"key":"configured"`, and the `token` it returns must earn a `200` from `GET /v1/config` **only** when sent as `x-rs-device-token` (not `Authorization`) — and a second call with the same `deviceId` inside 60 s is refused on purpose.
 - [ ] **A2.** Open the app **once with Wi-Fi and mobile data off**. You should get the boot page saying to
   check the connection — not a system error page, not a blank white screen. *(The local-boot
   architecture: `www/` holds the boot page, the app itself arrives over the air.)*

@@ -266,11 +266,16 @@ untouched until the owner signs the look off.
 - [ ] **D-8.16** Play Integrity (the header comment's next gate, needs the owner's Google Cloud project): replaces our "this came from our app" claim with
   Google's, and is the only remaining reason to hold any key. Decided against doing it blind — it needs a cloud project, a service account and a real
   Play-signed app, none of which exist yet.
-- [ ] **D-8.19** Set `MOBILE_DEVICE_TOKEN_KEY` on the deployed mobile service — one value, 32 characters or more, e.g.
+- [x] **D-8.19** Set `MOBILE_DEVICE_TOKEN_KEY` on the deployed mobile service — one value, 32 characters or more, e.g.
   `openssl rand -hex 32`. Nothing breaks without it (that is deliberate: `G-120`'s lesson is that a missing key must not lock installs
   out), but without it a restart invalidates every device token and a second instance refuses the first one's devices, so each install
   pays a re-enrolment round trip. `POST /v1/mobile/enroll` answers `key:"ephemeral"` while this is unset and `key:"configured"` after.
   A key shorter than 32 chars is refused as a key and reported as ephemeral, so a placeholder value cannot look like a finished job.
+  **Closed 2026-09-08 (round 20), verified from here:** `POST /v1/mobile/enroll` answers `key:"configured"`, a minted token sent in **`x-rs-device-token`**
+  gets `200 /v1/config` (`{"maps":{"provider":"osm","platform":"mobile","surface":"mobile"}}`), a tampered signature and no header both get `401`. Two facts that cost me
+  a false "401" and are worth knowing before anyone re-runs this check: the header is **not** `Authorization` (that is the API session token's header), and enrolment is throttled
+  to one per `deviceId` per 60 s (`MOBILE_ENROLL_INTERVAL_MS`), so a second probe on the same id returns an error body with no `token` field — use a fresh id. What still cannot be
+  proven from a sandbox is persistence across a redeploy: the value must live in Railway's Variables for the **mobile** service, not in a shell, and only the next deploy settles it.
   Still the owner's job (Railway has no token here), and one command: `openssl rand -hex 32` → Railway → the **mobile** service → Variables → `MOBILE_DEVICE_TOKEN_KEY` → deploy. Verify in 5 seconds without me: `curl -s -X POST https://ride-sharemobile-production.up.railway.app/v1/mobile/enroll -H 'content-type: application/json' -d '{}'` and read `key:"ephemeral"` → `"configured"`.
 - [ ] **D-8.18** Give the shipped installer a stable signature. Measured 2026-09-07: CI ships the `assembleDebug` output
   (`.github/workflows/ci.yml:168`), signed with `CN=Android Debug, O=Android, serial=01`, and **two builds of the same `versionCode 6`
@@ -345,6 +350,6 @@ untouched until the owner signs the look off.
   hardcoded if we change it without updating?" — is answered by *what was not touched*: this script writes two colours and two icon flags and no length, no
   font, no spacing. `--head-t`, `--safe-t: env(safe-area-inset-top)` and `viewport-fit=cover` stay in the sheet and keep arriving over the air. 38 mobile tests
   green; all four new guards were shown red on purpose (drop the prep step, skip the night theme, re-add `StatusBar`, undeclare CAMERA) and green again.
-- [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 20 boxes across the one-time signature migration (A),
+- [ ] **D-8.27** `docs/planning/DEVICE_CHECKLIST.md` (round 20) is the paper the phone still owes us: 22 boxes across the one-time signature migration (A),
   location permission incl. the Deny → Settings → retry path and the Approximate-only case (B), camera/QR (C), system bars in both system modes and the
   double-gap test that decides whether a native follow-up is owed (D), and the four regressions that must stay green (E). Read it, tick it, send the ✗ lines.
