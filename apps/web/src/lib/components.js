@@ -543,15 +543,36 @@ function realMapView({h, route, locate, onPick}) {
   return box;
 }
 
+/* Why a position request failed, said honestly. Two shapes have to be read, because the two ways
+   this app gets a fix disagree: the web path in Platform.getPosition *resolves null* (its own error
+   callback, so the caller never sees a code), while the native plugin path *rejects* — and with no
+   .catch() anywhere that rejection was swallowed silently, which is why a denied permission looked
+   like a dead button rather than a message. Codes are matched on both GeolocationPositionError and
+   the plugin's shape, plus its message text, because Capacitor wraps. */
+const GEO_DENIED = "denied", GEO_UNAVAILABLE = "unavailable";
+function geoProblem(err) {
+  const code = err && (err.code != null ? err.code : err.PERMISSION_DENIED);
+  if (code === 1 || /denied|permission/i.test(String((err && (err.message || err.code)) || ""))) return GEO_DENIED;
+  return GEO_UNAVAILABLE;
+}
+/* The ask-before-you-are-asked half: Permissions API, when the engine has it, tells us whether the
+   app is already blocked — that is the case a retry can never fix, so it gets the settings sentence
+   instead of "unavailable". Absent API ⇒ no extra claim, which is the honest answer. */
+function locateMessage(problem) {
+  if (!problem) return t("locateDenied");
+  if (problem === GEO_DENIED) return t("locateOff");
+  return t("locateProblem");
+}
 function locateMe() {
   const map = window.__rsMapInstance;
-  if (!map) { toast("locateDenied"); return; }
+  if (!map) { toast(t("locateDenied")); return; }   /* no map, nothing to recentre — the generic sentence, not a settings lecture */
   const go = (lat, lng) => {
     if (map.setView) map.setView([lat, lng], map.getZoom && map.getZoom() > 3 ? map.getZoom() : 13);
     else map.setCenter({ lat, lng });
   };
   Platform.getPosition({ enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 })
-    .then((pos) => pos ? go(pos.lat, pos.lng) : go(ALEX_CENTER.lat, ALEX_CENTER.lng));
+    .then((pos) => pos ? go(pos.lat, pos.lng) : go(ALEX_CENTER.lat, ALEX_CENTER.lng))
+    .catch((err) => { toast(locateMessage(geoProblem(err))); });
 }
 
 /* QR — deterministic blocks + the numeric code that is the real fallback */

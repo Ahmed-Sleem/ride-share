@@ -161,7 +161,9 @@ function plannerUseMyLocation(stops) {
       const near = nearestStop(pos.coords.latitude, pos.coords.longitude, stops);
       if (near) { plannerSetField("from", near); toast(t("p_pinnedNearest") + ": " + stopLabel(near)); render(); }
     },
-    () => toast(t("locateDenied")),
+    /* One classifier for both surfaces (§0.3): the map button and this link fail for the same
+       reasons and must not say different things about them. */
+    (err) => toast(locateMessage(geoProblem(err))),
     { timeout: 8000 });
 }
 

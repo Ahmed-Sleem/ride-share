@@ -636,6 +636,20 @@ run_break "the rail is rebuilt on fold, so no travel can fire" src/shell/app.js 
     's|on:{click:foldRail}},|on:{click:()=>{S.rail=S.rail==="open"?"collapsed":"open";render();}}},|' \
     "the toggle's click handler is the fold, not a render"
 
+# Round 21 — the permission states. Each mutation is one line and stays valid JavaScript, so the
+# bundle rebuilds and the suite judges the real thing (a mutation that will not compile reports
+# MISSED-BUILD, which proves nothing about the guard).
+run_break "a refused native location vanishes with no message" src/lib/components.js \
+    '/^    \.catch((err) => { toast(locateMessage(geoProblem(err))); });$/d' \
+    "a denied native fix can no longer vanish unhandled"
+
+run_break "the toast prints a raw key again" src/lib/components.js \
+    's|if (!map) { toast(t("locateDenied")); return; }|if (!map) { toast("locateDenied"); return; }|' \
+    "no toast in the shipped bundle prints a raw key"
+
+run_break "denied is blamed on the GPS instead of on the setting" src/lib/components.js \
+    's|code === 1 |code === 2 |' \
+    "code 1 (denied) is the settings sentence|code 2 (unavailable, e.g. GPS off) is NOT blamed on the user"
 
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

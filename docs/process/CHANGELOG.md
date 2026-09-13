@@ -1,3 +1,39 @@
+## 2026-09-09 — round 21: what the app says after the permission dialog
+
+The owner asked about permissions and, separately, what was next while Task 2 (maps) is in flight. Round 20 had answered
+the prompting question at the source — Capacitor raises Android's dialog, the manifest declares what makes that legal — so
+this round went one step further: **what happens to a person who answers "Don't allow".** Three defects, all found by reading
+the code that runs.
+
+The loud one is in the installed app. `Platform.getPosition` has two shapes and they disagree: the web path resolves `null`
+because the caller's error callback swallows the code, while the native plugin path **rejects**. `locateMe()` had `.then()` and
+no `.catch()` — so after a denial on a phone the button did nothing at all: no message, nothing to read. Fixed with one line of
+wiring plus one shared classifier (`geoProblem` / `locateMessage` in `lib/components.js`, used by the map *and* the planner link,
+so the two surfaces cannot tell two stories about one failure — §0.3). Three states, three sentences, both languages: blocked ⇒
+"turn it on in Android settings", unavailable ⇒ "could not read a position", no map at all ⇒ the old honest generic, because a
+settings lecture there would be a lie.
+
+Second: `toast("locateDenied")` — the one toast call site that skipped `t()` — printed a raw key on screen. The i18n parity guard
+is blind to that class by construction, so the fix came with a new guard **on the built bundle**: a source-only check would pass a
+build that never included the strings. Third, mine: `code === 1` for `PERMISSION_DENIED` is the whole mapping, so a one-digit
+mutation had to be caught too — it is.
+
+**Measured, twice.** The first version of this work was committed and then lost when the sandbox rehydrated (HEAD rewound to an
+old commit, `/tmp` and my local objects wiped); the sources survived only inside the break harness's scratch copies. Rebuilding
+it surfaced two errors of mine that the numbers had hidden: a test group appended **after** the summary/`process.exit` block never
+executes and prints nothing — my "786 passed" had quietly become 15 assertions that ran but were not counted; and the baseline was
+768, not the "770" I had recorded. So the counts here are re-measured against the tree, not remembered:
+
+| | before | after |
+|---|---|---|
+| `apps/web` unit | 768 | **783, 0 failed** (group moved above the summary so it is counted) |
+| `apps/web` breaks | 129 | **132**, my three cases each seen CAUGHT — one came back BROKEN-BREAK first, because python emitted `\\.` into a single-quoted sed pattern (a literal backslash-dot) and matched nothing. **Verify the mutation mutates.** |
+| `apps/mobile` | — | **54/54** |
+| `version.code` | 10 | **11**, with `apps/mobile/scripts/build.js` in the same push (D-8.22) so Railway redeploys and OTA publishes v11 |
+
+The installer payload is unchanged (boot page still 100,466 B), so a copy fix implies no reinstall — the architecture proving
+itself again. Recorded as **G-132** (raw key), **G-133** (silent denial) and **D-8.29**.
+
 ## 2026-09-08 — round 21: the first screen inside the APK became a test, and a claim about reproducible bytes was corrected
 
 The owner said *"now whats next for you, the other developer still doing task 2"* — so nothing was handed over, nothing was waited on, and the

@@ -182,6 +182,10 @@ fs.writeFileSync(
 );
 
 const ver = BRAND.version || { name: "0.0.0", code: 0 };
+/* D-8.22, restated where it is executed: this file's existence in a push is what makes Railway redeploy
+   the mobile service, and the redeploy is what publishes `dist/www` for OTA. Round 21's change is three
+   words of copy and two lines of wiring in apps/web — no layout, no style — so the installer stays at
+   versionCode 11 with the same boot page and installed phones take it over the air. */
 const meta = {
   service: "mobile",
   wrapped: "@ride-share/web",

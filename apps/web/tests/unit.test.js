@@ -2362,6 +2362,62 @@ const mSettings = (async () => {
   ok("settings use the two-column setting rows", t.all(".setting").length>=6);
 })();
 pendingAsync.push(mSettings);
+
+/* ═══════════════════════════════════════════════════════════════════
+   PERMISSION STATES (D-8.29). Round 20 proved the OS prompt is raised by the shell, not by us;
+   this is what the app says AFTER the answer. Three measured defects: a rejected native lookup
+   with no `.catch()` (silence on the phone), one sentence for two different fixes, and a toast
+   that printed a raw key. Pinned on the BUILT bundle — the class of bug is invisible to a
+   source-only check, because a bundle can simply not contain the strings at all.
+   ═══════════════════════════════════════════════════════════════════ */
+group("PERMISSION STATES — what the app says after the OS dialog");
+const mGeo = (async () => {
+  const t = boot();
+  ok("the bundle itself speaks the settings sentence", /Android settings/.test(SRC));
+  ok("and the Arabic one, not only its key", /فعّله من إعدادات/.test(SRC));
+
+  const COMPONENTS = fs.readFileSync(path.join(__dirname, "..", "src", "lib", "components.js"), "utf8");
+  const PLANNER = fs.readFileSync(path.join(__dirname, "..", "src", "screens", "planner.js"), "utf8");
+  ok("a denied native fix can no longer vanish unhandled",
+     /\.catch\(\(err\) => \{ toast\(locateMessage\(geoProblem\(err\)\)\); \}\)/.test(COMPONENTS));
+  /* Asserted on the BUILT artifact, not on the source with its comments: a note explaining a pasted
+     bug is not the bug, and a guard that cannot tell them apart will be "fixed" by deleting the note.
+     In the bundle the only legal shape is t("…") — a raw key would be visible to a customer. */
+  ok("no toast in the shipped bundle prints a raw key",
+     (SRC.match(/toast\("[a-zA-Z_]+"\)/g)||[]).length===0,
+     (SRC.match(/toast\("[a-zA-Z_]+"\)/g)||[]).join(", "));
+  ok("and the no-map answer is the translated one", /toast\(t\("locateDenied"\)\); return;/.test(SRC));
+  ok("the map and the planner classify through ONE function, so they cannot disagree",
+     (SRC.match(/function geoProblem\(/g)||[]).length===1
+     && (SRC.match(/function locateMessage\(/g)||[]).length===1
+     && /geoProblem\(err\)/.test(PLANNER));
+  ok("denied is separated from unavailable, because only one of them is fixable by retrying",
+     /GEO_DENIED\s*=\s*"denied"/.test(COMPONENTS) && /GEO_UNAVAILABLE\s*=\s*"unavailable"/.test(COMPONENTS)
+     && /code === 1/.test(COMPONENTS));
+  ok("the classifier reads BOTH shapes — a GeolocationPositionError and a wrapped plugin error",
+     /err\.code != null \? err\.code : err\.PERMISSION_DENIED/.test(COMPONENTS)
+     && /denied\|permission/i.test(COMPONENTS));
+  ok("no map instance still says the honest generic thing, not a settings lecture",
+     /if \(!map\) \{ toast\(t\("locateDenied"\)\); return; \}/.test(COMPONENTS));
+
+  /* Executed, not read: the classifier is a pure function, so a wrong mapping is catchable here. */
+  const cls = t.w.eval(`({geoProblem, locateMessage, GEO_DENIED, GEO_UNAVAILABLE})`);
+  ok("code 1 (denied) is the settings sentence",
+     cls.locateMessage(cls.geoProblem({code:1})) === t.w.T.en.locateOff);
+  ok("a plugin rejection carrying only a message is still read as denied",
+     cls.geoProblem({message:"User denied the permission request."}) === cls.GEO_DENIED);
+  ok("code 2 (unavailable, e.g. GPS off) is NOT blamed on the user",
+     cls.locateMessage(cls.geoProblem({code:2})) === t.w.T.en.locateProblem);
+  ok("code 3 (timeout) reads as unavailable too, which is the truthful guess",
+     cls.geoProblem({code:3}) === cls.GEO_UNAVAILABLE);
+  ok("no error at all keeps the old wording, so nothing new is invented",
+     cls.locateMessage(null) === t.w.T.en.locateDenied);
+  t.w.S.lang="ar";
+  ok("the Arabic strings are the real ones, not the keys, when a fix is refused",
+     cls.locateMessage(cls.geoProblem({code:1})) === t.w.T.ar.locateOff);
+  t.w.S.lang="en";
+})();
+pendingAsync.push(mGeo);
 Promise.all(pendingAsync).then(() => {
   console.log(`\n──────── ${pass} passed, ${fail} failed ────────`);
   process.exit(fail?1:0);
