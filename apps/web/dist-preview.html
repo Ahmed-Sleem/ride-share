@@ -270,6 +270,19 @@
   --fx-rise:220ms; --fx-fill:90ms; --fx-release:110ms; --fx-fall:520ms;
   --fx-ink:var(--ink-900);           /* the curtain must read against the sheet it covers,
                                        which in the dark theme means the other end of the ramp */
+  /* Third-party map chrome (Leaflet), tokenized by build.js to these variables so
+     zoom control, popups, tooltips and attribution follow light/dark. */
+  --leaflet-bg:var(--bg-base);
+  --leaflet-fg:var(--text-primary);
+  --leaflet-muted:var(--text-secondary);
+  --leaflet-line:var(--line);
+  --leaflet-chip:var(--bg-raised);
+  --leaflet-accent:var(--brand);
+  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 20%,transparent);
+  --leaflet-shadow:rgba(0,0,0,0.18);
+  --leaflet-scrim:var(--scrim);
+  --leaflet-bg-80:color-mix(in srgb,var(--bg-base) 80%,transparent);
+  --leaflet-bg-50:color-mix(in srgb,var(--bg-base) 50%,transparent);
 }
 [data-theme="dark"]{
   --fx-ink:var(--ink-50);
@@ -279,6 +292,8 @@
   --grid-line:rgba(242,242,242,.05);
   --sea:#16202a; --coast:#24323f; --canal:#1d2b36;
   --rd-0:#cfcfcf; --rd-1:#b0b0b0; --rd-2:#6a6a6a; --rd-3:#3a3a3a;
+  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 25%,transparent);
+  --leaflet-shadow:rgba(0,0,0,0.55);
 }
 
 [data-theme="dark"]{
@@ -1762,6 +1777,24 @@ html.native .intro{padding-top:var(--safe-t)}
 /* map: hero zoom crop + real-map + locate */
 .mapbox--zoom .mapsvg{transform:scale(1.22);transform-origin:center}
 .mapbox--real{background:var(--map-land)}
+/* Leaflet container tokens inherit the app palette so panes, zoom buttons,
+   tooltips, popups and the attribution prefix don't flash white-on-dark or
+   ship hardcoded #333/#ccc hex. The --leaflet-* vars are defined at :root
+   and rebound for [data-theme="dark"] so the vendored CSS (which build.js
+   rewrites to var(--leaflet-…)) follows the active theme. */
+.mapbox .leaflet-container{background:var(--map-land);outline:0}
+.mapbox .leaflet-control-zoom a,
+.mapbox .leaflet-bar{background:var(--leaflet-bg);color:var(--leaflet-fg);
+  border-color:var(--leaflet-line)}
+.mapbox .leaflet-control-zoom a:hover{background:var(--leaflet-chip);color:var(--leaflet-fg)}
+.mapbox .leaflet-control-attribution{background:var(--leaflet-scrim);color:var(--leaflet-fg)}
+.mapbox .leaflet-control-attribution a{color:var(--leaflet-accent)}
+.mapbox .leaflet-tooltip,
+.mapbox .leaflet-popup-content-wrapper{background:var(--leaflet-bg);color:var(--leaflet-fg);
+  box-shadow:var(--sh-2);border-radius:var(--r-sm);border:1px solid var(--leaflet-line)}
+.mapbox .leaflet-tooltip-top:before{border-top-color:var(--leaflet-line)}
+.mapbox .leaflet-popup-tip{background:var(--leaflet-bg)}
+.mapbox .leaflet-popup-close-button{color:var(--leaflet-muted)}
 /* Third-party tiles are the one part of a map we do not draw, so they are
    filtered into the product's register instead of being restyled. The vector
    overlay is a sibling, not a child, so the route and the vehicle dot keep
@@ -1786,34 +1819,7 @@ html.native .intro{padding-top:var(--safe-t)}
 *{scrollbar-width:none}
 *::-webkit-scrollbar{width:0;height:0;display:none}
 
-/* Third-party map chrome (Leaflet), tokenized by build.js to these variables so
-   zoom control, popups, tooltips and attribution follow light/dark. */
-:root{
-  --leaflet-bg:var(--bg-base);
-  --leaflet-fg:var(--text-primary);
-  --leaflet-muted:var(--text-secondary);
-  --leaflet-line:var(--line);
-  --leaflet-chip:var(--bg-raised);
-  --leaflet-accent:var(--brand);
-  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 20%,transparent);
-  --leaflet-shadow:rgba(0,0,0,0.18);
-  --leaflet-scrim:var(--scrim);
-  --leaflet-bg-80:color-mix(in srgb,var(--bg-base) 80%,transparent);
-  --leaflet-bg-50:color-mix(in srgb,var(--bg-base) 50%,transparent);
-}
-[data-theme="dark"]{
-  --leaflet-bg:var(--bg-base);
-  --leaflet-fg:var(--text-primary);
-  --leaflet-muted:var(--text-secondary);
-  --leaflet-line:var(--line);
-  --leaflet-chip:var(--bg-raised);
-  --leaflet-accent:var(--brand);
-  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 25%,transparent);
-  --leaflet-shadow:rgba(0,0,0,0.55);
-  --leaflet-scrim:var(--scrim);
-  --leaflet-bg-80:color-mix(in srgb,var(--bg-base) 80%,transparent);
-  --leaflet-bg-50:color-mix(in srgb,var(--bg-base) 50%,transparent);
-}
+
 
 <style>/* __RS_VENDOR__ begin leaflet.css (tokenized) */
 /* required styles */

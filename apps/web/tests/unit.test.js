@@ -268,13 +268,15 @@ group("THE BRAND PALETTE IS THE ONLY SOURCE FOR PAPER, INK, MUTED, HAIRLINE (G-0
 
 group("EVERY TOKEN RESOLVES (a name nothing defines drops a declaration in silence)");
 {
-  // definitions = "--x:" anywhere in the stylesheet or in a JS inline style, plus
-  // setProperty("--x") for the runtime tokens (viewport height, reveal delays).
+  // Strip CSS/JS comments before scanning so illustrative text like `var(--leaflet-…)`
+  // in a source comment is not mistaken for a real reference.
+  const strip=s=>s.replace(/\/\*[\s\S]*?\*\//g,"").replace(/\/\/[^\n]*/g,"");
+  const cssStrip=strip(CSS), srcStrip=strip(SRC);
   const declared=new Set();
-  for (const src of [CSS, SRC])
+  for (const src of [cssStrip, srcStrip])
     for (const m of src.matchAll(/(--[a-z0-9]+(?:-[a-z0-9]+)*)\s*:/g)) declared.add(m[1]);
-  for (const m of SRC.matchAll(/setProperty\(\s*"?(--[a-z0-9-]+)"?/g)) declared.add(m[1]);
-  const used=[...new Set([...CSS.matchAll(/var\(\s*(--[a-z0-9]+(?:-[a-z0-9]+)*)/g)].map(m=>m[1]))];
+  for (const m of srcStrip.matchAll(/setProperty\(\s*"?(--[a-z0-9-]+)"?/g)) declared.add(m[1]);
+  const used=[...new Set([...cssStrip.matchAll(/var\(\s*(--[a-z0-9]+(?:-[a-z0-9]+)*)/g)].map(m=>m[1]))];
   const missing=used.filter(n=>!declared.has(n));
   ok("every var() in the app CSS has a source", missing.length===0, missing.join(",")||"clean");
   ok("the audit is not vacuous (tokens are actually counted)", used.length>80, used.length+" tokens used");
@@ -989,7 +991,10 @@ group("DESIGN TOKENS — one place to change a value");
      overridden by --leaflet-* variables above, so hexes in that block never
      reach the rendered chrome; bytes are sha256-pinned in build.js. */
   css = css.replace(/\/\* __RS_VENDOR__ begin leaflet\.css[\s\S]*?__RS_VENDOR__ end leaflet\.css \*\//, "");
-  const rules=css.replace(/:root\{[^}]*\}/g,"").replace(/\[data-theme="dark"\]\{[^}]*\}/g,"");
+  /* Strip source comments so illustrative hex mentions like #333/#ccc in
+     prose above don't masquerade as live declarations. */
+  const cssLive=css.replace(/\/\*[\s\S]*?\*\//g,"");
+  const rules=cssLive.replace(/:root\{[^}]*\}/g,"").replace(/\[data-theme="dark"\]\{[^}]*\}/g,"");
   const hex=(rules.match(/#[0-9a-fA-F]{3,8}\b/g)||[]);
   ok("no hardcoded colour in css rules", hex.length===0, hex.slice(0,5).join(","));
   let js=SRC.slice(SRC.indexOf("</style>"));
