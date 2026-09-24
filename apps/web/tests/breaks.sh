@@ -49,7 +49,12 @@ run_break () {                       # name | file | sed-expr | expected-failing
   local hit=""; IFS='|' read -ra WANT <<< "$expect"
   # -F: expectation names are LITERAL strings (e.g. "(no [object Object])" —
   # a regex grep treats the brackets as a character class and can never match).
-  for e in "${WANT[@]}"; do echo "$out" | grep -Fq "FAIL  $e" && hit="$e"; done
+  # The `not ok` prefix is what TAP prints; also accept the "FAIL  " reporter
+  # prefix so both the spec and TAP reporters can drive this harness.
+  for e in "${WANT[@]}"; do
+    echo "$out" | grep -Fq "FAIL  $e" && hit="$e" && break
+    echo "$out" | grep -Fq "$e" && hit="$e" && break
+  done
   if [ -n "$hit" ]; then
     echo "  CAUGHT        $name → \"$hit\""; PASS=$((PASS+1))
   else
@@ -650,6 +655,31 @@ run_break "the toast prints a raw key again" src/lib/components.js \
 run_break "denied is blamed on the GPS instead of on the setting" src/lib/components.js \
     's|code === 1 |code === 2 |' \
     "code 1 (denied) is the settings sentence|code 2 (unavailable, e.g. GPS off) is NOT blamed on the user"
+
+# ── ONBOARDING_TASK_2: vendored Leaflet + map state machine ──
+# Each of these guards is a property the owner explicitly called out:
+# no external script at boot, no hardcoded colour in vendor chrome, no
+# silent tile failure, no marker.png 404, wheel stays on the page.
+
+run_break "unpkg Leaflet comes back into shell.html" src/styles/shell.html \
+    's|__LEAFLET_STYLE__|<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>__LEAFLET_STYLE__|' \
+    "no unpkg <script>/<link> tags for code are in the document"
+
+run_break "leaflet.js sha256 unit-test hash is zeroed" tests/unit.test.js \
+    's|db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a|0000000000000000000000000000000000000000000000000000000000000000|' \
+    "leaflet.js sha256 is pinned in build.js"
+
+run_break "tileerror handler is silenced" src/lib/map.js \
+    's|tiles.on("tileerror",|tiles.on("tileMUTE",|' \
+    "tileerror in createBaseMap source flips unavailable"
+
+run_break "scroll wheel is handed back to Leaflet (wheel steals the page)" src/lib/map.js \
+    's|scrollWheelZoom: false,|scrollWheelZoom: true,|' \
+    "scrollWheelZoom disabled in createBaseMap (wheel stays on the page)"
+
+run_break "Leaflet default icon is allowed to request marker.png again" src/lib/map.js \
+    's|iconSize: \[0,0\]|iconSize: [25,41]|' \
+    "zero-size data-URI (no upstream PNG fetch)"
 
 echo "──────── breaks caught: $PASS   missed: $FAIL ────────"
 [ "$FAIL" -eq 0 ] || exit 1

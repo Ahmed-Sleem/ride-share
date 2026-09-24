@@ -136,7 +136,7 @@ function createBaseMap(el) {
      Gestures, zoom control placement and tile-failure state are decided
      in this one place so RouteMap, SearchMap, EditRouteMap and MapView
      cannot drift:
-       - scrollWheelZoom:false (a wheel-stealing map steals the page)
+       - wheel scroll stays on the page (a wheel-stealing map steals the page)
        - dragging + touchZoom on, keyboard:true
        - zoom control top-right, measured clear of the boarding pin
          at 320 px (guarded in layout.test.js)

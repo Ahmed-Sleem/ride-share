@@ -789,6 +789,37 @@ group("ONBOARDING_TASK_2 Steps 2-3 — map state machine, retry, default provide
      /provider = "osm"/.test(fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8")));
 }
 
+group("ONBOARDING_TASK_2 Step 4-5 — tile filter, overlay above tiles, no marker.png download, logical props kept");
+{
+  const t=boot();
+  const shell=fs.readFileSync(path.join(__dirname,"..","src","styles","shell.html"),"utf8");
+  const mapjs=fs.readFileSync(path.join(__dirname,"..","src","lib","map.js"),"utf8");
+  const build=fs.readFileSync(path.join(__dirname,"..","build.js"),"utf8");
+  ok("tile filter is applied to real surfaces (third-party tiles styled via the palette)",
+     /\.mapbox--real \.leaflet-tile[\s\S]*filter:\s*var\(--map-tile-filter\)/.test(shell));
+  ok("canvas overlay is position:absolute inset:0 (sits over tiles)",
+     /\.mapbox__canvas\s*\{[^}]*position:\s*absolute[^}]*inset:\s*0/.test(shell));
+  ok("zoom controls / locate use logical inline-start (RTL safe)",
+     /inset-inline-start:\s*var\(--s3\)/.test(shell) && /inset-inline-end:\s*var\(--s3\)/.test(shell));
+  ok("Leaflet marker default icon is overridden to zero-size data-URI (no upstream PNG fetch)",
+     /iconSvg\s*=\s*"<svg[^"]*\/>"/.test(mapjs) && /iconSize:\s*\[0,0\]/.test(mapjs));
+  ok("build.js blanks vendor Leaflet url() references (belt-and-braces against marker.png 404)",
+     build.includes("LEAFLET_CSS = LEAFLET_CSS.replace(/url\\([^)]*\\)/g")
+     || build.includes("LEAFLET_CSS.replace(/url\\([^)]*\\)/g"));
+  ok("scroll/wheel gesture stays on the page (scrollWheelZoom:false)",
+     /scrollWheelZoom\s*:\s*false/.test(mapjs));
+  ok("zoom control is positioned top-right (320px measured clear of the boarding pin)",
+     /position\s*:\s*"topright"/.test(mapjs));
+  ok("tileerror event flips unavailable (no silent grey rectangles)",
+     /tiles\.on\("tileerror"/.test(mapjs));
+  ok("realRouteMap draws polyline+stops+vehicle using cssVar --brand (no hardcoded route colour)",
+     /L\.polyline\(pts,\s*\{[^}]*color:\s*brand/.test(mapjs));
+  ok("build.js tokenizes vendor Leaflet CSS hexes to var(--leaflet-...)",
+     /LEAFLET_CSS_REPL\s*=\s*\[/m.test(build) && /--leaflet-bg/.test(build));
+  ok("--leaflet-bg defined on :root (light)", /:root\{[^}]*--leaflet-bg:var\(--bg-base\)/s.test(shell));
+  ok("--leaflet-shadow overridden in [data-theme=\"dark\"]", /\[data-theme="dark"\]\{[^}]*--leaflet-shadow/s.test(shell));
+}
+
 group("SEARCH — Fuse vendored + Arabic/English normalization");
 const mSearchNorm = (async () => {
   const t=boot();
