@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ONBOARDING_TASK_2 Step 6: syntax-gate marker. Mobile apps/web have no map
+# dependency (the map is web-only, default-osm via vendored Leaflet), so this
+# harness does not add a map case; it just stays bash-clean alongside the
+# web bundle push that follows. bash -n must pass before the web commit.
 # D-8.14 — break-detection harness for the device-token guards (G-117, G-119).
 # Each case cuts one guard, runs its gate, and demands the expected failure
 # shows up for the right reason; no case may leak a mutation, and none may
