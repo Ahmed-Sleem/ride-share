@@ -351,6 +351,7 @@ en:{
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
   m_fleet:"Live map", m_noLive:"No vehicles sharing a live position right now.",
+  m_mapUnavailable:"Map can't load right now — the list below still shows your stops.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"Type where you want to go — or tap the map to pin.",
   p_whereTo:"Where to?", p_useMyLocation:"Use my location",
@@ -802,6 +803,7 @@ ar:{
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
   m_fleet:"الخريطة المباشرة", m_noLive:"لا مركبات تشارك موقعاً مباشراً الآن.",
+  m_mapUnavailable:"تعذر تحميل الخريطة الآن — القائمة أدناه تظهر محطاتك.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
   p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",

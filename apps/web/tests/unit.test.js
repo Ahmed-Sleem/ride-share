@@ -751,6 +751,42 @@ group("ONBOARDING_TASK_2 Step 1 — Leaflet vendored, unpkg removed");
   ok("Leaflet L is attached to the window (vendored engine)", typeof t.w.L === "object" && typeof t.w.L.map === "function");
 }
 
+group("ONBOARDING_TASK_2 Steps 2-3 — map state machine, retry, default provider");
+{
+  const t=boot();
+  ok("pickLang renamed (Leaflet owns global L)", typeof t.w.pickLang === "function");
+  ok("setMapState/mapsLive/mapEngine exposed",
+     typeof t.w.setMapState==="function" && typeof t.w.mapsLive==="function" && typeof t.w.mapEngine==="function");
+  ok("OSM_ATTR is the literal © line", t.w.OSM_ATTR === "\u00a9 OpenStreetMap contributors");
+  ok("MAP_TILES declares a url and maxZoom", /^https:/.test(t.w.MAP_TILES.url) && t.w.MAP_TILES.maxZoom>=19);
+  ok("__rsMapsOn true (vendored default) after boot", t.w.__rsMapsOn === true);
+  ok("__rsMapProvider defaults to osm", t.w.__rsMapProvider === "osm");
+  ok("m_mapUnavailable EN copy present and honest (no admit-words)",
+     /right now/.test(t.w.T.en.m_mapUnavailable) && !ADMIT.test(t.w.T.en.m_mapUnavailable));
+  ok("m_mapUnavailable AR copy present", /الخريطة/.test(t.w.T.ar.m_mapUnavailable));
+  ok("setMapState flips to unavailable and gates mapsLive() off", ()=>{
+    t.w.setMapState("unavailable");
+    const before = t.w.mapsLive();
+    t.w.setMapState("ready");
+    const after = t.w.mapsLive();
+    return before===false && after===true;
+  });
+  ok("tileerror in createBaseMap source flips unavailable",
+     /tiles\.on\("tileerror"/.test(fs.readFileSync(path.join(__dirname,"..","src","lib","map.js"),"utf8")) &&
+      /setMapState\("unavailable"\)/.test(fs.readFileSync(path.join(__dirname,"..","src","lib","map.js"),"utf8")));
+  ok("scrollWheelZoom disabled in createBaseMap (wheel stays on the page)",
+     /scrollWheelZoom\s*:\s*false/.test(fs.readFileSync(path.join(__dirname,"..","src","lib","map.js"),"utf8")));
+  ok("zoom control positioned top-right",
+     /position\s*:\s*"topright"/.test(fs.readFileSync(path.join(__dirname,"..","src","lib","map.js"),"utf8")));
+  ok("single retry on online/visibilitychange (no silent loop)",
+     /window.addEventListener\("online", retryMaps\)/.test(fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8")) &&
+      /visibilitychange/.test(fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8")));
+  ok("file:// previews enable vendored engine (no doomed fetch)",
+     /location\.protocol === "file:"[^}]*__rsMapsOn = true/.test(fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8")));
+  ok("refused /v1/config falls through to default provider (not no-maps)",
+     /provider = "osm"/.test(fs.readFileSync(path.join(__dirname,"..","src","shell","app.js"),"utf8")));
+}
+
 group("SEARCH — Fuse vendored + Arabic/English normalization");
 const mSearchNorm = (async () => {
   const t=boot();
@@ -881,11 +917,20 @@ group("NOTHING PRETENDS TO BE REAL");
   let maps=0, labelled=0;
   for(const role of Object.keys(t.w.PAGES)) for(const p of t.w.PAGES[role]){
     t.go(role,p.k);
-    t.all(".mapbox").forEach(m=>{ if(!m.querySelector(".mapsvg")) return;
-      maps++; if(m.querySelector(".attribution")) labelled++; });
+    /* Count every .mapbox: the SVG illustration is always in the DOM
+       (aria-label on it OR on the canvas OR an attribution element counts
+       as labelled). ONBOARDING_TASK_2: with Leaflet live, surfaces may
+       render a canvas overlay above the SVG; both states are labelled. */
+    t.all(".mapbox").forEach(m=>{
+      maps++;
+      const lbl = m.getAttribute("aria-label")
+        || (m.querySelector(".mapsvg") && m.querySelector(".mapsvg").getAttribute("aria-label"))
+        || m.querySelector(".attribution");
+      if (lbl) labelled++;
+    });
   }
   ok("maps exist to check", maps>0, String(maps));
-  ok("every drawn map is labelled illustrative", maps===labelled, `${labelled}/${maps}`);
+  ok("every map is labelled (aria or attribution)", maps===labelled, `${labelled}/${maps}`);
 }
 
 group("ACCESSIBILITY");

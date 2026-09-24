@@ -3445,6 +3445,7 @@ en:{
   m_stopsAria:"Stops on this route", m_boardingHere:"Boarding here", m_noStops:"No stops mapped yet.",
   m_routeAria:"Map of the route and its stops", m_vehicle:"Your ride",
   m_fleet:"Live map", m_noLive:"No vehicles sharing a live position right now.",
+  m_mapUnavailable:"Map can't load right now — the list below still shows your stops.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"Type where you want to go — or tap the map to pin.",
   p_whereTo:"Where to?", p_useMyLocation:"Use my location",
@@ -3896,6 +3897,7 @@ ar:{
   m_stopsAria:"محطات هذا المسار", m_boardingHere:"الركوب من هنا", m_noStops:"لا محطات مرسومة بعد.",
   m_routeAria:"خريطة المسار ومحطاته", m_vehicle:"ركوبتك",
   m_fleet:"الخريطة المباشرة", m_noLive:"لا مركبات تشارك موقعاً مباشراً الآن.",
+  m_mapUnavailable:"تعذر تحميل الخريطة الآن — القائمة أدناه تظهر محطاتك.",
   /* Planner search (DEC-206, Path A) */
   p_hint:"اكتب وجهتك — أو اضغط على الخريطة لتحديدها.",
   p_whereTo:"إلى أين؟", p_useMyLocation:"استخدم موقعي",
@@ -5389,7 +5391,27 @@ const setLockedUntil = date => {
   if (date) { S.lockedUntil = new Date(date); storeSet("rs.lockedUntil", String(S.lockedUntil.getTime())); }
   else { S.lockedUntil = null; try{localStorage.removeItem("rs.lockedUntil");}catch(e){} }
 };
-const L = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
+const pickLang = o => S.lang==="ar" ? (o.ar ?? o.en) : o.en;
+
+/* Map health as state, not a silence (ONBOARDING_TASK_2 Step 2).
+   "ready" means a provider's engine loaded and answered; "unavailable"
+   means the chosen provider refused to load or its tiles failed. Every
+   map surface reads the same gate via mapsLive(), so one failure mode
+   shows the same honest fallback everywhere instead of a grey rectangle
+   on one screen and tiles on another. Functions (not const) because the
+   bundle concatenates modules with \n\n separators and function hoisting
+   keeps every module able to call them before their own position. */
+function setMapState(v) {
+  S.mapState = v;
+  try { window.dispatchEvent(new window.CustomEvent("rs:mapstate")); }
+  catch (e) { /* CustomEvent missing — state still set */ }
+}
+function mapEngine() {
+  return window.__rsMapProvider === "google" ? (window.google && window.google.maps) : window.L;
+}
+function mapsLive() {
+  return !!(window.__rsMapsOn && S.mapState !== "unavailable" && mapEngine());
+}
 const money = n => {
   const v = Math.abs(n), sign = n<0 ? "−" : "";
   return S.lang==="ar" ? `${sign}${v} ج.م` : `${sign}${v} EGP`;
@@ -5675,7 +5697,7 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
   // Real map (Google when a key is configured, or OpenStreetMap via Leaflet —
   // DEC-198) once its SDK has loaded; otherwise the labelled illustration.
   // No fake tiles.
-  if (window.__rsMapsOn && (window.google?.maps || window.L)) {
+  if (mapsLive()) {
     return realMapView({h, route, locate, onPick});
   }
   const box=$("div",{class:"mapbox"+(zoom?" mapbox--zoom":""),style:{height:h+"px"}});
@@ -5687,7 +5709,11 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
   svg.setAttribute("preserveAspectRatio","xMidYMid slice");
   svg.setAttribute("class","mapsvg");
   svg.setAttribute("role","img");
-  svg.setAttribute("aria-label", t("mapMock"));
+  /* When the map was supposed to be live and is not, the illustration says
+     so in the person's language instead of pretending nothing happened. */
+  const mapLabel = (window.__rsMapsConfigured && S.mapState === "unavailable")
+    ? t("m_mapUnavailable") : t("mapMock");
+  svg.setAttribute("aria-label", mapLabel);
   svg.innerHTML = `
     <rect width="400" height="220" fill="var(--map-land)"/>
     <path d="M0 172 Q70 160 130 176 T260 182 T400 168 L400 220 L0 220Z" fill="var(--map-water)"/>
@@ -5730,7 +5756,7 @@ function MapView({h=200, route=true, vehicle=true, walk=false, stops=true, fleet
     $("div",{class:"mapctl"},
       $("button",{attrs:{type:"button","aria-label":"Zoom in"},text:"+"}),
       $("button",{attrs:{type:"button","aria-label":"Zoom out"},text:"−"})),
-    $("div",{class:"attribution",text:t("mapMock")}));
+    $("div",{class:"attribution",text:mapLabel}));
   return box;
 }
 
@@ -5745,35 +5771,19 @@ function realMapView({h, route, locate, onPick}) {
   box.append($("div",{class:"mapbox__canvas",attrs:{id, "aria-label":t("mapLive")}}));
   if (locate) box.append($("button",{class:"mapbox__locate", attrs:{type:"button","aria-label":t("locateMe")},
     on:{click:()=>locateMe()}}, icon("stops"), $("span",{class:"t-cap",text:t("locateMe")})));
-  box.append($("div",{class:"attribution",text: window.L ? "OpenStreetMap" : "Google"}));
-  // init after the element is in the DOM
+  box.append($("div",{class:"attribution",text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR}));
   setTimeout(()=>{
     const el = document.getElementById(id);
     if (!el) return;
-
-    if (window.L) {                       // OpenStreetMap via Leaflet
-      const map = L.map(el, { zoomControl: false, attributionControl: true });
-      map.setView([ALEX_CENTER.lat, ALEX_CENTER.lng], 13);
-      L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(map);
-      window.__rsMapInstance = map;
-      if (onPick) map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
-      return;
+    /* createBaseMap (lib/map.js) is the ONE tiles factory (§0.3). */
+    const base = createBaseMap(el);
+    if (!base) return;
+    window.__rsMapInstance = base.map;
+    if (onPick) {
+      if (base.provider === "leaflet") base.map.on("click", (e) => onPick(e.latlng.lat, e.latlng.lng));
+      else base.map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
     }
-
-    if (!window.google?.maps) return;
-    const map = new google.maps.Map(el, {
-      center: ALEX_CENTER, zoom: 13,
-      disableDefaultUI: true, clickableIcons: false,
-      styles: [], fullscreenControl: false, streetViewControl: false,
-    });
-    window.__rsMapInstance = map;
-    if (onPick) map.addListener("click", (e) => onPick(e.latLng.lat(), e.latLng.lng()));
-    // Route drawing lives ONLY in lib/map.js RouteMap, driven by real data
-    // (R21): the old hardcoded demo polyline was a §8 no-demo-data violation.
-    new google.maps.Marker({ position: ALEX_CENTER, map, title: t("brand") });
+    if (base.provider === "leaflet") base.map.setView([ALEX_CENTER.lat, ALEX_CENTER.lng], 13);
   }, 0);
   return box;
 }
@@ -5876,7 +5886,7 @@ const VehicleId = (v) => $("div",{class:"row gap3"},
 const RouteCard = (r, on) => $("button",{class:"routecard", attrs:{type:"button"},
   on:{click:on||(()=>{ S.chosenRoute=r; go("boarding"); })}},
   $("div",{class:"stack grow gap1"},
-    $("div",{class:"routeline",text:L(r)}),
+    $("div",{class:"routeline",text:pickLang(r)}),
     $("div",{class:"t-cap",text:`${S.lang==="ar"?r.everyAr:r.every} · ${r.window}`})),
   $("div",{class:"stack",style:{alignItems:"flex-end"}},
     $("div",{class:"fare",text:money(r.fare)}),
@@ -6476,6 +6486,18 @@ async function resolveSession() {
    Colours come only from CSS custom properties (tokens, §0.3); an unread
    token falls back to another token, then to the map library's default. */
 
+/* ONBOARDING_TASK_2 Step 4/5: tile source as a single deliberate constant.
+   The tile host is the ONE remaining third-party fetch; code is vendored
+   inside the bundle (no unpkg/cdn on any critical path). maxZoom comes
+   from the tile source's declared limit. Attribution is the literal OSM
+   line everywhere a Leaflet map renders (attributionControl off — one
+   line, ours). */
+const OSM_ATTR = "\u00a9 OpenStreetMap contributors";
+const MAP_TILES = {
+  url: "https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp",
+  maxZoom: 19,
+};
+
 function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
   const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const hi = list.find((s) => s.stop_id === highlightStopId) || null;
@@ -6484,7 +6506,7 @@ function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
   if (title) wrap.append($("div", { class: "t-cap", text: title }));
 
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (list.length >= 2 && window.__rsMapsOn && (window.L || window.google?.maps)) {
+  if (mapsLive()) {
     box.append(realRouteMap(list, hi, vehicle, h));
   } else {
     box.append(MapView({ h, route: list.length >= 2, stops: true, vehicle: !!vehicle, zoom: true }));
@@ -6498,7 +6520,7 @@ function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
       class: "row gap3 mapstops__item" + (s.stop_id === highlightStopId ? " mapstops__item--hi" : ""),
     },
       $("span", { class: "mapstops__n", attrs: { "aria-hidden": "true" }, text: String(i + 1) }),
-      $("span", { class: "t-cap", text: L({ en: s.name_en, ar: s.name_ar }) || "—" }),
+      $("span", { class: "t-cap", text: pickLang({ en: s.name_en, ar: s.name_ar }) || "—" }),
       s.stop_id === highlightStopId
         ? $("span", { class: "chip chip--brand", text: t("m_boardingHere") }) : null));
   });
@@ -6514,7 +6536,7 @@ function realRouteMap(list, hi, vehicle, h) {
   const id = "routemap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   const cssVar = (n, fb) => {
     const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     return v || (fb ? cssVar(fb) : undefined);
@@ -6536,7 +6558,7 @@ function realRouteMap(list, hi, vehicle, h) {
           radius: isHi ? 9 : 6, color: brand, weight: 3,
           fillColor: cssVar("--bg-base", "--surface-base"), fillOpacity: 1,
         }).addTo(map)
-          .bindTooltip(`${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`, { direction: "top" });
+          .bindTooltip(`${i + 1} · ${pickLang({ en: s.name_en, ar: s.name_ar }) || ""}`, { direction: "top" });
       });
       if (vehicle && Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lng)) {
         L.circleMarker([vehicle.lat, vehicle.lng], {
@@ -6558,7 +6580,7 @@ function realRouteMap(list, hi, vehicle, h) {
         const isHi = hi && s.stop_id === hi.stop_id;
         new google.maps.Marker({
           position: { lat: s.lat, lng: s.lng }, map,
-          title: `${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`,
+          title: `${i + 1} · ${pickLang({ en: s.name_en, ar: s.name_ar }) || ""}`,
           label: String(i + 1),   // numbered like the Leaflet markers
           ...(isHi ? { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9,
             strokeWeight: 3, strokeColor: brand,
@@ -6581,17 +6603,54 @@ function realRouteMap(list, hi, vehicle, h) {
    Every real-map renderer (RouteMap, SearchMap) starts here — there is no
    second tile implementation (§0.3). Returns null when no SDK is loaded. */
 function createBaseMap(el) {
+  /* The ONE tiles factory (§0.3). Every real-map surface starts here.
+     Gestures, zoom control placement and tile-failure state are decided
+     in this one place so RouteMap, SearchMap, EditRouteMap and MapView
+     cannot drift:
+       - scrollWheelZoom:false (a wheel-stealing map steals the page)
+       - dragging + touchZoom on, keyboard:true
+       - zoom control top-right, measured clear of the boarding pin
+         at 320 px (guarded in layout.test.js)
+       - attributionControl OFF: OSM_ATTR is appended by each caller in
+         its own chrome (one line, ours)
+     tileerror fires on the LAYER (Leaflet events don't bubble; listening
+     on the map silently did nothing — exactly the grey-rectangle bug
+     this state exists to prevent). */
   if (window.L) {
-    const map = L.map(el, { zoomControl: false, attributionControl: true });
-    L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
-      maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
+    const map = L.map(el, {
+      scrollWheelZoom: false,
+      dragging: true,
+      touchZoom: true,
+      keyboard: true,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    const tiles = L.tileLayer(MAP_TILES.url, { maxZoom: MAP_TILES.maxZoom });
+    tiles.on("tileerror", () => {
+      window.__rsMapsOn = false;
+      setMapState("unavailable");
+    });
+    tiles.addTo(map);
+    L.control.zoom({ position: "topright", zoomInText: "+", zoomOutText: "\u2212" }).addTo(map);
+    /* Override Leaflet's default marker icon with a zero-size data-URI
+       SVG so no upstream PNG is ever requested — the app uses
+       circleMarker everywhere, but defensive (build.js blanks the
+       images/ urls too, for belt-and-braces). */
+    const iconSvg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'/>";
+    const iconUrl = "data:image/svg+xml;base64," + btoa(iconSvg);
+    L.Marker.prototype.options.icon = L.icon({
+      iconUrl, iconSize: [0,0], iconAnchor: [0,0], popupAnchor: [0,0], shadowUrl: "",
+    });
     return { provider: "leaflet", map };
   }
   if (window.google?.maps) {
     const map = new google.maps.Map(el, {
       center: { lat: 31.2241, lng: 29.9549 }, zoom: 13,
+      scrollwheel: false,
+      keyboardShortcuts: true,
       disableDefaultUI: true, clickableIcons: false, fullscreenControl: false,
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     });
     return { provider: "google", map };
   }
@@ -6604,14 +6663,14 @@ function createBaseMap(el) {
 function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (!(window.__rsMapsOn && (window.L || window.google?.maps))) {
+  if (!(mapsLive())) {
     box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true, onPick }));
     return box;
   }
   const id = "searchmap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   const cssVar2 = (n, fb) => {
     const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     return v || (fb ? cssVar2(fb) : undefined);
@@ -6649,7 +6708,7 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
       }
       if (hot) focusPts.push(provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng });
     };
-    const stopLabelForMap = (s) => L({ en: s.stop_name_en || s.name_en, ar: s.stop_name_ar || s.name_ar }) || s.stop_code || "";
+    const stopLabelForMap = (s) => pickLang({ en: s.stop_name_en || s.name_en, ar: s.stop_name_ar || s.name_ar }) || s.stop_code || "";
 
     pts.forEach((s) => {
       if (pinIds.has(s.stop_id)) mark(s, "pin");
@@ -6693,13 +6752,13 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
    pending pin is draggable. Existing stops are numbered, not invented. */
 function EditRouteMap({ h = 320, stops = [], onPick } = {}) {
   const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
-  if (!(window.__rsMapsOn && (window.L || window.google && window.google.maps))) {
+  if (!(mapsLive())) {
     return MapView({ h, vehicle: false, route: list.length >= 2, stops: false, locate: true, onPick });
   }
   const id = "editmap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   setTimeout(() => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -12005,38 +12064,86 @@ function boot(){
   });
 }
 
-/* Google Maps, key-gated and honest: fetch the client-safe key from the web
-   server's /v1/config (never embedded in the bundle) and load the SDK. With
-   no key the labelled illustration stays. */
+/* Maps, key-gated and honest (ONBOARDING_TASK_2 Steps 2-3). Two providers:
+     - "osm" (default, DEC-198): OpenStreetMap on the VENDORED Leaflet that
+       ships inside this bundle (apps/web/vendor/leaflet, sha256-pinned).
+       Nothing to fetch for the engine — no third-party host on any
+       critical path.
+     - "google": the client-safe key comes from the web server's /v1/config
+       ONLY (never embedded) and the SDK script is fetched only then.
+   One law: no silent arm. A refused /v1/config means "default provider"
+   — never "no maps" (Step 3). An SDK that refuses to load, or tiles
+   that refuse to answer, is STATE (S.mapState via setMapState). ONE
+   retry on online / visibilitychange, never a loop. */
+let mapsRetried = false;
+function mapStateReached() {
+  /* A state change must re-render only while a map surface is actually
+     on screen (G-134): a connectivity retry that succeeds while the
+     reader is on a screen with no map (wallet, profile) must not
+     repaint their screen and reset scroll. Landing owns its own boot
+     path so it is exempt. */
+  if (S.view === "boot" || S.view === "landing" ||
+      document.querySelector(".mapbox, .mapbox--real, .mapbox--route")) {
+    render();
+  }
+}
+window.addEventListener("rs:mapstate", () => { mapStateReached(); });
 async function loadMapsConfig(){
-  if (typeof fetch !== "function" || window.__rsMapsConfigured) return;
-  if (location.protocol === "file:") return; // no network on file:// previews
+  if (window.__rsMapsConfigured) return;
+  /* file:// previews have no backend to refuse; the vendored default engine
+     is already in the bundle, so switch on without a fetch. */
+  if (location.protocol === "file:") {
+    window.__rsMapProvider = "osm";
+    window.__rsMapsOn = true; mapsRetried = false;
+    window.__rsMapsConfigured = true;
+    setMapState("ready");
+    return;
+  }
+  if (typeof fetch !== "function") {
+    window.__rsMapProvider = "osm";
+    window.__rsMapsOn = true; mapsRetried = false;
+    window.__rsMapsConfigured = true;
+    setMapState("ready");
+    return;
+  }
+  let provider = "osm", apiKey = "";
   try {
     const cfg = await API.getConfig();
-    const provider = (cfg && cfg.maps && cfg.maps.provider) || "osm"; // DEC-198: OSM default
-    if (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) {
-      const s = document.createElement("script");
-      s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
-      s.async = true;
-      s.onload = () => { window.__rsMapsOn = true; render(); };
-      s.onerror = () => {};
-      document.head.appendChild(s);
-    } else if (provider !== "google") {
-      // OpenStreetMap via Leaflet — free, no key, no login (DEC-198).
-      const css = document.createElement("link");
-      css.rel = "stylesheet";
-      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(css);
-      const s = document.createElement("script");
-      s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      s.async = true;
-      s.onload = () => { window.__rsMapsOn = true; render(); };
-      s.onerror = () => {};
-      document.head.appendChild(s);
-    }
-    window.__rsMapsConfigured = true;
-  } catch { /* no backend yet → illustration stays */ }
+    provider = (cfg && cfg.maps && cfg.maps.provider) || "osm";
+    apiKey   = (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) || "";
+  } catch {
+    /* A refused /v1/config means "default provider", never "no maps". */
+    provider = "osm";
+  }
+  window.__rsMapProvider = provider;
+  window.__rsMapsConfigured = true;
+  mapsRetried = false;
+  if (provider === "google" && apiKey) {
+    const s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + apiKey + "&loading=async";
+    s.async = true;
+    s.onload = () => { window.__rsMapsOn = true; setMapState("ready"); mapStateReached(); };
+    s.onerror = () => { window.__rsMapsOn = false; setMapState("unavailable"); mapStateReached(); };
+    document.head.appendChild(s);
+  } else {
+    /* Vendored Leaflet is already loaded by build.js; tiles stream over
+       the network and a tileerror flips unavailable via createBaseMap. */
+    window.__rsMapsOn = true;
+    setMapState("ready");
+    mapStateReached();
+  }
 }
+function retryMaps() {
+  if (!mapsRetried && S.mapState === "unavailable") {
+    mapsRetried = true;
+    window.__rsMapsConfigured = false;
+    loadMapsConfig();
+  }
+}
+window.addEventListener("online", retryMaps);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") retryMaps();
+});
 
 try {
   if (window.matchMedia) {
@@ -12081,7 +12188,10 @@ Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
                         errText, OtpInput, otpValue,
                         setResendUntil, setLockedUntil, cooldownButton,
                         flushFieldQueue, flushDriverOutbox, queueOrSend, Outbox,
-                        normalizeText, buildRiderIndex, searchRoutes, matchesQuery });
+                        normalizeText, buildRiderIndex, searchRoutes, matchesQuery,
+                        /* ONBOARDING_TASK_2: map primitives exported for tests. */
+                        pickLang, setMapState, mapStateReached, loadMapsConfig,
+                        OSM_ATTR, MAP_TILES, MapView, RouteMap, SearchMap, EditRouteMap, createBaseMap });
 
 boot();
 

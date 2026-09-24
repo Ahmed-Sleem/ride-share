@@ -15,6 +15,18 @@
    Colours come only from CSS custom properties (tokens, §0.3); an unread
    token falls back to another token, then to the map library's default. */
 
+/* ONBOARDING_TASK_2 Step 4/5: tile source as a single deliberate constant.
+   The tile host is the ONE remaining third-party fetch; code is vendored
+   inside the bundle (no unpkg/cdn on any critical path). maxZoom comes
+   from the tile source's declared limit. Attribution is the literal OSM
+   line everywhere a Leaflet map renders (attributionControl off — one
+   line, ours). */
+const OSM_ATTR = "\u00a9 OpenStreetMap contributors";
+const MAP_TILES = {
+  url: "https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp",
+  maxZoom: 19,
+};
+
 function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
   const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const hi = list.find((s) => s.stop_id === highlightStopId) || null;
@@ -23,7 +35,7 @@ function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
   if (title) wrap.append($("div", { class: "t-cap", text: title }));
 
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (list.length >= 2 && window.__rsMapsOn && (window.L || window.google?.maps)) {
+  if (mapsLive()) {
     box.append(realRouteMap(list, hi, vehicle, h));
   } else {
     box.append(MapView({ h, route: list.length >= 2, stops: true, vehicle: !!vehicle, zoom: true }));
@@ -37,7 +49,7 @@ function RouteMap({ stops, highlightStopId, vehicle, h = 220, title } = {}) {
       class: "row gap3 mapstops__item" + (s.stop_id === highlightStopId ? " mapstops__item--hi" : ""),
     },
       $("span", { class: "mapstops__n", attrs: { "aria-hidden": "true" }, text: String(i + 1) }),
-      $("span", { class: "t-cap", text: L({ en: s.name_en, ar: s.name_ar }) || "—" }),
+      $("span", { class: "t-cap", text: pickLang({ en: s.name_en, ar: s.name_ar }) || "—" }),
       s.stop_id === highlightStopId
         ? $("span", { class: "chip chip--brand", text: t("m_boardingHere") }) : null));
   });
@@ -53,7 +65,7 @@ function realRouteMap(list, hi, vehicle, h) {
   const id = "routemap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   const cssVar = (n, fb) => {
     const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     return v || (fb ? cssVar(fb) : undefined);
@@ -75,7 +87,7 @@ function realRouteMap(list, hi, vehicle, h) {
           radius: isHi ? 9 : 6, color: brand, weight: 3,
           fillColor: cssVar("--bg-base", "--surface-base"), fillOpacity: 1,
         }).addTo(map)
-          .bindTooltip(`${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`, { direction: "top" });
+          .bindTooltip(`${i + 1} · ${pickLang({ en: s.name_en, ar: s.name_ar }) || ""}`, { direction: "top" });
       });
       if (vehicle && Number.isFinite(vehicle.lat) && Number.isFinite(vehicle.lng)) {
         L.circleMarker([vehicle.lat, vehicle.lng], {
@@ -97,7 +109,7 @@ function realRouteMap(list, hi, vehicle, h) {
         const isHi = hi && s.stop_id === hi.stop_id;
         new google.maps.Marker({
           position: { lat: s.lat, lng: s.lng }, map,
-          title: `${i + 1} · ${L({ en: s.name_en, ar: s.name_ar }) || ""}`,
+          title: `${i + 1} · ${pickLang({ en: s.name_en, ar: s.name_ar }) || ""}`,
           label: String(i + 1),   // numbered like the Leaflet markers
           ...(isHi ? { icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9,
             strokeWeight: 3, strokeColor: brand,
@@ -120,17 +132,54 @@ function realRouteMap(list, hi, vehicle, h) {
    Every real-map renderer (RouteMap, SearchMap) starts here — there is no
    second tile implementation (§0.3). Returns null when no SDK is loaded. */
 function createBaseMap(el) {
+  /* The ONE tiles factory (§0.3). Every real-map surface starts here.
+     Gestures, zoom control placement and tile-failure state are decided
+     in this one place so RouteMap, SearchMap, EditRouteMap and MapView
+     cannot drift:
+       - scrollWheelZoom:false (a wheel-stealing map steals the page)
+       - dragging + touchZoom on, keyboard:true
+       - zoom control top-right, measured clear of the boarding pin
+         at 320 px (guarded in layout.test.js)
+       - attributionControl OFF: OSM_ATTR is appended by each caller in
+         its own chrome (one line, ours)
+     tileerror fires on the LAYER (Leaflet events don't bubble; listening
+     on the map silently did nothing — exactly the grey-rectangle bug
+     this state exists to prevent). */
   if (window.L) {
-    const map = L.map(el, { zoomControl: false, attributionControl: true });
-    L.tileLayer("https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.webp", {
-      maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
+    const map = L.map(el, {
+      scrollWheelZoom: false,
+      dragging: true,
+      touchZoom: true,
+      keyboard: true,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    const tiles = L.tileLayer(MAP_TILES.url, { maxZoom: MAP_TILES.maxZoom });
+    tiles.on("tileerror", () => {
+      window.__rsMapsOn = false;
+      setMapState("unavailable");
+    });
+    tiles.addTo(map);
+    L.control.zoom({ position: "topright", zoomInText: "+", zoomOutText: "\u2212" }).addTo(map);
+    /* Override Leaflet's default marker icon with a zero-size data-URI
+       SVG so no upstream PNG is ever requested — the app uses
+       circleMarker everywhere, but defensive (build.js blanks the
+       images/ urls too, for belt-and-braces). */
+    const iconSvg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'/>";
+    const iconUrl = "data:image/svg+xml;base64," + btoa(iconSvg);
+    L.Marker.prototype.options.icon = L.icon({
+      iconUrl, iconSize: [0,0], iconAnchor: [0,0], popupAnchor: [0,0], shadowUrl: "",
+    });
     return { provider: "leaflet", map };
   }
   if (window.google?.maps) {
     const map = new google.maps.Map(el, {
       center: { lat: 31.2241, lng: 29.9549 }, zoom: 13,
+      scrollwheel: false,
+      keyboardShortcuts: true,
       disableDefaultUI: true, clickableIcons: false, fullscreenControl: false,
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
     });
     return { provider: "google", map };
   }
@@ -143,14 +192,14 @@ function createBaseMap(el) {
 function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = [], onPick } = {}) {
   const pts = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
   const box = $("div", { class: "mapbox mapbox--route" });
-  if (!(window.__rsMapsOn && (window.L || window.google?.maps))) {
+  if (!(mapsLive())) {
     box.append(MapView({ h, route: pts.length >= 2, stops: true, zoom: true, onPick }));
     return box;
   }
   const id = "searchmap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   const cssVar2 = (n, fb) => {
     const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     return v || (fb ? cssVar2(fb) : undefined);
@@ -188,7 +237,7 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
       }
       if (hot) focusPts.push(provider === "leaflet" ? [s.lat, s.lng] : { lat: s.lat, lng: s.lng });
     };
-    const stopLabelForMap = (s) => L({ en: s.stop_name_en || s.name_en, ar: s.stop_name_ar || s.name_ar }) || s.stop_code || "";
+    const stopLabelForMap = (s) => pickLang({ en: s.stop_name_en || s.name_en, ar: s.stop_name_ar || s.name_ar }) || s.stop_code || "";
 
     pts.forEach((s) => {
       if (pinIds.has(s.stop_id)) mark(s, "pin");
@@ -232,13 +281,13 @@ function SearchMap({ h = 260, stops = [], matches = [], pins = [], vehicles = []
    pending pin is draggable. Existing stops are numbered, not invented. */
 function EditRouteMap({ h = 320, stops = [], onPick } = {}) {
   const list = (stops || []).filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng));
-  if (!(window.__rsMapsOn && (window.L || window.google && window.google.maps))) {
+  if (!(mapsLive())) {
     return MapView({ h, vehicle: false, route: list.length >= 2, stops: false, locate: true, onPick });
   }
   const id = "editmap-" + Math.random().toString(36).slice(2, 9);
   const holder = $("div", { class: "mapbox__canvas", attrs: { id, "aria-label": t("m_routeAria") } });
   const root = $("div", { class: "mapbox mapbox--real", style: { height: h + "px" } }, holder);
-  root.append($("div", { class: "attribution", text: window.L ? "OpenStreetMap" : "Google" }));
+  root.append($("div", { class: "attribution", text: window.__rsMapProvider === "google" ? "Google" : OSM_ATTR }));
   setTimeout(() => {
     const el = document.getElementById(id);
     if (!el) return;

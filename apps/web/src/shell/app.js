@@ -435,38 +435,86 @@ function boot(){
   });
 }
 
-/* Google Maps, key-gated and honest: fetch the client-safe key from the web
-   server's /v1/config (never embedded in the bundle) and load the SDK. With
-   no key the labelled illustration stays. */
+/* Maps, key-gated and honest (ONBOARDING_TASK_2 Steps 2-3). Two providers:
+     - "osm" (default, DEC-198): OpenStreetMap on the VENDORED Leaflet that
+       ships inside this bundle (apps/web/vendor/leaflet, sha256-pinned).
+       Nothing to fetch for the engine — no third-party host on any
+       critical path.
+     - "google": the client-safe key comes from the web server's /v1/config
+       ONLY (never embedded) and the SDK script is fetched only then.
+   One law: no silent arm. A refused /v1/config means "default provider"
+   — never "no maps" (Step 3). An SDK that refuses to load, or tiles
+   that refuse to answer, is STATE (S.mapState via setMapState). ONE
+   retry on online / visibilitychange, never a loop. */
+let mapsRetried = false;
+function mapStateReached() {
+  /* A state change must re-render only while a map surface is actually
+     on screen (G-134): a connectivity retry that succeeds while the
+     reader is on a screen with no map (wallet, profile) must not
+     repaint their screen and reset scroll. Landing owns its own boot
+     path so it is exempt. */
+  if (S.view === "boot" || S.view === "landing" ||
+      document.querySelector(".mapbox, .mapbox--real, .mapbox--route")) {
+    render();
+  }
+}
+window.addEventListener("rs:mapstate", () => { mapStateReached(); });
 async function loadMapsConfig(){
-  if (typeof fetch !== "function" || window.__rsMapsConfigured) return;
-  if (location.protocol === "file:") return; // no network on file:// previews
+  if (window.__rsMapsConfigured) return;
+  /* file:// previews have no backend to refuse; the vendored default engine
+     is already in the bundle, so switch on without a fetch. */
+  if (location.protocol === "file:") {
+    window.__rsMapProvider = "osm";
+    window.__rsMapsOn = true; mapsRetried = false;
+    window.__rsMapsConfigured = true;
+    setMapState("ready");
+    return;
+  }
+  if (typeof fetch !== "function") {
+    window.__rsMapProvider = "osm";
+    window.__rsMapsOn = true; mapsRetried = false;
+    window.__rsMapsConfigured = true;
+    setMapState("ready");
+    return;
+  }
+  let provider = "osm", apiKey = "";
   try {
     const cfg = await API.getConfig();
-    const provider = (cfg && cfg.maps && cfg.maps.provider) || "osm"; // DEC-198: OSM default
-    if (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) {
-      const s = document.createElement("script");
-      s.src = "https://maps.googleapis.com/maps/api/js?key=" + cfg.maps.apiKey + "&loading=async";
-      s.async = true;
-      s.onload = () => { window.__rsMapsOn = true; render(); };
-      s.onerror = () => {};
-      document.head.appendChild(s);
-    } else if (provider !== "google") {
-      // OpenStreetMap via Leaflet — free, no key, no login (DEC-198).
-      const css = document.createElement("link");
-      css.rel = "stylesheet";
-      css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(css);
-      const s = document.createElement("script");
-      s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      s.async = true;
-      s.onload = () => { window.__rsMapsOn = true; render(); };
-      s.onerror = () => {};
-      document.head.appendChild(s);
-    }
-    window.__rsMapsConfigured = true;
-  } catch { /* no backend yet → illustration stays */ }
+    provider = (cfg && cfg.maps && cfg.maps.provider) || "osm";
+    apiKey   = (provider === "google" && cfg && cfg.maps && cfg.maps.apiKey) || "";
+  } catch {
+    /* A refused /v1/config means "default provider", never "no maps". */
+    provider = "osm";
+  }
+  window.__rsMapProvider = provider;
+  window.__rsMapsConfigured = true;
+  mapsRetried = false;
+  if (provider === "google" && apiKey) {
+    const s = document.createElement("script");
+    s.src = "https://maps.googleapis.com/maps/api/js?key=" + apiKey + "&loading=async";
+    s.async = true;
+    s.onload = () => { window.__rsMapsOn = true; setMapState("ready"); mapStateReached(); };
+    s.onerror = () => { window.__rsMapsOn = false; setMapState("unavailable"); mapStateReached(); };
+    document.head.appendChild(s);
+  } else {
+    /* Vendored Leaflet is already loaded by build.js; tiles stream over
+       the network and a tileerror flips unavailable via createBaseMap. */
+    window.__rsMapsOn = true;
+    setMapState("ready");
+    mapStateReached();
+  }
 }
+function retryMaps() {
+  if (!mapsRetried && S.mapState === "unavailable") {
+    mapsRetried = true;
+    window.__rsMapsConfigured = false;
+    loadMapsConfig();
+  }
+}
+window.addEventListener("online", retryMaps);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") retryMaps();
+});
 
 try {
   if (window.matchMedia) {
@@ -511,6 +559,9 @@ Object.assign(window, { S, T, BRAND, PAGES, DEFAULT_PAGE, render, go, back,
                         errText, OtpInput, otpValue,
                         setResendUntil, setLockedUntil, cooldownButton,
                         flushFieldQueue, flushDriverOutbox, queueOrSend, Outbox,
-                        normalizeText, buildRiderIndex, searchRoutes, matchesQuery });
+                        normalizeText, buildRiderIndex, searchRoutes, matchesQuery,
+                        /* ONBOARDING_TASK_2: map primitives exported for tests. */
+                        pickLang, setMapState, mapStateReached, loadMapsConfig,
+                        OSM_ATTR, MAP_TILES, MapView, RouteMap, SearchMap, EditRouteMap, createBaseMap });
 
 boot();
