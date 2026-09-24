@@ -1785,6 +1785,36 @@ html.native .intro{padding-top:var(--safe-t)}
 *{scrollbar-width:none}
 *::-webkit-scrollbar{width:0;height:0;display:none}
 
+/* Third-party map chrome (Leaflet), tokenized by build.js to these variables so
+   zoom control, popups, tooltips and attribution follow light/dark. */
+:root{
+  --leaflet-bg:var(--bg-base);
+  --leaflet-fg:var(--text-primary);
+  --leaflet-muted:var(--text-secondary);
+  --leaflet-line:var(--line);
+  --leaflet-chip:var(--bg-raised);
+  --leaflet-accent:var(--brand);
+  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 20%,transparent);
+  --leaflet-shadow:rgba(0,0,0,0.18);
+  --leaflet-scrim:var(--scrim);
+  --leaflet-bg-80:color-mix(in srgb,var(--bg-base) 80%,transparent);
+  --leaflet-bg-50:color-mix(in srgb,var(--bg-base) 50%,transparent);
+}
+[data-theme="dark"]{
+  --leaflet-bg:var(--bg-base);
+  --leaflet-fg:var(--text-primary);
+  --leaflet-muted:var(--text-secondary);
+  --leaflet-line:var(--line);
+  --leaflet-chip:var(--bg-raised);
+  --leaflet-accent:var(--brand);
+  --leaflet-accent-soft:color-mix(in srgb,var(--brand) 25%,transparent);
+  --leaflet-shadow:rgba(0,0,0,0.55);
+  --leaflet-scrim:var(--scrim);
+  --leaflet-bg-80:color-mix(in srgb,var(--bg-base) 80%,transparent);
+  --leaflet-bg-50:color-mix(in srgb,var(--bg-base) 50%,transparent);
+}
+
+__LEAFLET_STYLE__
 </style>
 </head>
 <body data-theme="light">

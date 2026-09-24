@@ -55,3 +55,5 @@ apps/mobile/android/captures/
 # python by-products (the release-signing patch is a .py a test executes)
 __pycache__/
 *.pyc
+apps/web/node_modules/
+apps/mobile/node_modules/

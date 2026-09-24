@@ -126,6 +126,90 @@ const FONT_FACE_CSS = shipped.map((f) =>
 const FONT_DISPLAY_STACK = shipped.filter((f) => f.display).map((f) => '"' + f.family + '"')
   .concat([brandStack]).join(", ");
 
+/* ── Leaflet (BSD-2-Clause, vendored — ONBOARDING_TASK_2 Step 1) ──────────
+   The map engine ships inside the bundle: sha256-pinned the same way as the
+   fonts, so a touched payload fails the build. Third-party origins are not
+   on any screen's critical path (unpkg/CDN outages, privacy, store-data
+   declarations). The tile host alone remains a deliberate third-party
+   fetch, declared as MAP_TILES in lib/map.js.
+   Wrapped in an IIFE (same as Fuse) so Leaflet's UMD attaches to window.L
+   without colliding with app constants. Bracketed by __RS_VENDOR__ sentinels
+   so the design-token scan can carve out the upstream constants (Leaflet's
+   palette is overridden by --leaflet-* CSS variables bound to the app's own
+   ink/paper/brand tokens in shell.html).
+   Marker PNG urls are blanked: the app never creates a layers control and
+   overrides the default icon with a token-coloured inline SVG in
+   createBaseMap — shipping upstream's PNGs would be dead bytes and three
+   broken relative urls in a single-file document with no images/ dir. */
+const LEAFLET_DIR = path.join(__dirname, "vendor", "leaflet");
+const LEAFLET_PIN = {
+  // Leaflet 1.9.4 canonical unpkg bytes (verified 2026-09-09 against https://unpkg.com/leaflet@1.9.4/dist/).
+  "leaflet.js":  "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a",
+  "leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6",
+};
+for (const [name, expected] of Object.entries(LEAFLET_PIN)) {
+  const file = path.join(LEAFLET_DIR, name);
+  if (!fs.existsSync(file)) { console.error("FAIL: vendor/leaflet/" + name + " is missing"); process.exit(1); }
+  const buf = fs.readFileSync(file);
+  const sum = crypto.createHash("sha256").update(buf).digest("hex");
+  if (sum !== expected) {
+    console.error("FAIL: vendor/leaflet/" + name + " sha256 mismatch (expected " + expected.slice(0,12) +
+                  "…, found " + sum.slice(0,12) + "…) — replace from the pinned 1.9.4 release");
+    process.exit(1);
+  }
+}
+if (!fs.existsSync(path.join(LEAFLET_DIR, "LICENSE"))) {
+  console.error("FAIL: vendor/leaflet/LICENSE missing (BSD-2-Clause must ship)"); process.exit(1);
+}
+const LEAFLET_JS_RAW = fs.readFileSync(path.join(LEAFLET_DIR, "leaflet.js"), "utf8");
+const LEAFLET_SRC =
+  "/* __RS_VENDOR__ begin leaflet 1.9.4 (BSD-2-Clause, sha256-pinned) */\n" +
+  "(function(){\n" + LEAFLET_JS_RAW + "\n}).call(typeof window !== 'undefined' ? window : this);\n" +
+  "/* __RS_VENDOR__ end leaflet */\n";
+let LEAFLET_CSS = fs.readFileSync(path.join(LEAFLET_DIR, "leaflet.css"), "utf8").replace(/\r\n/g, "\n");
+LEAFLET_CSS = LEAFLET_CSS.replace(/url\([^)]*\)/g, 'url("")');
+/* Tokenize the stylesheet: Leaflet's hardcoded palette becomes CSS variables
+   defined in shell.html :root, bound to the app's tokens. */
+const LEAFLET_CSS_REPL = [
+  [/#fff\b/g,                       "var(--leaflet-bg)"],
+  [/white\b/gi,                     "var(--leaflet-bg)"],
+  [/#222\b/g,                       "var(--leaflet-fg)"],
+  [/#333\b/g,                       "var(--leaflet-fg)"],
+  [/#000\b/g,                       "var(--leaflet-fg)"],
+  [/black\b/gi,                     "var(--leaflet-fg)"],
+  [/#585858\b/g,                    "var(--leaflet-fg)"],
+  [/#666\b/g,                       "var(--leaflet-muted)"],
+  [/#757575\b/g,                    "var(--leaflet-muted)"],
+  [/#777\b/g,                       "var(--leaflet-muted)"],
+  [/#999\b/g,                       "var(--leaflet-muted)"],
+  [/#bbb\b/g,                       "var(--leaflet-line)"],
+  [/#ccc\b/g,                       "var(--leaflet-line)"],
+  [/#ddd\b/g,                       "var(--leaflet-line)"],
+  [/#f4f4f4\b/g,                    "var(--leaflet-chip)"],
+  [/#defa\b/g,                      "var(--leaflet-accent-soft)"],
+  [/#38f\b/g,                       "var(--leaflet-accent)"],
+  [/#0078A8\b/g,                    "var(--leaflet-accent)"],
+  [/rgba\(0,0,0,0\.2\)/g,           "var(--leaflet-shadow)"],
+  [/rgba\(0,0,0,0\.4\)/g,           "var(--leaflet-shadow)"],
+  [/rgba\(0,0,0,0\.65\)/g,          "var(--leaflet-scrim)"],
+  [/rgba\(255, ?255, ?255, ?0\.8\)/g,"var(--leaflet-bg-80)"],
+  [/rgba\(255,255,255,0\.5\)/g,     "var(--leaflet-bg-50)"],
+  [/rgba\(51, ?181, ?229, ?0\.4\)/g,"var(--leaflet-accent-soft)"],
+];
+for (const [re, v] of LEAFLET_CSS_REPL) LEAFLET_CSS = LEAFLET_CSS.replace(re, v);
+/* Leaflet ships physical left/right margin/padding/border; convert to
+   logical properties so RTL doesn't break. Positioned left:/right: are
+   left alone because they place corner controls. */
+LEAFLET_CSS = LEAFLET_CSS.replace(/margin-left/g,  "margin-inline-start")
+                         .replace(/margin-right/g, "margin-inline-end")
+                         .replace(/padding-left/g, "padding-inline-start")
+                         .replace(/padding-right/g,"padding-inline-end")
+                         .replace(/border-left/g,  "border-inline-start")
+                         .replace(/border-right/g, "border-inline-end");
+const LEAFLET_STYLE = "<style>/* __RS_VENDOR__ begin leaflet.css (tokenized) */\n" + LEAFLET_CSS + "\n/* __RS_VENDOR__ end leaflet.css */</style>";
+const leafletJsBytes = Buffer.byteLength(LEAFLET_SRC, "utf8");
+const leafletCssBytes = Buffer.byteLength(LEAFLET_CSS, "utf8");
+
 const SHELL_TOKENS = {
   "__BRAND_TITLE__": BRAND.name.en,
   "__BRAND_DESCRIPTION__": BRAND.description,
@@ -136,6 +220,7 @@ const SHELL_TOKENS = {
   "__BRAND_FONT_WEIGHT__": String(BRAND.font.weight),
   "__FONT_FACES__": FONT_FACE_CSS,
   "__FONT_DISPLAY_STACK__": FONT_DISPLAY_STACK,
+  "__LEAFLET_STYLE__": LEAFLET_STYLE,
 };
 
 let shell = fs.readFileSync(path.join(SRC, "styles", "shell.html"), "utf8");
@@ -182,6 +267,7 @@ const FUSE_SRC =
   fs.readFileSync(path.join(__dirname, "node_modules", "fuse.js", "dist", "fuse.min.js"), "utf8") +
   "\n}).call(typeof window !== 'undefined' ? window : this);";
 
+
 const PLATFORM_SRC = fs.readFileSync(
   path.join(__dirname, "..", "..", "packages", "platform", "src", "index.js"),
   "utf8"
@@ -205,7 +291,7 @@ const ALARM_SRC = fs.readFileSync(
    brand.json at build time through scripts/resolve-origin.js, so nobody here needs it. */
 const BUNDLE_BRAND = { ...BRAND };
 delete BUNDLE_BRAND.app;
-const js = "const BRAND = " + JSON.stringify(BUNDLE_BRAND) + ";\n\n" + FUSE_SRC + "\n\n" +
+const js = "const BRAND = " + JSON.stringify(BUNDLE_BRAND) + ";\n\n" + LEAFLET_SRC + "\n\n" + FUSE_SRC + "\n\n" +
   PLATFORM_SRC + "\n\n" + OUTBOX_SRC + "\n\n" + TRACK_SRC + "\n\n" + ALARM_SRC + "\n\n" +
   PARTS.map(f => fs.readFileSync(path.join(SRC, f), "utf8")).join("\n\n");
 
@@ -251,6 +337,7 @@ catch (e) {
 fs.writeFileSync(OUT, html);
 fs.mkdirSync(path.join(__dirname, "dist"), { recursive: true });
 fs.writeFileSync(path.join(__dirname, "dist", "index.html"), html);
+console.log(`leaflet: 1.9.4 inlined (js ${Math.round(leafletJsBytes/1024)} KB, css ${Math.round(leafletCssBytes/1024)} KB, sha256-pinned, tokenized)`);
 console.log(`fonts: ${shipped.length} inlined (${Math.round(fontBytes/1024)} KB), ` +
   `${shipped.filter((f) => f.display).length} display face(s), ` +
   (held.length ? `${held.length} held as an option: ${held.join(", ")}` : "no unused faces") +

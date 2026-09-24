@@ -733,6 +733,24 @@ const mTrips = (async () => {
      && seg.children[0].getAttribute("aria-pressed")==="false");
 })();
 
+group("ONBOARDING_TASK_2 Step 1 — Leaflet vendored, unpkg removed");
+{
+  ok("vendored Leaflet is 1.9.4 (build pins sha256; version string proves payload)", /Leaflet 1\.9\.4/.test(SRC_TEXT));
+  ok("no unpkg <script>/<link> tags for code are in the document",
+     !/<script[^>]+src="https?:\/\/unpkg/.test(SRC) && !/<link[^>]+href="https?:\/\/unpkg/.test(SRC));
+  const buildSrc = fs.readFileSync(path.join(__dirname, "..", "build.js"), "utf8");
+  ok("leaflet.js sha256 is pinned in build.js",
+     /db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a/.test(buildSrc));
+  ok("leaflet.css sha256 is pinned in build.js",
+     /a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6/.test(buildSrc));
+  ok("vendor Leaflet LICENSE ships alongside",
+     fs.existsSync(path.join(__dirname, "..", "vendor", "leaflet", "LICENSE")));
+  ok("default marker-icon PNG urls blanked (no images/ reference for a single-file doc)",
+     !/images\/marker-icon/.test(SRC));
+  const t = boot();
+  ok("Leaflet L is attached to the window (vendored engine)", typeof t.w.L === "object" && typeof t.w.L.map === "function");
+}
+
 group("SEARCH — Fuse vendored + Arabic/English normalization");
 const mSearchNorm = (async () => {
   const t=boot();
@@ -921,11 +939,19 @@ group("RTL");
 
 group("DESIGN TOKENS — one place to change a value");
 {
-  const css=SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
+  let css=SRC.slice(SRC.indexOf("<style>"), SRC.indexOf("</style>"));
+  /* Strip vendored Leaflet CSS (__RS_VENDOR__ sentinels): its palette is
+     overridden by --leaflet-* variables above, so hexes in that block never
+     reach the rendered chrome; bytes are sha256-pinned in build.js. */
+  css = css.replace(/\/\* __RS_VENDOR__ begin leaflet\.css[\s\S]*?__RS_VENDOR__ end leaflet\.css \*\//, "");
   const rules=css.replace(/:root\{[^}]*\}/g,"").replace(/\[data-theme="dark"\]\{[^}]*\}/g,"");
   const hex=(rules.match(/#[0-9a-fA-F]{3,8}\b/g)||[]);
   ok("no hardcoded colour in css rules", hex.length===0, hex.slice(0,5).join(","));
-  const js=SRC.slice(SRC.indexOf("</style>"));
+  let js=SRC.slice(SRC.indexOf("</style>"));
+  /* Same carve-out for the vendored Leaflet JS block: its upstream constants
+     are pinned by hash; the default marker icon is overridden with a
+     zero-size data-URI SVG in createBaseMap so those constants never paint. */
+  js = js.replace(/\/\* __RS_VENDOR__ begin leaflet 1\.9\.4[\s\S]*?__RS_VENDOR__ end leaflet \*\//, "");
   const jsHex=(js.match(/#[0-9a-fA-F]{3,8}\b/g)||[]).filter(h=>!/^#[0-9a-fA-F]{6}$/.test(h)||true);
   // allowed: the sample vehicle colour AND every colour the single brand source
   // carries (favicon gradient, browser theme, email identity — data, not chrome)
